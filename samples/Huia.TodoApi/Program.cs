@@ -38,6 +38,8 @@ var issuer = builder.ResolveIssuer();
 builder.Services.AddHuia(issuer, huia =>
     {
         huia.Branding.Title = "Todo";
+
+        huia.Branding.ShowTopbar = false;
         // Served from this app's own wwwroot (see app.UseStaticFiles() below) rather than reusing Huia's
         // favicon, so the sample demonstrates LogoUrl with a brand asset distinct from Huia's own.
         huia.Branding.LogoUrl = "/huia-icon.svg";

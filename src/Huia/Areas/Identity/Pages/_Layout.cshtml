@@ -66,11 +66,14 @@
 <body data-huia-authenticated="@(isAuthenticated ? "true" : "false")"
       data-huia-react-to-sign-in="@(ViewData["ReactToSignIn"] is true ? "true" : "false")">
     <div class="huia-page">
-        <header class="huia-topbar">
-            <a href="@Url.Content("~/")" class="huia-brand">
-                <span>@branding.Title</span>
-            </a>
-        </header>
+        @if (branding.ShowTopbar)
+        {
+            <header class="huia-topbar">
+                <a href="@Url.Content("~/")" class="huia-brand">
+                    <span>@branding.Title</span>
+                </a>
+            </header>
+        }
         <main class="huia-main">
             <div class="huia-panel">
                 @if (!string.IsNullOrEmpty(branding.LogoUrl))

@@ -54,6 +54,11 @@ public sealed class BrandingOptions
     public bool CanChangeThemeMode { get; set; } = true;
 
     /// <summary>
+    /// Show topbar with title
+    /// </summary>
+    public bool ShowTopbar  { get; set; } = true;
+
+    /// <summary>
     /// Default theme mode
     /// </summary>
     public ThemeMode DefaultTheme { get; set; } = ThemeMode.System;
