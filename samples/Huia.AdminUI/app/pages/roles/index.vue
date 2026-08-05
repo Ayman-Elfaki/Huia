@@ -93,7 +93,7 @@ async function openMembers(role: RoleResponse) {
     </template>
 
     <template #body>
-      <UAlert v-if="error" color="error" variant="subtle" :title="error" />
+      <UAlert v-if="error && !loading" color="error" variant="subtle" :title="error" />
 
       <UTable :data="items" :columns="columns" :loading="loading">
         <template #actions-cell="{ row }">

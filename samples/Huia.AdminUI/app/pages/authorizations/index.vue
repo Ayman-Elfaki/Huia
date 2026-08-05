@@ -62,7 +62,7 @@ function formatDate(value: string | null) {
           class="max-w-xs" />
       </div>
 
-      <UAlert v-if="error" color="error" variant="subtle" :title="error" />
+      <UAlert v-if="error && !loading" color="error" variant="subtle" :title="error" />
 
       <UTable :data="items" :columns="columns" :loading="loading">
         <template #status-cell="{ row }">

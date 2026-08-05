@@ -37,7 +37,7 @@ var issuer = builder.ResolveIssuer();
 
 builder.Services.AddHuia(issuer, huia =>
     {
-        // huia.Branding.Title = "Todo";
+        huia.Branding.Title = "Todo";
         // Served from this app's own wwwroot (see app.UseStaticFiles() below) rather than reusing Huia's
         // favicon, so the sample demonstrates LogoUrl with a brand asset distinct from Huia's own.
         huia.Branding.LogoUrl = "/huia-icon.svg";
@@ -64,6 +64,9 @@ builder.Services.AddHuia(issuer, huia =>
             // /connect/logout, which front/back-channel-logs-out every other client with a live session.
             app.SetFrontChannelLogoutUri(builder.Configuration["Oidc:WebFrontChannelLogoutUri"]!);
             app.SetBackChannelLogoutUri(builder.Configuration["Oidc:WebBackChannelLogoutUri"]!);
+
+            // Short-lived access tokens for the sample's own demonstration of token refresh (see RefreshTokenEndpoints).
+            app.SetAccessTokenLifetime(TimeSpan.FromMinutes(5));
 
             // profile/email so Auth.js default OIDC scope request (which includes them) is honored; todos
             // so the issued access token can call the CRUD endpoints below. roles/reports back the

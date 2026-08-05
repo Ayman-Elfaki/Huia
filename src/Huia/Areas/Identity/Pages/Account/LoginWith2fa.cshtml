@@ -14,7 +14,12 @@
     </header>
     <section>
         <form method="post" class="huia-field-group" novalidate>
-            <input type="hidden" name="rememberMe" value="@Model.RememberMe" />
+            @* Razor omits the value attribute entirely for a plain bool expression when it's false (its
+               built-in conditional-attribute-rendering rule), so an unchecked "Remember me" on the Login page
+               would otherwise post rememberMe="" here — which fails to bind to OnPostAsync's bool parameter
+               and silently short-circuits verification before the code is even checked. ToString() forces a
+               string expression so "True"/"False" always renders, like ReturnUrl below. *@
+            <input type="hidden" name="rememberMe" value="@Model.RememberMe.ToString()" />
             <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
             <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
 

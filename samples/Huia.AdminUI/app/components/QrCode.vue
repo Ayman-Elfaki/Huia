@@ -11,17 +11,6 @@ watch(() => props.value, async (value) => {
 </script>
 
 <template>
-  <img
-    v-if="dataUrl"
-    :src="dataUrl"
-    :width="size"
-    :height="size"
-    alt=""
-    class="rounded-md"
-  >
-  <div
-    v-else
-    class="animate-pulse rounded-md bg-elevated"
-    :style="{ width: `${size}px`, height: `${size}px` }"
-  />
+  <img v-if="dataUrl" :src="dataUrl" :width="size" :height="size" alt="" class="rounded-md">
+  <div v-else class="animate-pulse rounded-md bg-elevated" :style="{ width: `${size}px`, height: `${size}px` }" />
 </template>

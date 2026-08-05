@@ -181,7 +181,7 @@ async function submitReset() {
     <template #body>
       <UInput v-model="search" placeholder="Search by email or username…" icon="i-lucide-search" class="max-w-sm" />
 
-      <UAlert v-if="error" color="error" variant="subtle" :title="error" />
+      <UAlert v-if="error && !loading" color="error" variant="subtle" :title="error" />
 
       <UTable :data="items" :columns="columns" :loading="loading">
         <template #firstName-cell="{ row }">

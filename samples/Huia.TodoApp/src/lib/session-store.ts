@@ -21,7 +21,7 @@ const KEY_PREFIX = "todoapp:session:";
 // repeatedly is the whole point), so it isn't bounded by their lifetimes — this TTL instead bounds how long
 // an abandoned session (browser closed without ever signing out, cookie never cleared) lingers in Redis.
 // Refreshed on every write, so an actively-used session never hits it.
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const SESSION_TTL_SECONDS = 60 * 5; // 5 minutes
 
 let client: Redis | undefined;
 
