@@ -44,10 +44,19 @@ public static class ServiceCollectionExtensions
     /// Customizes Quartz's hosted service. <see cref="QuartzHostedServiceOptions.WaitForJobsToComplete"/>
     /// defaults to <see langword="true"/>; this runs after that default, so it can override it.
     /// </param>
+    /// <param name="entityCacheLimit">
+    /// The maximum number of entities (applications, authorizations, scopes and tokens combined) OpenIddict's
+    /// managers keep in their scoped, in-memory <c>IOpenIddictXxxCache</c> before evicting the oldest entries.
+    /// OpenIddict's own default is 250, which a real deployment blows through almost immediately (every active
+    /// authorization and every access/refresh token pair counts against it), turning most manager lookups back
+    /// into database round-trips. Raised here so the caching OpenIddict already wires up by default is actually
+    /// effective; pass a smaller value only for constrained/low-memory hosts.
+    /// </param>
     public static HuiaBuilder WithEntityFrameworkStores<TContext>(
         this HuiaBuilder builder,
         Action<IServiceCollectionQuartzConfigurator>? configureQuartz = null,
-        Action<QuartzHostedServiceOptions>? configureHostedService = null)
+        Action<QuartzHostedServiceOptions>? configureHostedService = null,
+        int entityCacheLimit = 4_000)
         where TContext : DbContext
     {
         var services = builder.Services;
@@ -71,6 +80,10 @@ public static class ServiceCollectionExtensions
                     .UseDbContext<TContext>();
 
                 options.UseQuartz();
+
+                // See the entityCacheLimit parameter doc comment above: this is what actually makes
+                // OpenIddict's default (but too-small-to-matter) entity caching worth having.
+                options.SetEntityCacheLimit(entityCacheLimit);
             });
 
         services.AddQuartz(configureQuartz);
