@@ -9,6 +9,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
+import {QrCode} from "@/components/ui/qr-code";
 import {Separator} from "@/components/ui/separator";
 
 /** Groups a raw authenticator key into 4-char chunks — matches how authenticator apps display/expect a
@@ -73,8 +74,9 @@ export function TwoFactorPanel({email, initial}: { email: string; initial: TwoFa
             ) : (
                 <div className="flex flex-col gap-3">
                     {state.sharedKey ? (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-2">
                             <p className="text-sm text-muted-foreground">{t("twoFactorSetupHint")}</p>
+                            {otpauthUrl ? <QrCode value={otpauthUrl} /> : null}
                             <code className="rounded-md bg-muted px-2 py-1 text-xs break-all">
                                 {formatSharedKey(state.sharedKey)}
                             </code>

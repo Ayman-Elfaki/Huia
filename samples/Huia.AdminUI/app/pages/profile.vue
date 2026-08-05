@@ -295,11 +295,12 @@ await Promise.all([loadInfo(), loadTwoFactor()])
             <template v-else>
               <div
                 v-if="twoFactor?.sharedKey"
-                class="flex flex-col gap-1"
+                class="flex flex-col gap-2"
               >
                 <p class="text-sm text-muted">
-                  Scan this key with your authenticator app, or enter it manually:
+                  Scan this QR code with your authenticator app, or enter the key manually:
                 </p>
+                <QrCode v-if="otpauthUrl" :value="otpauthUrl" />
                 <code class="rounded-md bg-elevated px-2 py-1 text-xs break-all">{{
                     formatSharedKey(twoFactor.sharedKey)
                   }}</code>
