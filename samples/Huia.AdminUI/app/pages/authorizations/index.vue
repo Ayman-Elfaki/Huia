@@ -4,24 +4,24 @@ import type { AuthorizationResponse } from '~~/shared/types/admin'
 const page = ref(1)
 const pageSize = 25
 const subject = ref('')
-const applicationId = ref('')
+const clientId = ref('')
 const query = computed(() => ({
   page: page.value,
   pageSize,
   subject: subject.value || undefined,
-  applicationId: applicationId.value || undefined
+  clientId: clientId.value || undefined
 }))
 const { items, totalCount, loading, error, refresh } = useAdminList<AuthorizationResponse>('authorizations', query)
 await refresh()
 watch(page, refresh)
-watch([subject, applicationId], () => {
+watch([subject, clientId], () => {
   page.value = 1
   refresh()
 })
 
 const columns = [
   { accessorKey: 'subject', header: 'Subject' },
-  { accessorKey: 'applicationId', header: 'Application ID' },
+  { accessorKey: 'applicationClientId', header: 'Client ID' },
   { accessorKey: 'status', header: 'Status' },
   { accessorKey: 'scopes', header: 'Scopes' },
   { accessorKey: 'creationDate', header: 'Created' },
@@ -58,7 +58,7 @@ function formatDate(value: string | null) {
     <template #body>
       <div class="flex gap-3">
         <UInput v-model="subject" placeholder="Filter by subject (user id)…" icon="i-lucide-search" class="max-w-xs" />
-        <UInput v-model="applicationId" placeholder="Filter by application id…" icon="i-lucide-search"
+        <UInput v-model="clientId" placeholder="Filter by client id…" icon="i-lucide-search"
           class="max-w-xs" />
       </div>
 

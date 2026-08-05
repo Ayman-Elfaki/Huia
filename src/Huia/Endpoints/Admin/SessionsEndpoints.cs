@@ -27,7 +27,8 @@ internal static class SessionsEndpoints
     }
 
     private static async Task<IResult> ListAsync(int? page, int? pageSize, string? subject,
-        IUserSessionManager manager, CancellationToken cancellationToken)
+        IUserSessionManager manager, IOpenIddictAuthorizationManager authorizationManager,
+        IOpenIddictApplicationManager applicationManager, CancellationToken cancellationToken)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
         var offset = ((page is null or <= 0 ? 1 : page.Value) - 1) * size;
@@ -35,14 +36,29 @@ internal static class SessionsEndpoints
         var items = await manager.ListAsync(size, offset, subject, cancellationToken).ConfigureAwait(false);
         var totalCount = await manager.CountAsync(subject, cancellationToken).ConfigureAwait(false);
 
-        return Results.Ok(new PagedResult<SessionResponse>([.. items.Select(ToResponse)], totalCount));
+        var clientIdCache = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var responses = new List<SessionResponse>(items.Count);
+        foreach (var session in items)
+        {
+            responses.Add(await ToResponseAsync(session, authorizationManager, applicationManager, clientIdCache,
+                cancellationToken).ConfigureAwait(false));
+        }
+
+        return Results.Ok(new PagedResult<SessionResponse>(responses, totalCount));
     }
 
     private static async Task<IResult> GetAsync(string id, IUserSessionManager manager,
+        IOpenIddictAuthorizationManager authorizationManager, IOpenIddictApplicationManager applicationManager,
         CancellationToken cancellationToken)
     {
         var session = await manager.FindByIdAsync(id, cancellationToken).ConfigureAwait(false);
-        return session is null ? Results.NotFound() : Results.Ok(ToResponse(session));
+        if (session is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(await ToResponseAsync(session, authorizationManager, applicationManager,
+            new Dictionary<string, string?>(StringComparer.Ordinal), cancellationToken).ConfigureAwait(false));
     }
 
     private static async Task<IResult> RevokeAsync(string id, IUserSessionManager manager,
@@ -124,9 +140,34 @@ internal static class SessionsEndpoints
         await sessions.RevokeAsync(session.Id, ct).ConfigureAwait(false);
     }
 
-    private static SessionResponse ToResponse(UserSessionDescriptor session) => new(
-        session.Id, session.UserId, session.CreatedAt, session.LastActivityAt, session.ExpiresAt,
-        session.IpAddress, session.UserAgent, session.RevokedAt);
+    /// <summary>
+    /// A session isn't tied to a single application — SSO lets it back authorizations for several clients —
+    /// so this surfaces every distinct application's <c>client_id</c> the session has authorized, rather than
+    /// a single (and otherwise meaningless) internal application id.
+    /// </summary>
+    private static async Task<SessionResponse> ToResponseAsync(UserSessionDescriptor session,
+        IOpenIddictAuthorizationManager authorizationManager, IOpenIddictApplicationManager applicationManager,
+        Dictionary<string, string?> clientIdCache, CancellationToken cancellationToken)
+    {
+        var clientIds = new List<string>();
+        await foreach (var authorization in SessionAuthorizationLookup
+                           .FindBySessionAsync(authorizationManager, session.UserId, session.Id, cancellationToken)
+                           .ConfigureAwait(false))
+        {
+            var applicationId = await authorizationManager.GetApplicationIdAsync(authorization, cancellationToken)
+                .ConfigureAwait(false);
+            var clientId = await ApplicationClientIdResolver
+                .ResolveAsync(applicationId, applicationManager, clientIdCache, cancellationToken)
+                .ConfigureAwait(false);
+            if (clientId is not null && !clientIds.Contains(clientId, StringComparer.Ordinal))
+            {
+                clientIds.Add(clientId);
+            }
+        }
+
+        return new SessionResponse(session.Id, session.UserId, session.CreatedAt, session.LastActivityAt,
+            session.ExpiresAt, session.IpAddress, session.UserAgent, session.RevokedAt, [.. clientIds]);
+    }
 
     private sealed record SessionResponse(
         string Id,
@@ -136,7 +177,8 @@ internal static class SessionsEndpoints
         DateTimeOffset ExpiresAt,
         string? IpAddress,
         string? UserAgent,
-        DateTimeOffset? RevokedAt);
+        DateTimeOffset? RevokedAt,
+        string[] ApplicationClientIds);
 
     private sealed record RevokeAllRequest(string Subject);
 }

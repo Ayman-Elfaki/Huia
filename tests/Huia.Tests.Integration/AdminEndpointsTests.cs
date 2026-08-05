@@ -369,7 +369,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 
     private sealed record AuthorizationResponse(
         string Id,
-        string? ApplicationId,
+        string? ApplicationClientId,
         string? Subject,
         string? Status,
         string? Type,
@@ -384,5 +384,6 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         DateTimeOffset ExpiresAt,
         string? IpAddress,
         string? UserAgent,
-        DateTimeOffset? RevokedAt);
+        DateTimeOffset? RevokedAt,
+        string[] ApplicationClientIds);
 }

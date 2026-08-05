@@ -91,7 +91,7 @@ export interface RoleMemberResponse {
 
 export interface AuthorizationResponse {
   id: string
-  applicationId: string | null
+  applicationClientId: string | null
   subject: string | null
   status: string | null
   type: string | null
@@ -108,4 +108,5 @@ export interface SessionResponse {
   ipAddress: string | null
   userAgent: string | null
   revokedAt: string | null
+  applicationClientIds: string[]
 }

@@ -15,6 +15,7 @@ watch(subject, () => {
 
 const columns = [
   { accessorKey: 'userId', header: 'User ID' },
+  { accessorKey: 'applicationClientIds', header: 'Applications' },
   { accessorKey: 'ipAddress', header: 'IP address' },
   { accessorKey: 'userAgent', header: 'User agent' },
   { accessorKey: 'lastActivityAt', header: 'Last activity' },
@@ -71,6 +72,15 @@ function formatDate(value: string | null) {
       <UAlert v-if="error" color="error" variant="subtle" :title="error" />
 
       <UTable :data="items" :columns="columns" :loading="loading">
+        <template #applicationClientIds-cell="{ row }">
+          <div v-if="row.original.applicationClientIds.length" class="flex flex-wrap gap-1">
+            <UBadge v-for="clientId in row.original.applicationClientIds" :key="clientId" color="neutral"
+              variant="subtle">
+              {{ clientId }}
+            </UBadge>
+          </div>
+          <span v-else class="text-sm text-muted">—</span>
+        </template>
         <template #userAgent-cell="{ row }">
           <span class="text-sm text-muted truncate max-w-xs block">{{ row.original.userAgent || '—' }}</span>
         </template>
