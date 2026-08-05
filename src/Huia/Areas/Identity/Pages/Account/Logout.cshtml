@@ -1,0 +1,18 @@
+@page
+@model LogoutModel
+@{
+    ViewData["Title"] = Localizer["SignedOutTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["SignedOutTitle"]</h2>
+        <p>@Localizer["SignedOutMessage"]</p>
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        <a asp-page="./Login" class="btn huia-full-width" data-variant="outline">@Localizer["SignInAgainLink"]</a>
+    </section>
+</div>

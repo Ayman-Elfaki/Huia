@@ -1,0 +1,22 @@
+@page
+@model ConfirmEmailModel
+@{
+    ViewData["Title"] = Localizer["ConfirmEmailTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["ConfirmEmailTitle"]</h2>
+        @if (Model.Succeeded)
+        {
+            <p>@Localizer["ConfirmEmailSuccessMessage"]</p>
+        }
+        else
+        {
+            <p>@Localizer["ConfirmEmailFailureMessage"]</p>
+        }
+    </header>
+    <section>
+        <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="btn huia-full-width" data-variant="outline">@Localizer["SignInLink"]</a>
+    </section>
+</div>

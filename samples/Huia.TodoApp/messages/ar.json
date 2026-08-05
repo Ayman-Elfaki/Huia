@@ -1,0 +1,80 @@
+{
+  "Metadata": {
+    "title": "نموذج مهام Huia",
+    "description": "تطبيق مهام يوضح استخدام Huia كمزود OpenID Connect."
+  },
+  "HomePage": {
+    "heading": "المهام",
+    "signInPrompt": "سجّل الدخول بحساب Huia الخاص بك لإدارة مهامك.",
+    "empty": "لا توجد مهام بعد — أضف أول مهمة أعلاه.",
+    "profileLink": "الملف الشخصي"
+  },
+  "Auth": {
+    "signIn": "تسجيل الدخول",
+    "signOut": "تسجيل الخروج"
+  },
+  "NewTodoForm": {
+    "placeholder": "ما الذي تريد إنجازه؟",
+    "add": "إضافة"
+  },
+  "TodoItem": {
+    "markDone": "وضع علامة كمنجزة",
+    "markNotDone": "وضع علامة كغير منجزة",
+    "save": "حفظ",
+    "delete": "حذف"
+  },
+  "IdToken": {
+    "trigger": "إظهار رمز الهوية",
+    "title": "رمز الهوية",
+    "description": "رمز OpenID Connect (id_token) الذي أصدرته Huia عند تسجيل الدخول، بعد فك الترميز.",
+    "raw": "الرمز الخام (JWT مضغوط)",
+    "claims": "المطالبات (الحمولة بعد فك الترميز)",
+    "none": "لا يوجد رمز هوية لهذه الجلسة."
+  },
+  "LocaleSwitcher": {
+    "label": "اللغة"
+  },
+  "ThemeToggle": {
+    "label": "المظهر",
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام"
+  },
+  "Admin": {
+    "title": "تقارير الإدارة",
+    "badge": "للمشرفين فقط",
+    "totalTodos": "إجمالي المهام",
+    "completedTodos": "المنجزة",
+    "distinctOwners": "المستخدمون الذين لديهم مهام"
+  },
+  "Profile": {
+    "title": "الملف الشخصي",
+    "infoTitle": "معلومات الحساب",
+    "email": "البريد الإلكتروني",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "saved": "تم الحفظ.",
+    "saveFailed": "تعذّر حفظ التغييرات.",
+    "save": "حفظ",
+    "passwordTitle": "كلمة المرور",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "passwordChanged": "تم تغيير كلمة المرور.",
+    "passwordChangeFailed": "تعذّر تغيير كلمة المرور — تحقق من كلمة المرور الحالية.",
+    "changePassword": "تغيير كلمة المرور",
+    "twoFactorTitle": "المصادقة الثنائية",
+    "twoFactorStatus": "الحالة",
+    "twoFactorEnabled": "مفعّلة",
+    "twoFactorDisabled": "غير مفعّلة",
+    "twoFactorActionFailed": "لم ينجح ذلك — حاول مرة أخرى.",
+    "recoveryCodesTitle": "احفظ رموز الاسترداد الخاصة بك",
+    "recoveryCodesHint": "يمكن استخدام كل رمز مرة واحدة إذا فقدت الوصول إلى تطبيق المصادقة. هذه هي المرة الوحيدة التي ستظهر فيها.",
+    "recoveryCodesLeft": "{count, plural, =0 {لا توجد رموز استرداد متبقية} one {رمز استرداد واحد متبقٍ} two {رمزا استرداد متبقيان} few {# رموز استرداد متبقية} many {# رمز استرداد متبقٍ} other {# رمز استرداد متبقٍ}}",
+    "regenerateRecoveryCodes": "إعادة إنشاء رموز الاسترداد",
+    "disableTwoFactor": "تعطيل المصادقة الثنائية",
+    "twoFactorSetupHint": "امسح هذا المفتاح باستخدام تطبيق المصادقة، أو أدخله يدويًا:",
+    "openInAuthenticatorApp": "فتح في تطبيق المصادقة",
+    "twoFactorCode": "رمز مكوّن من 6 أرقام",
+    "enableTwoFactor": "تفعيل المصادقة الثنائية"
+  }
+}

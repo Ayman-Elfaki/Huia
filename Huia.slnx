@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="docs/architecture.md" />
+    <File Path="docs/custom-store.md" />
+    <File Path="docs/getting-started.md" />
+    <File Path="docs/key-management.md" />
+    <File Path="docs/localization.md" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Huia.AdminUI/Huia.AdminUI.esproj" />
+    <Project Path="samples/Huia.AppHost/Huia.AppHost.csproj" />
+    <Project Path="samples/Huia.ServiceDefaults/Huia.ServiceDefaults.csproj" />
+    <Project Path="samples/Huia.TodoApi/Huia.TodoApi.csproj" />
+    <Project Path="samples/Huia.TodoApp/Huia.TodoApp.esproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj" />
+    <Project Path="src/Huia/Huia.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Huia.Tests.E2E/Huia.Tests.E2E.csproj" />
+    <Project Path="tests/Huia.Tests.Integration/Huia.Tests.Integration.csproj" />
+    <Project Path="tests/Huia.Tests.Unit/Huia.Tests.Unit.csproj" />
+  </Folder>
+</Solution>

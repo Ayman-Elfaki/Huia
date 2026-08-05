@@ -1,0 +1,20 @@
+@page "{statusCode:int?}"
+@model ErrorModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="card">
+    <header>
+        <h2>@Model.Title</h2>
+        <p>@Model.Message</p>
+    </header>
+    @if (Model.HomeUrl is not null)
+    {
+        <section>
+            <a href="@Model.HomeUrl" class="btn huia-full-width" data-variant="outline">
+                @Localizer["BackToHomeLink"]
+            </a>
+        </section>
+    }
+</div>

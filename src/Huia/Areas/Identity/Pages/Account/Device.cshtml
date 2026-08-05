@@ -1,0 +1,59 @@
+@page
+@model DeviceModel
+@{
+    ViewData["Title"] = Localizer["DeviceTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["DeviceTitle"]</h2>
+        @if (Model.Decision is null && !Model.CodeInvalid)
+        {
+            <p>@Localizer["DeviceSubtitle"]</p>
+        }
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        @if (Model.Decision == true)
+        {
+            <p>@Localizer["DeviceApprovedMessage"]</p>
+        }
+        else if (Model.Decision == false)
+        {
+            <p>@Localizer["DeviceDeniedMessage"]</p>
+        }
+        else if (Model.CodeInvalid)
+        {
+            <p>@Localizer["DeviceInvalidCodeMessage"]</p>
+        }
+        else if (string.IsNullOrWhiteSpace(Model.UserCode))
+        {
+            <form method="get" class="huia-field-group" novalidate>
+                <div role="group" class="field">
+                    <label for="user_code">@Localizer["DeviceCodeLabel"]</label>
+                    <input type="text" id="user_code" name="user_code" autocomplete="one-time-code" placeholder="XXXX-XXXX" />
+                </div>
+                <div class="huia-actions">
+                    <button type="submit" class="btn huia-full-width">@Localizer["DeviceContinueButton"]</button>
+                </div>
+            </form>
+        }
+        else
+        {
+            <p>@Localizer["DeviceApplicationIntro", Model.ApplicationName ?? string.Empty]</p>
+            @if (Model.Scopes.Length > 0)
+            {
+                <p>@Localizer["DeviceScopesIntro"]: @string.Join(", ", Model.Scopes)</p>
+            }
+            <form method="post" class="huia-field-group" novalidate>
+                <input type="hidden" name="user_code" value="@Model.UserCode" />
+                <div class="huia-actions">
+                    <button type="submit" name="accept" value="true" class="btn huia-full-width">@Localizer["DeviceApproveButton"]</button>
+                    <button type="submit" name="accept" value="false" class="btn huia-full-width" data-variant="outline">@Localizer["DeviceDenyButton"]</button>
+                </div>
+            </form>
+        }
+    </section>
+</div>

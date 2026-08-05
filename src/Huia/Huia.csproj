@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="OpenIddict.Quartz"/>
+        <PackageReference Include="OpenIddict.AspNetCore"/>
+        <PackageReference Include="Quartz.Extensions.Hosting"/>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Huia.Tests.Unit"/>
+        <InternalsVisibleTo Include="Huia.Tests.Integration"/>
+    </ItemGroup>
+</Project>

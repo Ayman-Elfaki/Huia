@@ -1,0 +1,12 @@
+@using Huia.Branding
+@inject BrandingOptions Branding
+@inject IStringLocalizer<HuiaResources> Localizer
+
+@if (Branding.CanChangeThemeMode)
+{
+    <button type="button" aria-label="@Localizer["ThemeToggleAriaLabel"]" onclick="window.basecoat.theme.toggle()"
+            class="btn" data-variant="outline" data-size="icon">
+        <span class="huia-theme-icon-dark"><i data-lucide="sun"></i></span>
+        <span class="huia-theme-icon-light"><i data-lucide="moon"></i></span>
+    </button>
+}

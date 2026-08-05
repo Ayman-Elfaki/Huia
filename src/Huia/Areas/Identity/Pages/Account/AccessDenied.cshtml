@@ -1,0 +1,18 @@
+@page
+@model AccessDeniedModel
+@{
+    ViewData["Title"] = Localizer["AccessDeniedTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["AccessDeniedTitle"]</h2>
+        <p>@Localizer["AccessDeniedMessage"]</p>
+    </header>
+    <section>
+        <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="btn huia-full-width"
+           data-variant="outline">
+            @Localizer["BackToSignInLink"]
+        </a>
+    </section>
+</div>

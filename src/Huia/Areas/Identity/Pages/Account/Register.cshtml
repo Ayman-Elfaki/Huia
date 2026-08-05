@@ -1,0 +1,60 @@
+@page
+@model RegisterModel
+@{
+    ViewData["Title"] = Localizer["CreateAccountTitle"].Value;
+    ViewData["ReactToSignIn"] = true;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["CreateAccountTitle"]</h2>
+        <p>@Localizer["CreateAccountSubtitle"]</p>
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        <form method="post" class="huia-field-group" novalidate>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.FirstName">@Localizer["FirstNameLabel"]</label>
+                <input asp-for="Input.FirstName" autocomplete="given-name" />
+                <span asp-validation-for="Input.FirstName" role="alert"></span>
+            </div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.LastName">@Localizer["LastNameLabel"]</label>
+                <input asp-for="Input.LastName" autocomplete="family-name" />
+                <span asp-validation-for="Input.LastName" role="alert"></span>
+            </div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.Email">@Localizer["EmailLabel"]</label>
+                <input asp-for="Input.Email" autocomplete="username" placeholder="m@example.com" />
+                <span asp-validation-for="Input.Email" role="alert"></span>
+            </div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.Password">@Localizer["PasswordLabel"]</label>
+                <input asp-for="Input.Password" autocomplete="new-password" />
+                <span asp-validation-for="Input.Password" role="alert"></span>
+            </div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.ConfirmPassword">@Localizer["ConfirmPasswordLabel"]</label>
+                <input asp-for="Input.ConfirmPassword" autocomplete="new-password" />
+                <span asp-validation-for="Input.ConfirmPassword" role="alert"></span>
+            </div>
+
+            <div class="huia-actions">
+                <button type="submit" class="btn huia-full-width">@Localizer["CreateAccountButton"]</button>
+            </div>
+        </form>
+
+        <div class="huia-footer-links">
+            <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["AlreadyHaveAccountLink"]</a>
+        </div>
+    </section>
+</div>

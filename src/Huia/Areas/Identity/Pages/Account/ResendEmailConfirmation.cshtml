@@ -1,0 +1,42 @@
+@page
+@model ResendEmailConfirmationModel
+@{
+    ViewData["Title"] = Localizer["ResendConfirmationTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["ResendConfirmationTitle"]</h2>
+        @if (!Model.Submitted)
+        {
+            <p>@Localizer["ResendConfirmationSubtitle"]</p>
+        }
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        @if (Model.Submitted)
+        {
+            <p>@Localizer["ResendConfirmationSentMessage"]</p>
+            <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="btn huia-full-width" data-variant="outline">@Localizer["BackToSignInLink"]</a>
+        }
+        else
+        {
+            <form method="post" class="huia-field-group" novalidate>
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
+
+                <div role="group" class="field">
+                    <label asp-for="Input.Email">@Localizer["EmailLabel"]</label>
+                    <input asp-for="Input.Email" autocomplete="username" placeholder="m@example.com" />
+                    <span asp-validation-for="Input.Email" role="alert"></span>
+                </div>
+
+                <div class="huia-actions">
+                    <button type="submit" class="btn huia-full-width">@Localizer["ResendConfirmationButton"]</button>
+                </div>
+            </form>
+        }
+    </section>
+</div>

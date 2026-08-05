@@ -1,0 +1,37 @@
+@page
+@model LoginWith2faModel
+@{
+    ViewData["Title"] = Localizer["TwoFactorTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["TwoFactorTitle"]</h2>
+        <p>@Localizer["TwoFactorSubtitle"]</p>
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        <form method="post" class="huia-field-group" novalidate>
+            <input type="hidden" name="rememberMe" value="@Model.RememberMe" />
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.TwoFactorCode">@Localizer["AuthenticatorCodeLabel"]</label>
+                <input asp-for="Input.TwoFactorCode" autocomplete="one-time-code" inputmode="numeric" />
+                <span asp-validation-for="Input.TwoFactorCode" role="alert"></span>
+            </div>
+
+            <div role="group" class="field" data-orientation="horizontal">
+                <input asp-for="Input.RememberMachine" type="checkbox" role="switch" class="input" />
+                <label asp-for="Input.RememberMachine">@Localizer["RememberMachineLabel"]</label>
+            </div>
+
+            <div class="huia-actions">
+                <button type="submit" class="btn huia-full-width">@Localizer["VerifyButton"]</button>
+            </div>
+        </form>
+    </section>
+</div>

@@ -1,0 +1,162 @@
+@namespace Huia.Emails.Template
+@using Microsoft.Extensions.Localization
+@using Huia.Localization
+@inject IStringLocalizer<HuiaResources> Localizer
+@inject HuiaOptions HuiaOptions
+@model Huia.Emails.EmailViewModel
+@using System.Globalization
+@using Huia.Branding
+@using Huia.Core
+@{
+    Layout = null;
+
+    // Email clients don't reliably support external stylesheets, CSS custom properties, or modern layout, so
+    // this renders a single self-contained HTML document with inline styles and a table-based layout — the
+    // same approach Huia UI's own Basecoat theme conceptually follows (card, primary-colored button, muted
+    // secondary text), just re-expressed in a form email clients render consistently. Colors are plain hex
+    // (not Basecoat's oklch() custom properties, which most email clients — Outlook in particular — don't
+    // parse at all) approximating the same light/dark palette Basecoat's own :root/.dark tokens use.
+    const string fontFamily = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+    const string lightPageBackground = "#f5f5f5";
+    const string lightCardBackground = "#ffffff";
+    const string lightBorder = "#e5e5e5";
+    const string lightHeading = "#0a0a0a";
+    const string lightBody = "#404040";
+    const string lightMuted = "#737373";
+    const string lightCodeBackground = "#f5f5f5";
+    const string defaultPrimaryLight = "#171717";
+    const string defaultPrimaryForegroundLight = "#fafafa";
+
+    const string darkPageBackground = "#0a0a0a";
+    const string darkCardBackground = "#18181b";
+    const string darkBorder = "#333333";
+    const string darkHeading = "#fafafa";
+    const string darkBody = "#d4d4d4";
+    const string darkMuted = "#a3a3a3";
+    const string darkCodeBackground = "#262626";
+    // Basecoat's dark theme inverts the default (unbranded) primary button to a light fill with dark text —
+    // matched here for the same reason: a dark-mode-appropriate default when no custom PrimaryColor is set.
+    const string defaultPrimaryDark = "#e5e5e5";
+    const string defaultPrimaryForegroundDark = "#1a1a1a";
+
+    var branding = HuiaOptions.Branding;
+    var themeMode = branding.DefaultTheme switch
+    {
+        BrandingOptions.ThemeMode.Dark => "dark",
+        BrandingOptions.ThemeMode.Light => "light",
+        _ => "system",
+    };
+    var forcedDark = themeMode == "dark";
+    var systemDark = themeMode == "system";
+
+    // What renders unconditionally: the light palette, unless the branding forces dark — "system" still
+    // renders light here (the safe fallback for clients that ignore the <style> block below entirely) and
+    // relies on the prefers-color-scheme override to switch it for clients that support that.
+    var pageBackground = forcedDark ? darkPageBackground : lightPageBackground;
+    var cardBackground = forcedDark ? darkCardBackground : lightCardBackground;
+    var borderColor = forcedDark ? darkBorder : lightBorder;
+    var headingColor = forcedDark ? darkHeading : lightHeading;
+    var bodyColor = forcedDark ? darkBody : lightBody;
+    var mutedColor = forcedDark ? darkMuted : lightMuted;
+    var codeBackground = forcedDark ? darkCodeBackground : lightCodeBackground;
+
+    var hasCustomPrimary = !string.IsNullOrEmpty(branding.PrimaryColor);
+    var primary = hasCustomPrimary ? branding.PrimaryColor! : (forcedDark ? defaultPrimaryDark : defaultPrimaryLight);
+    var primaryForeground = hasCustomPrimary ? defaultPrimaryForegroundLight : (forcedDark ? defaultPrimaryForegroundDark : defaultPrimaryForegroundLight);
+
+    // Only "system" needs this: "light"/"dark" already rendered their one true palette inline above.
+    // !important is required here — inline style attributes otherwise always beat a stylesheet rule.
+    var darkModeOverride = "";
+    if (systemDark)
+    {
+        var rules = new List<string>
+        {
+            $".hb-page {{ background-color: {darkPageBackground} !important; }}",
+            $".hb-card {{ background-color: {darkCardBackground} !important; border-color: {darkBorder} !important; }}",
+            $".hb-brand, .hb-heading, .hb-code-text {{ color: {darkHeading} !important; }}",
+            $".hb-intro {{ color: {darkBody} !important; }}",
+            $".hb-code-box {{ background-color: {darkCodeBackground} !important; }}",
+            $".hb-footer {{ color: {darkMuted} !important; }}",
+        };
+        if (!hasCustomPrimary)
+        {
+            rules.Add($".hb-button-bg {{ background-color: {defaultPrimaryDark} !important; }}");
+            rules.Add($".hb-button-text {{ color: {defaultPrimaryForegroundDark} !important; }}");
+        }
+
+        darkModeOverride = $"<style>@media (prefers-color-scheme: dark) {{ {string.Join(' ', rules)} }}</style>";
+    }
+
+    var uiCulture = CultureInfo.CurrentUICulture;
+    var htmlLang = uiCulture.TwoLetterISOLanguageName;
+    var htmlDir = uiCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
+}
+<!DOCTYPE html>
+<html lang="@htmlLang" dir="@htmlDir">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>@Model.Heading</title>
+    @Html.Raw(darkModeOverride)
+</head>
+<body style="margin:0;padding:0;background-color:@pageBackground;" class="hb-page">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:@pageBackground;"
+       class="hb-page">
+    <tr>
+        <td align="center" style="padding:32px 16px;">
+            <table role="presentation" width="480" cellpadding="0" cellspacing="0" class="hb-card"
+                   style="max-width:480px;width:100%;background-color:@cardBackground;border:1px solid @borderColor;border-radius:10px;">
+                <tr>
+                    <td style="padding:20px 32px;border-bottom:1px solid @borderColor;">
+                        @if (string.IsNullOrEmpty(branding.LogoUrl))
+                        {
+                            <span class="hb-brand"
+                                  style="font-family:@fontFamily;font-size:18px;font-weight:700;color:@headingColor;">@branding.Title</span>
+                        }
+                        else
+                        {
+                            <img src="@branding.LogoUrl" alt="@branding.Title" height="28"
+                                 style="height:28px;display:block;"/>
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:32px;font-family:@fontFamily;">
+                        <h1 class="hb-heading"
+                            style="margin:0 0 12px;font-size:20px;line-height:28px;color:@headingColor;">@Model.Heading</h1>
+                        <p class="hb-intro"
+                           style="margin:0 0 24px;font-size:15px;line-height:22px;color:@bodyColor;">@Model.IntroText</p>
+                        @if (Model.ButtonText is not null && Model.ButtonUrl is not null)
+                        {
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+                                <tr>
+                                    <td class="hb-button-bg" style="border-radius:6px;background-color:@primary;">
+                                        <a href="@Model.ButtonUrl" class="hb-button-text"
+                                           style="display:inline-block;padding:10px 20px;font-family:@fontFamily;font-size:14px;font-weight:600;color:@primaryForeground;text-decoration:none;border-radius:6px;">
+                                            @Model.ButtonText
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        }
+                        else if (Model.Code is not null)
+                        {
+                            <div class="hb-code-box"
+                                 style="margin:0 0 24px;padding:16px;background-color:@codeBackground;border-radius:6px;text-align:center;">
+                                <span class="hb-code-text"
+                                      style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:24px;font-weight:600;letter-spacing:4px;color:@headingColor;">
+                                    @Model.Code
+                                </span>
+                            </div>
+                        }
+                        <p class="hb-footer"
+                           style="margin:24px 0 0;font-size:13px;line-height:20px;color:@mutedColor;">@Localizer["EmailFooterNote"]</p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

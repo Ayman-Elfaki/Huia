@@ -1,0 +1,80 @@
+{
+  "Metadata": {
+    "title": "Huia Todo Sample",
+    "description": "A todo app demonstrating Huia as an OpenID Connect provider."
+  },
+  "HomePage": {
+    "heading": "Todos",
+    "signInPrompt": "Sign in with your Huia account to manage your todos.",
+    "empty": "No todos yet — add your first one above.",
+    "profileLink": "Profile"
+  },
+  "Auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
+  "NewTodoForm": {
+    "placeholder": "What needs doing?",
+    "add": "Add"
+  },
+  "TodoItem": {
+    "markDone": "Mark as done",
+    "markNotDone": "Mark as not done",
+    "save": "Save",
+    "delete": "Delete"
+  },
+  "IdToken": {
+    "trigger": "Show ID token",
+    "title": "ID token",
+    "description": "The OpenID Connect id_token Huia issued when you signed in, decoded.",
+    "raw": "Raw (compact JWT)",
+    "claims": "Claims (decoded payload)",
+    "none": "No id_token on this session."
+  },
+  "LocaleSwitcher": {
+    "label": "Language"
+  },
+  "ThemeToggle": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "Admin": {
+    "title": "Admin reports",
+    "badge": "Admin only",
+    "totalTodos": "Total todos",
+    "completedTodos": "Completed",
+    "distinctOwners": "Users with todos"
+  },
+  "Profile": {
+    "title": "Profile",
+    "infoTitle": "Account info",
+    "email": "Email",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "saved": "Saved.",
+    "saveFailed": "Couldn't save your changes.",
+    "save": "Save",
+    "passwordTitle": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "passwordChanged": "Password changed.",
+    "passwordChangeFailed": "Couldn't change your password — check your current password.",
+    "changePassword": "Change password",
+    "twoFactorTitle": "Two-factor authentication",
+    "twoFactorStatus": "Status",
+    "twoFactorEnabled": "Enabled",
+    "twoFactorDisabled": "Disabled",
+    "twoFactorActionFailed": "That didn't work — try again.",
+    "recoveryCodesTitle": "Save your recovery codes",
+    "recoveryCodesHint": "Each code can be used once if you lose access to your authenticator app. This is the only time they'll be shown.",
+    "recoveryCodesLeft": "{count, plural, =0 {No recovery codes left} one {# recovery code left} other {# recovery codes left}}",
+    "regenerateRecoveryCodes": "Regenerate recovery codes",
+    "disableTwoFactor": "Disable two-factor authentication",
+    "twoFactorSetupHint": "Scan this key with your authenticator app, or enter it manually:",
+    "openInAuthenticatorApp": "Open in authenticator app",
+    "twoFactorCode": "6-digit code",
+    "enableTwoFactor": "Enable two-factor authentication"
+  }
+}

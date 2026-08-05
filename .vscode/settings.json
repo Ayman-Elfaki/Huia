@@ -1,0 +1,17 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.idea": true,
+        "**/.next": true,
+        "**/.nuxt": true,
+        "**/.vs": true,
+        "**/bin": true,
+        "**/node_modules": true,
+        "**/obj": true
+    },
+    "hide-files.files": []
+}

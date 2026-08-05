@@ -1,0 +1,108 @@
+@using System.Globalization
+@using Huia.Branding
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@inject BrandingOptions Branding
+@{
+    var pageTitle = ViewData["Title"] as string ?? "Account";
+    var branding = Branding;
+    var uiCulture = CultureInfo.CurrentUICulture;
+    var defaultTheme = branding.DefaultTheme switch
+    {
+        BrandingOptions.ThemeMode.Dark => "dark",
+        BrandingOptions.ThemeMode.Light => "light",
+        _ => "system"
+    };
+
+    // User (the default-scheme principal) isn't the sign-in cookie here — Huia's default authentication
+    // scheme is the OpenIddict bearer validator (see ServiceCollectionExtensions), which never authenticates
+    // a browser request with no Authorization header. Authenticating against the Identity cookie scheme
+    // explicitly is what huia-session-sync.js's cross-tab reload relies on to know the real sign-in state.
+    var isAuthenticated = (await Context.AuthenticateAsync(IdentityConstants.ApplicationScheme)).Succeeded;
+}
+<!DOCTYPE html>
+<html lang="@uiCulture.TwoLetterISOLanguageName" dir="@(uiCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr")">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@pageTitle - @branding.Title</title>
+    <link rel="icon" href="@(branding.FaviconUrl ?? Url.Content("~/_content/Huia/favicon.svg"))" />
+
+    @* Prevents a flash of the wrong theme: read the persisted preference (falling back to
+       HuiaBrandingOptions.DefaultTheme, and "system" to the OS preference) before first paint. *@
+    <script>
+        (() => {
+            try {
+                const stored = localStorage.getItem("themeMode");
+                const fallback = "@defaultTheme";
+                const isDark = stored
+                    ? stored === "dark"
+                    : fallback === "system" ? matchMedia("(prefers-color-scheme: dark)").matches : fallback === "dark";
+                if (isDark) {
+                    document.documentElement.classList.add("dark");
+                }
+            } catch (_) { }
+        })();
+    </script>
+
+    @* Local assets first (vendored under wwwroot/lib, no network dependency); each falls back to the
+       public CDN only if the local file fails to load (e.g. a trimmed/incomplete package install). The
+       fallback test probes a real, distinctive Basecoat rule (.btn sets display:inline-flex, which no
+       unstyled element has by default) rather than a purpose-built marker, since Basecoat is vendored
+       as-is and not authored by Huia. *@
+    <link rel="stylesheet" href="~/_content/Huia/lib/basecoat/basecoat.min.css"
+          asp-fallback-href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.min.css"
+          asp-fallback-test-class="btn" asp-fallback-test-property="display" asp-fallback-test-value="inline-flex" />
+    <link rel="stylesheet" href="~/_content/Huia/css/site.css" />
+
+    @if (!string.IsNullOrEmpty(branding.PrimaryColor))
+    {
+        <style>
+            :root { --primary: @branding.PrimaryColor; }
+            :root.dark { --primary: @branding.PrimaryColor; }
+        </style>
+    }
+</head>
+<body data-huia-authenticated="@(isAuthenticated ? "true" : "false")"
+      data-huia-react-to-sign-in="@(ViewData["ReactToSignIn"] is true ? "true" : "false")">
+    <div class="huia-page">
+        <header class="huia-topbar">
+            <a href="@Url.Content("~/")" class="huia-brand">
+                <span>@branding.Title</span>
+            </a>
+        </header>
+        <main class="huia-main">
+            <div class="huia-panel">
+                @if (!string.IsNullOrEmpty(branding.LogoUrl))
+                {
+                    <div class="huia-panel-logo">
+                        <img src="@branding.LogoUrl" alt="@branding.Title" />
+                    </div>
+                }
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    @* Local assets first (vendored under wwwroot/lib); each falls back to the public CDN only if the local
+       file fails to load. Scripts execute in document order — including any fallback the tag helper injects
+       synchronously on error — so the plain <script> below can safely assume all three are loaded by then. *@
+    <script src="~/_content/Huia/lib/basecoat/basecoat.min.js"
+            asp-fallback-src="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/js/all.min.js"
+            asp-fallback-test="window.basecoat"></script>
+    <script src="~/_content/Huia/lib/lucide/lucide.min.js"
+            asp-fallback-src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"
+            asp-fallback-test="window.lucide"></script>
+    <script src="~/_content/Huia/lib/aspnet-validation/aspnet-validation.min.js"
+            asp-fallback-src="https://unpkg.com/aspnet-client-validation@0.11.1/dist/aspnet-validation.js"
+            asp-fallback-test="window.aspnetValidation"></script>
+    <script src="~/_content/Huia/js/huia-session-sync.js"></script>
+
+    <script>
+        if (window.lucide) lucide.createIcons();
+        if (window.aspnetValidation) new aspnetValidation.ValidationService().bootstrap();
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

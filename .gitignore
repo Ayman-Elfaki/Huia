@@ -1,0 +1,47 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Claude Code local/session state (not shared project config)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Aspire
+.aspire/
+
+# Rider / IDE
+.idea/
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Node / Next.js / Nuxt
+node_modules/
+.next/
+.nuxt/
+.output/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sample local SQLite DB (generated at runtime)
+samples/**/*.db
+samples/**/*.db-shm
+samples/**/*.db-wal

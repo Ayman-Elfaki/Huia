@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <resheader name="resmimetype">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="version">
+        <value>2.0</value>
+    </resheader>
+    <resheader name="reader">
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+    <resheader name="writer">
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+
+    <data name="ThemeToggleAriaLabel" xml:space="preserve"><value>Toggle dark mode</value></data>
+
+    <data name="SignInTitle" xml:space="preserve"><value>Sign in</value></data>
+    <data name="SignInSubtitle" xml:space="preserve"><value>Enter your email below to sign in to your account.</value></data>
+    <data name="EmailLabel" xml:space="preserve"><value>Email</value></data>
+    <data name="PasswordLabel" xml:space="preserve"><value>Password</value></data>
+    <data name="RememberMeLabel" xml:space="preserve"><value>Remember me</value></data>
+    <data name="SignInButton" xml:space="preserve"><value>Sign in</value></data>
+    <data name="ForgotPasswordLink" xml:space="preserve"><value>Forgot your password?</value></data>
+    <data name="CreateAccountLink" xml:space="preserve"><value>Create an account</value></data>
+
+    <data name="CreateAccountTitle" xml:space="preserve"><value>Create account</value></data>
+    <data name="CreateAccountSubtitle" xml:space="preserve"><value>Enter your details below to create a new account.</value></data>
+    <data name="FirstNameLabel" xml:space="preserve"><value>First name</value></data>
+    <data name="LastNameLabel" xml:space="preserve"><value>Last name</value></data>
+    <data name="ConfirmPasswordLabel" xml:space="preserve"><value>Confirm password</value></data>
+    <data name="CreateAccountButton" xml:space="preserve"><value>Create account</value></data>
+    <data name="AlreadyHaveAccountLink" xml:space="preserve"><value>Already have an account? Sign in</value></data>
+
+    <data name="AccessDeniedTitle" xml:space="preserve"><value>Access denied</value></data>
+    <data name="AccessDeniedMessage" xml:space="preserve"><value>You don't have permission to access this resource.</value></data>
+    <data name="BackToSignInLink" xml:space="preserve"><value>Back to sign in</value></data>
+
+    <data name="ConfirmEmailTitle" xml:space="preserve"><value>Confirm email</value></data>
+    <data name="ConfirmEmailSuccessMessage" xml:space="preserve"><value>Thank you for confirming your email.</value></data>
+    <data name="ConfirmEmailFailureMessage" xml:space="preserve"><value>We couldn't confirm your email. The link may have expired or already been used.</value></data>
+    <data name="SignInLink" xml:space="preserve"><value>Sign in</value></data>
+
+    <data name="ForgotPasswordTitle" xml:space="preserve"><value>Forgot your password?</value></data>
+    <data name="ForgotPasswordSubtitle" xml:space="preserve"><value>Enter your email and we'll send you a link to reset it.</value></data>
+    <data name="SendResetLinkButton" xml:space="preserve"><value>Send reset link</value></data>
+
+    <data name="CheckYourEmailTitle" xml:space="preserve"><value>Check your email</value></data>
+    <data name="ForgotPasswordConfirmationMessage" xml:space="preserve"><value>If an account with that address exists, we've sent a link to reset your password.</value></data>
+
+    <data name="LockedOutTitle" xml:space="preserve"><value>This account is locked out</value></data>
+    <data name="LockedOutMessage" xml:space="preserve"><value>Too many failed sign-in attempts. Please try again in a few minutes.</value></data>
+
+    <data name="TwoFactorTitle" xml:space="preserve"><value>Two-factor authentication</value></data>
+    <data name="TwoFactorSubtitle" xml:space="preserve"><value>Enter the code from your authenticator app.</value></data>
+    <data name="AuthenticatorCodeLabel" xml:space="preserve"><value>Authenticator code</value></data>
+    <data name="RememberMachineLabel" xml:space="preserve"><value>Remember this machine</value></data>
+    <data name="VerifyButton" xml:space="preserve"><value>Verify</value></data>
+
+    <data name="SignedOutTitle" xml:space="preserve"><value>You've been signed out</value></data>
+    <data name="SignedOutMessage" xml:space="preserve"><value>Your session has ended. You can close this window or sign in again.</value></data>
+    <data name="SignInAgainLink" xml:space="preserve"><value>Sign in again</value></data>
+
+    <data name="ConfirmYourEmailTitle" xml:space="preserve"><value>Confirm your email</value></data>
+    <data name="ConfirmationLinkSentMessage" xml:space="preserve"><value>We've sent a confirmation link to {0}.</value></data>
+
+    <data name="ResendConfirmationTitle" xml:space="preserve"><value>Resend confirmation email</value></data>
+    <data name="ResendConfirmationSubtitle" xml:space="preserve"><value>Enter your email below and we'll resend the confirmation link.</value></data>
+    <data name="ResendConfirmationSentMessage" xml:space="preserve"><value>If an account with that address exists and isn't already confirmed, we've sent a new link.</value></data>
+    <data name="ResendConfirmationButton" xml:space="preserve"><value>Resend confirmation</value></data>
+
+    <data name="ResetPasswordTitle" xml:space="preserve"><value>Reset your password</value></data>
+    <data name="ResetPasswordSubtitle" xml:space="preserve"><value>Enter your email and a new password below.</value></data>
+    <data name="NewPasswordLabel" xml:space="preserve"><value>New password</value></data>
+    <data name="ConfirmNewPasswordLabel" xml:space="preserve"><value>Confirm new password</value></data>
+    <data name="ResetPasswordButton" xml:space="preserve"><value>Reset password</value></data>
+
+    <data name="PasswordResetTitle" xml:space="preserve"><value>Password reset</value></data>
+    <data name="PasswordResetMessage" xml:space="preserve"><value>Your password has been reset.</value></data>
+
+    <data name="ErrorBadRequestTitle" xml:space="preserve"><value>Bad request</value></data>
+    <data name="ErrorBadRequestMessage" xml:space="preserve"><value>The request couldn't be understood or was missing required information.</value></data>
+    <data name="ErrorUnauthorizedTitle" xml:space="preserve"><value>Sign-in required</value></data>
+    <data name="ErrorUnauthorizedMessage" xml:space="preserve"><value>You need to sign in to continue.</value></data>
+    <data name="ErrorForbiddenTitle" xml:space="preserve"><value>Access denied</value></data>
+    <data name="ErrorForbiddenMessage" xml:space="preserve"><value>You don't have permission to access this resource.</value></data>
+    <data name="ErrorNotFoundTitle" xml:space="preserve"><value>Not found</value></data>
+    <data name="ErrorNotFoundMessage" xml:space="preserve"><value>The page you're looking for doesn't exist.</value></data>
+    <data name="ErrorGenericTitle" xml:space="preserve"><value>Something went wrong</value></data>
+    <data name="ErrorGenericMessage" xml:space="preserve"><value>An unexpected error occurred. Please try again.</value></data>
+    <data name="BackToHomeLink" xml:space="preserve"><value>Back to home</value></data>
+
+    <data name="EmailConfirmationHeading" xml:space="preserve"><value>Confirm your email</value></data>
+    <data name="EmailConfirmationIntro" xml:space="preserve"><value>Confirm your email address to finish setting up your account.</value></data>
+    <data name="EmailConfirmationButton" xml:space="preserve"><value>Confirm email</value></data>
+    <data name="EmailResetPasswordHeading" xml:space="preserve"><value>Reset your password</value></data>
+    <data name="EmailResetPasswordLinkIntro" xml:space="preserve"><value>We received a request to reset your password. Click the button below to choose a new one.</value></data>
+    <data name="EmailResetPasswordButton" xml:space="preserve"><value>Reset password</value></data>
+    <data name="EmailResetPasswordCodeIntro" xml:space="preserve"><value>We received a request to reset your password. Enter the code below to continue.</value></data>
+    <data name="EmailFooterNote" xml:space="preserve"><value>If you didn't request this, you can safely ignore this email.</value></data>
+
+    <data name="IdentityErrorDefaultError" xml:space="preserve"><value>An unknown error occurred.</value></data>
+    <data name="IdentityErrorConcurrencyFailure" xml:space="preserve"><value>Optimistic concurrency failure, object has been modified.</value></data>
+    <data name="IdentityErrorPasswordMismatch" xml:space="preserve"><value>Incorrect password.</value></data>
+    <data name="IdentityErrorInvalidToken" xml:space="preserve"><value>Invalid token.</value></data>
+    <data name="IdentityErrorRecoveryCodeRedemptionFailed" xml:space="preserve"><value>Recovery code redemption failed.</value></data>
+    <data name="IdentityErrorLoginAlreadyAssociated" xml:space="preserve"><value>A user with this login already exists.</value></data>
+    <data name="IdentityErrorInvalidUserName" xml:space="preserve"><value>User name '{0}' is invalid, can only contain letters or digits.</value></data>
+    <data name="IdentityErrorInvalidEmail" xml:space="preserve"><value>Email '{0}' is invalid.</value></data>
+    <data name="IdentityErrorDuplicateUserName" xml:space="preserve"><value>User name '{0}' is already taken.</value></data>
+    <data name="IdentityErrorDuplicateEmail" xml:space="preserve"><value>Email '{0}' is already taken.</value></data>
+    <data name="IdentityErrorInvalidRoleName" xml:space="preserve"><value>Role name '{0}' is invalid.</value></data>
+    <data name="IdentityErrorDuplicateRoleName" xml:space="preserve"><value>Role name '{0}' is already taken.</value></data>
+    <data name="IdentityErrorUserAlreadyHasPassword" xml:space="preserve"><value>User already has a password set.</value></data>
+    <data name="IdentityErrorUserLockoutNotEnabled" xml:space="preserve"><value>Lockout is not enabled for this user.</value></data>
+    <data name="IdentityErrorUserAlreadyInRole" xml:space="preserve"><value>User already in role '{0}'.</value></data>
+    <data name="IdentityErrorUserNotInRole" xml:space="preserve"><value>User is not in role '{0}'.</value></data>
+    <data name="IdentityErrorPasswordTooShort" xml:space="preserve"><value>Passwords must be at least {0} characters.</value></data>
+    <data name="IdentityErrorPasswordRequiresUniqueChars" xml:space="preserve"><value>Passwords must use at least {0} different characters.</value></data>
+    <data name="IdentityErrorPasswordRequiresNonAlphanumeric" xml:space="preserve"><value>Passwords must have at least one non alphanumeric character.</value></data>
+    <data name="IdentityErrorPasswordRequiresDigit" xml:space="preserve"><value>Passwords must have at least one digit ('0'-'9').</value></data>
+    <data name="IdentityErrorPasswordRequiresLower" xml:space="preserve"><value>Passwords must have at least one lowercase ('a'-'z').</value></data>
+    <data name="IdentityErrorPasswordRequiresUpper" xml:space="preserve"><value>Passwords must have at least one uppercase ('A'-'Z').</value></data>
+
+    <data name="DeviceTitle" xml:space="preserve"><value>Sign in on another device</value></data>
+    <data name="DeviceSubtitle" xml:space="preserve"><value>Enter the code shown on your device to continue.</value></data>
+    <data name="DeviceCodeLabel" xml:space="preserve"><value>Code</value></data>
+    <data name="DeviceContinueButton" xml:space="preserve"><value>Continue</value></data>
+    <data name="DeviceApplicationIntro" xml:space="preserve"><value>{0} wants to sign in.</value></data>
+    <data name="DeviceScopesIntro" xml:space="preserve"><value>It's asking for</value></data>
+    <data name="DeviceApproveButton" xml:space="preserve"><value>Approve</value></data>
+    <data name="DeviceDenyButton" xml:space="preserve"><value>Deny</value></data>
+    <data name="DeviceApprovedMessage" xml:space="preserve"><value>Signed in. You can close this window and return to your device.</value></data>
+    <data name="DeviceDeniedMessage" xml:space="preserve"><value>Sign-in denied. You can close this window.</value></data>
+    <data name="DeviceInvalidCodeMessage" xml:space="preserve"><value>This code is invalid or has expired. Ask your device to show a new one.</value></data>
+</root>

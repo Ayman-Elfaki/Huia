@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <resheader name="resmimetype">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="version">
+        <value>2.0</value>
+    </resheader>
+    <resheader name="reader">
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+    <resheader name="writer">
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+
+    <data name="ThemeToggleAriaLabel" xml:space="preserve"><value>تبديل الوضع الداكن</value></data>
+
+    <data name="SignInTitle" xml:space="preserve"><value>تسجيل الدخول</value></data>
+    <data name="SignInSubtitle" xml:space="preserve"><value>أدخل بريدك الإلكتروني أدناه لتسجيل الدخول إلى حسابك.</value></data>
+    <data name="EmailLabel" xml:space="preserve"><value>البريد الإلكتروني</value></data>
+    <data name="PasswordLabel" xml:space="preserve"><value>كلمة المرور</value></data>
+    <data name="RememberMeLabel" xml:space="preserve"><value>تذكرني</value></data>
+    <data name="SignInButton" xml:space="preserve"><value>تسجيل الدخول</value></data>
+    <data name="ForgotPasswordLink" xml:space="preserve"><value>هل نسيت كلمة المرور؟</value></data>
+    <data name="CreateAccountLink" xml:space="preserve"><value>إنشاء حساب</value></data>
+
+    <data name="CreateAccountTitle" xml:space="preserve"><value>إنشاء حساب</value></data>
+    <data name="CreateAccountSubtitle" xml:space="preserve"><value>أدخل بياناتك أدناه لإنشاء حساب جديد.</value></data>
+    <data name="FirstNameLabel" xml:space="preserve"><value>الاسم الأول</value></data>
+    <data name="LastNameLabel" xml:space="preserve"><value>اسم العائلة</value></data>
+    <data name="ConfirmPasswordLabel" xml:space="preserve"><value>تأكيد كلمة المرور</value></data>
+    <data name="CreateAccountButton" xml:space="preserve"><value>إنشاء حساب</value></data>
+    <data name="AlreadyHaveAccountLink" xml:space="preserve"><value>لديك حساب بالفعل؟ سجّل الدخول</value></data>
+
+    <data name="AccessDeniedTitle" xml:space="preserve"><value>تم رفض الوصول</value></data>
+    <data name="AccessDeniedMessage" xml:space="preserve"><value>ليس لديك إذن للوصول إلى هذا المورد.</value></data>
+    <data name="BackToSignInLink" xml:space="preserve"><value>العودة إلى تسجيل الدخول</value></data>
+
+    <data name="ConfirmEmailTitle" xml:space="preserve"><value>تأكيد البريد الإلكتروني</value></data>
+    <data name="ConfirmEmailSuccessMessage" xml:space="preserve"><value>شكرًا لتأكيدك بريدك الإلكتروني.</value></data>
+    <data name="ConfirmEmailFailureMessage" xml:space="preserve"><value>تعذّر تأكيد بريدك الإلكتروني. قد يكون الرابط منتهي الصلاحية أو مستخدمًا من قبل.</value></data>
+    <data name="SignInLink" xml:space="preserve"><value>تسجيل الدخول</value></data>
+
+    <data name="ForgotPasswordTitle" xml:space="preserve"><value>هل نسيت كلمة المرور؟</value></data>
+    <data name="ForgotPasswordSubtitle" xml:space="preserve"><value>أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيينها.</value></data>
+    <data name="SendResetLinkButton" xml:space="preserve"><value>إرسال رابط إعادة التعيين</value></data>
+
+    <data name="CheckYourEmailTitle" xml:space="preserve"><value>تحقق من بريدك الإلكتروني</value></data>
+    <data name="ForgotPasswordConfirmationMessage" xml:space="preserve"><value>إذا كان هناك حساب مرتبط بهذا العنوان، فقد أرسلنا رابطًا لإعادة تعيين كلمة المرور الخاصة بك.</value></data>
+
+    <data name="LockedOutTitle" xml:space="preserve"><value>تم قفل هذا الحساب</value></data>
+    <data name="LockedOutMessage" xml:space="preserve"><value>عدد كبير جدًا من محاولات تسجيل الدخول الفاشلة. يرجى المحاولة مرة أخرى بعد بضع دقائق.</value></data>
+
+    <data name="TwoFactorTitle" xml:space="preserve"><value>المصادقة الثنائية</value></data>
+    <data name="TwoFactorSubtitle" xml:space="preserve"><value>أدخل الرمز من تطبيق المصادقة الخاص بك.</value></data>
+    <data name="AuthenticatorCodeLabel" xml:space="preserve"><value>رمز المصادقة</value></data>
+    <data name="RememberMachineLabel" xml:space="preserve"><value>تذكر هذا الجهاز</value></data>
+    <data name="VerifyButton" xml:space="preserve"><value>تحقق</value></data>
+
+    <data name="SignedOutTitle" xml:space="preserve"><value>لقد تم تسجيل خروجك</value></data>
+    <data name="SignedOutMessage" xml:space="preserve"><value>انتهت جلستك. يمكنك إغلاق هذه النافذة أو تسجيل الدخول مرة أخرى.</value></data>
+    <data name="SignInAgainLink" xml:space="preserve"><value>تسجيل الدخول مرة أخرى</value></data>
+
+    <data name="ConfirmYourEmailTitle" xml:space="preserve"><value>تأكيد بريدك الإلكتروني</value></data>
+    <data name="ConfirmationLinkSentMessage" xml:space="preserve"><value>أرسلنا رابط تأكيد إلى {0}.</value></data>
+
+    <data name="ResendConfirmationTitle" xml:space="preserve"><value>إعادة إرسال بريد التأكيد</value></data>
+    <data name="ResendConfirmationSubtitle" xml:space="preserve"><value>أدخل بريدك الإلكتروني أدناه وسنعيد إرسال رابط التأكيد.</value></data>
+    <data name="ResendConfirmationSentMessage" xml:space="preserve"><value>إذا كان هناك حساب مرتبط بهذا العنوان ولم يتم تأكيده بعد، فقد أرسلنا رابطًا جديدًا.</value></data>
+    <data name="ResendConfirmationButton" xml:space="preserve"><value>إعادة إرسال التأكيد</value></data>
+
+    <data name="ResetPasswordTitle" xml:space="preserve"><value>إعادة تعيين كلمة المرور</value></data>
+    <data name="ResetPasswordSubtitle" xml:space="preserve"><value>أدخل بريدك الإلكتروني وكلمة مرور جديدة أدناه.</value></data>
+    <data name="NewPasswordLabel" xml:space="preserve"><value>كلمة المرور الجديدة</value></data>
+    <data name="ConfirmNewPasswordLabel" xml:space="preserve"><value>تأكيد كلمة المرور الجديدة</value></data>
+    <data name="ResetPasswordButton" xml:space="preserve"><value>إعادة تعيين كلمة المرور</value></data>
+
+    <data name="PasswordResetTitle" xml:space="preserve"><value>إعادة تعيين كلمة المرور</value></data>
+    <data name="PasswordResetMessage" xml:space="preserve"><value>تمت إعادة تعيين كلمة المرور الخاصة بك.</value></data>
+
+    <data name="ErrorBadRequestTitle" xml:space="preserve"><value>طلب غير صالح</value></data>
+    <data name="ErrorBadRequestMessage" xml:space="preserve"><value>تعذّر فهم الطلب أو أنه يفتقد إلى معلومات مطلوبة.</value></data>
+    <data name="ErrorUnauthorizedTitle" xml:space="preserve"><value>تسجيل الدخول مطلوب</value></data>
+    <data name="ErrorUnauthorizedMessage" xml:space="preserve"><value>يجب عليك تسجيل الدخول للمتابعة.</value></data>
+    <data name="ErrorForbiddenTitle" xml:space="preserve"><value>تم رفض الوصول</value></data>
+    <data name="ErrorForbiddenMessage" xml:space="preserve"><value>ليس لديك إذن للوصول إلى هذا المورد.</value></data>
+    <data name="ErrorNotFoundTitle" xml:space="preserve"><value>غير موجود</value></data>
+    <data name="ErrorNotFoundMessage" xml:space="preserve"><value>الصفحة التي تبحث عنها غير موجودة.</value></data>
+    <data name="ErrorGenericTitle" xml:space="preserve"><value>حدث خطأ ما</value></data>
+    <data name="ErrorGenericMessage" xml:space="preserve"><value>حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.</value></data>
+    <data name="BackToHomeLink" xml:space="preserve"><value>العودة إلى الصفحة الرئيسية</value></data>
+
+    <data name="EmailConfirmationHeading" xml:space="preserve"><value>تأكيد بريدك الإلكتروني</value></data>
+    <data name="EmailConfirmationIntro" xml:space="preserve"><value>أكّد عنوان بريدك الإلكتروني لإتمام إعداد حسابك.</value></data>
+    <data name="EmailConfirmationButton" xml:space="preserve"><value>تأكيد البريد الإلكتروني</value></data>
+    <data name="EmailResetPasswordHeading" xml:space="preserve"><value>إعادة تعيين كلمة المرور</value></data>
+    <data name="EmailResetPasswordLinkIntro" xml:space="preserve"><value>تلقينا طلبًا لإعادة تعيين كلمة المرور الخاصة بك. انقر على الزر أدناه لاختيار كلمة مرور جديدة.</value></data>
+    <data name="EmailResetPasswordButton" xml:space="preserve"><value>إعادة تعيين كلمة المرور</value></data>
+    <data name="EmailResetPasswordCodeIntro" xml:space="preserve"><value>تلقينا طلبًا لإعادة تعيين كلمة المرور الخاصة بك. أدخل الرمز أدناه للمتابعة.</value></data>
+    <data name="EmailFooterNote" xml:space="preserve"><value>إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة بأمان.</value></data>
+
+    <data name="IdentityErrorDefaultError" xml:space="preserve"><value>حدث خطأ غير معروف.</value></data>
+    <data name="IdentityErrorConcurrencyFailure" xml:space="preserve"><value>فشل التزامن المتفائل، تم تعديل الكائن.</value></data>
+    <data name="IdentityErrorPasswordMismatch" xml:space="preserve"><value>كلمة المرور غير صحيحة.</value></data>
+    <data name="IdentityErrorInvalidToken" xml:space="preserve"><value>الرمز غير صالح.</value></data>
+    <data name="IdentityErrorRecoveryCodeRedemptionFailed" xml:space="preserve"><value>فشل استخدام رمز الاسترداد.</value></data>
+    <data name="IdentityErrorLoginAlreadyAssociated" xml:space="preserve"><value>يوجد مستخدم بهذا الحساب بالفعل.</value></data>
+    <data name="IdentityErrorInvalidUserName" xml:space="preserve"><value>اسم المستخدم '{0}' غير صالح، يمكن أن يحتوي فقط على أحرف أو أرقام.</value></data>
+    <data name="IdentityErrorInvalidEmail" xml:space="preserve"><value>البريد الإلكتروني '{0}' غير صالح.</value></data>
+    <data name="IdentityErrorDuplicateUserName" xml:space="preserve"><value>اسم المستخدم '{0}' مُستخدم بالفعل.</value></data>
+    <data name="IdentityErrorDuplicateEmail" xml:space="preserve"><value>البريد الإلكتروني '{0}' مُستخدم بالفعل.</value></data>
+    <data name="IdentityErrorInvalidRoleName" xml:space="preserve"><value>اسم الدور '{0}' غير صالح.</value></data>
+    <data name="IdentityErrorDuplicateRoleName" xml:space="preserve"><value>اسم الدور '{0}' مُستخدم بالفعل.</value></data>
+    <data name="IdentityErrorUserAlreadyHasPassword" xml:space="preserve"><value>المستخدم لديه كلمة مرور مضبوطة بالفعل.</value></data>
+    <data name="IdentityErrorUserLockoutNotEnabled" xml:space="preserve"><value>الإيقاف المؤقت غير مُفعّل لهذا المستخدم.</value></data>
+    <data name="IdentityErrorUserAlreadyInRole" xml:space="preserve"><value>المستخدم موجود بالفعل في الدور '{0}'.</value></data>
+    <data name="IdentityErrorUserNotInRole" xml:space="preserve"><value>المستخدم ليس في الدور '{0}'.</value></data>
+    <data name="IdentityErrorPasswordTooShort" xml:space="preserve"><value>يجب أن تتكون كلمة المرور من {0} أحرف على الأقل.</value></data>
+    <data name="IdentityErrorPasswordRequiresUniqueChars" xml:space="preserve"><value>يجب أن تستخدم كلمة المرور {0} أحرف مختلفة على الأقل.</value></data>
+    <data name="IdentityErrorPasswordRequiresNonAlphanumeric" xml:space="preserve"><value>يجب أن تحتوي كلمة المرور على رمز غير أبجدي رقمي واحد على الأقل.</value></data>
+    <data name="IdentityErrorPasswordRequiresDigit" xml:space="preserve"><value>يجب أن تحتوي كلمة المرور على رقم واحد على الأقل ('0'-'9').</value></data>
+    <data name="IdentityErrorPasswordRequiresLower" xml:space="preserve"><value>يجب أن تحتوي كلمة المرور على حرف صغير واحد على الأقل ('a'-'z').</value></data>
+    <data name="IdentityErrorPasswordRequiresUpper" xml:space="preserve"><value>يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل ('A'-'Z').</value></data>
+
+    <data name="DeviceTitle" xml:space="preserve"><value>تسجيل الدخول على جهاز آخر</value></data>
+    <data name="DeviceSubtitle" xml:space="preserve"><value>أدخل الرمز الظاهر على جهازك للمتابعة.</value></data>
+    <data name="DeviceCodeLabel" xml:space="preserve"><value>الرمز</value></data>
+    <data name="DeviceContinueButton" xml:space="preserve"><value>متابعة</value></data>
+    <data name="DeviceApplicationIntro" xml:space="preserve"><value>{0} يريد تسجيل الدخول.</value></data>
+    <data name="DeviceScopesIntro" xml:space="preserve"><value>يطلب الوصول إلى</value></data>
+    <data name="DeviceApproveButton" xml:space="preserve"><value>موافقة</value></data>
+    <data name="DeviceDenyButton" xml:space="preserve"><value>رفض</value></data>
+    <data name="DeviceApprovedMessage" xml:space="preserve"><value>تم تسجيل الدخول. يمكنك إغلاق هذه النافذة والعودة إلى جهازك.</value></data>
+    <data name="DeviceDeniedMessage" xml:space="preserve"><value>تم رفض تسجيل الدخول. يمكنك إغلاق هذه النافذة.</value></data>
+    <data name="DeviceInvalidCodeMessage" xml:space="preserve"><value>هذا الرمز غير صالح أو منتهي الصلاحية. اطلب من جهازك عرض رمز جديد.</value></data>
+</root>

@@ -1,0 +1,12 @@
+@page
+@model LockoutModel
+@{
+    ViewData["Title"] = Localizer["LockedOutTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["LockedOutTitle"]</h2>
+        <p>@Localizer["LockedOutMessage"]</p>
+    </header>
+</div>

@@ -1,0 +1,31 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <GenerateDocumentationFile Condition="$(MSBuildProjectDirectory.Contains('\src\'))">true</GenerateDocumentationFile>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Package metadata" Condition="$(MSBuildProjectDirectory.Contains('\src\'))">
+    <IsPackable>true</IsPackable>
+    <Authors>Ayman Elfaki</Authors>
+    <Company>Huia</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Ayman-Elfaki/Huia</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Ayman-Elfaki/Huia</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>identity;openiddict;oauth;oidc;aspnetcore;efcore</PackageTags>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Test/sample projects" Condition="!$(MSBuildProjectDirectory.Contains('\src\'))">
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+</Project>
