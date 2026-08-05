@@ -69,6 +69,12 @@ var web = builder.AddNextJsApp("web", "../Huia.TodoApp")
     // process instead. Safe here because every call this process makes over HTTPS stays on loopback
     // (TodoApi, on the same machine); never do this for a process that talks to the public internet.
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
+    // Without this, Auth.js falls back to inferring its own base URL from the request on every single
+    // request and logs a warning each time it does — see https://next-auth.js.org/warnings#nextauth_url.
+    // Literal, not web.GetEndpoint("http"), for the same reason AUTH_HUIA_POST_LOGOUT_REDIRECT_URI below is:
+    // this resource can't reference its own endpoint from within its own builder chain, but the port is
+    // pinned (see WithHttpEndpoint above), so the literal is exact.
+    .WithEnvironment("NEXTAUTH_URL", "http://localhost:3000")
     .WithEnvironment("AUTH_SECRET", authSecret)
     .WithEnvironment("AUTH_HUIA_CLIENT_ID", "todo-web")
     .WithEnvironment("AUTH_HUIA_CLIENT_SECRET", webClientSecret)

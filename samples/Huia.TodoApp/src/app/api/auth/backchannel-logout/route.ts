@@ -1,4 +1,5 @@
 import {createRemoteJWKSet, jwtVerify} from "jose";
+import {deleteSession} from "@/lib/session-store";
 
 /**
  * Receives the OpenID Connect Back-Channel Logout 1.0 notification Huia's LogoutNotifier POSTs here
@@ -61,6 +62,12 @@ export async function POST(request: Request) {
     if (!payload.sid || typeof payload.sid !== "string") {
         return invalidRequest("logout_token is missing a sid claim.");
     }
+
+    // This is what actually revokes the session: deleting its Redis-stored tokens so the next request
+    // bearing this session's (still otherwise-valid) cookie gets treated as signed out by auth.ts's `jwt`
+    // callback, instead of silently refreshing an access token whose underlying session Huia has already
+    // ended.
+    await deleteSession(payload.sid);
 
     // Cache-Control: no-store per the spec, so no intermediary caches this response for a subsequent
     // unrelated request.

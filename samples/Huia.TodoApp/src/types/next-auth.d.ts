@@ -4,7 +4,8 @@
 // even depend on, so augmenting that silently merges with nothing.
 declare module "next-auth" {
   interface Session {
-    // Populated by the `session` callback in auth.ts from the JWT (see the `jwt` callback there).
+    // Populated by the `session` callback in auth.ts from the session store (see session-store.ts) — not
+    // from the JWT itself, which no longer carries these (see the `jwt` callback's own remarks).
     accessToken?: string;
     idToken?: string;
     sub?: string;
@@ -38,16 +39,15 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    accessToken?: string;
-    idToken?: string;
+    // Huia's own per-sign-in session id (the OIDC `sid` claim) — the only thing this JWT needs to carry to
+    // look the rest up in the session store (see session-store.ts/auth.ts's `jwt` callback). The actual
+    // access/id/refresh tokens deliberately do NOT live here anymore: keeping them out of the cookie is the
+    // whole point of the session store, and it's also what lets /api/auth/backchannel-logout actually
+    // revoke a session (deleting a Redis key) instead of a stateless cookie living out its own expiry.
     sid?: string;
     givenName?: string;
     familyName?: string;
     roles?: string[];
-    // See RefreshableToken in @/lib/token-refresh — this interface is kept structurally compatible with it
-    // so the jwt callback can pass `token` straight to refreshAccessToken/shouldRefresh.
-    refreshToken?: string;
-    accessTokenExpires?: number;
     error?: string;
   }
 }
