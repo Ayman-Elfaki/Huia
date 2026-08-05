@@ -1,8 +1,7 @@
 using System.Security.Claims;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using Huia.Common;
 using Huia.Core;
+using Huia.Emails;
 using Huia.Identity;
 using Huia.Sessions;
 using Microsoft.AspNetCore;
@@ -32,6 +31,7 @@ internal static class EndSessionEndpoints
         LogoutNotifier logoutNotifier,
         UserSessionService sessions,
         HuiaOptions huiaOptions,
+        RazorViewRenderer viewRenderer,
         ILogger<LogoutNotifier> logger,
         CancellationToken cancellationToken)
     {
@@ -74,7 +74,9 @@ internal static class EndSessionEndpoints
                 // authority with no path, adds a trailing slash) — this must match byte-for-byte what
                 // relying parties already know as this OP's issuer from discovery/their ID tokens' iss claim.
                 var issuer = new Uri(huiaOptions.Issuer, UriKind.Absolute).AbsoluteUri;
-                var html = BuildFrontChannelLogoutPage(targets.FrontChannelLogoutUris, issuer, continueUrl);
+                var iframeSources = BuildIframeSources(targets.FrontChannelLogoutUris, issuer);
+                var html = await viewRenderer.RenderAsync("/Areas/Identity/Pages/Account/FrontChannelSignOut.cshtml",
+                    new FrontChannelSignOutViewModel(iframeSources, continueUrl));
                 return Results.Content(html, "text/html");
             }
         }
@@ -105,80 +107,15 @@ internal static class EndSessionEndpoints
             parameters.Where(pair => pair.Value is not null));
     }
 
-    private static string BuildFrontChannelLogoutPage(IReadOnlyList<Uri> frontChannelLogoutUris, string issuer,
-        string continueUrl)
-    {
-        var iframes = string.Join('\n', frontChannelLogoutUris.Select(uri =>
+    /// <summary>
+    /// Builds each relying party's front-channel logout iframe <c>src</c> — the logout URI plus the required
+    /// <c>iss</c> query parameter (see the OpenID Connect RP-Initiated Logout spec). Left un-encoded: Razor's
+    /// <c>@@src</c> interpolation in FrontChannelSignOut.cshtml HTML-encodes it on write.
+    /// </summary>
+    private static IReadOnlyList<string> BuildIframeSources(IReadOnlyList<Uri> frontChannelLogoutUris, string issuer)
+        => [.. frontChannelLogoutUris.Select(uri =>
         {
             var separator = uri.Query.Length > 0 ? '&' : '?';
-            var src = $"{uri}{separator}iss={Uri.EscapeDataString(issuer)}";
-            return
-                $"""<iframe src="{HtmlEncoder.Default.Encode(src)}" style="display:none" width="0" height="0"></iframe>""";
-        }));
-
-        // The delay gives the iframes a moment to actually load before the browser navigates away; there is
-        // no reliable cross-origin "all iframes finished" signal (their content is on other clients' own
-        // origins), so this is a best-effort wait rather than something that blocks indefinitely on it.
-        //lang=html
-        return $$"""
-                 <!DOCTYPE html>
-                 <html lang="en">
-                    <head>
-                        <meta charset="utf-8"><title>Signing out&hellip;</title>
-                        <style>
-                                    /* 1. Box sizing rules globally */
-                             *, *::before, *::after {
-                               box-sizing: border-box;
-                             }
-                             
-                             /* 2. Remove default margins for layout elements */
-                             body, h1, h2, h3, h4, p, figure, blockquote, dl, dd {
-                               margin: 0;
-                             }
-                             
-                             /* 3. Core body defaults */
-                             body {
-                               min-height: 100vh;
-                               line-height: 1.5;
-                               -webkit-font-smoothing: antialiased;
-                               height: 100vh; /* Or any specific height */
-                             }
-                             
-                             /* 4. Make media elements easier to work with */
-                             img, picture, fixed, svg, video, canvas {
-                               max-width: 100%;
-                               display: block;
-                             }
-                             
-                             /* 5. Inherit fonts for form controls */
-                             input, button, textarea, select {
-                               font: inherit;
-                             }
-                             
-                             /* 6. Avoid text overflows */
-                             p, h1, h2, h3, h4, h5, h6 {
-                               overflow-wrap: break-word;
-                             }
-                             
-                            .container {
-                               display: grid;
-                               place-items: center;
-                               background: #1e1e1e;
-                               color: white;
-                              
-                             }
-                        </style>
-                    </head>
-                     <body>
-                        <div class="container">
-                         <p>Signing out&hellip;</p>
-                        </div>
-                         {{iframes}}
-                         <script>
-                            setTimeout(function () { window.location.replace({{JsonSerializer.Serialize(continueUrl)}}); }, 1500);
-                         </script>
-                     </body>
-                 </html>
-                 """;
-    }
+            return $"{uri}{separator}iss={Uri.EscapeDataString(issuer)}";
+        })];
 }

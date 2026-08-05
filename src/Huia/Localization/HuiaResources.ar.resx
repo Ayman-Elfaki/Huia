@@ -61,6 +61,9 @@
     <data name="SignedOutMessage" xml:space="preserve"><value>انتهت جلستك. يمكنك إغلاق هذه النافذة أو تسجيل الدخول مرة أخرى.</value></data>
     <data name="SignInAgainLink" xml:space="preserve"><value>تسجيل الدخول مرة أخرى</value></data>
 
+    <data name="SigningOutTitle" xml:space="preserve"><value>جارٍ تسجيل الخروج&#8230;</value></data>
+    <data name="SigningOutMessage" xml:space="preserve"><value>يرجى الانتظار بينما نسجل خروجك من كل تطبيق متصل.</value></data>
+
     <data name="ConfirmYourEmailTitle" xml:space="preserve"><value>تأكيد بريدك الإلكتروني</value></data>
     <data name="ConfirmationLinkSentMessage" xml:space="preserve"><value>أرسلنا رابط تأكيد إلى {0}.</value></data>
 

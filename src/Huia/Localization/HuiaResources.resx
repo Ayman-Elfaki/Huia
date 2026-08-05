@@ -61,6 +61,9 @@
     <data name="SignedOutMessage" xml:space="preserve"><value>Your session has ended. You can close this window or sign in again.</value></data>
     <data name="SignInAgainLink" xml:space="preserve"><value>Sign in again</value></data>
 
+    <data name="SigningOutTitle" xml:space="preserve"><value>Signing out&#8230;</value></data>
+    <data name="SigningOutMessage" xml:space="preserve"><value>Please wait while we sign you out of every connected app.</value></data>
+
     <data name="ConfirmYourEmailTitle" xml:space="preserve"><value>Confirm your email</value></data>
     <data name="ConfirmationLinkSentMessage" xml:space="preserve"><value>We've sent a confirmation link to {0}.</value></data>
 
