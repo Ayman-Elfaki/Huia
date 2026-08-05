@@ -44,12 +44,21 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  nativeButton,
+  render,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      render={render}
+      // Base UI's own default (true) assumes `render` still targets a <button> — true for the
+      // Dropdown/Dialog trigger and Close usages that render Button itself, but not when Button's own
+      // `render` swaps in something else (e.g. next/link's <a>, as the profile link on the home page does):
+      // defaulting to false there unless the caller says otherwise avoids Base UI's dev-only
+      // "expected a native <button>" warning without pushing that detail onto every call site.
+      nativeButton={nativeButton ?? !render}
       {...props}
     />
   )
