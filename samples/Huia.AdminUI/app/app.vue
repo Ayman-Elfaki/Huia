@@ -26,6 +26,8 @@ const navigationItems = [
 
 <template>
   <UApp>
+    <NuxtLoadingIndicator color="var(--ui-primary)" />
+
     <div v-if="!loggedIn" class="flex items-center justify-center h-screen">
       <UButton label="Sign in" icon="i-lucide-log-in" size="lg" @click="() => useOidcAuth().login()" />
     </div>
@@ -69,7 +71,18 @@ const navigationItems = [
         </template>
       </UDashboardSidebar>
 
-      <NuxtPage />
+      <NuxtPage>
+        <template #default="{ Component }">
+          <Suspense>
+            <component :is="Component" />
+            <template #fallback>
+              <div class="flex items-center justify-center h-full py-24">
+                <UIcon name="i-lucide-loader-circle" class="animate-spin size-6 text-muted" />
+              </div>
+            </template>
+          </Suspense>
+        </template>
+      </NuxtPage>
     </UDashboardGroup>
   </UApp>
 </template>

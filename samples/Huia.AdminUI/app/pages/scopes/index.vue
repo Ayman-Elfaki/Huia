@@ -75,9 +75,16 @@ async function submit() {
   }
 }
 
+const deletingId = ref<string | null>(null)
+
 async function remove(scope: ScopeResponse) {
-  await $fetch(`/api/admin/scopes/${scope.id}`, { method: 'DELETE' })
-  await refresh()
+  deletingId.value = scope.id
+  try {
+    await $fetch(`/api/admin/scopes/${scope.id}`, { method: 'DELETE' })
+    await refresh()
+  } finally {
+    deletingId.value = null
+  }
 }
 </script>
 
@@ -107,7 +114,8 @@ async function remove(scope: ScopeResponse) {
         <template #actions-cell="{ row }">
           <div class="flex gap-1 justify-end">
             <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" @click="openEdit(row.original)" />
-            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm" @click="remove(row.original)" />
+            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm"
+              :loading="deletingId === row.original.id" @click="remove(row.original)" />
           </div>
         </template>
       </UTable>

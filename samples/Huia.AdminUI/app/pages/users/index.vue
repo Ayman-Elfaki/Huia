@@ -81,14 +81,28 @@ async function submit() {
   }
 }
 
+const deletingId = ref<string | null>(null)
+
 async function remove(user: UserResponse) {
-  await $fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
-  await refresh()
+  deletingId.value = user.id
+  try {
+    await $fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+    await refresh()
+  } finally {
+    deletingId.value = null
+  }
 }
 
+const togglingLockoutId = ref<string | null>(null)
+
 async function toggleLockout(user: UserResponse) {
-  await $fetch(`/api/admin/users/${user.id}/lockout`, { method: 'POST', body: { locked: !user.isLockedOut } })
-  await refresh()
+  togglingLockoutId.value = user.id
+  try {
+    await $fetch(`/api/admin/users/${user.id}/lockout`, { method: 'POST', body: { locked: !user.isLockedOut } })
+    await refresh()
+  } finally {
+    togglingLockoutId.value = null
+  }
 }
 
 // --- Roles ---
@@ -200,9 +214,10 @@ async function submitReset() {
               @click="openReset(row.original)" />
             <UButton :icon="row.original.isLockedOut ? 'i-lucide-lock-open' : 'i-lucide-lock'" color="neutral"
               variant="ghost" size="sm" :title="row.original.isLockedOut ? 'Unlock' : 'Lock out'"
-              @click="toggleLockout(row.original)" />
+              :loading="togglingLockoutId === row.original.id" @click="toggleLockout(row.original)" />
             <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" @click="openEdit(row.original)" />
-            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm" @click="remove(row.original)" />
+            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm"
+              :loading="deletingId === row.original.id" @click="remove(row.original)" />
           </div>
         </template>
       </UTable>

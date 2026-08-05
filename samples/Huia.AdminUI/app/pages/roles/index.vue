@@ -49,9 +49,16 @@ async function submit() {
   }
 }
 
+const deletingId = ref<string | null>(null)
+
 async function remove(role: RoleResponse) {
-  await $fetch(`/api/admin/roles/${role.id}`, { method: 'DELETE' })
-  await refresh()
+  deletingId.value = role.id
+  try {
+    await $fetch(`/api/admin/roles/${role.id}`, { method: 'DELETE' })
+    await refresh()
+  } finally {
+    deletingId.value = null
+  }
 }
 
 // --- Members ---
@@ -94,7 +101,8 @@ async function openMembers(role: RoleResponse) {
             <UButton icon="i-lucide-users" color="neutral" variant="ghost" size="sm" title="Members"
               @click="openMembers(row.original)" />
             <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" @click="openEdit(row.original)" />
-            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm" @click="remove(row.original)" />
+            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm"
+              :loading="deletingId === row.original.id" @click="remove(row.original)" />
           </div>
         </template>
       </UTable>
