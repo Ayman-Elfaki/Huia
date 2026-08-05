@@ -27,6 +27,10 @@
     "trigger": "إظهار رمز الهوية",
     "title": "رمز الهوية",
     "description": "رمز OpenID Connect (id_token) الذي أصدرته Huia عند تسجيل الدخول، بعد فك الترميز.",
+    "accessTokenExpiresIn": "ينتهي رمز الوصول خلال {countdown}",
+    "refreshTokenOnFile": "رمز تحديث متوفر",
+    "noRefreshToken": "لا يوجد رمز تحديث",
+    "accessTokenRefreshHint": "يُستبدل رمز الوصول القريب من الانتهاء تلقائيًا برمز جديد باستخدام رمز التحديث — دون الحاجة لتسجيل الدخول مرة أخرى.",
     "raw": "الرمز الخام (JWT مضغوط)",
     "claims": "المطالبات (الحمولة بعد فك الترميز)",
     "none": "لا يوجد رمز هوية لهذه الجلسة."
@@ -75,6 +79,13 @@
     "twoFactorSetupHint": "امسح هذا المفتاح باستخدام تطبيق المصادقة، أو أدخله يدويًا:",
     "openInAuthenticatorApp": "فتح في تطبيق المصادقة",
     "twoFactorCode": "رمز مكوّن من 6 أرقام",
-    "enableTwoFactor": "تفعيل المصادقة الثنائية"
+    "enableTwoFactor": "تفعيل المصادقة الثنائية",
+    "sessionsTitle": "الجلسات",
+    "sessionsSubtitle": "كل جهاز أو متصفح مسجّل الدخول حاليًا.",
+    "sessionsActionFailed": "لم ينجح ذلك — حاول مرة أخرى.",
+    "thisDevice": "هذا الجهاز",
+    "signOutSession": "تسجيل الخروج",
+    "signOutOtherSessions": "تسجيل الخروج من كل الجلسات الأخرى",
+    "lastActive": "آخر نشاط {date}"
   }
 }

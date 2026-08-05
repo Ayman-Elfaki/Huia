@@ -1,3 +1,4 @@
+using Huia.Applications;
 using Huia.Common;
 using Huia.Endpoints.Connect;
 using Huia.Sessions;
@@ -71,7 +72,7 @@ internal static class SessionsEndpoints
             return Results.NotFound();
         }
 
-        await RevokeSessionAsync(session, sessions, logoutNotifier, authorizationManager, cancellationToken)
+        await sessions.RevokeWithNotificationAsync(session, logoutNotifier, authorizationManager, cancellationToken)
             .ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -103,41 +104,14 @@ internal static class SessionsEndpoints
 
             foreach (var session in batch.Where(s => s.RevokedAt is null))
             {
-                await RevokeSessionAsync(session, sessions, logoutNotifier, authorizationManager, cancellationToken)
-                    .ConfigureAwait(false);
+                await sessions.RevokeWithNotificationAsync(session, logoutNotifier, authorizationManager,
+                    cancellationToken).ConfigureAwait(false);
             }
 
             offset += batchSize;
         }
 
         return Results.NoContent();
-    }
-
-    /// <summary>
-    /// Notifies the session's clients (same as a normal sign-out) and additionally revokes every OpenIddict
-    /// authorization tied to it — an admin's explicit revoke is a strictly stronger action than an
-    /// end-user's own "Sign out": that one only notifies (see <see cref="LogoutNotifier"/>'s own remarks),
-    /// leaving the underlying authorization/refresh token technically valid at the OpenIddict layer (the
-    /// session's own liveness check in <see cref="UserSessionService"/>/the token endpoint is what
-    /// actually blocks its further use in that case).
-    /// </summary>
-    private static async Task RevokeSessionAsync(UserSessionDescriptor session, UserSessionService sessions,
-        LogoutNotifier logoutNotifier, IOpenIddictAuthorizationManager manager,
-        CancellationToken ct)
-    {
-        var targets = await logoutNotifier
-            .CollectAsync(session.UserId, session.Id, excludeClientId: null, ct)
-            .ConfigureAwait(false);
-        await logoutNotifier.NotifyBackChannelAsync(session.Id, targets.BackChannelLogoutTargets, ct)
-            .ConfigureAwait(false);
-
-        await foreach (var authorization in SessionAuthorizationLookup.FindBySessionAsync(
-                           manager, session.UserId, session.Id, ct).ConfigureAwait(false))
-        {
-            await manager.TryRevokeAsync(authorization, ct).ConfigureAwait(false);
-        }
-
-        await sessions.RevokeAsync(session.Id, ct).ConfigureAwait(false);
     }
 
     /// <summary>

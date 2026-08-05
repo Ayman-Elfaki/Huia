@@ -43,7 +43,11 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
               <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground sm:max-w-48 sm:flex-none">
                 {fullName ?? session.user?.email ?? session.user?.name}
               </span>
-              <IdTokenPanel idToken={session.idToken} />
+              <IdTokenPanel
+                idToken={session.idToken}
+                accessTokenExpires={session.accessTokenExpires}
+                hasRefreshToken={session.hasRefreshToken}
+              />
               <Button variant="outline" size="sm" render={<Link href="/profile" />}>
                 {t("profileLink")}
               </Button>

@@ -1,4 +1,6 @@
+using Huia.Common;
 using Microsoft.AspNetCore.Http;
+using OpenIddict.Abstractions;
 
 namespace Huia.Sessions;
 
@@ -55,4 +57,32 @@ public sealed class UserSessionService(
     /// </summary>
     public Task RevokeAsync(string sessionId, CancellationToken cancellationToken = default) =>
         manager.RevokeAsync(sessionId, timeProvider.GetUtcNow(), cancellationToken);
+
+    /// <summary>
+    /// An explicit revoke of someone else's live session — an admin acting on a user, or a user acting on
+    /// one of their own other sessions — which is a strictly stronger action than that session's own
+    /// end-user "Sign out": it additionally notifies every relying party tied to the session over the
+    /// back channel (see <see cref="LogoutNotifier"/>) and revokes every OpenIddict authorization tied to
+    /// it, rather than leaving them technically valid until this session's own liveness check
+    /// (<see cref="IsLiveAsync"/>/the token endpoint) catches it. There's no front-channel notification here
+    /// (unlike <c>EndSessionEndpoints</c>) — that needs a live browser to load an iframe into, which an
+    /// out-of-band API call triggering this has no way to provide.
+    /// </summary>
+    public async Task RevokeWithNotificationAsync(UserSessionDescriptor session, LogoutNotifier logoutNotifier,
+        IOpenIddictAuthorizationManager authorizationManager, CancellationToken cancellationToken = default)
+    {
+        var targets = await logoutNotifier
+            .CollectAsync(session.UserId, session.Id, excludeClientId: null, cancellationToken)
+            .ConfigureAwait(false);
+        await logoutNotifier.NotifyBackChannelAsync(session.Id, targets.BackChannelLogoutTargets, cancellationToken)
+            .ConfigureAwait(false);
+
+        await foreach (var authorization in SessionAuthorizationLookup.FindBySessionAsync(
+                           authorizationManager, session.UserId, session.Id, cancellationToken).ConfigureAwait(false))
+        {
+            await authorizationManager.TryRevokeAsync(authorization, cancellationToken).ConfigureAwait(false);
+        }
+
+        await RevokeAsync(session.Id, cancellationToken).ConfigureAwait(false);
+    }
 }

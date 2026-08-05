@@ -1,12 +1,13 @@
 using OpenIddict.Abstractions;
 
-namespace Huia.Endpoints.Admin;
+namespace Huia.Applications;
 
 /// <summary>
 /// Resolves OpenIddict's internal application id to the application's public <c>client_id</c> — the only
-/// application identifier an admin ever configured or sees elsewhere (see <c>ApplicationsEndpoints</c>).
-/// Shared by <c>AuthorizationsEndpoints</c> and <c>SessionsEndpoints</c>, both of which surface the
-/// application(s) behind an authorization/session instead of the opaque internal id.
+/// application identifier a caller ever configured or sees elsewhere (see <c>ApplicationsEndpoints</c>).
+/// Shared by <c>Endpoints.Admin.AuthorizationsEndpoints</c>/<c>SessionsEndpoints</c> and
+/// <c>Endpoints.Manage.ManageSessionsEndpoints</c>, all of which surface the application(s) behind an
+/// authorization/session instead of the opaque internal id.
 /// </summary>
 internal static class ApplicationClientIdResolver
 {

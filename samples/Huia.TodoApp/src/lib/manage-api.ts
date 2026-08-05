@@ -17,6 +17,18 @@ export type TwoFactorStatus = {
     recoveryCodesLeft: number;
 };
 
+export type ManageSession = {
+    id: string;
+    createdAt: string;
+    lastActivityAt: string;
+    expiresAt: string;
+    ipAddress: string | null;
+    userAgent: string | null;
+    revokedAt: string | null;
+    isCurrent: boolean;
+    applicationClientIds: string[];
+};
+
 /** Thrown for a 400 ValidationProblem response — e.g. a wrong current password — so callers can surface
  * field-level errors instead of a generic failure. */
 export class ManageApiValidationError extends Error {
@@ -43,6 +55,12 @@ async function manageFetch<T>(path: string, accessToken: string, init?: RequestI
 
     if (!response.ok) {
         throw new Error(`Manage API request to ${path} failed with ${response.status}: ${await response.text()}`);
+    }
+
+    // Revoke endpoints return 204 No Content — response.json() would throw on the empty body, and callers
+    // expecting Promise<void> never actually need the parsed value anyway.
+    if (response.status === 204) {
+        return undefined as T;
     }
 
     return response.json();
@@ -83,4 +101,23 @@ export function setTwoFactor(
         method: "POST",
         body: JSON.stringify(body),
     });
+}
+
+/** Every live/revoked session for the signed-in user, most recently active first — the one backing the
+ * caller's own access token is flagged `isCurrent`. */
+export function getSessions(accessToken: string): Promise<ManageSession[]> {
+    return manageFetch("/api/identity/manage/sessions", accessToken);
+}
+
+/** Ends one of the caller's own sessions — signing that device/browser out and notifying every relying
+ * party it authorized (see LogoutNotifier). Revoking the current session isn't blocked server-side, but the
+ * UI should route that through a normal sign-out instead so this app's own cookie/session gets cleared too. */
+export function revokeSession(accessToken: string, sessionId: string): Promise<void> {
+    return manageFetch(`/api/identity/manage/sessions/${sessionId}/revoke`, accessToken, { method: "POST" });
+}
+
+/** "Sign out of all other devices" — revokes every other live session for the caller, leaving the one
+ * making this request untouched. */
+export function revokeOtherSessions(accessToken: string): Promise<void> {
+    return manageFetch("/api/identity/manage/sessions/revoke-others", accessToken, { method: "POST" });
 }

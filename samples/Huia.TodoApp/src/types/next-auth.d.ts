@@ -14,6 +14,11 @@ declare module "next-auth" {
     givenName?: string;
     familyName?: string;
     roles?: string[];
+    // Milliseconds-since-epoch — surfaced (not sensitive, just a timestamp) so the UI can show when the
+    // access token was last (re)issued/will next be silently refreshed by the `jwt` callback below.
+    accessTokenExpires?: number;
+    // Whether a refresh_token is on file server-side — never the token itself, which stays server-only.
+    hasRefreshToken?: boolean;
     // Set by the `jwt` callback in auth.ts when the stored refresh token can no longer redeem a fresh
     // access token — the page treats this the same as "no session."
     error?: string;

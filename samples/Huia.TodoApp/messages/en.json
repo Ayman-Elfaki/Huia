@@ -27,6 +27,10 @@
     "trigger": "Show ID token",
     "title": "ID token",
     "description": "The OpenID Connect id_token Huia issued when you signed in, decoded.",
+    "accessTokenExpiresIn": "Access token expires in {countdown}",
+    "refreshTokenOnFile": "Refresh token on file",
+    "noRefreshToken": "No refresh token",
+    "accessTokenRefreshHint": "A near-expiry access token is silently swapped for a fresh one using the refresh token — no sign-in required.",
     "raw": "Raw (compact JWT)",
     "claims": "Claims (decoded payload)",
     "none": "No id_token on this session."
@@ -75,6 +79,13 @@
     "twoFactorSetupHint": "Scan this key with your authenticator app, or enter it manually:",
     "openInAuthenticatorApp": "Open in authenticator app",
     "twoFactorCode": "6-digit code",
-    "enableTwoFactor": "Enable two-factor authentication"
+    "enableTwoFactor": "Enable two-factor authentication",
+    "sessionsTitle": "Sessions",
+    "sessionsSubtitle": "Every device or browser that's currently signed in.",
+    "sessionsActionFailed": "That didn't work — try again.",
+    "thisDevice": "This device",
+    "signOutSession": "Sign out",
+    "signOutOtherSessions": "Sign out of all other sessions",
+    "lastActive": "Last active {date}"
   }
 }

@@ -1,3 +1,4 @@
+using Huia.Applications;
 using Huia.Common;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

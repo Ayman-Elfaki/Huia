@@ -91,6 +91,8 @@ export const authOptions: AuthOptions = {
             session.givenName = token.givenName;
             session.familyName = token.familyName;
             session.roles = token.roles;
+            session.accessTokenExpires = token.accessTokenExpires;
+            session.hasRefreshToken = Boolean(token.refreshToken);
             // Set only once the stored refresh token is dead (revoked session, expired, etc.) — the page
             // treats this the same as "no session" rather than serving API calls with a token that's about
             // to start failing.
