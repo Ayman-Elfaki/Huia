@@ -55,15 +55,14 @@ whatever else it needs.
 
 ## Persistence
 
-Two independent extension points, so you can mix and match:
-
-- **`IHuiaStore<TApplication, TAuthorization, TScope, TToken>`** — Identity's user/role stores +
-  OpenIddict's application/authorization/scope/token stores, as one interface. `Huia.EntityFrameworkCore`'s
-  `WithEntityFrameworkStores<TContext>()` implements this against EF Core; implement it yourself for a fully
-  custom backend (see [custom-store.md](custom-store.md)).
-- **`IHuiaSigningKeyStore`** — signing/encryption key persistence, entirely separate from the above (a cloud
-  KMS, for instance, while everything else stays on EF Core). Needed only if you enable key management (see
-  [key-management.md](key-management.md)).
+- **`IHuiaStore<TApplication, TAuthorization, TScope, TToken>`** — Identity's user/role stores,
+  OpenIddict's application/authorization/scope/token stores, and signing/encryption key storage
+  (`ISigningKeyStore`), as one interface. `Huia.EntityFrameworkCore`'s `WithEntityFrameworkStores<TContext>()`
+  implements the Identity/OpenIddict part against EF Core (with its own separate `ISigningKeyStore` for
+  keys); implement `IHuiaStore` yourself for a fully custom backend (see [custom-store.md](custom-store.md)).
+  Signing-key storage doesn't have to live wherever the rest of your data lives — register a custom
+  `ISigningKeyStore` directly to point it at a dedicated backend (a cloud KMS, for instance) independent of
+  everything else. Needed only if you enable key management (see [key-management.md](key-management.md)).
 
 ## Applications and scopes
 

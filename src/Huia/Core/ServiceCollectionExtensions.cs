@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using OpenIddict.Validation.AspNetCore;
+using Quartz;
 using IdentityErrorDescriber = Microsoft.AspNetCore.Identity.IdentityErrorDescriber;
 
 namespace Huia.Core;
@@ -54,6 +55,25 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<AttachSessionAuthorizationHandler>();
         services.AddHttpClient(LogoutNotifier.BackChannelHttpClientName,
             client => client.Timeout = TimeSpan.FromSeconds(5));
+
+        // Registered directly (not just implicitly via AddJob<T> below) so UserSessionTimeoutJob.RunAsync
+        // can be resolved and invoked without going through Quartz's own scheduler/trigger machinery — see
+        // its own remarks.
+        services.TryAddScoped<UserSessionTimeoutJob>();
+
+        // Doesn't itself start Quartz's hosted service (WithEntityFrameworkStores/WithStore already do,
+        // for OpenIddict's own record pruning) — same pattern KeyManagementBuilder.UseAutomaticKeyManagement
+        // follows for KeyRotationJob. A 5-minute check interval keeps the worst-case overshoot past
+        // IdleTimeout's 30-minute default proportionate, without needing a separately configurable knob.
+        services.AddQuartz(quartz =>
+        {
+            var jobKey = new JobKey("Huia.UserSessionTimeout");
+            quartz.AddJob<UserSessionTimeoutJob>(job => job.WithIdentity(jobKey).StoreDurably());
+            quartz.AddTrigger(trigger => trigger
+                .ForJob(jobKey)
+                .WithIdentity("Huia.UserSessionTimeout-trigger")
+                .WithSimpleSchedule(schedule => schedule.WithIntervalInMinutes(5).RepeatForever()));
+        });
 
         // ASP.NET Core Identity (via AddIdentityCore below) registers Data Protection with its defaults if
         // nothing else has configured it, which isolates key rings using IHostEnvironment.ContentRootPath as

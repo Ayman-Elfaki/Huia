@@ -1,5 +1,6 @@
 using Huia.Core;
 using Huia.Identity;
+using Huia.Keys;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
@@ -12,14 +13,13 @@ namespace Huia.Stores;
 public static class StoreBuilderExtensions
 {
     /// <summary>
-    /// Backs ASP.NET Core Identity and OpenIddict's persistence with a single custom
-    /// <typeparamref name="TStore"/> implementation, instead of
+    /// Backs ASP.NET Core Identity and OpenIddict's persistence — plus signing/encryption key storage — with
+    /// a single custom <typeparamref name="TStore"/> implementation, instead of
     /// <c>.WithEntityFrameworkStores&lt;TContext&gt;()</c>. Use this to store everything with something
-    /// other than EF Core (e.g. Dapper). Says nothing about signing-key storage — if you also want automatic
-    /// or manual key management, additionally call <c>.WithSigningKeyStore&lt;TKeyStore&gt;()</c>
-    /// (<typeparamref name="TStore"/> can implement that too, or use a separate type), and configure
-    /// <c>huia.KeysManagement.UseAutomaticKeyManagement()</c>/<c>UseManualKeyManagement()</c> inside
-    /// <c>AddHuia</c>. See docs/custom-store.md and docs/key-management.md.
+    /// other than EF Core (e.g. Dapper). Key management (automatic or manual) still needs to be enabled
+    /// separately via <c>huia.KeysManagement.UseAutomaticKeyManagement()</c>/<c>UseManualKeyManagement()</c>
+    /// inside <c>AddHuia</c> to actually be used, but <typeparamref name="TStore"/> is registered as its
+    /// <see cref="ISigningKeyStore"/> either way. See docs/custom-store.md and docs/key-management.md.
     /// </summary>
     /// <param name="builder">The builder returned by <c>services.AddHuia(...)</c>.</param>
     /// <param name="configureQuartz">
@@ -43,6 +43,7 @@ public static class StoreBuilderExtensions
 
         services.AddScoped<IUserStore<HuiaUser>, TStore>();
         services.AddScoped<IRoleStore<HuiaRole>, TStore>();
+        services.AddScoped<ISigningKeyStore, TStore>();
 
         services.AddOpenIddict()
             .AddCore(core =>
@@ -58,9 +59,9 @@ public static class StoreBuilderExtensions
                 core.ReplaceTokenStore<TToken, TStore>();
             });
 
-        // Starts Quartz's hosted service for OpenIddict's own record pruning. WithSigningKeyStore/
-        // KeysManagement.UseAutomaticKeyManagement only call AddQuartz(), not AddQuartzHostedService()
-        // themselves, so this is also what starts the rotation job's hosted service if you use those too.
+        // Starts Quartz's hosted service for OpenIddict's own record pruning.
+        // KeysManagement.UseAutomaticKeyManagement only calls AddQuartz(), not AddQuartzHostedService()
+        // itself, so this is also what starts the rotation job's hosted service if you use that too.
         services.AddQuartz(configureQuartz);
 
         services.AddQuartzHostedService(options =>

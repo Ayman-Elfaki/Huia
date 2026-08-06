@@ -58,14 +58,16 @@ await keyManager.RetireKeyAsync(oldKeyId, retiredAt: DateTimeOffset.UtcNow);
 
 ## Storage
 
-Either mode needs an `IHuiaSigningKeyStore` registered — chain one of these onto the builder `AddHuia(...)`
+Either mode needs an `ISigningKeyStore` registered — chain one of these onto the builder `AddHuia(...)`
 returns (order relative to `huia.KeysManagement.Use*KeyManagement()` doesn't matter):
 
 - `.WithEntityFrameworkStores<TContext>()` (from `Huia.EntityFrameworkCore`) — also backs Identity/OpenIddict
   persistence.
-- `.WithStore<TStore, ...>()` — if `TStore` also implements `IHuiaSigningKeyStore`.
-- `.WithSigningKeyStore<TKeyStore>()` — a dedicated implementation, independent of everything else (e.g. a
-  cloud KMS while Identity/OpenIddict data stays on EF Core).
+- `.WithStore<TStore, ...>()` — `TStore` implements `ISigningKeyStore` as part of `IHuiaStore`, so this
+  registers it automatically.
+- A custom `ISigningKeyStore` implementation registered directly (e.g. `services.AddScoped<ISigningKeyStore,
+  MyKmsKeyStore>()`), independent of everything else — a cloud KMS, for instance, while Identity/OpenIddict
+  data stays on EF Core or a custom `IHuiaStore`.
 
 Private key material is encrypted at rest by the store implementation — `Huia.EntityFrameworkCore`'s uses
 [ASP.NET Core Data Protection](https://learn.microsoft.com/aspnet/core/security/data-protection/introduction).

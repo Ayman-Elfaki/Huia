@@ -17,4 +17,13 @@ public sealed class UserSessionsBuilder
         Options.AbsoluteLifetime = lifetime;
         return this;
     }
+
+    /// <summary>
+    /// Sets <see cref="UserSessionsOptions.IdleTimeout"/>.
+    /// </summary>
+    public UserSessionsBuilder SetIdleTimeout(TimeSpan timeout)
+    {
+        Options.IdleTimeout = timeout;
+        return this;
+    }
 }

@@ -1,74 +1,35 @@
 # Custom stores
 
 `Huia.EntityFrameworkCore` is the default persistence provider, but it isn't required — Huia's persistence
-is split into two independent, provider-agnostic extension points.
+is provider-agnostic.
 
-## `IHuiaStore` — Identity + OpenIddict data
+## `IHuiaStore` — Identity, OpenIddict, and key data
 
-`IHuiaStore<TApplication, TAuthorization, TScope, TToken>` composes ASP.NET Core Identity's user/role stores
-with OpenIddict's application/authorization/scope/token stores into one interface. Implement it against
-whatever you're using (Dapper, MongoDB, ...) and register it instead of
-`.WithEntityFrameworkStores<TContext>()`:
+`IHuiaStore<TApplication, TAuthorization, TScope, TToken>` composes ASP.NET Core Identity's user/role
+stores, OpenIddict's application/authorization/scope/token stores, and `ISigningKeyStore` (signing/encryption
+key storage) into one interface. Implement it against whatever you're using (Dapper, MongoDB, ...) and
+register it instead of `.WithEntityFrameworkStores<TContext>()`:
 
 ```csharp
-builder.Services.AddHuia(issuer, huia => { /* ... */ })
+builder.Services.AddHuia(issuer, huia =>
+    {
+        huia.KeysManagement.UseAutomaticKeyManagement();
+    })
     .WithStore<MyStore, MyApplication, MyAuthorization, MyScope, MyToken>();
 
 public class MyStore : IHuiaStore<MyApplication, MyAuthorization, MyScope, MyToken>
 {
     // IUserStore<HuiaUser>, IRoleStore<HuiaRole>,
     // IOpenIddictApplicationStore<MyApplication>, IOpenIddictAuthorizationStore<MyAuthorization>,
-    // IOpenIddictScopeStore<MyScope>, IOpenIddictTokenStore<MyToken>
+    // IOpenIddictScopeStore<MyScope>, IOpenIddictTokenStore<MyToken>,
+    // ISigningKeyStore: GetValidKeysAsync, CreateKeyAsync, RetireKeyAsync, PurgeExpiredKeysAsync
+    // (private key material must be encrypted at rest by your implementation)
 }
 ```
 
-`WithStore<TStore, TApplication, TAuthorization, TScope, TToken>()` wires `MyStore` in as both the Identity
-user/role store and the OpenIddict application/authorization/scope/token store, and starts Quartz's hosted
-service (needed for OpenIddict's own record pruning).
-
-`IHuiaStore` says nothing about signing-key storage — that's the separate extension point below.
-
-## `IHuiaSigningKeyStore` — signing/encryption keys
-
-Needed only if you enable [key management](key-management.md) (automatic or manual). Implement this
-directly for a dedicated backend (a cloud KMS, for instance), independent of however everything else is
-stored:
-
-```csharp
-public interface IHuiaSigningKeyStore
-{
-    Task<IReadOnlyList<HuiaKeyDescriptor>> GetValidKeysAsync(HuiaKeyUsage usage, CancellationToken cancellationToken = default);
-    Task<HuiaKeyDescriptor> CreateKeyAsync(HuiaKeyUsage usage, DateTimeOffset expiresAt, CancellationToken cancellationToken = default);
-    Task RetireKeyAsync(string keyId, DateTimeOffset retiredAt, CancellationToken cancellationToken = default);
-    Task PurgeExpiredKeysAsync(DateTimeOffset olderThan, CancellationToken cancellationToken = default);
-}
-```
-
-Private key material must be encrypted at rest by your implementation. Register it with
-`.WithSigningKeyStore<TKeyStore>()`:
-
-```csharp
-builder.Services.AddHuia(issuer, huia =>
-    {
-        huia.KeysManagement.UseAutomaticKeyManagement();
-    })
-    .WithStore<MyStore, MyApplication, MyAuthorization, MyScope, MyToken>()
-    .WithSigningKeyStore<MyKeyStore>();
-```
-
-`MyKeyStore` can be the same type as `MyStore` (if it also implements `IHuiaSigningKeyStore`) or a completely
-separate type — signing-key storage doesn't have to live wherever the rest of your data lives.
-
-## Mixing providers
-
-Because the two extension points are independent, you can mix EF Core for one and a custom store for the
-other — e.g. EF Core for Identity/OpenIddict data, but a cloud KMS for signing keys:
-
-```csharp
-builder.Services.AddHuia(issuer, huia =>
-    {
-        huia.KeysManagement.UseAutomaticKeyManagement();
-    })
-    .WithEntityFrameworkStores<AppDbContext>()
-    .WithSigningKeyStore<MyKmsKeyStore>();
-```
+`WithStore<TStore, TApplication, TAuthorization, TScope, TToken>()` wires `MyStore` in as the Identity
+user/role store, the OpenIddict application/authorization/scope/token store, and (since `IHuiaStore`
+includes it) the `ISigningKeyStore` key management uses — and starts Quartz's hosted service (needed for
+OpenIddict's own record pruning). Key management (automatic or manual) still needs to be enabled separately
+via `huia.KeysManagement.Use*KeyManagement()`; `MyStore`'s `ISigningKeyStore` implementation is only used
+once that's on.

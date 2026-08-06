@@ -13,9 +13,9 @@ namespace Huia.Keys;
 /// </summary>
 /// <remarks>
 /// Either mode requires an <see cref="ISigningKeyStore"/> to be registered — chain
-/// <c>.WithEntityFrameworkStores&lt;TContext&gt;()</c> (from <c>Huia.EntityFrameworkCore</c>),
-/// <c>.WithStore&lt;TStore,...&gt;()</c>, or <c>.WithSigningKeyStore&lt;TKeyStore&gt;()</c> onto the
-/// <see cref="HuiaBuilder"/> <c>AddHuia</c> returns. Call order between that and
+/// <c>.WithEntityFrameworkStores&lt;TContext&gt;()</c> (from <c>Huia.EntityFrameworkCore</c>) or
+/// <c>.WithStore&lt;TStore,...&gt;()</c> onto the <see cref="HuiaBuilder"/> <c>AddHuia</c> returns, or
+/// register a custom <see cref="ISigningKeyStore"/> implementation directly. Call order between that and
 /// <see cref="UseAutomaticKeyManagement"/>/<see cref="UseManualKeyManagement"/> doesn't matter — both only
 /// need the store registered by the time the app actually starts.
 /// </remarks>
