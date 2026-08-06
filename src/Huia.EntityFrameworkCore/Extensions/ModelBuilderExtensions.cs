@@ -1,6 +1,5 @@
 using Huia.EntityFrameworkCore.Common;
 using Huia.EntityFrameworkCore.Keys;
-using Huia.EntityFrameworkCore.Sessions;
 using Huia.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -30,26 +29,6 @@ public static class ModelBuilderExtensions
             key.Property(k => k.Usage).HasConversion<int>();
             key.HasIndex(k => new { k.Usage, k.ExpiresAt });
             key.Property(k => k.ProtectedPrivateKey).IsRequired();
-        });
-
-        return builder;
-    }
-
-    /// <summary>
-    /// Configures the <see cref="UserSession"/> entity backing Huia's user-session tracking. Call this
-    /// from <c>OnModelCreating</c> on your own <see cref="DbContext"/> if it doesn't inherit
-    /// <see cref="HuiaDbContext"/>. <see cref="HuiaDbContext{TUser,TRole}"/> calls this internally, so
-    /// consumers using that base class don't need to call it themselves.
-    /// </summary>
-    public static ModelBuilder UseUserSessions(this ModelBuilder builder)
-    {
-        builder.Entity<UserSession>(session =>
-        {
-            session.ToTable("HuiaSessions");
-            session.HasKey(s => s.Id);
-            session.Property(s => s.UserId).IsRequired();
-            session.HasIndex(s => new { s.UserId, s.RevokedAt });
-            session.HasIndex(s => s.ExpiresAt);
         });
 
         return builder;

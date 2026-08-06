@@ -36,22 +36,6 @@ public abstract class ClientApplicationOptions
     public IReadOnlyList<string> Scopes => _scopes;
 
     /// <summary>
-    /// The client's OpenID Connect front-channel logout URI, set via <see cref="SetFrontChannelLogoutUri"/>.
-    /// When set, Huia's <c>/connect/logout</c> loads this URL in a hidden browser iframe (with an
-    /// <c>iss</c> query parameter) alongside any other signed-in client's, so it can clear its own session
-    /// when the user signs out anywhere.
-    /// </summary>
-    public string? FrontChannelLogoutUri { get; private set; }
-
-    /// <summary>
-    /// The client's OpenID Connect back-channel logout URI, set via <see cref="SetBackChannelLogoutUri"/>.
-    /// When set, Huia's <c>/connect/logout</c> POSTs a signed <c>logout_token</c> directly to this URL
-    /// (server-to-server, no browser involved) so the client can end the user's session there even if its
-    /// front-channel logout iframe never loads.
-    /// </summary>
-    public string? BackChannelLogoutUri { get; private set; }
-
-    /// <summary>
     /// Where to send the browser back to this client when there's no in-flight OAuth request to resume — set
     /// via <see cref="SetHomeUri"/>. Two places prefer this
     /// (see <c>Huia.Helpers.ClientHomeResolver</c>) when set, falling back to just the origin of a registered
@@ -115,16 +99,6 @@ public abstract class ClientApplicationOptions
     /// Adds scopes this client is allowed to request.
     /// </summary>
     public void AllowScopes(params string[] scopes) => _scopes.AddRange(scopes);
-
-    /// <summary>
-    /// Sets <see cref="FrontChannelLogoutUri"/>.
-    /// </summary>
-    public void SetFrontChannelLogoutUri(string uri) => FrontChannelLogoutUri = uri;
-
-    /// <summary>
-    /// Sets <see cref="BackChannelLogoutUri"/>.
-    /// </summary>
-    public void SetBackChannelLogoutUri(string uri) => BackChannelLogoutUri = uri;
 
     /// <summary>
     /// Sets <see cref="HomeUri"/>.

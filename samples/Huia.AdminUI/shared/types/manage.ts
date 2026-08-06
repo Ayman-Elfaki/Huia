@@ -29,15 +29,3 @@ export interface TwoFactorRequest {
   resetSharedKey?: boolean | null
   resetRecoveryCodes?: boolean | null
 }
-
-export interface ManageSessionResponse {
-  id: string
-  createdAt: string
-  lastActivityAt: string
-  expiresAt: string
-  ipAddress: string | null
-  userAgent: string | null
-  revokedAt: string | null
-  isCurrent: boolean
-  applicationClientIds: string[]
-}

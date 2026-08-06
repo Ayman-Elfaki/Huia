@@ -31,12 +31,8 @@ export function SignOutButton({endSessionUrl}: { endSessionUrl: string | null })
             variant="ghost"
             size="sm"
             onClick={async () => {
-                // Huia's own back-channel logout notifier deliberately excludes whichever client initiated the
-                // logout (see LogoutNotifier's doc comment) — a normal redirect-based flow already covers that
-                // client, so it never POSTs to our /api/auth/backchannel-logout for this case. This is that
-                // "normal redirect-based flow" completing its half of the job: clear the local session, then send
-                // the browser on to Huia's own RP-initiated logout so its sign-in cookie doesn't silently SSO the
-                // user back in on the next "Sign in" click.
+                // Clear the local session, then send the browser on to Huia's own RP-initiated logout so its
+                // sign-in cookie doesn't silently SSO the user back in on the next "Sign in" click.
                 await signOut({redirect: false});
                 window.location.href = endSessionUrl ?? "/";
             }}

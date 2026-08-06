@@ -1,6 +1,5 @@
 import {AuthOptions} from "next-auth";
 import {refreshAccessToken, shouldRefresh} from "@/lib/token-refresh";
-import {deleteSession, getSession, saveSession} from "@/lib/session-store";
 
 // OpenIddict's role claim type is "role" (singular) — a token with more than one role serializes it as a
 // JSON array under that same key rather than pluralizing the key itself, so a raw decoded claim can be a
@@ -29,7 +28,7 @@ export const authOptions: AuthOptions = {
             // provider.authorization/token/userinfo/jwks_endpoint directly — none of which are set below
             // (only authorization.params is), so every sign-in attempt fails with an OAuthSignin error before
             // ever reaching Huia. wellKnown makes it fetch these endpoints from Huia's own discovery document
-            // instead, the same document backchannel-logout/route.ts fetches for jwks_uri.
+            // instead.
             wellKnown: process.env.AUTH_HUIA_ISSUER
                 ? new URL(".well-known/openid-configuration", process.env.AUTH_HUIA_ISSUER).toString()
                 : undefined,
@@ -45,7 +44,6 @@ export const authOptions: AuthOptions = {
             profile(profile) {
                 return {
                     id: profile.sub,
-                    sid: profile.sid,
                     name: profile.name,
                     email: profile.email,
                     given_name: profile.given_name,
@@ -56,82 +54,49 @@ export const authOptions: AuthOptions = {
     ],
     callbacks: {
         async jwt({token, account, profile}) {
-            // Fresh sign-in: the access/id/refresh tokens go straight into the session store (see
-            // session-store.ts) instead of onto the JWT — the cookie-backed token below only ever carries a
-            // reference to that record (Huia's own per-sign-in "sid" claim) plus small, non-sensitive display
-            // claims. "offline_access" is in the requested scope above, so Huia issues a refresh_token
-            // alongside the access token — account.expires_at is seconds-since-epoch (the OAuth standard
-            // unit), converted to ms to match Date.now() below.
-            if (account && profile) {
-                token.sid = profile.sid;
+            // Persist the OAuth access/id/refresh tokens to the JWT right after signin. "offline_access" is
+            // in the requested scope above, so Huia issues a refresh_token alongside the access token —
+            // account.expires_at is seconds-since-epoch (the OAuth standard unit), converted to ms to match
+            // Date.now() below.
+            if (account) {
+                token.accessToken = account.access_token;
+                token.idToken = account.id_token;
+                token.refreshToken = account.refresh_token;
+                token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : undefined;
+                token.error = undefined;
+            }
+            // `profile` is Huia's raw OIDC claims (the provider's own `profile()` above only shapes the
+            // *User* object, which the default token below doesn't carry over) — copy the ones the UI needs
+            // onto the JWT so they survive as part of the session cookie.
+            if (profile) {
                 token.givenName = profile.given_name;
                 token.familyName = profile.family_name;
                 token.roles = normalizeRoles(profile.role);
-                token.error = undefined;
-
-                await saveSession(token.sid!, {
-                    accessToken: account.access_token,
-                    idToken: account.id_token,
-                    refreshToken: account.refresh_token,
-                    accessTokenExpires: account.expires_at ? account.expires_at * 1000 : undefined,
-                });
-                return token;
-            }
-
-            if (!token.sid) {
-                // No session id at all — shouldn't happen once signed in, but there's nothing to look up
-                // without one.
-                return token;
-            }
-
-            const stored = await getSession(token.sid);
-            if (!stored) {
-                // Deleted by /api/auth/backchannel-logout (someone signed this session out elsewhere, or
-                // revoked it from the profile page's "Sessions" panel), or evicted/expired — either way,
-                // there's nothing left to silently refresh. Treated exactly like a dead refresh token.
-                return {...token, error: "RefreshAccessTokenError"};
             }
 
             // Runs on every request that touches the session (not just sign-in), so this is where an
             // access token nearing expiry gets silently swapped for a fresh one via the refresh_token grant.
-            if (!shouldRefresh(stored.accessTokenExpires, Date.now())) {
+            if (!shouldRefresh(token.accessTokenExpires, Date.now())) {
                 return token;
             }
 
-            const refreshed = await refreshAccessToken(stored);
-            await saveSession(token.sid, refreshed);
-            return {...token, error: refreshed.error};
+            return refreshAccessToken(token);
         },
         async session({session, token}) {
-            session.sid = token.sid;
+            // Send properties to the client, like an access_token from a provider.
+            session.accessToken = token.accessToken;
+            session.idToken = token.idToken;
             session.givenName = token.givenName;
             session.familyName = token.familyName;
             session.roles = token.roles;
-            // Set only once the stored refresh token is dead (revoked session, expired, etc.) — the page
-            // treats this the same as "no session" rather than serving API calls with a token that's about
-            // to start failing.
+            session.accessTokenExpires = token.accessTokenExpires;
+            session.hasRefreshToken = Boolean(token.refreshToken);
+            // Set only once the stored refresh token is dead (expired, etc.) — the page treats this the
+            // same as "no session" rather than serving API calls with a token that's about to start
+            // failing.
             session.error = token.error;
-
-            // The actual tokens live in the session store, not the JWT — see the `jwt` callback above.
-            const stored = token.sid && !token.error ? await getSession(token.sid) : null;
-            session.accessToken = stored?.accessToken;
-            session.idToken = stored?.idToken;
-            session.accessTokenExpires = stored?.accessTokenExpires;
-            session.hasRefreshToken = Boolean(stored?.refreshToken);
 
             return session
         }
-    },
-    events: {
-        // SignOutButton's own normal sign-out flow never reaches /api/auth/backchannel-logout: Huia's
-        // LogoutNotifier deliberately excludes whichever client initiated the RP-initiated logout (see its
-        // own doc comment) — that client already knows it's signing out, this is it finding out. Without
-        // this, the session store entry would just sit there until its own TTL expires instead of being
-        // cleaned up immediately.
-        async signOut({token}) {
-            if (token.sid) {
-                await deleteSession(token.sid);
-            }
-        },
     },
 }

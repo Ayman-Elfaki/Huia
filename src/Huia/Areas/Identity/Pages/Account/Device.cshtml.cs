@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Security.Claims;
 using Huia.Common;
 using Huia.Identity;
-using Huia.Sessions;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -39,8 +38,6 @@ namespace Huia.Areas.Identity.Pages.Account;
 [IgnoreAntiforgeryToken]
 public class DeviceModel(
     UserManager<HuiaUser> userManager,
-    HuiaSignInManager signInManager,
-    UserSessionService sessions,
     IOpenIddictApplicationManager applicationManager,
     IOpenIddictScopeManager scopeManager,
     IAntiforgery antiforgery) : PageModel
@@ -140,7 +137,7 @@ public class DeviceModel(
         }
 
         var identity = await DeviceVerifier
-            .ApproveAsync(HttpContext, user, request.Scopes, userManager, signInManager, sessions, scopeManager)
+            .ApproveAsync(user, request.Scopes, userManager, scopeManager)
             .ConfigureAwait(false);
         await HttpContext.SignInAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
             new ClaimsPrincipal(identity)).ConfigureAwait(false);
@@ -162,9 +159,8 @@ public class DeviceModel(
         // authorization middleware sets HttpContext.User to its result as a side effect — a plain manual
         // AuthenticateAsync call here doesn't touch HttpContext.User at all; it stays whatever the app's
         // *default* scheme (OpenIddict's bearer validator, never satisfied by a browser request with no
-        // Authorization header) left it as. Everything downstream (GetUserAsync,
-        // DeviceVerifier.ApproveAsync's own session-id lookup) reads HttpContext.User directly,
-        // so it has to be set explicitly here.
+        // Authorization header) left it as. GetUserAsync below reads HttpContext.User directly, so it has
+        // to be set explicitly here.
         HttpContext.User = signedIn.Principal!;
         return null;
     }

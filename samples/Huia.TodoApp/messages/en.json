@@ -79,13 +79,6 @@
     "twoFactorSetupHint": "Scan this key with your authenticator app, or enter it manually:",
     "openInAuthenticatorApp": "Open in authenticator app",
     "twoFactorCode": "6-digit code",
-    "enableTwoFactor": "Enable two-factor authentication",
-    "sessionsTitle": "Sessions",
-    "sessionsSubtitle": "Every device or browser that's currently signed in.",
-    "sessionsActionFailed": "That didn't work — try again.",
-    "thisDevice": "This device",
-    "signOutSession": "Sign out",
-    "signOutOtherSessions": "Sign out of all other sessions",
-    "lastActive": "Last active {date}"
+    "enableTwoFactor": "Enable two-factor authentication"
   }
 }

@@ -20,7 +20,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 [AllowAnonymous]
 public class RegisterModel(
     UserManager<HuiaUser> userManager,
-    HuiaSignInManager signInManager,
+    SignInManager<HuiaUser> signInManager,
     IEmailSender<HuiaUser> emailSender,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
@@ -113,7 +113,7 @@ public class RegisterModel(
 
         await signInManager.SignInAsync(user, isPersistent: false);
 
-        await events.PublishAsync(new UserSignedInEvent(userId, Input.Email, signInManager.CurrentSessionId!));
+        await events.PublishAsync(new UserSignedInEvent(userId, Input.Email));
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
     }

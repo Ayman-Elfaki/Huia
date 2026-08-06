@@ -1,10 +1,8 @@
 using Huia.Core;
 using Huia.EntityFrameworkCore.Common;
 using Huia.EntityFrameworkCore.Keys;
-using Huia.EntityFrameworkCore.Sessions;
 using Huia.Identity;
 using Huia.Keys;
-using Huia.Sessions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,7 +69,6 @@ public static class ServiceCollectionExtensions
         // (configured inside AddHuia, so it always runs before this) alone.
         services.TryAddSingleton(new KeyManagementOptions());
         services.AddScoped<ISigningKeyStore, EfCoreSigningKeyStore<TContext>>();
-        services.AddScoped<IUserSessionManager, EfCoreUserSessionManager<TContext>>();
 
         services.AddOpenIddict()
             .AddCore(options =>
@@ -87,20 +84,6 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddQuartz(configureQuartz);
-
-        // Hourly is frequent enough that a revoked/expired session's row doesn't linger long, but coarse
-        // enough not to matter that it isn't tied to AbsoluteLifetime precisely — sessions are also already
-        // treated as dead by HuiaUserSessionService.IsLiveAsync well before this ever runs; this job only
-        // ever cleans up rows nothing is relying on anymore.
-        services.AddQuartz(quartz =>
-        {
-            var jobKey = new JobKey("Huia.UserSessionPruning");
-            quartz.AddJob<HuiaUserSessionPruningJob<TContext>>(job => job.WithIdentity(jobKey).StoreDurably());
-            quartz.AddTrigger(trigger => trigger
-                .ForJob(jobKey)
-                .WithIdentity("Huia.UserSessionPruning-trigger")
-                .WithSimpleSchedule(schedule => schedule.WithIntervalInHours(1).RepeatForever()));
-        });
 
         services.AddQuartzHostedService(options =>
         {

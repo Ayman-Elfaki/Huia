@@ -88,36 +88,3 @@ export async function twoFactorAction(_prev: TwoFactorState, formData: FormData)
         throw error;
     }
 }
-
-/** Ends one other device/browser's session — see manageApi.revokeSession for why "other" (revoking the
- * caller's own current session here wouldn't sign this app itself out; use next-auth's own signOut for that). */
-export async function revokeSessionAction(sessionId: string): Promise<ActionState> {
-    const accessToken = await requireAccessToken();
-
-    try {
-        await manageApi.revokeSession(accessToken, sessionId);
-        revalidatePath("/profile");
-        return {status: "success"};
-    } catch (error) {
-        if (error instanceof Error) {
-            return {status: "error", message: error.message};
-        }
-        throw error;
-    }
-}
-
-/** "Sign out of all other devices." */
-export async function revokeOtherSessionsAction(): Promise<ActionState> {
-    const accessToken = await requireAccessToken();
-
-    try {
-        await manageApi.revokeOtherSessions(accessToken);
-        revalidatePath("/profile");
-        return {status: "success"};
-    } catch (error) {
-        if (error instanceof Error) {
-            return {status: "error", message: error.message};
-        }
-        throw error;
-    }
-}

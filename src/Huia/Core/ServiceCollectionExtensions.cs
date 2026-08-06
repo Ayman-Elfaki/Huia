@@ -1,12 +1,10 @@
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
 using Huia.Applications;
-using Huia.Common;
 using Huia.Emails;
 using Huia.Eventing;
 using Huia.Identity;
 using Huia.Scopes;
-using Huia.Sessions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -15,9 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Abstractions;
-using OpenIddict.Server;
 using OpenIddict.Validation.AspNetCore;
-using Quartz;
 using IdentityErrorDescriber = Microsoft.AspNetCore.Identity.IdentityErrorDescriber;
 
 namespace Huia.Core;
@@ -45,35 +41,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options.Applications);
         services.AddSingleton(options.Scopes);
         services.AddSingleton(options.Branding);
-        services.AddSingleton(options.Sessions.Options);
         services.TryAddSingleton<IEmailSender<HuiaUser>, NoOpEmailSender>();
         services.TryAddSingleton<RazorViewRenderer>();
         services.TryAddSingleton<HuiaEmailTemplate>();
         services.TryAddScoped<IEventPublisher, EventPublisher>();
-        services.TryAddScoped<LogoutNotifier>();
-        services.TryAddScoped<UserSessionService>();
-        services.TryAddScoped<AttachSessionAuthorizationHandler>();
-        services.AddHttpClient(LogoutNotifier.BackChannelHttpClientName,
-            client => client.Timeout = TimeSpan.FromSeconds(5));
-
-        // Registered directly (not just implicitly via AddJob<T> below) so UserSessionTimeoutJob.RunAsync
-        // can be resolved and invoked without going through Quartz's own scheduler/trigger machinery — see
-        // its own remarks.
-        services.TryAddScoped<UserSessionTimeoutJob>();
-
-        // Doesn't itself start Quartz's hosted service (WithEntityFrameworkStores/WithStore already do,
-        // for OpenIddict's own record pruning) — same pattern KeyManagementBuilder.UseAutomaticKeyManagement
-        // follows for KeyRotationJob. A 5-minute check interval keeps the worst-case overshoot past
-        // IdleTimeout's 30-minute default proportionate, without needing a separately configurable knob.
-        services.AddQuartz(quartz =>
-        {
-            var jobKey = new JobKey("Huia.UserSessionTimeout");
-            quartz.AddJob<UserSessionTimeoutJob>(job => job.WithIdentity(jobKey).StoreDurably());
-            quartz.AddTrigger(trigger => trigger
-                .ForJob(jobKey)
-                .WithIdentity("Huia.UserSessionTimeout-trigger")
-                .WithSimpleSchedule(schedule => schedule.WithIntervalInMinutes(5).RepeatForever()));
-        });
 
         // ASP.NET Core Identity (via AddIdentityCore below) registers Data Protection with its defaults if
         // nothing else has configured it, which isolates key rings using IHostEnvironment.ContentRootPath as
@@ -121,16 +92,9 @@ public static class ServiceCollectionExtensions
                 options.Identity = identity;
             })
             .AddRoles<HuiaRole>()
-            // HuiaSignInManager makes session tracking (the sid claim) a first-class part of every sign-in —
-            // see its own doc comment for why that's not just a bolted-on helper.
-            .AddSignInManager<HuiaSignInManager>()
+            .AddSignInManager()
             .AddDefaultTokenProviders()
             .AddErrorDescriber<IdentityErrorDescriber>();
-
-        // AddSignInManager<T>() registers T as the SignInManager<HuiaUser> service, but not as its own
-        // resolvable type — this redirect makes HuiaSignInManager itself injectable too (same scoped
-        // instance), for call sites that need its CurrentSessionId.
-        services.AddScoped(sp => (HuiaSignInManager)sp.GetRequiredService<SignInManager<HuiaUser>>());
 
         // The standard Identity.Application cookie scheme, not a custom one: SignInManager<HuiaUser>'s
         // high-level methods (PasswordSignInAsync, TwoFactorSignInAsync, lockout handling, etc. — all used
@@ -198,16 +162,6 @@ public static class ServiceCollectionExtensions
 
                 var declaredScopes = options.Scopes.Scopes.Select(s => s.Name);
                 server.RegisterScopes([.. wellKnownScopes, .. options.Applications.GetAllScopes(), .. declaredScopes]);
-
-                // Tags the authorization OpenIddict's own built-in sign-in handling just created/reused with
-                // the sid claim from the same principal. 499_000 runs this well after AttachAuthorization
-                // (order -2,147,375,648) and every built-in token-generation handler (topping out around
-                // 112,000) has resolved the authorization id this one reads off the principal, but strictly
-                // before the terminal Apply*Response handlers (order 500,000) that write the HTTP response
-                // and short-circuit the dispatch loop — SetOrder(int.MaxValue) would sort after those and
-                // silently never run at all. See AttachSessionAuthorizationHandler's own remarks.
-                server.AddEventHandler<OpenIddictServerEvents.ProcessSignInContext>(handler =>
-                    handler.UseScopedHandler<AttachSessionAuthorizationHandler>().SetOrder(499_000));
 
                 var aspNetCore = server.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()

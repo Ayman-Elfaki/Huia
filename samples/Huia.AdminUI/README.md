@@ -1,7 +1,7 @@
 # Huia Admin UI
 
 A [Nuxt](https://nuxt.com) console for managing a [Huia](https://github.com/Ayman-Elfaki/Huia) instance —
-applications, scopes, users, roles, live authorizations, and sessions — built entirely on top of
+applications, scopes, users, roles, and live authorizations — built entirely on top of
 `MapHuiaAdminEndpoints` (see `samples/Huia.TodoApi/Program.cs`, which maps and role-gates it).
 
 [`nuxt-oidc-auth`](https://nuxtoidc.cloud) signs in against `Huia.TodoApi` as a confidential,

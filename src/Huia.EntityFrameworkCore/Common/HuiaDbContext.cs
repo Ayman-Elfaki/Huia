@@ -22,7 +22,6 @@ public abstract class HuiaDbContext<TUser, TRole>(DbContextOptions options)
 
         builder.UseOpenIddict();
         builder.UseKeyManagement();
-        builder.UseUserSessions();
         builder.UseHuiaIdentityTableNames<TUser, TRole, string>();
         builder.UseHuiaOpenIddictTableNames();
 

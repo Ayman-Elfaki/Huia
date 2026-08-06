@@ -51,42 +51,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                     b.ToTable("HuiaSigningKeys", "huia");
                 });
 
-            modelBuilder.Entity("Huia.EntityFrameworkCore.Sessions.UserSession", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IpAddress")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("LastActivityAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserAgent")
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExpiresAt");
-
-                    b.HasIndex("UserId", "RevokedAt");
-
-                    b.ToTable("HuiaSessions", "huia");
-                });
-
             modelBuilder.Entity("Huia.Identity.HuiaRole", b =>
                 {
                     b.Property<string>("Id")

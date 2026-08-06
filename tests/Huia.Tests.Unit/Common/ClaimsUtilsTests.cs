@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Huia.Common;
-using Huia.Sessions;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -48,21 +47,6 @@ public class ClaimsUtilsTests
         var identity = CreateIdentity(OpenIddictConstants.Scopes.Roles);
 
         var destinations = ClaimsUtils.GetDestinations(new Claim(Claims.Role, "admin"), identity);
-
-        Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations);
-    }
-
-    /// <summary>
-    /// Unconditional (no scope gate, unlike the profile/email/role claims above) and, unlike every other
-    /// claim, goes into the access token too: <c>Endpoints.Manage.ManageSessionsEndpoints</c> reads it off
-    /// the bearer-authenticated principal to mark which of the caller's own sessions made the request.
-    /// </summary>
-    [Fact]
-    public void GetDestinations_SidClaim_GoesToBothTokens_RegardlessOfScopes()
-    {
-        var identity = CreateIdentity();
-
-        var destinations = ClaimsUtils.GetDestinations(new Claim(SessionClaimTypes.Sid, "session-id"), identity);
 
         Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations);
     }

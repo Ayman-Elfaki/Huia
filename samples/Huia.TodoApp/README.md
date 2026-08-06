@@ -29,7 +29,6 @@ This assumes `Huia.TodoApi` is running standalone too, on its default fallback a
 |---|---|
 | `AUTH_SECRET` | Encrypts Auth.js's session cookie. |
 | `NEXTAUTH_URL` | This app's own base URL — without it, Auth.js infers it from the request and warns on every one. |
-| `CACHE_URI` | Redis connection string backing the session store (see `src/lib/session-store.ts`) — the access/id/refresh tokens live here, keyed by session id, instead of in the session cookie itself. |
 | `AUTH_HUIA_ISSUER` | `TodoApi`'s OpenIddict issuer — must match its self-reported issuer exactly (including the trailing slash OpenIddict's discovery document normalizes to). |
 | `AUTH_HUIA_CLIENT_ID` / `AUTH_HUIA_CLIENT_SECRET` | The `todo-web` client's credentials, as registered by `TodoApi`. |
 | `TODO_API_URL` | Base URL for server-side calls to `TodoApi`'s `/api/todos` endpoints. |

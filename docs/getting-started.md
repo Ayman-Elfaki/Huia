@@ -146,27 +146,8 @@ See [key-management.md](key-management.md) for the full policy knobs.
 
 ## Logout
 
-`/connect/logout` (RP-initiated logout) always signs the user out at Huia and, for the client that sent them
-there, redirects back to its `post_logout_redirect_uri` — see `AddPostLogoutRedirectUri` above. If the same
-user also has live SSO sessions with *other* clients, register those clients' front/back-channel logout
-URIs (per the OpenID Connect Front-Channel/Back-Channel Logout 1.0 specs) so they get torn down too:
-
-```csharp
-app.SetFrontChannelLogoutUri("https://other-app.example/oidc/frontchannel-logout");
-app.SetBackChannelLogoutUri("https://other-app.example/oidc/backchannel-logout");
-```
-
-- **Front-channel**: Huia serves a brief HTML page with a hidden `<iframe>` per registered
-  `FrontChannelLogoutUri` (each with an `?iss=` query parameter) before continuing on to the usual
-  redirect — the browser has to actually be there for these to load.
-- **Back-channel**: Huia POSTs a signed `logout_token` directly to each registered `BackChannelLogoutUri`,
-  server-to-server, no browser involved. A slow or unreachable client here never blocks or fails the user's
-  own sign-out.
-
-Both are keyed by the signed-out **session** (`sid`), not the subject — only client applications with a live
-authorization tied to *that specific session* are notified; a different session for the same user (a
-different browser or device) is untouched. The client that itself initiated the logout is never notified of
-its own logout.
+`/connect/logout` (RP-initiated logout) signs the user out at Huia and, for the client that sent them
+there, redirects back to its `post_logout_redirect_uri` — see `AddPostLogoutRedirectUri` above.
 
 ## Home URL
 

@@ -78,25 +78,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                 });
 
             migrationBuilder.CreateTable(
-                name: "HuiaSessions",
-                schema: "huia",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    LastActivityAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    ExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    IpAddress = table.Column<string>(type: "text", nullable: true),
-                    UserAgent = table.Column<string>(type: "text", nullable: true),
-                    RevokedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_HuiaSessions", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "HuiaSigningKeys",
                 schema: "huia",
                 columns: table => new
@@ -354,18 +335,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_HuiaSessions_ExpiresAt",
-                schema: "huia",
-                table: "HuiaSessions",
-                column: "ExpiresAt");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_HuiaSessions_UserId_RevokedAt",
-                schema: "huia",
-                table: "HuiaSessions",
-                columns: new[] { "UserId", "RevokedAt" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_HuiaSigningKeys_Usage_ExpiresAt",
                 schema: "huia",
                 table: "HuiaSigningKeys",
@@ -431,10 +400,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
 
             migrationBuilder.DropTable(
                 name: "HuiaScopes",
-                schema: "huia");
-
-            migrationBuilder.DropTable(
-                name: "HuiaSessions",
                 schema: "huia");
 
             migrationBuilder.DropTable(

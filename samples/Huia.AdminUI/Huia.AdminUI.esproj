@@ -30,7 +30,6 @@
       <Script Include="app\pages\users\index.vue" />
       <Script Include="app\pages\roles\index.vue" />
       <Script Include="app\pages\authorizations\index.vue" />
-      <Script Include="app\pages\sessions\index.vue" />
       <Script Include="server\api\admin\[...path].ts" />
       <Script Include="shared\types\admin.ts" />
       <Script Include="shared\utils\roles.ts" />

@@ -7,7 +7,7 @@ useHead({
 
 useSeoMeta({
   title: 'Huia Admin',
-  description: 'Manage Huia applications, scopes, users, roles, authorizations, and sessions.'
+  description: 'Manage Huia applications, scopes, users, roles, and authorizations.'
 })
 
 const { user, loggedIn, logout } = useOidcAuth()
@@ -19,8 +19,7 @@ const navigationItems = [
   { label: 'Scopes', icon: 'i-lucide-shield-check', to: '/scopes' },
   { label: 'Users', icon: 'i-lucide-users', to: '/users' },
   { label: 'Roles', icon: 'i-lucide-tag', to: '/roles' },
-  { label: 'Authorizations', icon: 'i-lucide-key-round', to: '/authorizations' },
-  { label: 'Sessions', icon: 'i-lucide-monitor-smartphone', to: '/sessions' }
+  { label: 'Authorizations', icon: 'i-lucide-key-round', to: '/authorizations' }
 ]
 </script>
 

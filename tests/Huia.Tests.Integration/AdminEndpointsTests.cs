@@ -21,7 +21,6 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [InlineData("users")]
     [InlineData("roles")]
     [InlineData("authorizations")]
-    [InlineData("sessions")]
     public async Task List_WithoutToken_ReturnsUnauthorized(string resource)
     {
         var client = factory.CreateClient();
@@ -37,7 +36,6 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [InlineData("users")]
     [InlineData("roles")]
     [InlineData("authorizations")]
-    [InlineData("sessions")]
     public async Task List_WithoutAdminRole_ReturnsForbidden(string resource)
     {
         var client = await AdminTestHelpers.CreateNonAdminAuthorizedClientAsync(factory);
@@ -284,56 +282,6 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    /// <summary>
-    /// Registering + signing in through <see cref="AdminTestHelpers"/> creates a live session for the
-    /// resulting subject (see Login.cshtml.cs/Register.cshtml.cs publishing UserSignedInEvent) — the fixture
-    /// this test lists/revokes, since sessions (like authorizations) can only be created by a real sign-in,
-    /// not through the admin API itself.
-    /// </summary>
-    [Fact]
-    public async Task Sessions_List_GetAndRevoke_Succeeds()
-    {
-        var (client, subject) = await AdminTestHelpers.CreateAdminAuthorizedClientWithSubjectAsync(factory);
-
-        var list = await client.GetFromJsonAsync<PagedResult<SessionResponse>>(
-            $"{BasePath}/sessions?subject={Uri.EscapeDataString(subject)}");
-        Assert.NotEmpty(list!.Items);
-        var session = list.Items[0];
-
-        var fetched = await client.GetFromJsonAsync<SessionResponse>($"{BasePath}/sessions/{session.Id}");
-        Assert.Equal(session.Id, fetched!.Id);
-        Assert.Null(fetched.RevokedAt);
-
-        var revoked = await client.PostAsync($"{BasePath}/sessions/{session.Id}/revoke", content: null);
-        Assert.Equal(HttpStatusCode.NoContent, revoked.StatusCode);
-
-        var afterRevoke = await client.GetFromJsonAsync<SessionResponse>($"{BasePath}/sessions/{session.Id}");
-        Assert.NotNull(afterRevoke!.RevokedAt);
-    }
-
-    [Fact]
-    public async Task Sessions_RevokeAll_WithoutSubject_ReturnsValidationProblem()
-    {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
-
-        var response = await client.PostAsJsonAsync($"{BasePath}/sessions/revoke-all", new { Subject = "" });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Sessions_RevokeAll_ForSubject_RevokesEverySessionForThatUser()
-    {
-        var (client, subject) = await AdminTestHelpers.CreateAdminAuthorizedClientWithSubjectAsync(factory);
-
-        var revokedAll = await client.PostAsJsonAsync($"{BasePath}/sessions/revoke-all", new { Subject = subject });
-        Assert.Equal(HttpStatusCode.NoContent, revokedAll.StatusCode);
-
-        var list = await client.GetFromJsonAsync<PagedResult<SessionResponse>>(
-            $"{BasePath}/sessions?subject={Uri.EscapeDataString(subject)}");
-        Assert.All(list!.Items, s => Assert.NotNull(s.RevokedAt));
-    }
-
     private sealed record ApplicationResponse(
         string Id,
         string ClientId,
@@ -375,15 +323,4 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         string? Type,
         DateTimeOffset? CreationDate,
         string[] Scopes);
-
-    private sealed record SessionResponse(
-        string Id,
-        string UserId,
-        DateTimeOffset CreatedAt,
-        DateTimeOffset LastActivityAt,
-        DateTimeOffset ExpiresAt,
-        string? IpAddress,
-        string? UserAgent,
-        DateTimeOffset? RevokedAt,
-        string[] ApplicationClientIds);
 }

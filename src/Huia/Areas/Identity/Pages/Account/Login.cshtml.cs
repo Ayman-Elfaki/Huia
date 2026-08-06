@@ -15,7 +15,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// <summary>Signs a user in with email/password, publishing <see cref="UserSignedInEvent"/> on success.</summary>
 [AllowAnonymous]
 public class LoginModel(
-    HuiaSignInManager signInManager,
+    SignInManager<HuiaUser> signInManager,
     UserManager<HuiaUser> userManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
@@ -69,7 +69,7 @@ public class LoginModel(
             var user = await userManager.FindByEmailAsync(Input.Email);
             if (user is not null)
             {
-                await events.PublishAsync(new UserSignedInEvent(user.Id, Input.Email, signInManager.CurrentSessionId!));
+                await events.PublishAsync(new UserSignedInEvent(user.Id, Input.Email));
             }
 
             return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));

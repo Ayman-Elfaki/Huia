@@ -79,13 +79,6 @@
     "twoFactorSetupHint": "امسح هذا المفتاح باستخدام تطبيق المصادقة، أو أدخله يدويًا:",
     "openInAuthenticatorApp": "فتح في تطبيق المصادقة",
     "twoFactorCode": "رمز مكوّن من 6 أرقام",
-    "enableTwoFactor": "تفعيل المصادقة الثنائية",
-    "sessionsTitle": "الجلسات",
-    "sessionsSubtitle": "كل جهاز أو متصفح مسجّل الدخول حاليًا.",
-    "sessionsActionFailed": "لم ينجح ذلك — حاول مرة أخرى.",
-    "thisDevice": "هذا الجهاز",
-    "signOutSession": "تسجيل الخروج",
-    "signOutOtherSessions": "تسجيل الخروج من كل الجلسات الأخرى",
-    "lastActive": "آخر نشاط {date}"
+    "enableTwoFactor": "تفعيل المصادقة الثنائية"
   }
 }

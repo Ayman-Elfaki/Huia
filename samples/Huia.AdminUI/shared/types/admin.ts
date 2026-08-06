@@ -98,15 +98,3 @@ export interface AuthorizationResponse {
   creationDate: string | null
   scopes: string[]
 }
-
-export interface SessionResponse {
-  id: string
-  userId: string
-  createdAt: string
-  lastActivityAt: string
-  expiresAt: string
-  ipAddress: string | null
-  userAgent: string | null
-  revokedAt: string | null
-  applicationClientIds: string[]
-}

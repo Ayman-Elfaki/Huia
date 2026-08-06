@@ -3,7 +3,6 @@ using Huia.Branding;
 using Huia.Keys;
 using Huia.Localization;
 using Huia.Scopes;
-using Huia.Sessions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -91,12 +90,6 @@ public sealed class HuiaOptions
     /// Enables and configures Huia's signing/encryption key management (automatic or manual).
     /// </summary>
     public KeyManagementBuilder KeysManagement { get; }
-
-    /// <summary>
-    /// Configures Huia's user-session tracking — one session per interactive sign-in, carried on tokens
-    /// as the <c>sid</c> claim, listable/revocable via the admin <c>/sessions</c> endpoints.
-    /// </summary>
-    public UserSessionsBuilder Sessions { get; } = new();
 
     /// <summary>
     /// Configures which cultures Huia.UI's pages and transactional emails are localized into. English

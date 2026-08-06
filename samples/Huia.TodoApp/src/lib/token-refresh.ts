@@ -23,8 +23,7 @@ export function shouldRefresh(expiresAt: number | undefined, now: number): boole
  * Redeems the stored refresh token against Huia's token endpoint (see TokenEndpoints.cs's
  * HandleReAuthenticateAsync, which handles authorization-code exchange, refresh-token redemption, and
  * device-code polling identically). Returns a token carrying the rotated credentials, or the original token
- * with `error` set if the refresh token is dead — e.g. its underlying session was revoked server-side (see
- * UserSessionService.IsLiveAsync), which the caller should treat as "sign in again."
+ * with `error` set if the refresh token is no longer valid, which the caller should treat as "sign in again."
  */
 // Generic over T (constrained to RefreshableToken) rather than fixed to that interface, so callers passing
 // NextAuth's own JWT type (a RefreshableToken plus an index signature and other fields) get that same type

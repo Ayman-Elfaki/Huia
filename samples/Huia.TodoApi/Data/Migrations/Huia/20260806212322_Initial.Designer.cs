@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Huia.TodoApi.Data.Migrations.Huia
 {
     [DbContext(typeof(HuiaAppDbContext))]
-    [Migration("20260804191834_Initial")]
+    [Migration("20260806212322_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -52,42 +52,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                     b.HasIndex("Usage", "ExpiresAt");
 
                     b.ToTable("HuiaSigningKeys", "huia");
-                });
-
-            modelBuilder.Entity("Huia.EntityFrameworkCore.Sessions.UserSession", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IpAddress")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("LastActivityAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserAgent")
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExpiresAt");
-
-                    b.HasIndex("UserId", "RevokedAt");
-
-                    b.ToTable("HuiaSessions", "huia");
                 });
 
             modelBuilder.Entity("Huia.Identity.HuiaRole", b =>

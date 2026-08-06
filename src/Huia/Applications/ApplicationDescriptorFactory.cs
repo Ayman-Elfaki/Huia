@@ -102,18 +102,6 @@ internal static class ApplicationDescriptorFactory
                 : ConsentTypes.Explicit,
         };
 
-        if (app.FrontChannelLogoutUri is not null)
-        {
-            descriptor.Properties[LogoutApplicationProperties.FrontChannelLogoutUri] =
-                JsonSerializer.SerializeToElement(app.FrontChannelLogoutUri);
-        }
-
-        if (app.BackChannelLogoutUri is not null)
-        {
-            descriptor.Properties[LogoutApplicationProperties.BackChannelLogoutUri] =
-                JsonSerializer.SerializeToElement(app.BackChannelLogoutUri);
-        }
-
         if (app.HomeUri is not null)
         {
             descriptor.Properties[HomeUriApplicationProperty.HomeUri] =

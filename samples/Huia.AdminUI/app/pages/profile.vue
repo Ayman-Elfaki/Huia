@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type {
   ManageInfoResponse,
-  ManageSessionResponse,
   TwoFactorRequest,
   TwoFactorResponse,
   UpdateInfoRequest
@@ -107,54 +106,7 @@ const otpauthUrl = computed(() => {
   return `otpauth://totp/Huia%20Admin:${encodeURIComponent(info.value.email)}?secret=${twoFactor.value.sharedKey}&issuer=Huia%20Admin&digits=6`
 })
 
-const sessions = ref<ManageSessionResponse[]>([])
-const sessionsError = ref<string | null>(null)
-const revokingSessionId = ref<string | null>(null)
-const revokingOthers = ref(false)
-
-async function loadSessions() {
-  sessionsError.value = null
-  try {
-    sessions.value = await $fetch<ManageSessionResponse[]>('/api/manage/sessions')
-  } catch (err) {
-    sessionsError.value = adminErrorMessage(err)
-  }
-}
-
-async function revokeSession(session: ManageSessionResponse) {
-  revokingSessionId.value = session.id
-  sessionsError.value = null
-  try {
-    await $fetch(`/api/manage/sessions/${session.id}/revoke`, {method: 'POST'})
-    await loadSessions()
-  } catch (err) {
-    sessionsError.value = adminErrorMessage(err)
-  } finally {
-    revokingSessionId.value = null
-  }
-}
-
-async function revokeOtherSessions() {
-  revokingOthers.value = true
-  sessionsError.value = null
-  try {
-    await $fetch('/api/manage/sessions/revoke-others', {method: 'POST'})
-    await loadSessions()
-  } catch (err) {
-    sessionsError.value = adminErrorMessage(err)
-  } finally {
-    revokingOthers.value = false
-  }
-}
-
-const liveSessions = computed(() => sessions.value.filter(session => !session.revokedAt))
-const hasOtherSessions = computed(() => liveSessions.value.some(session => !session.isCurrent))
-
-function formatSessionDate(value: string) {
-  return new Date(value).toLocaleString()
-}
-
-await Promise.all([loadInfo(), loadTwoFactor(), loadSessions()])
+await Promise.all([loadInfo(), loadTwoFactor()])
 </script>
 
 <template>
@@ -382,66 +334,6 @@ await Promise.all([loadInfo(), loadTwoFactor(), loadSessions()])
                 @click="enableTwoFactor"
               />
             </template>
-          </div>
-        </UCard>
-
-        <UCard>
-          <template #header>
-            <span class="font-semibold">Sessions</span>
-          </template>
-
-          <div class="flex flex-col gap-4">
-            <p class="text-sm text-muted">
-              Every device or browser that's currently signed in.
-            </p>
-
-            <UAlert
-              v-if="sessionsError"
-              color="error"
-              variant="subtle"
-              :title="sessionsError"
-            />
-
-            <ul class="flex flex-col gap-3">
-              <li
-                v-for="(session, index) in liveSessions"
-                :key="session.id"
-                class="flex flex-col gap-2"
-              >
-                <hr v-if="index > 0" class="border-default">
-                <div class="flex items-center justify-between gap-2">
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-medium">
-                        {{ session.applicationClientIds.join(', ') || session.ipAddress || session.id }}
-                      </span>
-                      <UBadge v-if="session.isCurrent" color="neutral" variant="subtle">This device</UBadge>
-                    </div>
-                    <span class="text-xs text-muted">Last active {{ formatSessionDate(session.lastActivityAt) }}</span>
-                    <span v-if="session.userAgent" class="text-xs text-muted truncate max-w-sm">{{ session.userAgent }}</span>
-                  </div>
-                  <UButton
-                    v-if="!session.isCurrent"
-                    label="Sign out"
-                    color="neutral"
-                    variant="subtle"
-                    size="sm"
-                    :loading="revokingSessionId === session.id"
-                    @click="revokeSession(session)"
-                  />
-                </div>
-              </li>
-            </ul>
-
-            <UButton
-              v-if="hasOtherSessions"
-              label="Sign out of all other sessions"
-              color="neutral"
-              variant="subtle"
-              :loading="revokingOthers"
-              class="self-start"
-              @click="revokeOtherSessions"
-            />
           </div>
         </UCard>
       </div>

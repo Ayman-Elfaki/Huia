@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Huia.Common;
 using Huia.Identity;
-using Huia.Sessions;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -71,8 +70,7 @@ internal static class DeviceEndpoints
     }
 
     private static async Task<IResult> HandlePostAsync([FromForm] DeviceVerificationDecision decision,
-        HttpContext httpContext, UserManager<HuiaUser> userManager, HuiaSignInManager signInManager,
-        UserSessionService sessions, IOpenIddictScopeManager scopeManager,
+        HttpContext httpContext, UserManager<HuiaUser> userManager, IOpenIddictScopeManager scopeManager,
         IOpenIddictApplicationManager applicationManager)
     {
         var result = await DeviceVerifier.AuthenticateAsync(httpContext).ConfigureAwait(false);
@@ -94,7 +92,7 @@ internal static class DeviceEndpoints
         }
 
         var identity = await DeviceVerifier
-            .ApproveAsync(httpContext, user, request.Scopes, userManager, signInManager, sessions, scopeManager)
+            .ApproveAsync(user, request.Scopes, userManager, scopeManager)
             .ConfigureAwait(false);
 
         return Results.SignIn(new ClaimsPrincipal(identity), properties: null,

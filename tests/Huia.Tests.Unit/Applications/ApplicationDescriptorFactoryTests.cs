@@ -149,24 +149,6 @@ public class ApplicationDescriptorFactoryTests
     }
 
     [Fact]
-    public void NewDescriptor_WithLogoutUris_StoresThemAsProperties()
-    {
-        var app = new ServerSideWebApplicationOptions();
-        app.SetClientId("web");
-        app.SetClientSecret("s");
-        app.SetFrontChannelLogoutUri("https://web.example/oidc/front-logout");
-        app.SetBackChannelLogoutUri("https://web.example/oidc/back-logout");
-
-        var descriptor =
-            ApplicationDescriptorFactory.NewDescriptor(app, ApplicationTypes.Web, ClientTypes.Confidential);
-
-        Assert.Equal("https://web.example/oidc/front-logout",
-            descriptor.Properties["huia:frontchannel_logout_uri"].GetString());
-        Assert.Equal("https://web.example/oidc/back-logout",
-            descriptor.Properties["huia:backchannel_logout_uri"].GetString());
-    }
-
-    [Fact]
     public void NewDescriptor_WithoutTokenLifetimesConfigured_StoresNoLifetimeSettings()
     {
         var app = new ServerSideWebApplicationOptions();

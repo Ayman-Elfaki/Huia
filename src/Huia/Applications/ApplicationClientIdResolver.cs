@@ -5,9 +5,8 @@ namespace Huia.Applications;
 /// <summary>
 /// Resolves OpenIddict's internal application id to the application's public <c>client_id</c> — the only
 /// application identifier a caller ever configured or sees elsewhere (see <c>ApplicationsEndpoints</c>).
-/// Shared by <c>Endpoints.Admin.AuthorizationsEndpoints</c>/<c>SessionsEndpoints</c> and
-/// <c>Endpoints.Manage.ManageSessionsEndpoints</c>, all of which surface the application(s) behind an
-/// authorization/session instead of the opaque internal id.
+/// Used by <c>Endpoints.Admin.AuthorizationsEndpoints</c>, which surfaces the application behind an
+/// authorization instead of the opaque internal id.
 /// </summary>
 internal static class ApplicationClientIdResolver
 {

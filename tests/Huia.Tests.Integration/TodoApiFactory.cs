@@ -33,20 +33,6 @@ public sealed class TodoApiFactory : WebApplicationFactory<Program>
         ClientOptions.BaseAddress = new Uri("https://localhost");
     }
 
-    /// <summary>
-    /// When set, back-channel logout POSTs (see <see cref="LogoutNotifier"/>) are routed through this
-    /// delegate instead of a real <see cref="HttpMessageHandler"/> — lets tests capture/inspect those
-    /// requests without spinning up a second in-process host per test (which raced against this factory's
-    /// own Quartz-registered logger provider being torn down; see LogoutNotificationTests).
-    /// Left <see langword="null"/>, requests fall through to a real handler, which is what every other test
-    /// gets by default since none of them exercise back-channel logout.
-    /// </summary>
-    public Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? BackChannelLogoutInterceptor
-    {
-        get;
-        set;
-    }
-
     /// <summary>Confirmation links captured by the fake <see cref="IEmailSender{TUser}"/>,
     /// newest last — for tests that need to inspect what Huia would have emailed
     /// (e.g. its <c>returnUrl</c>) without a real SMTP sender.
@@ -105,9 +91,6 @@ public sealed class TodoApiFactory : WebApplicationFactory<Program>
             // TokenSecurityTests prove reuse of an already-rotated refresh token is rejected without a
             // real 30-second sleep.
             services.Configure<OpenIddictServerOptions>(options => options.RefreshTokenReuseLeeway = TimeSpan.Zero);
-
-            services.AddHttpClient(LogoutNotifier.BackChannelHttpClientName)
-                .ConfigurePrimaryHttpMessageHandler(() => new BackChannelLogoutRelayHandler(this));
         });
     }
 
@@ -119,17 +102,6 @@ public sealed class TodoApiFactory : WebApplicationFactory<Program>
         {
             _connection.Dispose();
         }
-    }
-
-    /// <summary>Forwards to <see cref="BackChannelLogoutInterceptor"/> if a test has set one, otherwise behaves like a normal handler.</summary>
-    private sealed class BackChannelLogoutRelayHandler(TodoApiFactory factory)
-        : DelegatingHandler(new HttpClientHandler())
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            factory.BackChannelLogoutInterceptor is { } interceptor
-                ? interceptor(request, cancellationToken)
-                : base.SendAsync(request, cancellationToken);
     }
 
     /// <summary>Records what Huia would have emailed into <see cref="SentConfirmationLinks"/>/<see cref="SentPasswordResetLinks"/> instead of actually sending anything.</summary>

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Huia.Common;
 using Huia.Identity;
-using Huia.Sessions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -27,7 +26,6 @@ internal static class TokenEndpoints
         HttpContext httpContext,
         UserManager<HuiaUser> userManager,
         SignInManager<HuiaUser> signInManager,
-        UserSessionService sessions,
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictScopeManager scopeManager)
     {
@@ -42,7 +40,7 @@ internal static class TokenEndpoints
         if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType() ||
             request.IsDeviceCodeGrantType())
         {
-            return await HandleReAuthenticateAsync(httpContext, userManager, signInManager, sessions)
+            return await HandleReAuthenticateAsync(httpContext, userManager, signInManager)
                 .ConfigureAwait(false);
         }
 
@@ -78,7 +76,7 @@ internal static class TokenEndpoints
     /// the user can still sign in, and re-issue.
     /// </summary>
     private static async Task<IResult> HandleReAuthenticateAsync(HttpContext httpContext,
-        UserManager<HuiaUser> userManager, SignInManager<HuiaUser> signInManager, UserSessionService sessions)
+        UserManager<HuiaUser> userManager, SignInManager<HuiaUser> signInManager)
     {
         var result = await httpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)
             .ConfigureAwait(false);
@@ -98,25 +96,7 @@ internal static class TokenEndpoints
 
         var principal = result.Principal!;
 
-        // Carried forward from the code/refresh/device token's own principal, not re-derived — a session
-        // must keep the same sid across every redemption, or a relying party could never correlate a later
-        // back-channel logout notification against the session it originally saw in an id_token. Absent
-        // entirely for a token minted before this feature shipped; present-but-no-longer-live means the
-        // session it belongs to has since ended (sign-out or an admin's explicit revoke via the /sessions
-        // endpoints) — without this check, an already-issued refresh token would keep minting fresh access
-        // tokens forever regardless, defeating the point of tracking sessions at all.
-        var sessionId = principal.GetClaim(SessionClaimTypes.Sid);
-        if (sessionId is not null)
-        {
-            if (!await sessions.IsLiveAsync(sessionId).ConfigureAwait(false))
-            {
-                return Forbid(Errors.InvalidGrant, "The session this token belongs to has ended.");
-            }
-
-            await sessions.TouchAsync(sessionId).ConfigureAwait(false);
-        }
-
-        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, principal.GetScopes(), sessionId)
+        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, principal.GetScopes())
             .ConfigureAwait(false);
         identity.SetResources(principal.GetResources());
 

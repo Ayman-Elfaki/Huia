@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Security.Claims;
 using Huia.Endpoints.Connect;
 using Huia.Identity;
-using Huia.Sessions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -60,31 +59,15 @@ internal static class DeviceVerifier
     }
 
     /// <summary>
-    /// Builds the identity for a just-approved device code — reusing (or creating) the approving browser's
-    /// own session the same way a browser-driven <c>/connect/authorize</c> would, since approving a device
-    /// code is equally an interactive sign-in moment. The caller still has to actually sign this in against
+    /// Builds the identity for a just-approved device code, ready to be signed in against
     /// <see cref="OpenIddictServerAspNetCoreDefaults.AuthenticationScheme"/> (a plain
     /// <see cref="ClaimsPrincipal"/> here rather than an <c>IResult</c>/<c>SignInAsync</c> call, so it works
     /// equally from a minimal API handler or a Razor Page).
     /// </summary>
-    public static async Task<ClaimsIdentity> ApproveAsync(HttpContext httpContext, HuiaUser user,
-        ImmutableArray<string> scopes, UserManager<HuiaUser> userManager, HuiaSignInManager signInManager,
-        UserSessionService sessions, IOpenIddictScopeManager scopeManager)
+    public static async Task<ClaimsIdentity> ApproveAsync(HuiaUser user, ImmutableArray<string> scopes,
+        UserManager<HuiaUser> userManager, IOpenIddictScopeManager scopeManager)
     {
-        var existingSessionId = httpContext.User.FindFirstValue(SessionClaimTypes.Sid);
-        string sessionId;
-        if (existingSessionId is not null && await sessions.IsLiveAsync(existingSessionId).ConfigureAwait(false))
-        {
-            sessionId = existingSessionId;
-            await sessions.TouchAsync(sessionId).ConfigureAwait(false);
-        }
-        else
-        {
-            await signInManager.SignInAsync(user, isPersistent: false).ConfigureAwait(false);
-            sessionId = signInManager.CurrentSessionId!;
-        }
-
-        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes, sessionId)
+        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes)
             .ConfigureAwait(false);
         // Without this, TokenEndpoints.HandleReAuthenticateAsync's own identity.SetResources(principal.GetResources())
         // — which just carries forward whatever this sign-in attached — would always find nothing: unlike

@@ -6,27 +6,16 @@ var webClientSecret = builder.AddParameter("web-client-secret", "todo-web-dev-se
 var testClientSecret = builder.AddParameter("test-client-secret", "todo-tests-dev-secret", secret: true);
 var adminClientSecret = builder.AddParameter("admin-client-secret", "admin-ui-dev-secret", secret: true);
 var authSecret = builder.AddParameter("auth-secret", "insecure-dev-only-auth-secret-change-me", secret: true);
-var redisPassword = builder.AddParameter("redis-password", "todo-redis-dev-secret", secret: true);
 var postgresPassword = builder.AddParameter("postgres-password", "todo-postgres-dev-secret", secret: true);
 
 var mailpit = builder.AddMailPit("mailpit");
 
-// One server, one logical database per app — mirrors the "cache" Redis resource shared across apps, but each
-// app gets its own database rather than sharing schemas within one. Persistent so local dev data (accounts,
-// todos) survives an AppHost restart, same reasoning as "cache" below.
+// One server, one logical database per app. Persistent so local dev data (accounts, todos) survives an
+// AppHost restart.
 var postgres = builder.AddPostgres("postgres", password: postgresPassword)
     .WithLifetime(ContainerLifetime.Persistent);
 
 var todoApiDb = postgres.AddDatabase("todoapidb");
-
-// Backs Auth.js's session store on the "web" resource (see auth.ts) — the actual access/refresh/id tokens
-// live here, keyed by the signed-in user's Huia subject, rather than inside the session JWT cookie itself.
-// That's what makes /api/auth/backchannel-logout able to actually revoke a session on Huia's say-so: deleting
-// a Redis key is something a self-contained, stateless JWT can never be made to forget on demand. Persistent
-// so a todo-web restart during local dev doesn't silently sign everyone out.
-var redis = builder.AddRedis("cache", port: null, password: redisPassword)
-    .WithLifetime(ContainerLifetime.Persistent)
-    .WithRedisInsight();
 
 var api = builder.AddProject<Projects.Huia_TodoApi>("todoapi")
     // Pinned and unproxied: TodoApi reports its own issuer (in tokens and the discovery document) based on
@@ -51,15 +40,6 @@ var web = builder.AddNextJsApp("web", "../Huia.TodoApp")
     .WithHttpEndpoint(port: 3000, targetPort: 3000, isProxied: false)
     .WithReference(api)
     .WaitFor(api)
-    .WithReference(redis)
-    .WaitFor(redis)
-    // WithReference alone already gives this JS resource a ready-to-use "CACHE_URI" env var (Aspire's
-    // JavaScript integration derives it from the Redis resource's own name, "cache" -> CACHE_URI, the same
-    // way ConnectionStrings__cache is derived for a .NET consumer) — no need to build our own. It's
-    // a "rediss://" URL: Aspire's container tunnel wraps every container resource's endpoint in TLS by
-    // default (ASPIRE_ENABLE_CONTAINER_TUNNEL), using a self-signed dev cert, so session-store.ts's ioredis
-    // client has to be told to trust it, same reasoning as NODE_TLS_REJECT_UNAUTHORIZED below but scoped to
-    // just this one client instead of the whole process.
     // Node has its own CA bundle, separate from the OS/.NET trust store, so it doesn't trust TodoApi's
     // ASP.NET Core HTTPS development certificate. Without this, Auth.js's server-to-server calls to TodoApi
     // (discovery, code-for-token exchange) fail with "fetch failed", surfaced to the browser as a generic

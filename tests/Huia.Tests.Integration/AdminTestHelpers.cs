@@ -28,7 +28,7 @@ internal static class AdminTestHelpers
         CreateAuthorizedClientAsync(factory, roles: []);
 
     /// <summary>Same as <see cref="CreateAdminAuthorizedClientAsync"/>, also returning the token's <c>sub</c>
-    /// claim — the id AuthorizationsEndpoints/SessionsEndpoints filter by.</summary>
+    /// claim — the id AuthorizationsEndpoints filters by.</summary>
     public static async Task<(HttpClient Client, string Subject)> CreateAdminAuthorizedClientWithSubjectAsync(
         TodoApiFactory factory)
     {

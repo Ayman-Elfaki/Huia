@@ -3,6 +3,7 @@ using Huia.Eventing;
 using Huia.Common;
 using Huia.Identity;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// <summary>Completes sign-in for a user whose password check succeeded but who has 2FA enabled.</summary>
 [AllowAnonymous]
 public class LoginWith2faModel(
-    HuiaSignInManager signInManager,
+    SignInManager<HuiaUser> signInManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
     ILogger<LoginWith2faModel> logger) : PageModel
@@ -60,7 +61,7 @@ public class LoginWith2faModel(
         if (result.Succeeded)
         {
             logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", user.Id);
-            await events.PublishAsync(new UserSignedInEvent(user.Id, user.Email!, signInManager.CurrentSessionId!));
+            await events.PublishAsync(new UserSignedInEvent(user.Id, user.Email!));
             return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
         }
 

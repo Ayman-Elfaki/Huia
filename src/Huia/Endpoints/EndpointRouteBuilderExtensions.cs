@@ -36,8 +36,7 @@ public static class EndpointRouteBuilderExtensions
 
         /// <summary>
         /// Maps the account-management JSON endpoints a signed-in user calls to manage their own account:
-        /// <c>/api/identity/manage/2fa</c>, <c>/api/identity/manage/info</c>, <c>/api/identity/manage/sessions</c>
-        /// — for an SPA/native/server-side
+        /// <c>/api/identity/manage/2fa</c>, <c>/api/identity/manage/info</c> — for an SPA/native/server-side
         /// OAuth client to build its own account-settings UI against. Accepts either the
         /// <c>Identity.Application</c> cookie (same-origin server-rendered callers) or a bearer access token
         /// validated by OpenIddict (cross-origin OAuth clients, the same scheme <c>userinfo</c> uses).
@@ -52,14 +51,13 @@ public static class EndpointRouteBuilderExtensions
 
             group.MapManageInfoEndpoints();
             group.MapManage2FaEndpoints();
-            group.MapManageSessionsEndpoints();
 
             return group;
         }
 
         /// <summary>
         /// Maps JSON CRUD endpoints for managing what Huia stores — OpenIddict applications and scopes, live
-        /// authorizations, users, roles, and sessions <c>/api/identity/admin</c>.
+        /// authorizations, users, and roles — under <c>/api/identity/admin</c>.
         /// Backed by <c>IOpenIddictApplicationManager</c>/<c>IOpenIddictAuthorizationManager</c>/
         /// <c>UserManager&lt;HuiaUser&gt;</c>/<c>RoleManager&lt;HuiaRole&gt;</c>, so it works against whatever
         /// store is configured.
@@ -77,7 +75,6 @@ public static class EndpointRouteBuilderExtensions
             group.MapScopesEndpoints();
             group.MapUsersEndpoints();
             group.MapRolesEndpoints();
-            group.MapSessionsEndpoints();
 
             return group;
         }

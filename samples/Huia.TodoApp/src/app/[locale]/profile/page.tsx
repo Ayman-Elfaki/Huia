@@ -8,7 +8,6 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {ProfileInfoForm} from "@/components/profile/profile-info-form";
 import {ChangePasswordForm} from "@/components/profile/change-password-form";
 import {TwoFactorPanel} from "@/components/profile/two-factor-panel";
-import {SessionsPanel} from "@/components/profile/sessions-panel";
 
 export default async function ProfilePage({params}: { params: Promise<{ locale: string }> }) {
     const {locale} = await params;
@@ -19,10 +18,9 @@ export default async function ProfilePage({params}: { params: Promise<{ locale: 
     }
 
     const t = await getTranslations("Profile");
-    const [info, twoFactor, sessions] = await Promise.all([
+    const [info, twoFactor] = await Promise.all([
         manageApi.getInfo(session.accessToken),
         manageApi.getTwoFactorStatus(session.accessToken),
-        manageApi.getSessions(session.accessToken),
     ]);
 
     return (
@@ -54,15 +52,6 @@ export default async function ProfilePage({params}: { params: Promise<{ locale: 
                     </CardHeader>
                     <CardContent>
                         <TwoFactorPanel email={info.email} initial={{status: "idle", ...twoFactor}} />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t("sessionsTitle")}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <SessionsPanel initial={sessions} />
                     </CardContent>
                 </Card>
             </main>

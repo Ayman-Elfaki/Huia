@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Huia.Common;
 using Huia.Core;
 using Huia.Identity;
-using Huia.Sessions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -27,8 +26,6 @@ internal static class AuthorizationEndpoints
     private static async Task<IResult> HandleAsync(
         HttpContext httpContext,
         UserManager<HuiaUser> userManager,
-        HuiaSignInManager signInManager,
-        UserSessionService sessions,
         IOpenIddictScopeManager scopeManager,
         IOpenIddictApplicationManager applicationManager,
         HuiaOptions huiaOptions)
@@ -43,7 +40,7 @@ internal static class AuthorizationEndpoints
 
         if (user is null)
         {
-            // No session, or the cookie names a user that no longer exists (e.g. a stale cookie left over
+            // Not signed in, or the cookie names a user that no longer exists (e.g. a stale cookie left over
             // from a wiped/reseeded database) — either way, treat it as "not signed in" rather than 500ing.
             if (result is { Succeeded: true })
             {
@@ -53,36 +50,6 @@ internal static class AuthorizationEndpoints
             var returnUrl = Uri.EscapeDataString(httpContext.Request.GetEncodedUrl());
             var separator = huiaOptions.LoginPath.Contains('?') ? '&' : '?';
             return Results.Redirect($"{huiaOptions.LoginPath}{separator}ReturnUrl={returnUrl}");
-        }
-
-        // The cookie names a session (the common case — every sign-in since this feature shipped stamps one
-        // on) but it's since expired or been revoked (e.g. by an admin, via the /sessions endpoints): don't
-        // silently mint tokens under a session that's supposed to be over. Same "not signed in" treatment as
-        // a missing/stale user above, rather than quietly falling back to a fresh session, which would let a
-        // revoked session's cookie keep working indefinitely just by hitting /connect/authorize again.
-        var existingSessionId = result.Principal?.FindFirstValue(SessionClaimTypes.Sid);
-        if (existingSessionId is not null && !await sessions.IsLiveAsync(existingSessionId))
-        {
-            await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
-
-            var returnUrl = Uri.EscapeDataString(httpContext.Request.GetEncodedUrl());
-            var separator = huiaOptions.LoginPath.Contains('?') ? '&' : '?';
-            return Results.Redirect($"{huiaOptions.LoginPath}{separator}ReturnUrl={returnUrl}");
-        }
-
-        // A cookie from before this feature shipped names no session at all — create one now and re-stamp
-        // the cookie so later /connect/authorize hits over the same (short-lived) cookie reuse it, the same
-        // way a cookie that already has one does, instead of minting a fresh session on every SSO hop.
-        string sessionId;
-        if (existingSessionId is not null)
-        {
-            sessionId = existingSessionId;
-            await sessions.TouchAsync(sessionId);
-        }
-        else
-        {
-            await signInManager.SignInAsync(user, isPersistent: false);
-            sessionId = signInManager.CurrentSessionId!;
         }
 
         var scopes = request.GetScopes();
@@ -108,7 +75,7 @@ internal static class AuthorizationEndpoints
             }
         }
 
-        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes, sessionId);
+        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes);
         identity.SetResources(await scopeManager.ListResourcesAsync(scopes).ToListAsync());
 
         // NOTE: Huia auto-approves consent for every client for v1 (no consent-screen UI is implemented

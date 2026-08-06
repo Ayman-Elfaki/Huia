@@ -62,11 +62,6 @@ builder.Services.AddHuia(issuer, huia =>
             // far as Huia can automatically take the user.
             app.SetHomeUri(builder.Configuration["Oidc:WebHomeUri"]!);
 
-            // Notified when the user signs out anywhere, not just here — see MapHuiaConnectEndpoints's
-            // /connect/logout, which front/back-channel-logs-out every other client with a live session.
-            app.SetFrontChannelLogoutUri(builder.Configuration["Oidc:WebFrontChannelLogoutUri"]!);
-            app.SetBackChannelLogoutUri(builder.Configuration["Oidc:WebBackChannelLogoutUri"]!);
-
             // Short-lived access tokens for the sample's own demonstration of token refresh (see RefreshTokenEndpoints).
             app.SetAccessTokenLifetime(TimeSpan.FromMinutes(5));
 
