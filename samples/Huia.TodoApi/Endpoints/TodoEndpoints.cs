@@ -23,6 +23,9 @@ public static class TodoEndpoints
     public sealed record UpdateTodoRequest(string Title, bool IsComplete);
 
     
+    // Long because it's a flat list of five independent MapGet/Post/Put/Delete route registrations -
+    // splitting it would just relocate, not reduce, that sequence.
+#pragma warning disable MA0051
     public static RouteGroupBuilder MapTodoEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/todos")
@@ -54,7 +57,7 @@ public static class TodoEndpoints
         {
             if (string.IsNullOrWhiteSpace(request.Title))
             {
-                return Results.ValidationProblem(new Dictionary<string, string[]>
+                return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
                 {
                     [nameof(request.Title)] = ["Title is required."]
                 });
@@ -82,7 +85,7 @@ public static class TodoEndpoints
 
             if (string.IsNullOrWhiteSpace(request.Title))
             {
-                return Results.ValidationProblem(new Dictionary<string, string[]>
+                return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
                 {
                     [nameof(request.Title)] = ["Title is required."]
                 });
@@ -108,6 +111,7 @@ public static class TodoEndpoints
 
         return group;
     }
+#pragma warning restore MA0051
 
     private static string GetOwnerId(ClaimsPrincipal user) =>
         user.GetClaim(OpenIddictConstants.Claims.Subject)

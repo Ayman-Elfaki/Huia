@@ -62,20 +62,20 @@ public class DeviceFlowTests(TodoApiFactory factory) : IClassFixture<TodoApiFact
 
         using var deviceClient = factory.CreateClient();
         var (deviceCode, userCode, verificationUri) = await RequestDeviceCodeAsync(deviceClient, "roles todos");
-        Assert.Contains("/identity/account/device", verificationUri);
+        Assert.Contains("/identity/account/device", verificationUri, StringComparison.Ordinal);
 
         var pageUrl = $"/identity/account/device?user_code={userCode}";
         var antiforgeryToken = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(signedInClient, pageUrl);
 
         using var approveResponse = await signedInClient.PostAsync(pageUrl, new FormUrlEncodedContent(
-            new Dictionary<string, string>
+            new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["user_code"] = userCode,
                 ["accept"] = "true",
                 ["__RequestVerificationToken"] = antiforgeryToken,
             }));
         Assert.Equal(HttpStatusCode.OK, approveResponse.StatusCode);
-        Assert.Contains("Signed in", await approveResponse.Content.ReadAsStringAsync());
+        Assert.Contains("Signed in", await approveResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
         var (accessToken, error) = await PollTokenOnceAsync(deviceClient, deviceCode);
         Assert.Null(error);
@@ -114,7 +114,7 @@ public class DeviceFlowTests(TodoApiFactory factory) : IClassFixture<TodoApiFact
         var antiforgeryToken = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(signedInClient, pageUrl);
 
         using var denyResponse = await signedInClient.PostAsync(pageUrl, new FormUrlEncodedContent(
-            new Dictionary<string, string>
+            new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["user_code"] = userCode,
                 ["accept"] = "false",
@@ -153,7 +153,7 @@ public class DeviceFlowTests(TodoApiFactory factory) : IClassFixture<TodoApiFact
         // landing on the login page (not a bare 401) is the point: a real user clicking this link from their
         // phone needs a normal sign-in prompt, not an API-style 401.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Sign in", await response.Content.ReadAsStringAsync());
+        Assert.Contains("Sign in", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     private async Task PromoteToAdminAsync(string email)
@@ -183,7 +183,7 @@ public class DeviceFlowTests(TodoApiFactory factory) : IClassFixture<TodoApiFact
         HttpClient client, string scope)
     {
         using var response = await client.PostAsync("/connect/device", new FormUrlEncodedContent(
-            new Dictionary<string, string>
+            new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["client_id"] = DeviceClientId,
                 ["scope"] = scope,
@@ -205,7 +205,7 @@ public class DeviceFlowTests(TodoApiFactory factory) : IClassFixture<TodoApiFact
         var antiforgeryToken = getDocument.RootElement.GetProperty("antiforgeryToken").GetString()!;
 
         using var postResponse = await signedInClient.PostAsync($"/connect/verify?user_code={userCode}",
-            new FormUrlEncodedContent(new Dictionary<string, string>
+            new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["user_code"] = userCode,
                 ["accept"] = accept ? "true" : "false",
@@ -224,7 +224,7 @@ public class DeviceFlowTests(TodoApiFactory factory) : IClassFixture<TodoApiFact
     private static async Task<(string? AccessToken, string? Error)> PollTokenOnceAsync(HttpClient client, string deviceCode)
     {
         using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(
-            new Dictionary<string, string>
+            new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["grant_type"] = "urn:ietf:params:oauth:grant-type:device_code",
                 ["device_code"] = deviceCode,

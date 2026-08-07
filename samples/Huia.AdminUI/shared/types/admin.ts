@@ -1,9 +1,10 @@
 // Mirrors the response/request record shapes in src/Huia/Endpoints/Admin/*.cs and
-// samples/Huia.TodoApi's MapHuiaAdminEndpoints() (proxied through server/api/admin/[...path].ts).
+// samples/Huia.TodoApi's MapHuiaAdminEndpoints() (proxied through nuxt-api-party's huiaAdmin endpoint).
 
 export interface PagedResult<T> {
   items: T[]
-  totalCount: number
+  /** Opaque token to pass back as the next request's `cursor` query param, or null on the last page. */
+  nextCursor: string | null
 }
 
 export type ApplicationKind = 'spa' | 'native' | 'web' | 'm2m' | 'device'

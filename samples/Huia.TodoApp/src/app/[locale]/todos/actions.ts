@@ -1,18 +1,9 @@
 "use server";
 
 import {revalidatePath} from "next/cache";
-import {getServerSession} from "next-auth/next"
 
 import * as todoApi from "@/lib/todo-api";
-import {authOptions} from "@/auth";
-
-async function requireAccessToken(): Promise<string> {
-    const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
-        throw new Error("Not authenticated.");
-    }
-    return session.accessToken;
-}
+import {requireAccessToken} from "@/lib/require-access-token";
 
 export async function createTodoAction(formData: FormData): Promise<void> {
     const title = String(formData.get("title") ?? "").trim();

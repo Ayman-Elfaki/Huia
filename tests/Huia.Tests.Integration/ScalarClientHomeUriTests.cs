@@ -52,13 +52,13 @@ public class ScalarClientHomeUriTests(TodoApiFactory factory) : IClassFixture<To
             await IdentityUiTestHelpers.RegisterAsync(client, email, "P@ssw0rd123!", loginReturnUrl);
         Assert.Equal(HttpStatusCode.Found, registerResponse.StatusCode);
 
-        var sent = Assert.Single(factory.SentConfirmationLinks, s => s.Email == email);
+        var sent = Assert.Single(factory.SentConfirmationLinks, s => string.Equals(s.Email, email, StringComparison.OrdinalIgnoreCase));
         var confirmationReturnUrl = ExtractQueryParameter(sent.ConfirmationLink, "returnUrl");
 
         // The bug: this used to resolve to "https://localhost" (redirectUri's bare authority, no path) — a
         // 404 on TodoApi, which maps nothing at "/". It must resolve to scalar's own HomeUri instead, which
         // Program.cs sets to this same "/scalar" redirect_uri.
-        Assert.NotEqual(new Uri(redirectUri).GetLeftPart(UriPartial.Authority), confirmationReturnUrl);
+        Assert.NotEqual(new Uri(redirectUri).GetLeftPart(UriPartial.Authority), confirmationReturnUrl, StringComparer.Ordinal);
         Assert.Equal(redirectUri, confirmationReturnUrl);
     }
 

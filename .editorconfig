@@ -1,0 +1,12 @@
+root = true
+
+[*.cshtml.cs]
+# Razor Pages' own convention names a page's code-behind after the .cshtml page ("Page.cshtml.cs"), not
+# after the PageModel class it declares ("PageModel") - not a real file/type mismatch.
+dotnet_diagnostic.MA0048.severity = none
+
+[**/Migrations/**/*.cs]
+# EF Core's migration scaffolding (`dotnet ef migrations add`) generates these file names and Up/Down
+# method bodies - not code to rename or split by hand.
+dotnet_diagnostic.MA0048.severity = none
+dotnet_diagnostic.MA0051.severity = none

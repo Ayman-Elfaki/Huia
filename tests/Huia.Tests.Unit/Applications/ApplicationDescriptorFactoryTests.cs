@@ -158,9 +158,9 @@ public class ApplicationDescriptorFactoryTests
         var descriptor =
             ApplicationDescriptorFactory.NewDescriptor(app, ApplicationTypes.Web, ClientTypes.Confidential);
 
-        Assert.DoesNotContain(Settings.TokenLifetimes.AccessToken, descriptor.Settings.Keys);
-        Assert.DoesNotContain(Settings.TokenLifetimes.IdentityToken, descriptor.Settings.Keys);
-        Assert.DoesNotContain(Settings.TokenLifetimes.RefreshToken, descriptor.Settings.Keys);
+        Assert.DoesNotContain(Settings.TokenLifetimes.AccessToken, descriptor.Settings.Keys, StringComparer.Ordinal);
+        Assert.DoesNotContain(Settings.TokenLifetimes.IdentityToken, descriptor.Settings.Keys, StringComparer.Ordinal);
+        Assert.DoesNotContain(Settings.TokenLifetimes.RefreshToken, descriptor.Settings.Keys, StringComparer.Ordinal);
     }
 
     [Fact]

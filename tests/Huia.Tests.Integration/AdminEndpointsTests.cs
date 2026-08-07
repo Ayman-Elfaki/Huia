@@ -68,7 +68,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal("spa", app.Kind);
 
         var list = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>($"{BasePath}/applications");
-        Assert.Contains(list!.Items, a => a.ClientId == clientId);
+        Assert.Contains(list!.Items, a => string.Equals(a.ClientId, clientId, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<ApplicationResponse>($"{BasePath}/applications/{app.Id}");
         Assert.Equal(clientId, fetched!.ClientId);
@@ -95,6 +95,49 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     }
 
     [Fact]
+    public async Task Applications_CursorPagination_WalksEveryItemExactlyOnceWithoutTotalCount()
+    {
+        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+
+        // More than one default-sized (25) page, so paging through requires at least one NextCursor hop.
+        var createdIds = new List<string>();
+        for (var i = 0; i < 30; i++)
+        {
+            var created = await client.PostAsJsonAsync($"{BasePath}/applications", new
+            {
+                Kind = "spa",
+                ClientId = $"test-app-cursor-{Guid.NewGuid():N}",
+                RequiresPkce = true,
+                RequireConsent = false,
+                RedirectUris = new[] { "https://example.com/callback" },
+                Scopes = new[] { "todos" },
+            });
+            Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+            var app = await created.Content.ReadFromJsonAsync<ApplicationResponse>();
+            createdIds.Add(app!.Id);
+        }
+
+        var firstPage = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>($"{BasePath}/applications");
+        Assert.Equal(25, firstPage!.Items.Count);
+        Assert.NotNull(firstPage.NextCursor);
+
+        var walkedIds = new List<string>();
+        var cursor = (string?)null;
+        do
+        {
+            var url = cursor is null
+                ? $"{BasePath}/applications"
+                : $"{BasePath}/applications?cursor={Uri.EscapeDataString(cursor)}";
+            var page = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>(url);
+            walkedIds.AddRange(page!.Items.Select(a => a.Id));
+            cursor = page.NextCursor;
+        } while (cursor is not null);
+
+        Assert.Equal(walkedIds.Count, walkedIds.Distinct(StringComparer.Ordinal).Count());
+        Assert.All(createdIds, id => Assert.Contains(id, walkedIds, StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task Scopes_Crud_FullLifecycle_Succeeds()
     {
         var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
@@ -113,7 +156,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal(name, scope!.Name);
 
         var list = await client.GetFromJsonAsync<PagedResult<ScopeResponse>>($"{BasePath}/scopes");
-        Assert.Contains(list!.Items, s => s.Name == name);
+        Assert.Contains(list!.Items, s => string.Equals(s.Name, name, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<ScopeResponse>($"{BasePath}/scopes/{scope.Id}");
         Assert.Equal(name, fetched!.Name);
@@ -137,6 +180,9 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     }
 
     [Fact]
+    // Long because it's a single linear create-read-update-role-lockout-reset-delete lifecycle; splitting a
+    // test's own sequential steps into multiple methods would just fragment one scenario, not simplify it.
+#pragma warning disable MA0051
     public async Task Users_Crud_FullLifecycle_Succeeds()
     {
         var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
@@ -157,7 +203,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 
         var found = await client.GetFromJsonAsync<PagedResult<UserResponse>>(
             $"{BasePath}/users?search={Uri.EscapeDataString(email)}");
-        Assert.Contains(found!.Items, u => u.Id == user.Id);
+        Assert.Contains(found!.Items, u => string.Equals(u.Id, user.Id, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<UserResponse>($"{BasePath}/users/{user.Id}");
         Assert.Equal(email, fetched!.Email);
@@ -181,13 +227,13 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
             new { Role = roleName, Add = true });
         Assert.Equal(HttpStatusCode.OK, roleAdded.StatusCode);
         var withRole = await roleAdded.Content.ReadFromJsonAsync<UserResponse>();
-        Assert.Contains(roleName, withRole!.Roles);
+        Assert.Contains(roleName, withRole!.Roles, StringComparer.Ordinal);
 
         var roleRemoved = await client.PostAsJsonAsync($"{BasePath}/users/{user.Id}/roles",
             new { Role = roleName, Add = false });
         Assert.Equal(HttpStatusCode.OK, roleRemoved.StatusCode);
         var withoutRole = await roleRemoved.Content.ReadFromJsonAsync<UserResponse>();
-        Assert.DoesNotContain(roleName, withoutRole!.Roles);
+        Assert.DoesNotContain(roleName, withoutRole!.Roles, StringComparer.Ordinal);
 
         var lockedOut = await client.PostAsJsonAsync($"{BasePath}/users/{user.Id}/lockout", new { Locked = true });
         Assert.Equal(HttpStatusCode.OK, lockedOut.StatusCode);
@@ -209,6 +255,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         var afterDelete = await client.GetAsync($"{BasePath}/users/{user.Id}");
         Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
     }
+#pragma warning restore MA0051
 
     [Fact]
     public async Task Roles_Crud_FullLifecycle_Succeeds()
@@ -223,7 +270,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal(name, role!.Name);
 
         var list = await client.GetFromJsonAsync<PagedResult<RoleResponse>>($"{BasePath}/roles");
-        Assert.Contains(list!.Items, r => r.Name == name);
+        Assert.Contains(list!.Items, r => string.Equals(r.Name, name, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<RoleResponse>($"{BasePath}/roles/{role.Id}");
         Assert.Equal(name, fetched!.Name);

@@ -37,7 +37,7 @@ internal static partial class IdentityUiTestHelpers
                           (returnUrl is null ? "" : $"?returnUrl={Uri.EscapeDataString(returnUrl)}");
         var token = await GetAntiforgeryTokenAsync(client, registerUrl);
 
-        var form = new Dictionary<string, string>
+        var form = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.FirstName"] = "Test",
             ["Input.LastName"] = "User",
@@ -64,7 +64,7 @@ internal static partial class IdentityUiTestHelpers
                        (returnUrl is null ? "" : $"?returnUrl={Uri.EscapeDataString(returnUrl)}");
         var token = await GetAntiforgeryTokenAsync(client, loginUrl);
 
-        var form = new Dictionary<string, string>
+        var form = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.Email"] = email,
             ["Input.Password"] = password,
@@ -75,6 +75,7 @@ internal static partial class IdentityUiTestHelpers
         return await client.PostAsync(loginUrl, new FormUrlEncodedContent(form));
     }
 
-    [GeneratedRegex("name=\"__RequestVerificationToken\"\\s+type=\"hidden\"\\s+value=\"(?<token>[^\"]+)\"")]
+    [GeneratedRegex("name=\"__RequestVerificationToken\"\\s+type=\"hidden\"\\s+value=\"(?<token>[^\"]+)\"",
+        RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex AntiforgeryTokenPattern();
 }

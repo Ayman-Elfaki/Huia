@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Security.Claims;
 using Huia.Endpoints.Connect;
 using Huia.Identity;
@@ -53,7 +54,8 @@ internal static class DeviceVerifier
                               "Details concerning the calling client application cannot be found.");
 
         return new DeviceVerificationRequest(
-            await applicationManager.GetLocalizedDisplayNameAsync(application).ConfigureAwait(false),
+            await applicationManager.GetLocalizedDisplayNameAsync(application, CultureInfo.CurrentUICulture)
+                .ConfigureAwait(false),
             result.Principal!.GetScopes(),
             result.Properties?.GetTokenValue(Tokens.UserCode));
     }
@@ -80,6 +82,8 @@ internal static class DeviceVerifier
 }
 
 /// <summary>A pending device code's application/scope, ready to show the user deciding whether to approve it.</summary>
+// Kept alongside its only producer, DeviceVerifier.TryDescribeAsync, rather than its own file.
+#pragma warning disable MA0048
 internal sealed record DeviceVerificationRequest(
     string? ApplicationName,
     ImmutableArray<string> Scopes,

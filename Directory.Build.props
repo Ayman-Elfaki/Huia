@@ -25,7 +25,13 @@
 
   <PropertyGroup Label="Test/sample projects" Condition="!$(MSBuildProjectDirectory.Contains('\src\'))">
     <IsPackable>false</IsPackable>
-    <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <!-- MA0004 (ConfigureAwait(false)) fires across every awaited call in tests/, where there's no
+         SynchronizationContext to avoid resuming on - unlike src/, which already follows it deliberately. -->
+    <NoWarn>$(NoWarn);CA1707;MA0004</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup Label="Analyzers">
+    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
+  </ItemGroup>
 
 </Project>

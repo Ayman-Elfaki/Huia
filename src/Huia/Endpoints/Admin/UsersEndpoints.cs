@@ -28,7 +28,7 @@ internal static class UsersEndpoints
         return api;
     }
 
-    private static async Task<IResult> ListAsync(string? search, int? page, int? pageSize,
+    private static async Task<IResult> ListAsync(string? search, string? cursor, int? pageSize,
         UserManager<HuiaUser> userManager)
     {
         if (!userManager.SupportsQueryableUsers)
@@ -38,7 +38,7 @@ internal static class UsersEndpoints
         }
 
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
-        var currentPage = page is null or <= 0 ? 1 : page.Value;
+        var offset = OffsetCursor.Decode(cursor);
 
         var query = userManager.Users;
         if (!string.IsNullOrWhiteSpace(search))
@@ -49,17 +49,19 @@ internal static class UsersEndpoints
         // UserManager.Users is a plain IQueryable<TUser> with no guaranteed async provider (a custom,
         // non-EF-Core IUserStore might back it with something that isn't IAsyncQueryProvider) — enumerating
         // synchronously here trades a blocked thread for staying store-agnostic. Acceptable for an
-        // admin-only, low-traffic surface.
-        var totalCount = query.LongCount();
-        var page1 = query.OrderBy(u => u.Email).Skip((currentPage - 1) * size).Take(size).ToList();
+        // admin-only, low-traffic surface. Fetches one extra row (rather than a separate LongCount() call)
+        // to know whether a next page exists - see OffsetCursor's own doc comment for why this stays
+        // offset-based internally instead of a real keyset query.
+        var page1 = query.OrderBy(u => u.Email).Skip(offset).Take(size + 1).ToList();
 
-        var items = new List<UserResponse>(page1.Count);
-        foreach (var user in page1)
+        var nextCursor = page1.Count > size ? OffsetCursor.Encode(offset + size) : null;
+        var items = new List<UserResponse>(size);
+        foreach (var user in page1.Take(size))
         {
             items.Add(await ToResponseAsync(user, userManager).ConfigureAwait(false));
         }
 
-        return Results.Ok(new PagedResult<UserResponse>(items, totalCount));
+        return Results.Ok(new PagedResult<UserResponse>(items, nextCursor));
     }
 
     private static async Task<IResult> GetAsync(string id, UserManager<HuiaUser> userManager)
@@ -199,8 +201,8 @@ internal static class UsersEndpoints
 
     private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
         => result.Errors
-            .GroupBy(e => e.Code)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
+            .GroupBy(e => e.Code, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
 
     private sealed record UserResponse(
         string Id,

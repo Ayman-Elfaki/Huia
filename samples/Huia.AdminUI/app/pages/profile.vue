@@ -15,7 +15,7 @@ const infoForm = reactive({firstName: '', lastName: ''})
 async function loadInfo() {
   infoError.value = null
   try {
-    info.value = await $fetch<ManageInfoResponse>('/api/manage/info')
+    info.value = await $huiaManage<ManageInfoResponse>('info')
     infoForm.firstName = info.value.firstName ?? ''
     infoForm.lastName = info.value.lastName ?? ''
   } catch (err) {
@@ -29,7 +29,7 @@ async function saveInfo() {
   infoSaved.value = false
   try {
     const body: UpdateInfoRequest = {firstName: infoForm.firstName, lastName: infoForm.lastName}
-    info.value = await $fetch<ManageInfoResponse>('/api/manage/info', {method: 'POST', body})
+    info.value = await $huiaManage<ManageInfoResponse>('info', {method: 'POST', body})
     infoSaved.value = true
   } catch (err) {
     infoError.value = adminErrorMessage(err)
@@ -49,7 +49,7 @@ async function changePassword() {
   passwordSaved.value = false
   try {
     const body: UpdateInfoRequest = {oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword}
-    await $fetch('/api/manage/info', {method: 'POST', body})
+    await $huiaManage('info', {method: 'POST', body})
     passwordSaved.value = true
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
@@ -69,7 +69,7 @@ async function loadTwoFactor() {
   twoFactorError.value = null
   try {
     const body: TwoFactorRequest = {}
-    twoFactor.value = await $fetch<TwoFactorResponse>('/api/manage/2fa', {method: 'POST', body})
+    twoFactor.value = await $huiaManage<TwoFactorResponse>('2fa', {method: 'POST', body})
   } catch (err) {
     twoFactorError.value = adminErrorMessage(err)
   }
@@ -79,7 +79,7 @@ async function submitTwoFactor(body: TwoFactorRequest) {
   twoFactorBusy.value = true
   twoFactorError.value = null
   try {
-    twoFactor.value = await $fetch<TwoFactorResponse>('/api/manage/2fa', {method: 'POST', body})
+    twoFactor.value = await $huiaManage<TwoFactorResponse>('2fa', {method: 'POST', body})
   } catch (err) {
     twoFactorError.value = adminErrorMessage(err)
   } finally {

@@ -114,7 +114,7 @@ public sealed partial class HomeUriE2ETests(HuiaAppFixture fixture) : IAsyncLife
         var match = ConfirmationLinkPattern().Match(html);
         Assert.True(match.Success, $"No confirmation link found in the email body: {html}");
 
-        return WebUtility.HtmlDecode(match.Groups[1].Value);
+        return WebUtility.HtmlDecode(match.Groups["link"].Value);
     }
 
     private string GetBaseUrl(string resourceName)
@@ -123,6 +123,7 @@ public sealed partial class HomeUriE2ETests(HuiaAppFixture fixture) : IAsyncLife
         return client.BaseAddress!.ToString();
     }
 
-    [GeneratedRegex("href=\"([^\"]*ConfirmEmail[^\"]*)\"", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("href=\"(?<link>[^\"]*ConfirmEmail[^\"]*)\"",
+        RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ConfirmationLinkPattern();
 }

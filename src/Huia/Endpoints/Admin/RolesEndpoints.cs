@@ -40,7 +40,9 @@ internal static class RolesEndpoints
             .Select(r => new RoleResponse(r.Id, r.Name!))
             .ToList();
 
-        return Results.Ok(new PagedResult<RoleResponse>(items, items.Count));
+        // Unpaginated by design (roles are typically few) - always the whole list, so there's never a next
+        // page to point a cursor at.
+        return Results.Ok(new PagedResult<RoleResponse>(items, null));
     }
 
     private static async Task<IResult> GetAsync(string id, RoleManager<HuiaRole> roleManager)
@@ -103,8 +105,8 @@ internal static class RolesEndpoints
 
     private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
         => result.Errors
-            .GroupBy(e => e.Code)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
+            .GroupBy(e => e.Code, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
 
     private sealed record RoleResponse(string Id, string Name);
 

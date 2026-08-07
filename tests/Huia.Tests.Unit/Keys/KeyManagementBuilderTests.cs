@@ -221,7 +221,7 @@ public class KeyManagementBuilderTests
         await manager.RotateAsync();
 
         var current = manager.Snapshot.SigningKeys[0];
-        Assert.NotEqual(firstKeyId, current.Id);
+        Assert.NotEqual(firstKeyId, current.Id, StringComparer.Ordinal);
         Assert.False(current.IsRetired);
     }
 
@@ -238,7 +238,7 @@ public class KeyManagementBuilderTests
         time.Advance(TimeSpan.FromDays(90));
         await manager.RotateAsync();
 
-        var original = store.AllKeys.Single(k => k.Id == originalKeyId);
+        var original = store.AllKeys.Single(k => string.Equals(k.Id, originalKeyId, StringComparison.Ordinal));
         Assert.True(original.IsRetired);
     }
 
@@ -261,12 +261,12 @@ public class KeyManagementBuilderTests
 
         // Still within the 30-day validation overlap after retirement: GetValidKeysAsync should still return it.
         var validKeys = await store.GetValidKeysAsync(KeyUsage.Signing);
-        Assert.Contains(validKeys, k => k.Id == originalKeyId);
+        Assert.Contains(validKeys, k => string.Equals(k.Id, originalKeyId, StringComparison.Ordinal));
 
         time.Advance(TimeSpan.FromDays(31));
         await manager.PurgeExpiredKeysAsync();
 
-        Assert.DoesNotContain(store.AllKeys, k => k.Id == originalKeyId);
+        Assert.DoesNotContain(store.AllKeys, k => string.Equals(k.Id, originalKeyId, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -322,7 +322,7 @@ public class KeyManagementBuilderTests
 
         var created = await manager.CreateKeyAsync(KeyUsage.Signing, time.GetUtcNow().AddDays(90));
 
-        Assert.Contains(manager.Snapshot.SigningKeys, k => k.Id == created.Id);
+        Assert.Contains(manager.Snapshot.SigningKeys, k => string.Equals(k.Id, created.Id, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public class KeyManagementBuilderTests
 
         await manager.RetireKeyAsync(created.Id, time.GetUtcNow());
 
-        Assert.True(Assert.Single(manager.Snapshot.SigningKeys, k => k.Id == created.Id).IsRetired);
+        Assert.True(Assert.Single(manager.Snapshot.SigningKeys, k => string.Equals(k.Id, created.Id, StringComparison.Ordinal)).IsRetired);
     }
 
     [Fact]
@@ -351,7 +351,7 @@ public class KeyManagementBuilderTests
 
         await manager.RefreshSnapshotAsync();
 
-        Assert.Contains(manager.Snapshot.SigningKeys, k => k.Id == "pre-existing");
+        Assert.Contains(manager.Snapshot.SigningKeys, k => string.Equals(k.Id, "pre-existing", StringComparison.Ordinal));
         Assert.Single(store.AllKeys);
     }
 }

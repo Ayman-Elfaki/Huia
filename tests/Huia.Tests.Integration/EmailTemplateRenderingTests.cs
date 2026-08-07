@@ -23,10 +23,10 @@ public class EmailTemplateRenderingTests(TodoApiFactory factory) : IClassFixture
 
         var html = await template.ConfirmationLink("https://example.com/confirm?token=abc");
 
-        Assert.Contains("Todo", html);
-        Assert.Contains("https://example.com/confirm?token=abc", html);
-        Assert.Contains("Confirm your email", html);
-        Assert.StartsWith("<!DOCTYPE html>", html);
+        Assert.Contains("Todo", html, StringComparison.Ordinal);
+        Assert.Contains("https://example.com/confirm?token=abc", html, StringComparison.Ordinal);
+        Assert.Contains("Confirm your email", html, StringComparison.Ordinal);
+        Assert.StartsWith("<!DOCTYPE html>", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -37,8 +37,8 @@ public class EmailTemplateRenderingTests(TodoApiFactory factory) : IClassFixture
 
         var html = await template.PasswordResetCode("123456");
 
-        Assert.Contains("123456", html);
-        Assert.DoesNotContain("<a href", html);
+        Assert.Contains("123456", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<a href", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -77,8 +77,8 @@ public class EmailTemplateRenderingTests(TodoApiFactory factory) : IClassFixture
             var template = scope.ServiceProvider.GetRequiredService<HuiaEmailTemplate>();
             var html = await template.ConfirmationLink("https://example.com/confirm?token=abc");
 
-            Assert.Contains("تأكيد بريدك الإلكتروني", html);
-            Assert.Contains("dir=\"rtl\"", html);
+            Assert.Contains("تأكيد بريدك الإلكتروني", html, StringComparison.Ordinal);
+            Assert.Contains("dir=\"rtl\"", html, StringComparison.Ordinal);
         }
         finally
         {
@@ -96,9 +96,9 @@ public class EmailTemplateRenderingTests(TodoApiFactory factory) : IClassFixture
         var template = scope.ServiceProvider.GetRequiredService<HuiaEmailTemplate>();
         var html = await template.ConfirmationLink("https://example.com/confirm?token=abc");
 
-        Assert.Contains("background-color:#ffffff", html);
-        Assert.Contains("prefers-color-scheme: dark", html);
-        Assert.Contains("#18181b", html); // the dark card background, inside the media-query override
+        Assert.Contains("background-color:#ffffff", html, StringComparison.Ordinal);
+        Assert.Contains("prefers-color-scheme: dark", html, StringComparison.Ordinal);
+        Assert.Contains("#18181b", html, StringComparison.Ordinal); // the dark card background, inside the media-query override
     }
 
     [Fact]
@@ -111,8 +111,8 @@ public class EmailTemplateRenderingTests(TodoApiFactory factory) : IClassFixture
         var template = scope.ServiceProvider.GetRequiredService<HuiaEmailTemplate>();
         var html = await template.ConfirmationLink("https://example.com/confirm?token=abc");
 
-        Assert.Contains("background-color:#18181b", html);
-        Assert.DoesNotContain("prefers-color-scheme", html);
+        Assert.Contains("background-color:#18181b", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("prefers-color-scheme", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -125,8 +125,8 @@ public class EmailTemplateRenderingTests(TodoApiFactory factory) : IClassFixture
         var template = scope.ServiceProvider.GetRequiredService<HuiaEmailTemplate>();
         var html = await template.ConfirmationLink("https://example.com/confirm?token=abc");
 
-        Assert.Contains("background-color:#ffffff", html);
-        Assert.DoesNotContain("prefers-color-scheme", html);
+        Assert.Contains("background-color:#ffffff", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("prefers-color-scheme", html, StringComparison.Ordinal);
     }
 
     private static int CountOccurrences(string haystack, string needle) =>

@@ -1,17 +1,12 @@
 <script setup lang="ts">
 import type { CreateUserRequest, PagedResult, RoleResponse, UpdateUserRequest, UserResponse } from '~~/shared/types/admin'
 
-const page = ref(1)
-const pageSize = 25
 const search = ref('')
-const query = computed(() => ({ page: page.value, pageSize, search: search.value || undefined }))
-const { items, totalCount, loading, error, refresh } = useAdminList<UserResponse>('users', query)
+const filters = computed(() => ({ search: search.value || undefined }))
+const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious, reset }
+  = useAdminList<UserResponse>('users', filters)
 await refresh()
-watch(page, refresh)
-watch(search, () => {
-  page.value = 1
-  refresh()
-})
+watch(search, reset)
 
 const columns = [
   { accessorKey: 'email', header: 'Email' },
@@ -61,7 +56,7 @@ async function submit() {
         lastName: form.lastName || null,
         emailConfirmed: form.emailConfirmed
       }
-      await $fetch(`/api/admin/users/${editing.value.id}`, { method: 'PUT', body })
+      await $huiaAdmin(`users/${editing.value.id}`, { method: 'PUT', body })
     } else {
       const body: CreateUserRequest = {
         email: form.email,
@@ -70,7 +65,7 @@ async function submit() {
         lastName: form.lastName || null,
         emailConfirmed: form.emailConfirmed
       }
-      await $fetch('/api/admin/users', { method: 'POST', body })
+      await $huiaAdmin('users', { method: 'POST', body })
     }
     isEditModalOpen.value = false
     await refresh()
@@ -86,7 +81,7 @@ const deletingId = ref<string | null>(null)
 async function remove(user: UserResponse) {
   deletingId.value = user.id
   try {
-    await $fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+    await $huiaAdmin(`users/${user.id}`, { method: 'DELETE' })
     await refresh()
   } finally {
     deletingId.value = null
@@ -98,7 +93,7 @@ const togglingLockoutId = ref<string | null>(null)
 async function toggleLockout(user: UserResponse) {
   togglingLockoutId.value = user.id
   try {
-    await $fetch(`/api/admin/users/${user.id}/lockout`, { method: 'POST', body: { locked: !user.isLockedOut } })
+    await $huiaAdmin(`users/${user.id}/lockout`, { method: 'POST', body: { locked: !user.isLockedOut } })
     await refresh()
   } finally {
     togglingLockoutId.value = null
@@ -114,7 +109,7 @@ const rolesBusy = ref<string | null>(null)
 async function openRoles(user: UserResponse) {
   rolesTarget.value = user
   isRolesModalOpen.value = true
-  const result = await $fetch<PagedResult<RoleResponse>>('/api/admin/roles')
+  const result = await $huiaAdmin<PagedResult<RoleResponse>>('roles')
   allRoles.value = result.items
 }
 
@@ -122,7 +117,7 @@ async function toggleRole(role: RoleResponse, add: boolean) {
   if (!rolesTarget.value) return
   rolesBusy.value = role.id
   try {
-    const updated = await $fetch<UserResponse>(`/api/admin/users/${rolesTarget.value.id}/roles`, {
+    const updated = await $huiaAdmin<UserResponse>(`users/${rolesTarget.value.id}/roles`, {
       method: 'POST',
       body: { role: role.name, add }
     })
@@ -152,7 +147,7 @@ async function submitReset() {
   resetting.value = true
   resetError.value = null
   try {
-    await $fetch(`/api/admin/users/${resetTarget.value.id}/reset-password`, {
+    await $huiaAdmin(`users/${resetTarget.value.id}/reset-password`, {
       method: 'POST',
       body: { newPassword: newPassword.value }
     })
@@ -166,24 +161,52 @@ async function submitReset() {
 </script>
 
 <template>
-  <UDashboardPanel id="users-panel" :ui="{ body: 'gap-4' }">
+  <UDashboardPanel
+    id="users-panel"
+    :ui="{ body: 'gap-4' }"
+  >
     <template #header>
       <UDashboardNavbar title="Users">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
-          <UButton label="New user" icon="i-lucide-plus" @click="openCreate" />
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="subtle"
+            :loading="loading"
+            @click="refresh"
+          />
+          <UButton
+            label="New user"
+            icon="i-lucide-plus"
+            @click="openCreate"
+          />
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
-      <UInput v-model="search" placeholder="Search by email or username…" icon="i-lucide-search" class="max-w-sm" />
+      <UInput
+        v-model="search"
+        placeholder="Search by email or username…"
+        icon="i-lucide-search"
+        class="max-w-sm"
+      />
 
-      <UAlert v-if="error && !loading" color="error" variant="subtle" :title="error" />
+      <UAlert
+        v-if="error && !loading"
+        color="error"
+        variant="subtle"
+        :title="error"
+      />
 
-      <UTable :data="items" :columns="columns" :loading="loading">
+      <UTable
+        :data="items"
+        :columns="columns"
+        :loading="loading"
+      >
         <template #firstName-cell="{ row }">
           {{ row.original.firstName || '—' }}
         </template>
@@ -192,94 +215,232 @@ async function submitReset() {
         </template>
         <template #roles-cell="{ row }">
           <div class="flex gap-1 flex-wrap">
-            <UBadge v-for="role in row.original.roles" :key="role" variant="subtle" color="primary">
+            <UBadge
+              v-for="role in row.original.roles"
+              :key="role"
+              variant="subtle"
+              color="primary"
+            >
               {{ role }}
             </UBadge>
-            <span v-if="!row.original.roles.length" class="text-muted text-sm">—</span>
+            <span
+              v-if="!row.original.roles.length"
+              class="text-muted text-sm"
+            >—</span>
           </div>
         </template>
         <template #isLockedOut-cell="{ row }">
-          <UBadge v-if="row.original.isLockedOut" color="error" variant="subtle">
+          <UBadge
+            v-if="row.original.isLockedOut"
+            color="error"
+            variant="subtle"
+          >
             Locked out
           </UBadge>
-          <UBadge v-else color="success" variant="subtle">
+          <UBadge
+            v-else
+            color="success"
+            variant="subtle"
+          >
             Active
           </UBadge>
         </template>
         <template #actions-cell="{ row }">
           <div class="flex gap-1 justify-end">
-            <UButton icon="i-lucide-shield" color="neutral" variant="ghost" size="sm" title="Roles"
-              @click="openRoles(row.original)" />
-            <UButton icon="i-lucide-key" color="neutral" variant="ghost" size="sm" title="Reset password"
-              @click="openReset(row.original)" />
-            <UButton :icon="row.original.isLockedOut ? 'i-lucide-lock-open' : 'i-lucide-lock'" color="neutral"
-              variant="ghost" size="sm" :title="row.original.isLockedOut ? 'Unlock' : 'Lock out'"
-              :loading="togglingLockoutId === row.original.id" @click="toggleLockout(row.original)" />
-            <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" @click="openEdit(row.original)" />
-            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm"
-              :loading="deletingId === row.original.id" @click="remove(row.original)" />
+            <UButton
+              icon="i-lucide-shield"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              title="Roles"
+              @click="openRoles(row.original)"
+            />
+            <UButton
+              icon="i-lucide-key"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              title="Reset password"
+              @click="openReset(row.original)"
+            />
+            <UButton
+              :icon="row.original.isLockedOut ? 'i-lucide-lock-open' : 'i-lucide-lock'"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              :title="row.original.isLockedOut ? 'Unlock' : 'Lock out'"
+              :loading="togglingLockoutId === row.original.id"
+              @click="toggleLockout(row.original)"
+            />
+            <UButton
+              icon="i-lucide-pencil"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              @click="openEdit(row.original)"
+            />
+            <UButton
+              icon="i-lucide-trash-2"
+              color="error"
+              variant="ghost"
+              size="sm"
+              :loading="deletingId === row.original.id"
+              @click="remove(row.original)"
+            />
           </div>
         </template>
       </UTable>
 
-      <div class="flex justify-end">
-        <UPagination v-model:page="page" :total="totalCount" :items-per-page="pageSize" />
-      </div>
+      <AdminPager
+        :has-previous="hasPrevious"
+        :has-next="!!nextCursor"
+        :loading="loading"
+        @previous="goPrevious"
+        @next="goNext"
+      />
     </template>
   </UDashboardPanel>
 
-  <UModal v-model:open="isEditModalOpen" :title="editing ? 'Edit user' : 'New user'">
+  <UModal
+    v-model:open="isEditModalOpen"
+    :title="editing ? 'Edit user' : 'New user'"
+  >
     <template #body>
-      <UForm :state="form" class="flex flex-col gap-4" @submit="submit">
-        <UFormField label="Email" name="email">
-          <UInput v-model="form.email" type="email" class="w-full" />
+      <UForm
+        :state="form"
+        class="flex flex-col gap-4"
+        @submit="submit"
+      >
+        <UFormField
+          label="Email"
+          name="email"
+        >
+          <UInput
+            v-model="form.email"
+            type="email"
+            class="w-full"
+          />
         </UFormField>
-        <UFormField v-if="!editing" label="Password" name="password">
-          <UInput v-model="form.password" type="password" class="w-full" />
+        <UFormField
+          v-if="!editing"
+          label="Password"
+          name="password"
+        >
+          <UInput
+            v-model="form.password"
+            type="password"
+            class="w-full"
+          />
         </UFormField>
-        <UFormField label="First name" name="firstName">
-          <UInput v-model="form.firstName" class="w-full" />
+        <UFormField
+          label="First name"
+          name="firstName"
+        >
+          <UInput
+            v-model="form.firstName"
+            class="w-full"
+          />
         </UFormField>
-        <UFormField label="Last name" name="lastName">
-          <UInput v-model="form.lastName" class="w-full" />
+        <UFormField
+          label="Last name"
+          name="lastName"
+        >
+          <UInput
+            v-model="form.lastName"
+            class="w-full"
+          />
         </UFormField>
-        <UCheckbox v-model="form.emailConfirmed" label="Email confirmed" />
+        <UCheckbox
+          v-model="form.emailConfirmed"
+          label="Email confirmed"
+        />
 
-        <UAlert v-if="formError" color="error" variant="subtle" :title="formError" />
+        <UAlert
+          v-if="formError"
+          color="error"
+          variant="subtle"
+          :title="formError"
+        />
 
         <div class="flex justify-end gap-2">
-          <UButton label="Cancel" color="neutral" variant="subtle" @click="isEditModalOpen = false" />
-          <UButton label="Save" type="submit" :loading="saving" />
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="subtle"
+            @click="isEditModalOpen = false"
+          />
+          <UButton
+            label="Save"
+            type="submit"
+            :loading="saving"
+          />
         </div>
       </UForm>
     </template>
   </UModal>
 
-  <UModal v-model:open="isRolesModalOpen" :title="`Roles — ${rolesTarget?.email ?? ''}`">
+  <UModal
+    v-model:open="isRolesModalOpen"
+    :title="`Roles — ${rolesTarget?.email ?? ''}`"
+  >
     <template #body>
       <div class="flex flex-col gap-2">
-        <div v-for="role in allRoles" :key="role.id" class="flex items-center justify-between">
+        <div
+          v-for="role in allRoles"
+          :key="role.id"
+          class="flex items-center justify-between"
+        >
           <span>{{ role.name }}</span>
-          <USwitch :model-value="!!rolesTarget?.roles.includes(role.name)" :loading="rolesBusy === role.id"
-            @update:model-value="(value: boolean) => toggleRole(role, value)" />
+          <USwitch
+            :model-value="!!rolesTarget?.roles.includes(role.name)"
+            :loading="rolesBusy === role.id"
+            @update:model-value="(value: boolean) => toggleRole(role, value)"
+          />
         </div>
-        <p v-if="!allRoles.length" class="text-muted text-sm">
+        <p
+          v-if="!allRoles.length"
+          class="text-muted text-sm"
+        >
           No roles exist yet — create one from the Roles page.
         </p>
       </div>
     </template>
   </UModal>
 
-  <UModal v-model:open="isResetModalOpen" :title="`Reset password — ${resetTarget?.email ?? ''}`">
+  <UModal
+    v-model:open="isResetModalOpen"
+    :title="`Reset password — ${resetTarget?.email ?? ''}`"
+  >
     <template #body>
       <div class="flex flex-col gap-4">
-        <UFormField label="New password" name="newPassword">
-          <UInput v-model="newPassword" type="password" class="w-full" />
+        <UFormField
+          label="New password"
+          name="newPassword"
+        >
+          <UInput
+            v-model="newPassword"
+            type="password"
+            class="w-full"
+          />
         </UFormField>
-        <UAlert v-if="resetError" color="error" variant="subtle" :title="resetError" />
+        <UAlert
+          v-if="resetError"
+          color="error"
+          variant="subtle"
+          :title="resetError"
+        />
         <div class="flex justify-end gap-2">
-          <UButton label="Cancel" color="neutral" variant="subtle" @click="isResetModalOpen = false" />
-          <UButton label="Reset" :loading="resetting" @click="submitReset" />
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="subtle"
+            @click="isResetModalOpen = false"
+          />
+          <UButton
+            label="Reset"
+            :loading="resetting"
+            @click="submitReset"
+          />
         </div>
       </div>
     </template>

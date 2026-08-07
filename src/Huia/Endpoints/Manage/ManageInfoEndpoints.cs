@@ -16,7 +16,7 @@ namespace Huia.Endpoints.Manage;
 /// <c>/connect/authorize</c> needs a real browser session (the <c>Identity.Application</c> cookie) to exist
 /// before it can issue a code, so there's no JSON client that would call a login endpoint directly.
 /// </summary>
-internal static class ManageEndpoints
+internal static class ManageInfoEndpoints
 {
     public static RouteGroupBuilder MapManageInfoEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -40,6 +40,9 @@ internal static class ManageEndpoints
             await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false), user.FirstName, user.LastName));
     }
 
+    // One line over MA0051's default 60-line limit; splitting this single linear update-then-notify flow
+    // wouldn't reduce its actual complexity, just spread it across an extra method.
+#pragma warning disable MA0051
     private static async Task<IResult> UpdateInfoAsync(UpdateInfoRequest request, ClaimsPrincipal principal,
         UserManager<HuiaUser> userManager, IEmailSender<HuiaUser> emailSender, HttpContext httpContext)
     {
@@ -68,7 +71,7 @@ internal static class ManageEndpoints
         {
             if (string.IsNullOrEmpty(request.OldPassword))
             {
-                return Results.ValidationProblem(new Dictionary<string, string[]>
+                return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
                     { ["oldPassword"] = ["Required to set a new password."] });
             }
 
@@ -104,11 +107,12 @@ internal static class ManageEndpoints
         return Results.Ok(new InfoResponse(user.Email!,
             await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false), user.FirstName, user.LastName));
     }
+#pragma warning restore MA0051
 
     private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
         => result.Errors
-            .GroupBy(e => e.Code)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
+            .GroupBy(e => e.Code, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
 
 
     private sealed record InfoResponse(string Email, bool IsEmailConfirmed, string? FirstName, string? LastName);

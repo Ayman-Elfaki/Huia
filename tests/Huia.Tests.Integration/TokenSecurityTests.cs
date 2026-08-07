@@ -135,7 +135,7 @@ public class TokenSecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiF
 
         // "scalar" minted this code; try to redeem it as the unrelated confidential "todo-web" client instead
         // (a different client_id, a real client secret, and that client's own registered redirect_uri).
-        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "authorization_code",
             ["code"] = code,
@@ -242,7 +242,7 @@ public class TokenSecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiF
     public async Task GetTodos_WithScopelessClientCredentialsToken_ReturnsUnauthorized()
     {
         var client = factory.CreateClient();
-        using var tokenResponse = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var tokenResponse = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "client_credentials",
             ["client_id"] = "todo-tests",
@@ -287,7 +287,7 @@ public class TokenSecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiF
         var client = factory.CreateClient();
 
         using var response = await client.PostAsync("/connect/register", new FormUrlEncodedContent(
-            new Dictionary<string, string> { ["client_name"] = "evil" }));
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["client_name"] = "evil" }));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -333,7 +333,7 @@ public class TokenSecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiF
         using var jwks = JsonDocument.Parse(await jwksResponse.Content.ReadAsStringAsync());
 
         return jwks.RootElement.GetProperty("keys").EnumerateArray()
-            .First(key => key.TryGetProperty("use", out var use) && use.GetString() == "sig")
+            .First(key => key.TryGetProperty("use", out var use) && string.Equals(use.GetString(), "sig", StringComparison.Ordinal))
             .Clone();
     }
 
@@ -479,7 +479,7 @@ public class TokenSecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiF
     }
 
     private static Task<HttpResponseMessage> RefreshAsync(HttpClient client, string refreshToken) =>
-        client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "refresh_token",
             ["refresh_token"] = refreshToken,
@@ -489,7 +489,7 @@ public class TokenSecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiF
     private static async Task<HttpResponseMessage> ExchangeCodeAsync(
         HttpClient client, string code, string redirectUri, string? codeVerifier)
     {
-        var form = new Dictionary<string, string>
+        var form = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "authorization_code",
             ["code"] = code,
@@ -509,7 +509,7 @@ public class TokenSecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiF
         foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = pair.Split('=', 2);
-            if (parts[0] == name)
+            if (string.Equals(parts[0], name, StringComparison.Ordinal))
             {
                 return Uri.UnescapeDataString(parts[1]);
             }

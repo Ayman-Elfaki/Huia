@@ -31,6 +31,9 @@ public static class ServiceCollectionExtensions
     /// returned builder to wire up persistence, and use <c>huia.KeysManagement.UseAutomaticKeyManagement(...)</c>
     /// inside <paramref name="configure"/> to enable automatic signing/encryption key rotation.
     /// </summary>
+    // Long because it's a single flat sequence of independent service registrations (Identity, OpenIddict
+    // server/validation, hosted initializers) - splitting it would just relocate, not reduce, that sequence.
+#pragma warning disable MA0051
     public static HuiaBuilder AddHuia(this IServiceCollection services, string issuer,
         Action<HuiaOptions> configure)
     {
@@ -197,4 +200,5 @@ public static class ServiceCollectionExtensions
 
         return new HuiaBuilder(services);
     }
+#pragma warning restore MA0051
 }

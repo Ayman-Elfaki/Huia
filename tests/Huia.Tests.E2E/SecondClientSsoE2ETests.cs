@@ -69,7 +69,9 @@ public sealed class SecondClientSsoE2ETests(HuiaAppFixture fixture) : IAsyncLife
 
         // A silent SSO redirect lands back on /scalar/v1 with a code — a broken/reprompted flow would show
         // Huia's login form (an "Email" field) instead.
-        await _page.WaitForURLAsync(url => url.Contains("/scalar/v1") && url.Contains("code="), new() { Timeout = 15000 });
+        await _page.WaitForURLAsync(
+            url => url.Contains("/scalar/v1", StringComparison.Ordinal) && url.Contains("code=", StringComparison.Ordinal),
+            new() { Timeout = 15000 });
     }
 
     private string GetBaseUrl(string resourceName)

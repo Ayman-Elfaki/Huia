@@ -20,7 +20,7 @@ public class TokenEndpointTests(TodoApiFactory factory) : IClassFixture<TodoApiF
     {
         var client = factory.CreateClient();
 
-        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "client_credentials",
             ["client_id"] = "todo-tests",
@@ -36,7 +36,7 @@ public class TokenEndpointTests(TodoApiFactory factory) : IClassFixture<TodoApiF
     {
         var client = factory.CreateClient();
 
-        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "client_credentials",
             ["client_id"] = "todo-tests",

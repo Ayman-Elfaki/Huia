@@ -15,7 +15,7 @@ public class ApplicationsBuilderTests
         var exception = Assert.Throws<InvalidOperationException>(() =>
             builder.AddSinglePageApplication(app => app.AllowScopes("todos")));
 
-        Assert.Contains("client ID", exception.Message);
+        Assert.Contains("client ID", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -26,7 +26,7 @@ public class ApplicationsBuilderTests
         var exception = Assert.Throws<InvalidOperationException>(() =>
             builder.AddServerSideWebApplication(app => app.SetClientId("web")));
 
-        Assert.Contains("client secret", exception.Message);
+        Assert.Contains("client secret", exception.Message, StringComparison.Ordinal);
     }
     
 

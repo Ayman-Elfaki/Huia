@@ -1,20 +1,11 @@
 "use server";
 
-import {getServerSession} from "next-auth/next";
 import {revalidatePath} from "next/cache";
 
-import {authOptions} from "@/auth";
 import * as manageApi from "@/lib/manage-api";
 import {ManageApiValidationError} from "@/lib/manage-api";
+import {requireAccessToken} from "@/lib/require-access-token";
 import type {ActionState, TwoFactorState} from "@/app/[locale]/profile/action-state";
-
-async function requireAccessToken(): Promise<string> {
-    const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
-        throw new Error("Not authenticated.");
-    }
-    return session.accessToken;
-}
 
 export async function updateProfileAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
     const accessToken = await requireAccessToken();

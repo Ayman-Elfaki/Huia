@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import type { ScopeRequest, ScopeResponse } from '~~/shared/types/admin'
 
-const page = ref(1)
-const pageSize = 25
-const query = computed(() => ({ page: page.value, pageSize }))
-const { items, totalCount, loading, error, refresh } = useAdminList<ScopeResponse>('scopes', query)
+const filters = ref({})
+const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious }
+  = useAdminList<ScopeResponse>('scopes', filters)
 await refresh()
-watch(page, refresh)
 
 const columns = [
   { accessorKey: 'name', header: 'Name' },
@@ -62,9 +60,9 @@ async function submit() {
   }
   try {
     if (editing.value) {
-      await $fetch(`/api/admin/scopes/${editing.value.id}`, { method: 'PUT', body })
+      await $huiaAdmin(`scopes/${editing.value.id}`, { method: 'PUT', body })
     } else {
-      await $fetch('/api/admin/scopes', { method: 'POST', body })
+      await $huiaAdmin('scopes', { method: 'POST', body })
     }
     isModalOpen.value = false
     await refresh()
@@ -80,7 +78,7 @@ const deletingId = ref<string | null>(null)
 async function remove(scope: ScopeResponse) {
   deletingId.value = scope.id
   try {
-    await $fetch(`/api/admin/scopes/${scope.id}`, { method: 'DELETE' })
+    await $huiaAdmin(`scopes/${scope.id}`, { method: 'DELETE' })
     await refresh()
   } finally {
     deletingId.value = null
@@ -89,22 +87,45 @@ async function remove(scope: ScopeResponse) {
 </script>
 
 <template>
-  <UDashboardPanel id="scopes-panel" :ui="{ body: 'gap-4' }">
+  <UDashboardPanel
+    id="scopes-panel"
+    :ui="{ body: 'gap-4' }"
+  >
     <template #header>
       <UDashboardNavbar title="Scopes">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
-          <UButton label="New scope" icon="i-lucide-plus" @click="openCreate" />
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="subtle"
+            :loading="loading"
+            @click="refresh"
+          />
+          <UButton
+            label="New scope"
+            icon="i-lucide-plus"
+            @click="openCreate"
+          />
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
-      <UAlert v-if="error && !loading" color="error" variant="subtle" :title="error" />
+      <UAlert
+        v-if="error && !loading"
+        color="error"
+        variant="subtle"
+        :title="error"
+      />
 
-      <UTable :data="items" :columns="columns" :loading="loading">
+      <UTable
+        :data="items"
+        :columns="columns"
+        :loading="loading"
+      >
         <template #displayName-cell="{ row }">
           {{ row.original.displayName || '—' }}
         </template>
@@ -113,40 +134,104 @@ async function remove(scope: ScopeResponse) {
         </template>
         <template #actions-cell="{ row }">
           <div class="flex gap-1 justify-end">
-            <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm" @click="openEdit(row.original)" />
-            <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="sm"
-              :loading="deletingId === row.original.id" @click="remove(row.original)" />
+            <UButton
+              icon="i-lucide-pencil"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              @click="openEdit(row.original)"
+            />
+            <UButton
+              icon="i-lucide-trash-2"
+              color="error"
+              variant="ghost"
+              size="sm"
+              :loading="deletingId === row.original.id"
+              @click="remove(row.original)"
+            />
           </div>
         </template>
       </UTable>
 
-      <div class="flex justify-end">
-        <UPagination v-model:page="page" :total="totalCount" :items-per-page="pageSize" />
-      </div>
+      <AdminPager
+        :has-previous="hasPrevious"
+        :has-next="!!nextCursor"
+        :loading="loading"
+        @previous="goPrevious"
+        @next="goNext"
+      />
     </template>
   </UDashboardPanel>
 
-  <UModal v-model:open="isModalOpen" :title="editing ? 'Edit scope' : 'New scope'">
+  <UModal
+    v-model:open="isModalOpen"
+    :title="editing ? 'Edit scope' : 'New scope'"
+  >
     <template #body>
-      <UForm :state="form" class="flex flex-col gap-4" @submit="submit">
-        <UFormField label="Name" name="name">
-          <UInput v-model="form.name" :disabled="!!editing" class="w-full" />
+      <UForm
+        :state="form"
+        class="flex flex-col gap-4"
+        @submit="submit"
+      >
+        <UFormField
+          label="Name"
+          name="name"
+        >
+          <UInput
+            v-model="form.name"
+            :disabled="!!editing"
+            class="w-full"
+          />
         </UFormField>
-        <UFormField label="Display name" name="displayName">
-          <UInput v-model="form.displayName" class="w-full" />
+        <UFormField
+          label="Display name"
+          name="displayName"
+        >
+          <UInput
+            v-model="form.displayName"
+            class="w-full"
+          />
         </UFormField>
-        <UFormField label="Description" name="description">
-          <UTextarea v-model="form.description" class="w-full" :rows="2" />
+        <UFormField
+          label="Description"
+          name="description"
+        >
+          <UTextarea
+            v-model="form.description"
+            class="w-full"
+            :rows="2"
+          />
         </UFormField>
-        <UFormField label="Resources (comma-separated)" name="resources">
-          <UInput v-model="form.resources" placeholder="todo-api" class="w-full" />
+        <UFormField
+          label="Resources (comma-separated)"
+          name="resources"
+        >
+          <UInput
+            v-model="form.resources"
+            placeholder="todo-api"
+            class="w-full"
+          />
         </UFormField>
 
-        <UAlert v-if="formError" color="error" variant="subtle" :title="formError" />
+        <UAlert
+          v-if="formError"
+          color="error"
+          variant="subtle"
+          :title="formError"
+        />
 
         <div class="flex justify-end gap-2">
-          <UButton label="Cancel" color="neutral" variant="subtle" @click="isModalOpen = false" />
-          <UButton label="Save" type="submit" :loading="saving" />
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="subtle"
+            @click="isModalOpen = false"
+          />
+          <UButton
+            label="Save"
+            type="submit"
+            :loading="saving"
+          />
         </div>
       </UForm>
     </template>

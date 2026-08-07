@@ -31,7 +31,7 @@ internal static class UserinfoEndpoints
         {
             return Results.Forbid(
                 authenticationSchemes: [OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme],
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                properties: new AuthenticationProperties(new Dictionary<string, string?>(StringComparer.Ordinal)
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidToken,
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =

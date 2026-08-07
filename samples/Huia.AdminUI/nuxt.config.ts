@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
-    'nuxt-oidc-auth'
+    'nuxt-oidc-auth',
+    'nuxt-api-party'
   ],
 
   // Disabled: its floating panel intercepts clicks in automated (headless/Playwright) browser runs — see
@@ -16,13 +17,17 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  runtimeConfig: {
-    // The base URL server/api/admin/[...path].ts forwards admin-API calls to — same origin as the OIDC
-    // endpoints below, just read outside the "oidc" module config key.
-    huiaIssuer: issuer
-  },
-
   compatibilityDate: '2026-06-30',
+
+  // nuxt-api-party generates its own server proxy per endpoint (composables $huiaAdmin/$huiaManage +
+  // useHuiaAdminData/useHuiaManageData) — the actual Authorization header is attached per-request in
+  // server/plugins/apiPartyAuth.ts, not here, since it depends on the signed-in user's session.
+  apiParty: {
+    endpoints: {
+      huiaAdmin: { url: `${issuer}/api/identity/admin` },
+      huiaManage: { url: `${issuer}/api/identity/manage` }
+    }
+  },
 
   eslint: {
     config: {

@@ -7,7 +7,7 @@ internal static class OAuthTestHelpers
     /// <summary>Requests a client_credentials token from the "todo-tests" M2M client registered by the sample.</summary>
     public static async Task<string> GetTodoTestsAccessTokenAsync(HttpClient client, string scope = "todos")
     {
-        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["grant_type"] = "client_credentials",
             ["client_id"] = "todo-tests",

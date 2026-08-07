@@ -24,8 +24,8 @@ public class ErrorPageReturnHomeTests(TodoApiFactory factory) : IClassFixture<To
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var html = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Back to home", html);
-        Assert.Contains("href=\"http://localhost:3000\"", html);
+        Assert.Contains("Back to home", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"http://localhost:3000\"", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class ErrorPageReturnHomeTests(TodoApiFactory factory) : IClassFixture<To
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var html = await response.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("Back to home", html);
+        Assert.DoesNotContain("Back to home", html, StringComparison.Ordinal);
     }
 
     private static Task<HttpResponseMessage> AuthorizeWithBadRedirectUriAsync(HttpClient client, string clientId)

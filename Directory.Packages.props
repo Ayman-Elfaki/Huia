@@ -59,5 +59,9 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.16.16" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
-  
+
+  <ItemGroup Label="Analyzers">
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.139" />
+  </ItemGroup>
+
 </Project>

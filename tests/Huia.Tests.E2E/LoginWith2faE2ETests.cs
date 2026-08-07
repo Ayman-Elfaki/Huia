@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using Microsoft.Playwright;
 
@@ -136,7 +137,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
                           | ((hash[offset + 2] & 0xFF) << 8)
                           | (hash[offset + 3] & 0xFF);
 
-        return (binaryCode % 1_000_000).ToString("D6");
+        return (binaryCode % 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
     }
 
     private static byte[] Base32Decode(string base32)

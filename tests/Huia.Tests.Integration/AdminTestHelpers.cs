@@ -45,6 +45,9 @@ internal static class AdminTestHelpers
     /// <summary>Same as <see cref="CreateAuthorizedClientAsync"/>, also returning the registered email and
     /// subject — for tests (e.g. <c>ManageEndpointsTests</c>) that need to assert against the caller's own
     /// identity rather than just checking status codes.</summary>
+    // Long because it's a single linear register-confirm-authorize-redeem sequence; splitting it would just
+    // relocate, not reduce, that sequence.
+#pragma warning disable MA0051
     internal static async Task<(HttpClient Client, string Email, string Subject)> CreateAuthorizedClientCoreAsync(
         TodoApiFactory factory, string[] roles)
     {
@@ -101,7 +104,7 @@ internal static class AdminTestHelpers
         var code = ExtractQueryParameter(authorizeResponse.Headers.Location!, "code");
 
         using var tokenResponse = await uiClient.PostAsync("/connect/token", new FormUrlEncodedContent(
-            new Dictionary<string, string>
+            new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["grant_type"] = "authorization_code",
                 ["code"] = code,
@@ -118,13 +121,14 @@ internal static class AdminTestHelpers
         apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         return (apiClient, email, subject);
     }
+#pragma warning restore MA0051
 
     private static string ExtractQueryParameter(Uri uri, string name)
     {
         foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = pair.Split('=', 2);
-            if (parts[0] == name)
+            if (string.Equals(parts[0], name, StringComparison.Ordinal))
             {
                 return Uri.UnescapeDataString(parts[1]);
             }

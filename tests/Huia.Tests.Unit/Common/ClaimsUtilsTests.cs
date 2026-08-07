@@ -18,7 +18,7 @@ public class ClaimsUtilsTests
 
         var destinations = ClaimsUtils.GetDestinations(new Claim(claimType, "value"), identity);
 
-        Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations);
+        Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class ClaimsUtilsTests
 
         var destinations = ClaimsUtils.GetDestinations(new Claim(Claims.Name, "value"), identity);
 
-        Assert.Equal([Destinations.AccessToken], destinations);
+        Assert.Equal([Destinations.AccessToken], destinations, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class ClaimsUtilsTests
 
         var destinations = ClaimsUtils.GetDestinations(new Claim(Claims.Email, "user@example.com"), identity);
 
-        Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations);
+        Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class ClaimsUtilsTests
 
         var destinations = ClaimsUtils.GetDestinations(new Claim(Claims.Role, "admin"), identity);
 
-        Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations);
+        Assert.Equal([Destinations.AccessToken, Destinations.IdentityToken], destinations, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class ClaimsUtilsTests
 
         var destinations = ClaimsUtils.GetDestinations(new Claim("custom_claim", "value"), identity);
 
-        Assert.Equal([Destinations.AccessToken], destinations);
+        Assert.Equal([Destinations.AccessToken], destinations, StringComparer.Ordinal);
     }
 
     private static ClaimsIdentity CreateIdentity(params string[] scopes)

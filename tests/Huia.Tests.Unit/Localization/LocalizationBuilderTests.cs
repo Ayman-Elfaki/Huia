@@ -9,7 +9,7 @@ public class LocalizationBuilderTests
     {
         var builder = new LocalizationBuilder();
 
-        Assert.Equal(["en", "ar"], builder.Cultures.Select(c => c.Name));
+        Assert.Equal(["en", "ar"], builder.Cultures.Select(c => c.Name), StringComparer.Ordinal);
         Assert.Equal("en", builder.DefaultCulture);
     }
 
@@ -20,7 +20,7 @@ public class LocalizationBuilderTests
 
         builder.AddCulture("fr");
 
-        Assert.Contains(builder.Cultures, c => c.Name == "fr");
+        Assert.Contains(builder.Cultures, c => string.Equals(c.Name, "fr", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -37,20 +37,27 @@ public sealed class RazorViewRenderer(
                 string.Join(", ", viewResult.SearchedLocations));
         }
 
-        await using var output = new StringWriter();
-        var viewData = new ViewDataDictionary<TModel>(new EmptyModelMetadataProvider(), new ModelStateDictionary())
+        var output = new StringWriter();
+        try
         {
-            Model = model
-        };
-        var viewContext = new ViewContext(
-            actionContext,
-            viewResult.View,
-            viewData,
-            new TempDataDictionary(httpContext, tempDataProvider),
-            output,
-            new HtmlHelperOptions());
+            var viewData = new ViewDataDictionary<TModel>(new EmptyModelMetadataProvider(), new ModelStateDictionary())
+            {
+                Model = model
+            };
+            var viewContext = new ViewContext(
+                actionContext,
+                viewResult.View,
+                viewData,
+                new TempDataDictionary(httpContext, tempDataProvider),
+                output,
+                new HtmlHelperOptions());
 
-        await viewResult.View.RenderAsync(viewContext);
-        return output.ToString();
+            await viewResult.View.RenderAsync(viewContext).ConfigureAwait(false);
+            return output.ToString();
+        }
+        finally
+        {
+            await output.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

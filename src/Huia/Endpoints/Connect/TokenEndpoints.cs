@@ -106,7 +106,7 @@ internal static class TokenEndpoints
 
     private static IResult Forbid(string error, string description) => Results.Forbid(
         authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
-        properties: new AuthenticationProperties(new Dictionary<string, string?>
+        properties: new AuthenticationProperties(new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             [OpenIddictServerAspNetCoreConstants.Properties.Error] = error,
             [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = description,

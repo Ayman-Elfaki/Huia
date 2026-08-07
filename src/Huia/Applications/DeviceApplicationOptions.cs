@@ -1,5 +1,8 @@
 namespace Huia.Applications;
 
+// The five ClientApplicationOptions subtypes (one per ApplicationsBuilder application kind) are kept
+// together in this one file rather than split across five, since they're only ever read/compared as a set.
+#pragma warning disable MA0048
 
 /// <summary>
 /// A public client for input-constrained devices (TVs, CLIs, IoT) using the device authorization flow.

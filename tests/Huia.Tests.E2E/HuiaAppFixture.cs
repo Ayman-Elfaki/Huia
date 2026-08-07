@@ -35,5 +35,8 @@ public sealed class HuiaAppFixture : IAsyncLifetime
     }
 }
 
+// Kept alongside HuiaAppFixture rather than in its own file - the idiomatic xUnit pairing of a collection
+// fixture with the [CollectionDefinition] marker class that references it.
+#pragma warning disable MA0048
 [CollectionDefinition("Huia E2E")]
 public sealed class HuiaAppCollection : ICollectionFixture<HuiaAppFixture>;

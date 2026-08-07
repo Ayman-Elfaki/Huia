@@ -35,8 +35,8 @@ internal static class AuthorizationEndpoints
 
         ApplyUiLocales(httpContext, request, huiaOptions);
 
-        var result = await httpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-        var user = result is { Succeeded: true } ? await userManager.GetUserAsync(result.Principal) : null;
+        var result = await httpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+        var user = result is { Succeeded: true } ? await userManager.GetUserAsync(result.Principal).ConfigureAwait(false) : null;
 
         if (user is null)
         {
@@ -44,7 +44,7 @@ internal static class AuthorizationEndpoints
             // from a wiped/reseeded database) — either way, treat it as "not signed in" rather than 500ing.
             if (result is { Succeeded: true })
             {
-                await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+                await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
             }
 
             var returnUrl = Uri.EscapeDataString(httpContext.Request.GetEncodedUrl());
@@ -61,10 +61,10 @@ internal static class AuthorizationEndpoints
             // request rather than silently issuing a token with none. Some OAuth testing tools (e.g.
             // Scalar's own "Authorize" UI) don't reliably include a scope parameter even when scopes appear
             // selected in their panel, which would otherwise produce a token no protected endpoint accepts.
-            var application = await applicationManager.FindByClientIdAsync(clientId);
+            var application = await applicationManager.FindByClientIdAsync(clientId).ConfigureAwait(false);
             if (application is not null)
             {
-                var permissions = await applicationManager.GetPermissionsAsync(application);
+                var permissions = await applicationManager.GetPermissionsAsync(application).ConfigureAwait(false);
                 scopes =
                 [
                     .. permissions
@@ -75,8 +75,8 @@ internal static class AuthorizationEndpoints
             }
         }
 
-        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes);
-        identity.SetResources(await scopeManager.ListResourcesAsync(scopes).ToListAsync());
+        var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes).ConfigureAwait(false);
+        identity.SetResources(await scopeManager.ListResourcesAsync(scopes).ToListAsync().ConfigureAwait(false));
 
         // NOTE: Huia auto-approves consent for every client for v1 (no consent-screen UI is implemented
         // yet). Third-party clients seeded with an explicit ConsentType are still issued tokens; treat this

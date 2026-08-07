@@ -112,7 +112,7 @@ public class TodoEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApiF
 
         var todos = await client.GetFromJsonAsync<List<TodoEndpoints.TodoResponse>>("/api/todos");
 
-        Assert.DoesNotContain(todos!, t => t.Title == "Not yours");
+        Assert.DoesNotContain(todos!, t => string.Equals(t.Title, "Not yours", StringComparison.Ordinal));
     }
 
     /// <summary>

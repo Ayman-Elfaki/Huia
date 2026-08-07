@@ -31,20 +31,28 @@ internal static class ApplicationsEndpoints
         return api;
     }
 
-    private static async Task<IResult> ListAsync(int? page, int? pageSize, IOpenIddictApplicationManager manager,
-        CancellationToken ct)
+    private static async Task<IResult> ListAsync(string? cursor, int? pageSize,
+        IOpenIddictApplicationManager manager, CancellationToken ct)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
-        var offset = ((page is null or <= 0 ? 1 : page.Value) - 1) * size;
+        var offset = OffsetCursor.Decode(cursor);
 
-        var items = new List<ApplicationResponse>();
-        await foreach (var app in manager.ListAsync(size, offset, ct).ConfigureAwait(false))
+        // Fetches one extra row to know whether a next page exists, rather than a separate CountAsync
+        // round-trip - see OffsetCursor's own doc comment for why this stays offset-based internally.
+        var apps = new List<object>();
+        await foreach (var app in manager.ListAsync(size + 1, offset, ct).ConfigureAwait(false))
+        {
+            apps.Add(app);
+        }
+
+        var nextCursor = apps.Count > size ? OffsetCursor.Encode(offset + size) : null;
+        var items = new List<ApplicationResponse>(size);
+        foreach (var app in apps.Take(size))
         {
             items.Add(await ToResponseAsync(app, manager, ct).ConfigureAwait(false));
         }
 
-        var totalCount = await manager.CountAsync(ct).ConfigureAwait(false);
-        return Results.Ok(new PagedResult<ApplicationResponse>(items, totalCount));
+        return Results.Ok(new PagedResult<ApplicationResponse>(items, nextCursor));
     }
 
     private static async Task<IResult> GetAsync(string id, IOpenIddictApplicationManager manager,
@@ -253,10 +261,10 @@ internal static class ApplicationsEndpoints
 
         if (isConfidential)
         {
-            return permissions.Contains(Permissions.GrantTypes.ClientCredentials) ? "m2m" : "web";
+            return permissions.Contains(Permissions.GrantTypes.ClientCredentials, StringComparer.Ordinal) ? "m2m" : "web";
         }
 
-        if (permissions.Contains(Permissions.GrantTypes.DeviceCode))
+        if (permissions.Contains(Permissions.GrantTypes.DeviceCode, StringComparer.Ordinal))
         {
             return "device";
         }

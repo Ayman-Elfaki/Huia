@@ -1,3 +1,6 @@
+// AppHost.cs is .NET Aspire's conventional file name for the host project's top-level statements (which the
+// compiler wraps in an implicit "Program" class) - not a name mismatch to fix.
+#pragma warning disable MA0048
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Secrets get dev-friendly defaults here so `aspire run` works out of the box; override them via user

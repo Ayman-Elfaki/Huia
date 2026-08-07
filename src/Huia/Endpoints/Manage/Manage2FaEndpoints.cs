@@ -79,8 +79,8 @@ internal static class Manage2FaEndpoints
 
     private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
         => result.Errors
-            .GroupBy(e => e.Code)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
+            .GroupBy(e => e.Code, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
 
     private sealed record TwoFactorRequest(
         bool? Enable,

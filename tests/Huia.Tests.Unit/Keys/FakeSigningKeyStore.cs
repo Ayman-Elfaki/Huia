@@ -34,7 +34,7 @@ internal sealed class FakeSigningKeyStore(TimeProvider timeProvider) : ISigningK
 
     public Task RetireKeyAsync(string keyId, DateTimeOffset retiredAt, CancellationToken cancellationToken = default)
     {
-        var index = _keys.FindIndex(k => k.Id == keyId);
+        var index = _keys.FindIndex(k => string.Equals(k.Id, keyId, StringComparison.Ordinal));
         var existing = _keys[index];
 
         _keys[index] = new KeyDescriptor

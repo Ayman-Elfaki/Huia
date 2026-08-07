@@ -27,12 +27,12 @@ internal static class AuthorizationsEndpoints
     }
 
     private static async Task<IResult> ListAsync(
-        int? page, int? pageSize, string? subject, string? clientId,
+        string? cursor, int? pageSize, string? subject, string? clientId,
         IOpenIddictAuthorizationManager manager, IOpenIddictApplicationManager applicationManager,
         CancellationToken cancellationToken)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
-        var offset = ((page is null or <= 0 ? 1 : page.Value) - 1) * size;
+        var offset = OffsetCursor.Decode(cursor);
 
         // The admin surface only ever knows an application by its public client_id (see ApplicationsEndpoints),
         // so a client_id filter is resolved down to OpenIddict's internal application id before querying.
@@ -43,46 +43,60 @@ internal static class AuthorizationsEndpoints
                 .ConfigureAwait(false);
             if (application is null)
             {
-                return Results.Ok(new PagedResult<AuthorizationResponse>([], 0));
+                return Results.Ok(new PagedResult<AuthorizationResponse>([], null));
             }
 
             applicationId = await applicationManager.GetIdAsync(application, cancellationToken).ConfigureAwait(false);
         }
 
+        // Fetches one extra candidate (rather than a separate count) to know whether a next page exists -
+        // see OffsetCursor's own doc comment for why this stays offset-based rather than a real keyset query.
+        var candidates = !string.IsNullOrWhiteSpace(subject) || applicationId is not null
+            ? await FindFilteredAsync(manager, subject, applicationId, offset, size, cancellationToken)
+                .ConfigureAwait(false)
+            : await ListUnfilteredAsync(manager, offset, size, cancellationToken).ConfigureAwait(false);
+
+        var nextCursor = candidates.Count > size ? OffsetCursor.Encode(offset + size) : null;
         var clientIdCache = new Dictionary<string, string?>(StringComparer.Ordinal);
-
-        if (!string.IsNullOrWhiteSpace(subject) || applicationId is not null)
-        {
-            // The filtered lookups (FindBySubjectAsync/FindByApplicationIdAsync) don't support server-side
-            // paging — fine for an admin-only surface where a given user/application has at most a handful
-            // of live authorizations.
-            var filtered = new List<object>();
-            await foreach (var authorization in Find(manager, subject, applicationId, cancellationToken)
-                               .ConfigureAwait(false))
-            {
-                filtered.Add(authorization);
-            }
-
-            var page1 = filtered.Skip(offset).Take(size).ToList();
-            var responses = new List<AuthorizationResponse>(page1.Count);
-            foreach (var authorization in page1)
-            {
-                responses.Add(await ToResponseAsync(authorization, manager, applicationManager, clientIdCache,
-                    cancellationToken).ConfigureAwait(false));
-            }
-
-            return Results.Ok(new PagedResult<AuthorizationResponse>(responses, filtered.Count));
-        }
-
-        var items = new List<AuthorizationResponse>();
-        await foreach (var authorization in manager.ListAsync(size, offset, cancellationToken).ConfigureAwait(false))
+        var items = new List<AuthorizationResponse>(size);
+        foreach (var authorization in candidates.Take(size))
         {
             items.Add(await ToResponseAsync(authorization, manager, applicationManager, clientIdCache,
                 cancellationToken).ConfigureAwait(false));
         }
 
-        var totalCount = await manager.CountAsync(cancellationToken).ConfigureAwait(false);
-        return Results.Ok(new PagedResult<AuthorizationResponse>(items, totalCount));
+        return Results.Ok(new PagedResult<AuthorizationResponse>(items, nextCursor));
+    }
+
+    /// <summary>
+    /// The filtered lookups (FindBySubjectAsync/FindByApplicationIdAsync) don't support server-side paging —
+    /// fine for an admin-only surface where a given user/application has at most a handful of live
+    /// authorizations.
+    /// </summary>
+    private static async Task<List<object>> FindFilteredAsync(IOpenIddictAuthorizationManager manager,
+        string? subject, string? applicationId, int offset, int size, CancellationToken cancellationToken)
+    {
+        var filtered = new List<object>();
+        await foreach (var authorization in Find(manager, subject, applicationId, cancellationToken)
+                           .ConfigureAwait(false))
+        {
+            filtered.Add(authorization);
+        }
+
+        return filtered.Skip(offset).Take(size + 1).ToList();
+    }
+
+    private static async Task<List<object>> ListUnfilteredAsync(IOpenIddictAuthorizationManager manager, int offset,
+        int size, CancellationToken cancellationToken)
+    {
+        var authorizations = new List<object>();
+        await foreach (var authorization in manager.ListAsync(size + 1, offset, cancellationToken)
+                           .ConfigureAwait(false))
+        {
+            authorizations.Add(authorization);
+        }
+
+        return authorizations;
     }
 
     private static IAsyncEnumerable<object> Find(IOpenIddictAuthorizationManager manager, string? subject,

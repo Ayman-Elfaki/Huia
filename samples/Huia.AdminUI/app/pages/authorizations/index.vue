@@ -1,23 +1,16 @@
 <script setup lang="ts">
 import type { AuthorizationResponse } from '~~/shared/types/admin'
 
-const page = ref(1)
-const pageSize = 25
 const subject = ref('')
 const clientId = ref('')
-const query = computed(() => ({
-  page: page.value,
-  pageSize,
+const filters = computed(() => ({
   subject: subject.value || undefined,
   clientId: clientId.value || undefined
 }))
-const { items, totalCount, loading, error, refresh } = useAdminList<AuthorizationResponse>('authorizations', query)
+const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious, reset }
+  = useAdminList<AuthorizationResponse>('authorizations', filters)
 await refresh()
-watch(page, refresh)
-watch([subject, clientId], () => {
-  page.value = 1
-  refresh()
-})
+watch([subject, clientId], reset)
 
 const columns = [
   { accessorKey: 'subject', header: 'Subject' },
@@ -33,7 +26,7 @@ const revoking = ref<string | null>(null)
 async function revoke(authorization: AuthorizationResponse) {
   revoking.value = authorization.id
   try {
-    await $fetch(`/api/admin/authorizations/${authorization.id}/revoke`, { method: 'POST' })
+    await $huiaAdmin(`authorizations/${authorization.id}/revoke`, { method: 'POST' })
     await refresh()
   } finally {
     revoking.value = null
@@ -46,27 +39,60 @@ function formatDate(value: string | null) {
 </script>
 
 <template>
-  <UDashboardPanel id="authorizations-panel" :ui="{ body: 'gap-4' }">
+  <UDashboardPanel
+    id="authorizations-panel"
+    :ui="{ body: 'gap-4' }"
+  >
     <template #header>
       <UDashboardNavbar title="Authorizations">
         <template #leading>
           <UDashboardSidebarCollapse />
+        </template>
+        <template #right>
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="subtle"
+            :loading="loading"
+            @click="refresh"
+          />
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
       <div class="flex gap-3">
-        <UInput v-model="subject" placeholder="Filter by subject (user id)…" icon="i-lucide-search" class="max-w-xs" />
-        <UInput v-model="clientId" placeholder="Filter by client id…" icon="i-lucide-search"
-          class="max-w-xs" />
+        <UInput
+          v-model="subject"
+          placeholder="Filter by subject (user id)…"
+          icon="i-lucide-search"
+          class="max-w-xs"
+        />
+        <UInput
+          v-model="clientId"
+          placeholder="Filter by client id…"
+          icon="i-lucide-search"
+          class="max-w-xs"
+        />
       </div>
 
-      <UAlert v-if="error && !loading" color="error" variant="subtle" :title="error" />
+      <UAlert
+        v-if="error && !loading"
+        color="error"
+        variant="subtle"
+        :title="error"
+      />
 
-      <UTable :data="items" :columns="columns" :loading="loading">
+      <UTable
+        :data="items"
+        :columns="columns"
+        :loading="loading"
+      >
         <template #status-cell="{ row }">
-          <UBadge :color="row.original.status === 'valid' ? 'success' : 'neutral'" variant="subtle">
+          <UBadge
+            :color="row.original.status === 'valid' ? 'success' : 'neutral'"
+            variant="subtle"
+          >
             {{ row.original.status || '—' }}
           </UBadge>
         </template>
@@ -77,15 +103,26 @@ function formatDate(value: string | null) {
           {{ formatDate(row.original.creationDate) }}
         </template>
         <template #actions-cell="{ row }">
-          <UButton label="Revoke" icon="i-lucide-ban" color="error" variant="ghost" size="sm"
-            :disabled="row.original.status !== 'valid'" :loading="revoking === row.original.id"
-            @click="revoke(row.original)" />
+          <UButton
+            label="Revoke"
+            icon="i-lucide-ban"
+            color="error"
+            variant="ghost"
+            size="sm"
+            :disabled="row.original.status !== 'valid'"
+            :loading="revoking === row.original.id"
+            @click="revoke(row.original)"
+          />
         </template>
       </UTable>
 
-      <div class="flex justify-end">
-        <UPagination v-model:page="page" :total="totalCount" :items-per-page="pageSize" />
-      </div>
+      <AdminPager
+        :has-previous="hasPrevious"
+        :has-next="!!nextCursor"
+        :loading="loading"
+        @previous="goPrevious"
+        @next="goNext"
+      />
     </template>
   </UDashboardPanel>
 </template>

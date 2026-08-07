@@ -26,20 +26,28 @@ internal static class ScopesEndpoints
         return api;
     }
 
-    private static async Task<IResult> ListAsync(int? page, int? pageSize, IOpenIddictScopeManager manager,
+    private static async Task<IResult> ListAsync(string? cursor, int? pageSize, IOpenIddictScopeManager manager,
         CancellationToken cancellationToken)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
-        var offset = ((page is null or <= 0 ? 1 : page.Value) - 1) * size;
+        var offset = OffsetCursor.Decode(cursor);
 
-        var items = new List<ScopeResponse>();
-        await foreach (var scope in manager.ListAsync(size, offset, cancellationToken).ConfigureAwait(false))
+        // Fetches one extra row to know whether a next page exists, rather than a separate CountAsync
+        // round-trip - see OffsetCursor's own doc comment for why this stays offset-based internally.
+        var scopes = new List<object>();
+        await foreach (var scope in manager.ListAsync(size + 1, offset, cancellationToken).ConfigureAwait(false))
+        {
+            scopes.Add(scope);
+        }
+
+        var nextCursor = scopes.Count > size ? OffsetCursor.Encode(offset + size) : null;
+        var items = new List<ScopeResponse>(size);
+        foreach (var scope in scopes.Take(size))
         {
             items.Add(await ToResponseAsync(scope, manager, cancellationToken).ConfigureAwait(false));
         }
 
-        var totalCount = await manager.CountAsync(cancellationToken).ConfigureAwait(false);
-        return Results.Ok(new PagedResult<ScopeResponse>(items, totalCount));
+        return Results.Ok(new PagedResult<ScopeResponse>(items, nextCursor));
     }
 
     private static async Task<IResult> GetAsync(string id, IOpenIddictScopeManager manager,

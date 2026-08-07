@@ -33,14 +33,17 @@ public sealed class TodoApiFactory : WebApplicationFactory<Program>
         ClientOptions.BaseAddress = new Uri("https://localhost");
     }
 
+    private readonly List<(string Email, string ConfirmationLink)> _sentConfirmationLinks = [];
+    private readonly List<(string Email, string ResetLink)> _sentPasswordResetLinks = [];
+
     /// <summary>Confirmation links captured by the fake <see cref="IEmailSender{TUser}"/>,
     /// newest last — for tests that need to inspect what Huia would have emailed
     /// (e.g. its <c>returnUrl</c>) without a real SMTP sender.
     /// </summary>
-    public List<(string Email, string ConfirmationLink)> SentConfirmationLinks { get; } = [];
+    public IReadOnlyList<(string Email, string ConfirmationLink)> SentConfirmationLinks => _sentConfirmationLinks;
 
     /// <summary>Reset links captured by the fake <see cref="IEmailSender{TUser}"/>, newest last.</summary>
-    public List<(string Email, string ResetLink)> SentPasswordResetLinks { get; } = [];
+    public IReadOnlyList<(string Email, string ResetLink)> SentPasswordResetLinks => _sentPasswordResetLinks;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -109,13 +112,13 @@ public sealed class TodoApiFactory : WebApplicationFactory<Program>
     {
         public Task SendConfirmationLinkAsync(HuiaUser user, string email, string confirmationLink)
         {
-            factory.SentConfirmationLinks.Add((email, confirmationLink));
+            factory._sentConfirmationLinks.Add((email, confirmationLink));
             return Task.CompletedTask;
         }
 
         public Task SendPasswordResetLinkAsync(HuiaUser user, string email, string resetLink)
         {
-            factory.SentPasswordResetLinks.Add((email, resetLink));
+            factory._sentPasswordResetLinks.Add((email, resetLink));
             return Task.CompletedTask;
         }
 

@@ -78,7 +78,7 @@ public class KeySecurityTests(TodoApiFactory factory) : IClassFixture<TodoApiFac
         var keys = await GetJwksKeysAsync();
 
         var keyIds = keys.Select(k => k.GetProperty("kid").GetString()).ToList();
-        Assert.Equal(keyIds.Distinct().Count(), keyIds.Count);
+        Assert.Equal(keyIds.Distinct(StringComparer.Ordinal).Count(), keyIds.Count);
     }
 
     private async Task<List<JsonElement>> GetJwksKeysAsync()

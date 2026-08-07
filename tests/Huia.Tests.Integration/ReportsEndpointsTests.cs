@@ -108,7 +108,7 @@ public class ReportsEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoA
         Assert.NotNull(reportsScope);
         var resources = await scopeManager.GetResourcesAsync(reportsScope!);
 
-        Assert.Contains("reports-api", resources);
+        Assert.Contains("reports-api", resources, StringComparer.Ordinal);
     }
 
     private sealed record ReportSummary(int TotalTodos, int CompletedTodos, int DistinctOwners);

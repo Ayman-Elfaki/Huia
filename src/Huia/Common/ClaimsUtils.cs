@@ -13,13 +13,13 @@ internal static class ClaimsUtils
         var identity = new ClaimsIdentity(authenticationType: "Huia", nameType: OpenIddictConstants.Claims.Name,
             roleType: OpenIddictConstants.Claims.Role);
 
-        identity.SetClaim(OpenIddictConstants.Claims.Subject, await userManager.GetUserIdAsync(user))
-            .SetClaim(OpenIddictConstants.Claims.Email, await userManager.GetEmailAsync(user))
-            .SetClaim(OpenIddictConstants.Claims.Name, await userManager.GetUserNameAsync(user))
-            .SetClaim(OpenIddictConstants.Claims.PreferredUsername, await userManager.GetUserNameAsync(user))
+        identity.SetClaim(OpenIddictConstants.Claims.Subject, await userManager.GetUserIdAsync(user).ConfigureAwait(false))
+            .SetClaim(OpenIddictConstants.Claims.Email, await userManager.GetEmailAsync(user).ConfigureAwait(false))
+            .SetClaim(OpenIddictConstants.Claims.Name, await userManager.GetUserNameAsync(user).ConfigureAwait(false))
+            .SetClaim(OpenIddictConstants.Claims.PreferredUsername, await userManager.GetUserNameAsync(user).ConfigureAwait(false))
             .SetClaim(OpenIddictConstants.Claims.GivenName, user.FirstName)
             .SetClaim(OpenIddictConstants.Claims.FamilyName, user.LastName)
-            .SetClaims(OpenIddictConstants.Claims.Role, [.. await userManager.GetRolesAsync(user)]);
+            .SetClaims(OpenIddictConstants.Claims.Role, [.. await userManager.GetRolesAsync(user).ConfigureAwait(false)]);
 
         identity.SetScopes(scopes);
         identity.SetDestinations(claim => GetDestinations(claim, identity));

@@ -42,7 +42,7 @@ public class ConfirmationEmailReturnUrlTests(TodoApiFactory factory) : IClassFix
             await IdentityUiTestHelpers.RegisterAsync(client, email, "P@ssw0rd123!", authorizeReturnUrl);
         Assert.Equal(HttpStatusCode.Found, response.StatusCode);
 
-        var sent = Assert.Single(factory.SentConfirmationLinks, s => s.Email == email);
+        var sent = Assert.Single(factory.SentConfirmationLinks, s => string.Equals(s.Email, email, StringComparison.OrdinalIgnoreCase));
         var confirmationReturnUrl = ExtractQueryParameter(sent.ConfirmationLink, "returnUrl");
 
         Assert.Equal(clientOrigin, confirmationReturnUrl);
@@ -61,7 +61,7 @@ public class ConfirmationEmailReturnUrlTests(TodoApiFactory factory) : IClassFix
         using var response = await IdentityUiTestHelpers.RegisterAsync(client, email, "P@ssw0rd123!");
         Assert.Equal(HttpStatusCode.Found, response.StatusCode);
 
-        var sent = Assert.Single(factory.SentConfirmationLinks, s => s.Email == email);
+        var sent = Assert.Single(factory.SentConfirmationLinks, s => string.Equals(s.Email, email, StringComparison.OrdinalIgnoreCase));
         Assert.Null(ExtractQueryParameter(sent.ConfirmationLink, "returnUrl", throwIfMissing: false));
     }
 
@@ -95,7 +95,7 @@ public class ConfirmationEmailReturnUrlTests(TodoApiFactory factory) : IClassFix
                         $"?returnUrl={Uri.EscapeDataString(authorizeReturnUrl)}";
         var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, resendUrl);
 
-        using var response = await client.PostAsync(resendUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync(resendUrl, new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.Email"] = email,
             ["returnUrl"] = authorizeReturnUrl,
@@ -105,7 +105,7 @@ public class ConfirmationEmailReturnUrlTests(TodoApiFactory factory) : IClassFix
 
         // Registering above already sent one confirmation link (with no returnUrl); this resend sends a
         // second, distinct one — the one under test here is that later one.
-        var sent = factory.SentConfirmationLinks.Last(s => s.Email == email);
+        var sent = factory.SentConfirmationLinks.Last(s => string.Equals(s.Email, email, StringComparison.OrdinalIgnoreCase));
         var confirmationReturnUrl = ExtractQueryParameter(sent.ConfirmationLink, "returnUrl");
 
         Assert.Equal(clientOrigin, confirmationReturnUrl);

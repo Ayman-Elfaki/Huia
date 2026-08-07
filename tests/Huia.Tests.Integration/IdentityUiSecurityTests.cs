@@ -63,7 +63,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         var loginUrl = "/identity/account/login";
         var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, loginUrl);
 
-        using var response = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.Email"] = email,
             ["Input.Password"] = Password,
@@ -93,7 +93,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         var loginUrl = "/identity/account/login";
         var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, loginUrl);
 
-        using var response = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.Email"] = email,
             ["Input.Password"] = Password,
@@ -117,7 +117,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         // token from; ForgotPassword doesn't check auth state, so it works regardless.
         var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, "/identity/account/forgotpassword");
 
-        using var response = await client.PostAsync(logoutUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync(logoutUrl, new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["__RequestVerificationToken"] = token,
         }));
@@ -135,7 +135,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         // field* is what's rejected, not simply the absence of any prior request.
         await client.GetAsync("/identity/account/register");
 
-        using var response = await client.PostAsync("/identity/account/register", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync("/identity/account/register", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.FirstName"] = "Test",
             ["Input.LastName"] = "User",
@@ -172,7 +172,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
 
         await client.GetAsync("/identity/account/login");
 
-        using var response = await client.PostAsync("/identity/account/login", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync("/identity/account/login", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.Email"] = email,
             ["Input.Password"] = Password,
@@ -197,7 +197,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         for (var attempt = 0; attempt < 5; attempt++)
         {
             var badToken = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, loginUrl);
-            using var failed = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+            using var failed = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["Input.Email"] = email,
                 ["Input.Password"] = "definitely-wrong-password",
@@ -206,7 +206,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         }
 
         var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, loginUrl);
-        using var response = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Input.Email"] = email,
             ["Input.Password"] = Password,
@@ -248,7 +248,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var html = await response.Content.ReadAsStringAsync();
-        Assert.Contains("returnUrl=%2Fapi%2Ftodos", html);
+        Assert.Contains("returnUrl=%2Fapi%2Ftodos", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         // Login would redirect (already authenticated) rather than render a form to scrape a token from;
         // ForgotPassword doesn't check auth state, so it works regardless of whether we're signed in yet.
         var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, "/identity/account/forgotpassword");
-        using var response = await client.PostAsync("/identity/account/logout", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var response = await client.PostAsync("/identity/account/logout", new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["__RequestVerificationToken"] = token,
         }));

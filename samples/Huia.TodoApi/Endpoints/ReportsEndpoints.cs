@@ -38,4 +38,6 @@ public static class ReportsEndpoints
     }
 }
 
+// Kept alongside its only producer, ReportsEndpoints, rather than its own file.
+#pragma warning disable MA0048
 public sealed record ReportSummaryResponse(int TotalTodos, int CompletedTodos, int DistinctOwners);
