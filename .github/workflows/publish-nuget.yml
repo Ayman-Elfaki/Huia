@@ -49,10 +49,11 @@ jobs:
           -p:Version=${{ steps.version.outputs.value }}
           -o ${{ github.workspace }}/artifacts
 
+      # ✅ FIX: Removed double quotes around the file path so Bash can expand the * wildcard
       - name: Push to NuGet.org
         if: github.ref_type == 'tag'
         run: >
-          dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg"
+          dotnet nuget push ${{ github.workspace }}/artifacts/*.nupkg
           --api-key ${{ secrets.NUGET_API_KEY }}
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
