@@ -1,7 +1,3 @@
---- README.md (原始)
-
-
-+++ README.md (修改后)
 # Huia
 
 **Huia** is an OpenIddict-based identity and authentication library for ASP.NET Core applications. It provides a complete identity solution with built-in UI, OAuth 2.0 / OpenID Connect server capabilities, and flexible key management.
