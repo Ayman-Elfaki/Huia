@@ -153,10 +153,10 @@ internal static class ApplicationDescriptorFactory
         string[] wellKnownScopes = includeOfflineAccess
             ?
             [
-                OpenIddict.Abstractions.OpenIddictConstants.Scopes.OpenId,
-                OpenIddict.Abstractions.OpenIddictConstants.Scopes.OfflineAccess
+                OpenIddictConstants.Scopes.OpenId,
+                OpenIddictConstants.Scopes.OfflineAccess,
             ]
-            : [OpenIddict.Abstractions.OpenIddictConstants.Scopes.OpenId];
+            : [OpenIddictConstants.Scopes.OpenId];
 
         descriptor.AddScopePermissions([.. wellKnownScopes, .. app.Scopes]);
     }

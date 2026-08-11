@@ -58,7 +58,7 @@ public static class ServiceCollectionExtensions
         // avoids that entirely.
         services.AddDataProtection().SetApplicationName("Huia");
 
-        // Huia.UI's pages (Areas/Identity/Pages) and error page are Razor Pages; consumers still need to
+        // Huia pages (Areas/Identity/Pages) and error page are Razor Pages; consumers still need to
         // call app.MapRazorPages() themselves, but registering the services here means they don't also need
         // to remember services.AddRazorPages().
         services.AddRazorPages();
@@ -160,7 +160,7 @@ public static class ServiceCollectionExtensions
                     OpenIddictConstants.Scopes.Email,
                     OpenIddictConstants.Scopes.OpenId,
                     OpenIddictConstants.Scopes.Profile,
-                    OpenIddictConstants.Scopes.OfflineAccess
+                    OpenIddictConstants.Scopes.OfflineAccess,
                 ];
 
                 var declaredScopes = options.Scopes.Scopes.Select(s => s.Name);
