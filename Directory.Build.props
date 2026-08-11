@@ -9,9 +9,11 @@
     <GenerateDocumentationFile Condition="$(MSBuildProjectDirectory.Contains('\src\'))">true</GenerateDocumentationFile>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <Deterministic>true</Deterministic>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
-  <PropertyGroup Label="Package metadata" Condition="$(MSBuildProjectDirectory.Contains('\src\'))">
+  <PropertyGroup Label="Package metadata" Condition="$(MSBuildProjectDirectory.Contains('/src/')) Or $(MSBuildProjectDirectory.Contains('\src\'))">
     <IsPackable>true</IsPackable>
     <Authors>Ayman Elfaki</Authors>
     <Company>Huia</Company>
@@ -20,13 +22,17 @@
     <RepositoryUrl>https://github.com/Ayman-Elfaki/Huia</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>identity;openiddict;oauth;oidc;aspnetcore;efcore</PackageTags>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
-  <PropertyGroup Label="Test/sample projects" Condition="!$(MSBuildProjectDirectory.Contains('\src\'))">
+  <!-- ✅ FIX 1: Explicitly include the README.md file in the package payload -->
+  <ItemGroup Label="Readme" Condition="$(MSBuildProjectDirectory.Contains('/src/')) Or $(MSBuildProjectDirectory.Contains('\src\'))">
+    <!-- $(MSBuildThisFileDirectory) automatically points to the directory where this .props file lives (the repo root) -->
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+   <PropertyGroup Label="Test/sample projects" Condition="!$(MSBuildProjectDirectory.Contains('/src/')) And !$(MSBuildProjectDirectory.Contains('\src\'))">
     <IsPackable>false</IsPackable>
-    <!-- MA0004 (ConfigureAwait(false)) fires across every awaited call in tests/, where there's no
-         SynchronizationContext to avoid resuming on - unlike src/, which already follows it deliberately. -->
     <NoWarn>$(NoWarn);CA1707;MA0004</NoWarn>
   </PropertyGroup>
 

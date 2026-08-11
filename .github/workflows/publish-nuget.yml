@@ -33,7 +33,6 @@ jobs:
       - name: Build
         run: dotnet build Huia.slnx -c Release --no-restore -p:Version=${{ steps.version.outputs.value }}
 
-      # ✅ FIX: Explicitly create the artifacts directory using an absolute path
       - name: Create artifacts directory
         run: mkdir -p ${{ github.workspace }}/artifacts
 
@@ -49,7 +48,6 @@ jobs:
           -p:Version=${{ steps.version.outputs.value }}
           -o ${{ github.workspace }}/artifacts
 
-      # ✅ FIX: Removed double quotes around the file path so Bash can expand the * wildcard
       - name: Push to NuGet.org
         if: github.ref_type == 'tag'
         run: >
