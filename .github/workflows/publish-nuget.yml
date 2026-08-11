@@ -33,22 +33,26 @@ jobs:
       - name: Build
         run: dotnet build Huia.slnx -c Release --no-restore -p:Version=${{ steps.version.outputs.value }}
 
+      # ✅ FIX: Explicitly create the artifacts directory using an absolute path
+      - name: Create artifacts directory
+        run: mkdir -p ${{ github.workspace }}/artifacts
+
       - name: Pack Huia
         run: >
           dotnet pack src/Huia/Huia.csproj -c Release --no-build
           -p:Version=${{ steps.version.outputs.value }}
-          -o artifacts
+          -o ${{ github.workspace }}/artifacts
 
       - name: Pack Huia.EntityFrameworkCore
         run: >
           dotnet pack src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj -c Release --no-build
           -p:Version=${{ steps.version.outputs.value }}
-          -o artifacts
+          -o ${{ github.workspace }}/artifacts
 
       - name: Push to NuGet.org
         if: github.ref_type == 'tag'
         run: >
-          dotnet nuget push "artifacts/*.nupkg"
+          dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg"
           --api-key ${{ secrets.NUGET_API_KEY }}
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
@@ -57,4 +61,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nuget-packages
-          path: artifacts/*.nupkg
+          path: ${{ github.workspace }}/artifacts/*.nupkg
