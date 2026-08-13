@@ -129,6 +129,25 @@ builder.Services.AddHuia(issuer, huia =>
             app.AllowScopes("roles", "todos");
         });
 
+        // Demonstrates Huia's external-provider support (docs/external-providers.md): once a Google client
+        // is registered, "Sign in with Google" appears on the login page automatically — no other wiring
+        // needed. Skipped when no client id is configured (e.g. a fresh clone before the sample's own
+        // appsettings.json/user-secrets carry one) so the sample still starts without it.
+        var googleClientId = builder.Configuration["Google:ClientId"];
+        if (!string.IsNullOrEmpty(googleClientId))
+        {
+            huia.ExternalLogins.AddGoogle(google =>
+            {
+                google.ClientId = googleClientId;
+                google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+            });
+        }
+
+        // Also demonstrates the opt-in password-confirmed linking shortcut: an external sign-in whose email
+        // matches an existing password account links itself once the user proves ownership by entering that
+        // password, instead of always requiring a separate sign-in-then-link-from-settings round trip.
+        huia.EnableExternalLoginPasswordLinking();
+
         huia.KeysManagement.UseAutomaticKeyManagement();
 
         // A token's aud claim is only populated for scopes that have a resource registered against them —

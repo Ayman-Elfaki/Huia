@@ -28,6 +28,14 @@ public class LoginModel(
     /// <summary>Where to redirect after a successful sign-in.</summary>
     public string ReturnUrl { get; set; } = "~/";
 
+    /// <summary>Registered external (third-party) sign-in providers, for rendering one button each.</summary>
+    public IList<AuthenticationScheme> ExternalLogins { get; set; } = [];
+
+    /// <summary>Set by <c>ExternalLoginModel</c>/<c>ExternalLoginConfirmationModel</c> when an external
+    /// sign-in couldn't complete, carried across the redirect back to this page.</summary>
+    [TempData]
+    public string? ExternalLoginError { get; set; }
+
     /// <summary>
     /// Renders the page, or — if the user is already signed in (e.g. another browser tab just completed a
     /// sign-in that this one's cross-tab sync script noticed, see <c>huia-session-sync.js</c>) — redirects
@@ -36,6 +44,7 @@ public class LoginModel(
     public async Task<IActionResult> OnGetAsync(string? returnUrl = null)
     {
         ReturnUrl = returnUrl ?? Url.Content("~/");
+        ExternalLogins = (await signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
         // HttpContext.User (the default-scheme principal) isn't the sign-in cookie here — Huia's default
         // authentication scheme is the OpenIddict bearer validator (see ServiceCollectionExtensions), so
@@ -52,6 +61,7 @@ public class LoginModel(
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
         ReturnUrl = returnUrl ?? Url.Content("~/");
+        ExternalLogins = (await signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
         if (!ModelState.IsValid)
         {

@@ -29,6 +29,7 @@ public abstract class HuiaDbContext<TUser, TRole>(DbContextOptions options)
         {
             user.Property(u => u.FirstName).HasMaxLength(256);
             user.Property(u => u.LastName).HasMaxLength(256);
+            user.Property(u => u.Picture).HasMaxLength(2048);
         });
     }
 }

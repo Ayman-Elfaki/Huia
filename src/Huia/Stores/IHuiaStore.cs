@@ -18,10 +18,14 @@ namespace Huia.Stores;
 /// needed only if you enable <c>huia.KeysManagement.UseAutomaticKeyManagement()</c>/
 /// <c>UseManualKeyManagement()</c>, but implemented regardless since it's part of this interface.
 /// <c>WithStore&lt;TStore, ...&gt;()</c> registers <c>TStore</c> as
-/// <see cref="Huia.Keys.ISigningKeyStore"/> too. See docs/custom-store.md and docs/key-management.md.
+/// <see cref="Huia.Keys.ISigningKeyStore"/> too. <see cref="IUserLoginStore{TUser}"/> backs external
+/// (third-party) sign-in providers registered via <c>huia.ExternalLogins</c> — needed only if you register
+/// any, but implemented regardless since it's part of this interface. See docs/custom-store.md,
+/// docs/key-management.md, and docs/external-providers.md.
 /// </remarks>
 public interface IHuiaStore<TApplication, TAuthorization, TScope, TToken> :
     IUserStore<HuiaUser>,
+    IUserLoginStore<HuiaUser>,
     IRoleStore<HuiaRole>,
     IOpenIddictApplicationStore<TApplication>,
     IOpenIddictAuthorizationStore<TAuthorization>,

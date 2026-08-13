@@ -34,7 +34,12 @@ whatever else it needs.
 
 - ASP.NET Core Identity (`AddIdentityCore<HuiaUser>().AddRoles<HuiaRole>().AddSignInManager()`), using the
   standard `Identity.Application` cookie scheme — the same one `SignInManager<HuiaUser>`'s high-level methods
-  target, so Huia's own Razor Pages and any custom pages you add work identically.
+  target, so Huia's own Razor Pages and any custom pages you add work identically. `DefaultSignInScheme` is
+  `IdentityConstants.ExternalScheme` (not `ApplicationScheme`) — every `SignInAsync`/`AuthenticateAsync` call
+  Huia itself makes passes its scheme explicitly, so this only affects a provider registered via
+  `huia.ExternalLogins` (see [external-providers.md](external-providers.md)) without its own `SignInScheme`:
+  it lands in the external cookie `SignInManager.GetExternalLoginInfoAsync()` reads from, the same default
+  plain ASP.NET Core Identity uses, instead of signing straight into the main application cookie unvalidated.
 - An OpenIddict authorization server (`AddOpenIddict().AddServer(...)`) with authorization code, refresh
   token, client credentials, and device authorization flows enabled, plus local token validation
   (`AddValidation().UseLocalServer()`) so the same app that issues tokens can also protect its own endpoints
@@ -55,8 +60,8 @@ whatever else it needs.
 
 ## Persistence
 
-- **`IHuiaStore<TApplication, TAuthorization, TScope, TToken>`** — Identity's user/role stores,
-  OpenIddict's application/authorization/scope/token stores, and signing/encryption key storage
+- **`IHuiaStore<TApplication, TAuthorization, TScope, TToken>`** — Identity's user/role/external-login
+  stores, OpenIddict's application/authorization/scope/token stores, and signing/encryption key storage
   (`ISigningKeyStore`), as one interface. `Huia.EntityFrameworkCore`'s `WithEntityFrameworkStores<TContext>()`
   implements the Identity/OpenIddict part against EF Core (with its own separate `ISigningKeyStore` for
   keys); implement `IHuiaStore` yourself for a fully custom backend (see [custom-store.md](custom-store.md)).
@@ -74,6 +79,16 @@ permissions/requirements for its kind (public vs. confidential, which grant type
 Every scope any application declares via `AllowScopes(...)` is also registered as a server-recognized scope
 automatically.
 
+## External providers
+
+`huia.ExternalLogins` is the `AuthenticationBuilder` `AddHuia` itself uses for the Identity cookie schemes,
+exposed directly so any standard ASP.NET Core remote-authentication handler (`AddGoogle`, `AddOpenIdConnect`,
+`AddOAuth`, ...) registers against it unmodified. `LoginModel` lists registered schemes via
+`SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()`; `ExternalLoginModel`/
+`ExternalLoginConfirmationModel` (`Areas/Identity/Pages/Account`) drive the challenge/callback/account-
+creation flow, and `ManageExternalLoginsEndpoints` lets a signed-in user list/link/unlink providers on their
+own account. See [external-providers.md](external-providers.md).
+
 ## Claims and tokens
 
 `ClaimsHelpers.CreateUserIdentityAsync` builds the `ClaimsIdentity` for a signed-in user: `sub`, `email`,
@@ -84,9 +99,10 @@ granted (everything always reaches the access token).
 ## Events
 
 `IHuiaEventPublisher`/`IHuiaEventHandler<TEvent>` is a lightweight pub/sub hook for things happening inside
-Huia's own pages — currently `UserRegisteredEvent` and `UserSignedInEvent`, published from the Register page.
-Register your own `IHuiaEventHandler<T>` implementations to react to them (e.g. send a welcome email,
-publish to a message bus) without forking the pages themselves.
+Huia's own pages — currently `UserRegisteredEvent` and `UserSignedInEvent`, published from the Register page
+and equally from the external-login sign-in/confirmation pages. Register your own `IHuiaEventHandler<T>`
+implementations to react to them (e.g. send a welcome email, publish to a message bus) without forking the
+pages themselves.
 
 ## Sample architecture
 

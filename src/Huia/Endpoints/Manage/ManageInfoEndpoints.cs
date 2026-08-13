@@ -37,7 +37,8 @@ internal static class ManageInfoEndpoints
         }
 
         return Results.Ok(new InfoResponse(user.Email!,
-            await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false), user.FirstName, user.LastName));
+            await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false), user.FirstName, user.LastName,
+            user.Picture));
     }
 
     // One line over MA0051's default 60-line limit; splitting this single linear update-then-notify flow
@@ -62,7 +63,14 @@ internal static class ManageInfoEndpoints
             user.LastName = request.LastName;
         }
 
-        if (request.FirstName is not null || request.LastName is not null)
+        if (request.Picture is not null)
+        {
+            // An empty string clears it (e.g. the user removing an auto-provisioned avatar); null leaves it
+            // untouched, distinguishing "not part of this update" from "clear it".
+            user.Picture = request.Picture.Length == 0 ? null : request.Picture;
+        }
+
+        if (request.FirstName is not null || request.LastName is not null || request.Picture is not null)
         {
             await userManager.UpdateAsync(user).ConfigureAwait(false);
         }
@@ -105,7 +113,8 @@ internal static class ManageInfoEndpoints
         }
 
         return Results.Ok(new InfoResponse(user.Email!,
-            await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false), user.FirstName, user.LastName));
+            await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false), user.FirstName, user.LastName,
+            user.Picture));
     }
 #pragma warning restore MA0051
 
@@ -115,12 +124,14 @@ internal static class ManageInfoEndpoints
             .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
 
 
-    private sealed record InfoResponse(string Email, bool IsEmailConfirmed, string? FirstName, string? LastName);
+    private sealed record InfoResponse(
+        string Email, bool IsEmailConfirmed, string? FirstName, string? LastName, string? Picture);
 
     private sealed record UpdateInfoRequest(
         string? NewEmail,
         string? NewPassword,
         string? OldPassword,
         string? FirstName,
-        string? LastName);
+        string? LastName,
+        string? Picture);
 }

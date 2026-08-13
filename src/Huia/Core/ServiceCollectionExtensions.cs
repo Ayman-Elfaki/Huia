@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Abstractions;
-using OpenIddict.Validation.AspNetCore;
 using IdentityErrorDescriber = Microsoft.AspNetCore.Identity.IdentityErrorDescriber;
 
 namespace Huia.Core;
@@ -99,16 +98,9 @@ public static class ServiceCollectionExtensions
             .AddDefaultTokenProviders()
             .AddErrorDescriber<IdentityErrorDescriber>();
 
-        // The standard Identity.Application cookie scheme, not a custom one: SignInManager<HuiaUser>'s
-        // high-level methods (PasswordSignInAsync, TwoFactorSignInAsync, lockout handling, etc. — all used
-        // by Huia's Razor Pages) target IdentityConstants.ApplicationScheme by convention.
-        services.AddAuthentication(auth =>
-            {
-                auth.DefaultScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-                auth.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
-            })
-            .AddIdentityCookies();
-
+        // Authentication (default schemes, Identity cookies) is already registered by HuiaOptions's
+        // constructor above — before this method runs — so ExternalLogins (an AuthenticationBuilder) is
+        // available inside the configure(options) callback itself.
         services.ConfigureApplicationCookie(cookie =>
         {
             cookie.ExpireTimeSpan = TimeSpan.FromMinutes(10);

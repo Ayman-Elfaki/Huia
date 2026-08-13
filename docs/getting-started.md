@@ -133,7 +133,8 @@ See [key-management.md](key-management.md) for the full policy knobs.
 - `app.MapHuiaConnectEndpoints()` — the OpenIddict endpoints: `/connect/authorize`, `/connect/token`,
   `/connect/userinfo`, `/connect/logout`, `/connect/device`, `/connect/verify`.
 - `app.MapHuiaManageEndpoints()` — JSON endpoints a signed-in user calls to manage their own account
-  (`/identity/manage/api/2fa`, `/identity/manage/api/info`).
+  (`/api/identity/manage/2fa`, `/api/identity/manage/info`, `/api/identity/manage/external-logins` — see
+  [external-providers.md](external-providers.md)).
 - `app.MapHuiaAdminEndpoints()` — JSON CRUD over applications, scopes, live authorizations, users, and roles
   at `/identity/admin/api/*`. **Not authorized by default** — chain `.RequireAuthorization(...)` onto the
   returned `RouteGroupBuilder` yourself. [`Huia.Cli`](cli.md) is a terminal client for this API.
@@ -188,6 +189,7 @@ for a complete example that sends over SMTP to [Mailpit](https://mailpit.axllent
 ## Next steps
 
 - [Architecture](architecture.md) — how the pieces fit together.
+- [External providers](external-providers.md) — sign in with Google, Microsoft, GitHub, and more.
 - [Localization](localization.md) — English/Arabic out of the box, add more.
 - [Custom stores](custom-store.md) — back persistence with something other than EF Core.
 - [Samples](samples.md) — a complete Todo CRUD API + Next.js frontend, run with Aspire.

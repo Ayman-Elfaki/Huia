@@ -136,4 +136,8 @@
     <data name="DeviceApprovedMessage" xml:space="preserve"><value>Signed in. You can close this window and return to your device.</value></data>
     <data name="DeviceDeniedMessage" xml:space="preserve"><value>Sign-in denied. You can close this window.</value></data>
     <data name="DeviceInvalidCodeMessage" xml:space="preserve"><value>This code is invalid or has expired. Ask your device to show a new one.</value></data>
+
+    <data name="LinkAccountTitle" xml:space="preserve"><value>Confirm your password</value></data>
+    <data name="LinkAccountSubtitle" xml:space="preserve"><value>An account already exists for {0}. Enter its password to link {1} to it.</value></data>
+    <data name="LinkAccountButton" xml:space="preserve"><value>Link account</value></data>
 </root>

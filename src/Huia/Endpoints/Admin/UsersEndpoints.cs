@@ -186,17 +186,21 @@ internal static class UsersEndpoints
     private static async Task<UserResponse> ToResponseAsync(HuiaUser user, UserManager<HuiaUser> userManager)
     {
         var roles = await userManager.GetRolesAsync(user).ConfigureAwait(false);
+        var logins = await userManager.GetLoginsAsync(user).ConfigureAwait(false);
 
         return new UserResponse(
             user.Id,
             user.Email!,
             user.FirstName,
             user.LastName,
+            user.Picture,
             user.EmailConfirmed,
             user.PhoneNumber,
             user.LockoutEnabled && user.LockoutEnd is not null && user.LockoutEnd > DateTimeOffset.UtcNow,
             user.TwoFactorEnabled,
-            [.. roles]);
+            await userManager.HasPasswordAsync(user).ConfigureAwait(false),
+            [.. roles],
+            [.. logins.Select(l => new ExternalLoginResponse(l.LoginProvider, l.ProviderDisplayName))]);
     }
 
     private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
@@ -209,11 +213,18 @@ internal static class UsersEndpoints
         string Email,
         string? FirstName,
         string? LastName,
+        string? Picture,
         bool EmailConfirmed,
         string? PhoneNumber,
         bool IsLockedOut,
         bool TwoFactorEnabled,
-        string[] Roles);
+        bool HasPassword,
+        string[] Roles,
+        ExternalLoginResponse[] ExternalLogins);
+
+    /// <summary>Which external (third-party) provider(s) a user has signed in with — the admin-facing view
+    /// of the same data <c>ManageExternalLoginsEndpoints</c> exposes for self-service.</summary>
+    private sealed record ExternalLoginResponse(string LoginProvider, string? ProviderDisplayName);
 
     private sealed record CreateUserRequest(
         string Email,

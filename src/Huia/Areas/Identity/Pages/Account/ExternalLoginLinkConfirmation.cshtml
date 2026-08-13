@@ -1,0 +1,35 @@
+@page
+@model ExternalLoginLinkConfirmationModel
+@{
+    ViewData["Title"] = Localizer["LinkAccountTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["LinkAccountTitle"]</h2>
+        <p>@Localizer["LinkAccountSubtitle", Model.Email, Model.ProviderDisplayName]</p>
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        <form method="post" class="huia-field-group" novalidate>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.Password">@Localizer["PasswordLabel"]</label>
+                <input asp-for="Input.Password" autocomplete="current-password" />
+                <span asp-validation-for="Input.Password" role="alert"></span>
+            </div>
+
+            <div class="huia-actions">
+                <button type="submit" class="btn huia-full-width">@Localizer["LinkAccountButton"]</button>
+            </div>
+        </form>
+
+        <div class="huia-footer-links">
+            <a asp-page="./Login" data-variant="link" class="btn" data-size="sm">@Localizer["BackToSignInLink"]</a>
+        </div>
+    </section>
+</div>
