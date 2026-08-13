@@ -98,6 +98,11 @@ var adminUi = builder.AddJavaScriptApp("admin-ui", "../Huia.AdminUI", "dev")
     // non-preset OIDC provider is fixed to "oidc" (see nuxt.config.ts) — that's what it derives every
     // login/callback/logout route from, regardless of what we name the client on Huia's side.
     .WithEnvironment("HUIA_REDIRECT_URI", "http://localhost:3100/auth/oidc/callback")
+    // Same literal-endpoint reasoning as HUIA_REDIRECT_URI above. Matches Oidc__AdminPostLogoutRedirectUri
+    // below, which is what api's admin-ui client registration actually validates against — without this,
+    // nuxt-oidc-auth's logout handler never sends a post_logout_redirect_uri at all (see nuxt.config.ts),
+    // so /connect/logout has nowhere registered to send the browser back to.
+    .WithEnvironment("HUIA_POST_LOGOUT_REDIRECT_URI", "http://localhost:3100")
     .WithExternalHttpEndpoints();
 
 // The web/admin-ui apps' own callback/post-logout URLs aren't known until they're declared, so the api's

@@ -18,10 +18,12 @@ export default async function ProfilePage({params}: { params: Promise<{ locale: 
     }
 
     const t = await getTranslations("Profile");
-    const [info, twoFactor] = await Promise.all([
+    const [info, externalLogins] = await Promise.all([
         manageApi.getInfo(session.accessToken),
-        manageApi.getTwoFactorStatus(session.accessToken),
+        manageApi.getExternalLogins(session.accessToken),
     ]);
+    const hasPassword = externalLogins.hasPassword;
+    const twoFactor = hasPassword ? await manageApi.getTwoFactorStatus(session.accessToken) : null;
 
     return (
         <div className="flex flex-1 justify-center bg-muted/30 px-4 py-8 sm:py-16">
@@ -37,23 +39,27 @@ export default async function ProfilePage({params}: { params: Promise<{ locale: 
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t("passwordTitle")}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ChangePasswordForm />
-                    </CardContent>
-                </Card>
+                {hasPassword ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{t("passwordTitle")}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ChangePasswordForm />
+                        </CardContent>
+                    </Card>
+                ) : null}
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t("twoFactorTitle")}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <TwoFactorPanel email={info.email} initial={{status: "idle", ...twoFactor}} />
-                    </CardContent>
-                </Card>
+                {hasPassword && twoFactor ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{t("twoFactorTitle")}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <TwoFactorPanel email={info.email} initial={{status: "idle", ...twoFactor}} />
+                        </CardContent>
+                    </Card>
+                ) : null}
             </main>
         </div>
     );

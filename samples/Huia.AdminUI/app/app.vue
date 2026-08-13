@@ -1,4 +1,21 @@
 <script setup lang="ts">
+import { ChevronsUpDown, LoaderCircle, LogIn, LogOut, ShieldAlert, User } from '@lucide/vue'
+import { Toaster } from '@/components/ui/sonner'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import { SidebarFooter, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { navigationItems } from '@/lib/navigation'
+
 useHead({
   meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
   link: [{ rel: 'icon', href: '/favicon.ico' }],
@@ -13,75 +30,127 @@ useSeoMeta({
 const { user, loggedIn, logout } = useOidcAuth()
 const roles = computed(() => normalizeRoles(user.value?.claims?.role))
 const isAdmin = computed(() => roles.value.includes('Admin'))
+const accountLabel = computed(() => (user.value?.userInfo?.email as string) || user.value?.userName || 'Account')
 
-const navigationItems = [
-  { label: 'Applications', icon: 'i-lucide-app-window', to: '/applications' },
-  { label: 'Scopes', icon: 'i-lucide-shield-check', to: '/scopes' },
-  { label: 'Users', icon: 'i-lucide-users', to: '/users' },
-  { label: 'Roles', icon: 'i-lucide-tag', to: '/roles' },
-  { label: 'Authorizations', icon: 'i-lucide-key-round', to: '/authorizations' }
-]
+const route = useRoute()
+const currentSection = computed(() => navigationItems.find(item => route.path.startsWith(item.to))?.label)
+
+/** First letter(s) of the account label, for the avatar fallback — e.g. "ayman@example.com" -> "A". */
+const accountInitial = computed(() => accountLabel.value.charAt(0).toUpperCase())
 </script>
 
 <template>
-  <UApp>
-    <NuxtLoadingIndicator color="var(--ui-primary)" />
+  <Toaster />
 
-    <div v-if="!loggedIn" class="flex items-center justify-center h-screen">
-      <UButton label="Sign in" icon="i-lucide-log-in" size="lg" @click="() => useOidcAuth().login()" />
-    </div>
+  <div
+    v-if="!loggedIn"
+    class="flex items-center justify-center h-screen"
+  >
+    <Button
+      size="lg"
+      @click="() => useOidcAuth().login()"
+    >
+      <LogIn data-icon="inline-start" />
+      Sign in
+    </Button>
+  </div>
 
-    <div v-else-if="!isAdmin" class="flex items-center justify-center h-screen">
-      <UCard class="max-w-sm">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-shield-alert" class="text-error size-5" />
-            <span class="font-semibold">Access denied</span>
-          </div>
-        </template>
-        <p class="text-muted text-sm">
-          {{ user?.userInfo?.email || user?.userName }} is signed in but doesn't have the "Admin" role that
-          Huia's admin API requires.
+  <div
+    v-else-if="!isAdmin"
+    class="flex items-center justify-center h-screen"
+  >
+    <Card class="max-w-sm">
+      <CardHeader>
+        <CardTitle class="flex items-center gap-2">
+          <ShieldAlert class="size-5 text-destructive" />
+          Access denied
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p class="text-sm text-muted-foreground">
+          {{ accountLabel }} is signed in but doesn't have the "Admin" role that Huia's admin API requires.
         </p>
-        <template #footer>
-          <UButton label="Sign out" color="neutral" variant="subtle" @click="() => logout()" />
-        </template>
-      </UCard>
-    </div>
+      </CardContent>
+      <CardFooter>
+        <Button
+          variant="secondary"
+          @click="() => logout()"
+        >
+          Sign out
+        </Button>
+      </CardFooter>
+    </Card>
+  </div>
 
-    <UDashboardGroup v-else>
-      <UDashboardSidebar collapsible>
-        <template #header>
-          <span class="font-semibold text-highlighted">
-            <img src="@/assets/images/huia-icon.svg" width="65" alt="logo" />
-          </span>
-        </template>
+  <SidebarProvider v-else>
+    <AppSidebar>
+      <template #footer>
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <SidebarMenuButton
+                    size="lg"
+                    class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <Avatar class="size-8 rounded-lg">
+                      <AvatarFallback class="rounded-lg">
+                        {{ accountInitial }}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span class="truncate">{{ accountLabel }}</span>
+                    <ChevronsUpDown class="ml-auto" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="top"
+                  align="start"
+                  class="w-56"
+                >
+                  <DropdownMenuLabel class="truncate">
+                    {{ accountLabel }}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem as-child>
+                      <NuxtLink to="/profile">
+                        <User />
+                        Profile
+                      </NuxtLink>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem @select="() => logout()">
+                    <LogOut />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </template>
+    </AppSidebar>
 
-        <UNavigationMenu :items="navigationItems" orientation="vertical" />
-
-        <template #footer>
-          <UDropdownMenu :items="[[
-            { label: 'Profile', icon: 'i-lucide-user', to: '/profile' },
-            { label: 'Sign out', icon: 'i-lucide-log-out', onSelect: () => logout() }
-          ]]">
-            <UButton :label="user?.userInfo?.email as string || user?.userName || 'Account'" icon="i-lucide-user-circle"
-              color="neutral" variant="ghost" class="w-full justify-start" trailing-icon="i-lucide-chevron-up" />
-          </UDropdownMenu>
-        </template>
-      </UDashboardSidebar>
+    <SidebarInset>
+      <header class="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarTrigger class="-ml-1" />
+        <span class="font-medium text-sm text-muted-foreground">{{ currentSection }}</span>
+      </header>
 
       <NuxtPage>
         <template #default="{ Component }">
           <Suspense>
             <component :is="Component" />
             <template #fallback>
-              <div class="flex items-center justify-center h-full py-24">
-                <UIcon name="i-lucide-loader-circle" class="animate-spin size-6 text-muted" />
+              <div class="flex items-center justify-center py-24">
+                <LoaderCircle class="size-6 animate-spin text-muted-foreground" />
               </div>
             </template>
           </Suspense>
         </template>
       </NuxtPage>
-    </UDashboardGroup>
-  </UApp>
+    </SidebarInset>
+  </SidebarProvider>
 </template>

@@ -1,5 +1,18 @@
 <script setup lang="ts">
+import { Key, Lock, LockOpen, Pencil, Plus, RefreshCw, Search, Shield, Trash2 } from '@lucide/vue'
 import type { CreateUserRequest, PagedResult, RoleResponse, UpdateUserRequest, UserResponse } from '~~/shared/types/admin'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const search = ref('')
 const filters = computed(() => ({ search: search.value || undefined }))
@@ -7,15 +20,6 @@ const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevi
   = useAdminList<UserResponse>('users', filters)
 await refresh()
 watch(search, reset)
-
-const columns = [
-  { accessorKey: 'email', header: 'Email' },
-  { accessorKey: 'firstName', header: 'First name' },
-  { accessorKey: 'lastName', header: 'Last name' },
-  { accessorKey: 'roles', header: 'Roles' },
-  { accessorKey: 'isLockedOut', header: 'Status' },
-  { id: 'actions', header: '' }
-]
 
 // --- Create/edit ---
 const isEditModalOpen = ref(false)
@@ -161,135 +165,171 @@ async function submitReset() {
 </script>
 
 <template>
-  <UDashboardPanel
-    id="users-panel"
-    :ui="{ body: 'gap-4' }"
-  >
-    <template #header>
-      <UDashboardNavbar title="Users">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
-        <template #right>
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="subtle"
-            :loading="loading"
+  <div>
+    <div class="flex flex-col gap-4 p-4 md:p-6">
+      <div class="flex items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold tracking-tight">
+          Users
+        </h1>
+        <div class="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            :disabled="loading"
             @click="refresh"
-          />
-          <UButton
-            label="New user"
-            icon="i-lucide-plus"
-            @click="openCreate"
-          />
-        </template>
-      </UDashboardNavbar>
-    </template>
+          >
+            <RefreshCw :class="{ 'animate-spin': loading }" />
+          </Button>
+          <Button @click="openCreate">
+            <Plus data-icon="inline-start" />
+            New user
+          </Button>
+        </div>
+      </div>
 
-    <template #body>
-      <UInput
-        v-model="search"
-        placeholder="Search by email or username…"
-        icon="i-lucide-search"
-        class="max-w-sm"
-      />
+      <InputGroup class="max-w-sm">
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput
+          v-model="search"
+          placeholder="Search by email or username…"
+        />
+      </InputGroup>
 
-      <UAlert
+      <Alert
         v-if="error && !loading"
-        color="error"
-        variant="subtle"
-        :title="error"
-      />
-
-      <UTable
-        :data="items"
-        :columns="columns"
-        :loading="loading"
+        variant="destructive"
       >
-        <template #firstName-cell="{ row }">
-          {{ row.original.firstName || '—' }}
-        </template>
-        <template #lastName-cell="{ row }">
-          {{ row.original.lastName || '—' }}
-        </template>
-        <template #roles-cell="{ row }">
-          <div class="flex gap-1 flex-wrap">
-            <UBadge
-              v-for="role in row.original.roles"
-              :key="role"
-              variant="subtle"
-              color="primary"
+        <AlertDescription>{{ error }}</AlertDescription>
+      </Alert>
+
+      <div class="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>First name</TableHead>
+              <TableHead>Last name</TableHead>
+              <TableHead>Roles</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead class="w-0" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="loading && !items.length">
+              <TableRow
+                v-for="n in 5"
+                :key="n"
+              >
+                <TableCell
+                  v-for="col in 6"
+                  :key="col"
+                >
+                  <Skeleton class="h-5 w-full" />
+                </TableCell>
+              </TableRow>
+            </template>
+            <TableEmpty
+              v-else-if="!items.length"
+              :colspan="6"
             >
-              {{ role }}
-            </UBadge>
-            <span
-              v-if="!row.original.roles.length"
-              class="text-muted text-sm"
-            >—</span>
-          </div>
-        </template>
-        <template #isLockedOut-cell="{ row }">
-          <UBadge
-            v-if="row.original.isLockedOut"
-            color="error"
-            variant="subtle"
-          >
-            Locked out
-          </UBadge>
-          <UBadge
-            v-else
-            color="success"
-            variant="subtle"
-          >
-            Active
-          </UBadge>
-        </template>
-        <template #actions-cell="{ row }">
-          <div class="flex gap-1 justify-end">
-            <UButton
-              icon="i-lucide-shield"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              title="Roles"
-              @click="openRoles(row.original)"
-            />
-            <UButton
-              icon="i-lucide-key"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              title="Reset password"
-              @click="openReset(row.original)"
-            />
-            <UButton
-              :icon="row.original.isLockedOut ? 'i-lucide-lock-open' : 'i-lucide-lock'"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              :title="row.original.isLockedOut ? 'Unlock' : 'Lock out'"
-              :loading="togglingLockoutId === row.original.id"
-              @click="toggleLockout(row.original)"
-            />
-            <UButton
-              icon="i-lucide-pencil"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              @click="openEdit(row.original)"
-            />
-            <UButton
-              icon="i-lucide-trash-2"
-              color="error"
-              variant="ghost"
-              size="sm"
-              :loading="deletingId === row.original.id"
-              @click="remove(row.original)"
-            />
-          </div>
-        </template>
-      </UTable>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <RefreshCw />
+                  </EmptyMedia>
+                  <EmptyTitle>No users found</EmptyTitle>
+                  <EmptyDescription>Try a different search, or create a new user.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </TableEmpty>
+            <TableRow
+              v-for="user in items"
+              :key="user.id"
+            >
+              <TableCell class="font-medium">
+                {{ user.email }}
+              </TableCell>
+              <TableCell>{{ user.firstName || '—' }}</TableCell>
+              <TableCell>{{ user.lastName || '—' }}</TableCell>
+              <TableCell>
+                <div class="flex flex-wrap gap-1">
+                  <Badge
+                    v-for="role in user.roles"
+                    :key="role"
+                    variant="outline"
+                  >
+                    {{ role }}
+                  </Badge>
+                  <span
+                    v-if="!user.roles.length"
+                    class="text-sm text-muted-foreground"
+                  >—</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge
+                  v-if="user.isLockedOut"
+                  variant="destructive"
+                >
+                  Locked out
+                </Badge>
+                <Badge
+                  v-else
+                  variant="secondary"
+                >
+                  Active
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div class="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Roles"
+                    @click="openRoles(user)"
+                  >
+                    <Shield />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Reset password"
+                    @click="openReset(user)"
+                  >
+                    <Key />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :title="user.isLockedOut ? 'Unlock' : 'Lock out'"
+                    :disabled="togglingLockoutId === user.id"
+                    @click="toggleLockout(user)"
+                  >
+                    <component :is="user.isLockedOut ? LockOpen : Lock" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="openEdit(user)"
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :disabled="deletingId === user.id"
+                    @click="remove(user)"
+                  >
+                    <Trash2 class="text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
 
       <AdminPager
         :has-previous="hasPrevious"
@@ -298,151 +338,141 @@ async function submitReset() {
         @previous="goPrevious"
         @next="goNext"
       />
-    </template>
-  </UDashboardPanel>
+    </div>
 
-  <UModal
-    v-model:open="isEditModalOpen"
-    :title="editing ? 'Edit user' : 'New user'"
-  >
-    <template #body>
-      <UForm
-        :state="form"
-        class="flex flex-col gap-4"
-        @submit="submit"
-      >
-        <UFormField
-          label="Email"
-          name="email"
-        >
-          <UInput
-            v-model="form.email"
-            type="email"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          v-if="!editing"
-          label="Password"
-          name="password"
-        >
-          <UInput
-            v-model="form.password"
-            type="password"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          label="First name"
-          name="firstName"
-        >
-          <UInput
-            v-model="form.firstName"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          label="Last name"
-          name="lastName"
-        >
-          <UInput
-            v-model="form.lastName"
-            class="w-full"
-          />
-        </UFormField>
-        <UCheckbox
-          v-model="form.emailConfirmed"
-          label="Email confirmed"
-        />
+    <Dialog v-model:open="isEditModalOpen">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{{ editing ? 'Edit user' : 'New user' }}</DialogTitle>
+        </DialogHeader>
 
-        <UAlert
-          v-if="formError"
-          color="error"
-          variant="subtle"
-          :title="formError"
-        />
+        <form
+          class="flex flex-col gap-4"
+          @submit.prevent="submit"
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel>Email</FieldLabel>
+              <Input
+                v-model="form.email"
+                type="email"
+              />
+            </Field>
+            <Field v-if="!editing">
+              <FieldLabel>Password</FieldLabel>
+              <Input
+                v-model="form.password"
+                type="password"
+              />
+            </Field>
+            <Field>
+              <FieldLabel>First name</FieldLabel>
+              <Input v-model="form.firstName" />
+            </Field>
+            <Field>
+              <FieldLabel>Last name</FieldLabel>
+              <Input v-model="form.lastName" />
+            </Field>
+            <label class="flex items-center gap-2 text-sm">
+              <Checkbox v-model="form.emailConfirmed" />
+              Email confirmed
+            </label>
+          </FieldGroup>
 
-        <div class="flex justify-end gap-2">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            variant="subtle"
-            @click="isEditModalOpen = false"
-          />
-          <UButton
-            label="Save"
-            type="submit"
-            :loading="saving"
-          />
+          <Alert
+            v-if="formError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ formError }}</AlertDescription>
+          </Alert>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              @click="isEditModalOpen = false"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              :disabled="saving"
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="isRolesModalOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Roles — {{ rolesTarget?.email ?? '' }}</DialogTitle>
+        </DialogHeader>
+
+        <div class="flex flex-col gap-2">
+          <div
+            v-for="role in allRoles"
+            :key="role.id"
+            class="flex items-center justify-between"
+          >
+            <span class="text-sm">{{ role.name }}</span>
+            <Switch
+              :model-value="!!rolesTarget?.roles.includes(role.name)"
+              :disabled="rolesBusy === role.id"
+              @update:model-value="(value: boolean) => toggleRole(role, value)"
+            />
+          </div>
+          <p
+            v-if="!allRoles.length"
+            class="text-sm text-muted-foreground"
+          >
+            No roles exist yet — create one from the Roles page.
+          </p>
         </div>
-      </UForm>
-    </template>
-  </UModal>
+      </DialogContent>
+    </Dialog>
 
-  <UModal
-    v-model:open="isRolesModalOpen"
-    :title="`Roles — ${rolesTarget?.email ?? ''}`"
-  >
-    <template #body>
-      <div class="flex flex-col gap-2">
-        <div
-          v-for="role in allRoles"
-          :key="role.id"
-          class="flex items-center justify-between"
-        >
-          <span>{{ role.name }}</span>
-          <USwitch
-            :model-value="!!rolesTarget?.roles.includes(role.name)"
-            :loading="rolesBusy === role.id"
-            @update:model-value="(value: boolean) => toggleRole(role, value)"
-          />
-        </div>
-        <p
-          v-if="!allRoles.length"
-          class="text-muted text-sm"
-        >
-          No roles exist yet — create one from the Roles page.
-        </p>
-      </div>
-    </template>
-  </UModal>
+    <Dialog v-model:open="isResetModalOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reset password — {{ resetTarget?.email ?? '' }}</DialogTitle>
+        </DialogHeader>
 
-  <UModal
-    v-model:open="isResetModalOpen"
-    :title="`Reset password — ${resetTarget?.email ?? ''}`"
-  >
-    <template #body>
-      <div class="flex flex-col gap-4">
-        <UFormField
-          label="New password"
-          name="newPassword"
-        >
-          <UInput
-            v-model="newPassword"
-            type="password"
-            class="w-full"
-          />
-        </UFormField>
-        <UAlert
-          v-if="resetError"
-          color="error"
-          variant="subtle"
-          :title="resetError"
-        />
-        <div class="flex justify-end gap-2">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            variant="subtle"
-            @click="isResetModalOpen = false"
-          />
-          <UButton
-            label="Reset"
-            :loading="resetting"
-            @click="submitReset"
-          />
+        <div class="flex flex-col gap-4">
+          <FieldGroup>
+            <Field>
+              <FieldLabel>New password</FieldLabel>
+              <Input
+                v-model="newPassword"
+                type="password"
+              />
+            </Field>
+          </FieldGroup>
+          <Alert
+            v-if="resetError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ resetError }}</AlertDescription>
+          </Alert>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              @click="isResetModalOpen = false"
+            >
+              Cancel
+            </Button>
+            <Button
+              :disabled="resetting"
+              @click="submitReset"
+            >
+              Reset
+            </Button>
+          </DialogFooter>
         </div>
-      </div>
-    </template>
-  </UModal>
+      </DialogContent>
+    </Dialog>
+  </div>
 </template>

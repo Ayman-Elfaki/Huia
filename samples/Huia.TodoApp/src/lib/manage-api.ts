@@ -17,6 +17,11 @@ export type TwoFactorStatus = {
     recoveryCodesLeft: number;
 };
 
+export type ExternalLogins = {
+    logins: { loginProvider: string; providerDisplayName: string | null; providerKey: string }[];
+    hasPassword: boolean;
+};
+
 /** Thrown for a 400 ValidationProblem response — e.g. a wrong current password — so callers can surface
  * field-level errors instead of a generic failure. */
 export class ManageApiValidationError extends Error {
@@ -56,6 +61,12 @@ async function manageFetch<T>(path: string, accessToken: string, init?: RequestI
 
 export function getInfo(accessToken: string): Promise<ManageInfo> {
     return manageFetch("/api/identity/manage/info", accessToken);
+}
+
+/** Whether the signed-in account has a local password — false for one signed in only through an external
+ * provider (Google, etc.), in which case the change-password and 2FA cards don't apply (see profile page). */
+export function getExternalLogins(accessToken: string): Promise<ExternalLogins> {
+    return manageFetch("/api/identity/manage/external-logins", accessToken);
 }
 
 export function updateInfo(

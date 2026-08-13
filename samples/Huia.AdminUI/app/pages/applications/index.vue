@@ -1,5 +1,18 @@
 <script setup lang="ts">
+import { Pencil, Plus, RefreshCw, Trash2 } from '@lucide/vue'
 import type { ApplicationKind, ApplicationRequest, ApplicationResponse } from '~~/shared/types/admin'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
 
 const filters = ref({})
 const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious }
@@ -12,14 +25,6 @@ const kinds: { label: string, value: ApplicationKind }[] = [
   { label: 'Server-side web', value: 'web' },
   { label: 'Machine-to-machine', value: 'm2m' },
   { label: 'Device', value: 'device' }
-]
-
-const columns = [
-  { accessorKey: 'clientId', header: 'Client ID' },
-  { accessorKey: 'displayName', header: 'Display name' },
-  { accessorKey: 'kind', header: 'Kind' },
-  { accessorKey: 'redirectUris', header: 'Redirect URIs' },
-  { id: 'actions', header: '' }
 ]
 
 const isModalOpen = ref(false)
@@ -129,79 +134,113 @@ const needsSecret = computed(() => form.kind === 'web' || form.kind === 'm2m')
 </script>
 
 <template>
-  <UDashboardPanel
-    id="applications-panel"
-    :ui="{ body: 'gap-4' }"
-  >
-    <template #header>
-      <UDashboardNavbar title="Applications">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
-        <template #right>
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="subtle"
-            :loading="loading"
+  <div>
+    <div class="flex flex-col gap-4 p-4 md:p-6">
+      <div class="flex items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold tracking-tight">
+          Applications
+        </h1>
+        <div class="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            :disabled="loading"
             @click="refresh"
-          />
-          <UButton
-            label="New application"
-            icon="i-lucide-plus"
-            @click="openCreate"
-          />
-        </template>
-      </UDashboardNavbar>
-    </template>
-
-    <template #body>
-      <UAlert
-        v-if="error && !loading"
-        color="error"
-        variant="subtle"
-        :title="error"
-      />
-
-      <UTable
-        :data="items"
-        :columns="columns"
-        :loading="loading"
-      >
-        <template #displayName-cell="{ row }">
-          {{ row.original.displayName || '—' }}
-        </template>
-        <template #kind-cell="{ row }">
-          <UBadge
-            variant="subtle"
-            color="neutral"
           >
-            {{ row.original.kind }}
-          </UBadge>
-        </template>
-        <template #redirectUris-cell="{ row }">
-          <span class="text-sm text-muted">{{ row.original.redirectUris.join(', ') || '—' }}</span>
-        </template>
-        <template #actions-cell="{ row }">
-          <div class="flex gap-1 justify-end">
-            <UButton
-              icon="i-lucide-pencil"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              @click="openEdit(row.original)"
-            />
-            <UButton
-              icon="i-lucide-trash-2"
-              color="error"
-              variant="ghost"
-              size="sm"
-              :loading="deletingId === row.original.id"
-              @click="remove(row.original)"
-            />
-          </div>
-        </template>
-      </UTable>
+            <RefreshCw :class="{ 'animate-spin': loading }" />
+          </Button>
+          <Button @click="openCreate">
+            <Plus data-icon="inline-start" />
+            New application
+          </Button>
+        </div>
+      </div>
+
+      <Alert
+        v-if="error && !loading"
+        variant="destructive"
+      >
+        <AlertDescription>{{ error }}</AlertDescription>
+      </Alert>
+
+      <div class="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Client ID</TableHead>
+              <TableHead>Display name</TableHead>
+              <TableHead>Kind</TableHead>
+              <TableHead>Redirect URIs</TableHead>
+              <TableHead class="w-0" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="loading && !items.length">
+              <TableRow
+                v-for="n in 5"
+                :key="n"
+              >
+                <TableCell
+                  v-for="col in 5"
+                  :key="col"
+                >
+                  <Skeleton class="h-5 w-full" />
+                </TableCell>
+              </TableRow>
+            </template>
+            <TableEmpty
+              v-else-if="!items.length"
+              :colspan="5"
+            >
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <RefreshCw />
+                  </EmptyMedia>
+                  <EmptyTitle>No applications yet</EmptyTitle>
+                  <EmptyDescription>Register an OAuth/OIDC client to get started.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </TableEmpty>
+            <TableRow
+              v-for="app in items"
+              :key="app.id"
+            >
+              <TableCell class="font-medium">
+                {{ app.clientId }}
+              </TableCell>
+              <TableCell>{{ app.displayName || '—' }}</TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {{ app.kind }}
+                </Badge>
+              </TableCell>
+              <TableCell class="text-sm text-muted-foreground">
+                {{ app.redirectUris.join(', ') || '—' }}
+              </TableCell>
+              <TableCell>
+                <div class="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="openEdit(app)"
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :disabled="deletingId === app.id"
+                    @click="remove(app)"
+                  >
+                    <Trash2 class="text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
 
       <AdminPager
         :has-previous="hasPrevious"
@@ -210,123 +249,116 @@ const needsSecret = computed(() => form.kind === 'web' || form.kind === 'm2m')
         @previous="goPrevious"
         @next="goNext"
       />
-    </template>
-  </UDashboardPanel>
+    </div>
 
-  <UModal
-    v-model:open="isModalOpen"
-    :title="editing ? 'Edit application' : 'New application'"
-  >
-    <template #body>
-      <UForm
-        :state="form"
-        class="flex flex-col gap-4"
-        @submit="submit"
-      >
-        <UFormField
-          label="Kind"
-          name="kind"
-        >
-          <USelect
-            v-model="form.kind"
-            :items="kinds"
-            :disabled="!!editing"
-            value-key="value"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          label="Client ID"
-          name="clientId"
-        >
-          <UInput
-            v-model="form.clientId"
-            :disabled="!!editing"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          label="Display name"
-          name="displayName"
-        >
-          <UInput
-            v-model="form.displayName"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          v-if="needsSecret"
-          :label="editing ? 'Client secret (leave blank to keep current)' : 'Client secret'"
-          name="clientSecret"
-        >
-          <UInput
-            v-model="form.clientSecret"
-            type="password"
-            class="w-full"
-          />
-        </UFormField>
-        <div class="flex gap-6">
-          <UCheckbox
-            v-model="form.requiresPkce"
-            label="Requires PKCE"
-          />
-          <UCheckbox
-            v-model="form.requireConsent"
-            label="Requires consent"
-          />
-        </div>
-        <UFormField
-          label="Redirect URIs (one per line)"
-          name="redirectUris"
-        >
-          <UTextarea
-            v-model="form.redirectUris"
-            class="w-full"
-            :rows="3"
-          />
-        </UFormField>
-        <UFormField
-          label="Post-logout redirect URIs (one per line)"
-          name="postLogoutRedirectUris"
-        >
-          <UTextarea
-            v-model="form.postLogoutRedirectUris"
-            class="w-full"
-            :rows="2"
-          />
-        </UFormField>
-        <UFormField
-          label="Allowed scopes (comma-separated)"
-          name="scopes"
-        >
-          <UInput
-            v-model="form.scopes"
-            placeholder="profile, email, todos"
-            class="w-full"
-          />
-        </UFormField>
+    <Dialog v-model:open="isModalOpen">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{{ editing ? 'Edit application' : 'New application' }}</DialogTitle>
+        </DialogHeader>
 
-        <UAlert
-          v-if="formError"
-          color="error"
-          variant="subtle"
-          :title="formError"
-        />
+        <form
+          class="flex flex-col gap-4"
+          @submit.prevent="submit"
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel>Kind</FieldLabel>
+              <Select
+                v-model="form.kind"
+                :disabled="!!editing"
+              >
+                <SelectTrigger class="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem
+                      v-for="kind in kinds"
+                      :key="kind.value"
+                      :value="kind.value"
+                    >
+                      {{ kind.label }}
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Client ID</FieldLabel>
+              <Input
+                v-model="form.clientId"
+                :disabled="!!editing"
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Display name</FieldLabel>
+              <Input v-model="form.displayName" />
+            </Field>
+            <Field v-if="needsSecret">
+              <FieldLabel>{{ editing ? 'Client secret (leave blank to keep current)' : 'Client secret' }}</FieldLabel>
+              <Input
+                v-model="form.clientSecret"
+                type="password"
+              />
+            </Field>
+            <div class="flex gap-6">
+              <label class="flex items-center gap-2 text-sm">
+                <Checkbox v-model="form.requiresPkce" />
+                Requires PKCE
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <Checkbox v-model="form.requireConsent" />
+                Requires consent
+              </label>
+            </div>
+            <Field>
+              <FieldLabel>Redirect URIs (one per line)</FieldLabel>
+              <Textarea
+                v-model="form.redirectUris"
+                :rows="3"
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Post-logout redirect URIs (one per line)</FieldLabel>
+              <Textarea
+                v-model="form.postLogoutRedirectUris"
+                :rows="2"
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Allowed scopes (comma-separated)</FieldLabel>
+              <Input
+                v-model="form.scopes"
+                placeholder="profile, email, todos"
+              />
+            </Field>
+          </FieldGroup>
 
-        <div class="flex justify-end gap-2">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            variant="subtle"
-            @click="isModalOpen = false"
-          />
-          <UButton
-            label="Save"
-            type="submit"
-            :loading="saving"
-          />
-        </div>
-      </UForm>
-    </template>
-  </UModal>
+          <Alert
+            v-if="formError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ formError }}</AlertDescription>
+          </Alert>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              @click="isModalOpen = false"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              :disabled="saving"
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  </div>
 </template>

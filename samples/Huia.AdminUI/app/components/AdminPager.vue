@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { ChevronLeft, ChevronRight } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
+
 /** Next/Previous controls for a useAdminList()-backed table - cursor pagination has no page count or total to show. */
 defineProps<{
   hasPrevious: boolean
@@ -11,22 +14,21 @@ const emit = defineEmits<{ previous: [], next: [] }>()
 
 <template>
   <div class="flex justify-end gap-2">
-    <UButton
-      label="Previous"
-      icon="i-lucide-chevron-left"
-      color="neutral"
-      variant="subtle"
+    <Button
+      variant="outline"
       :disabled="!hasPrevious || loading"
       @click="emit('previous')"
-    />
-    <UButton
-      label="Next"
-      icon="i-lucide-chevron-right"
-      trailing
-      color="neutral"
-      variant="subtle"
+    >
+      <ChevronLeft data-icon="inline-start" />
+      Previous
+    </Button>
+    <Button
+      variant="outline"
       :disabled="!hasNext || loading"
       @click="emit('next')"
-    />
+    >
+      Next
+      <ChevronRight data-icon="inline-end" />
+    </Button>
   </div>
 </template>

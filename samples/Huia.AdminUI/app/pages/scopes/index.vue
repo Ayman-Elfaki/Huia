@@ -1,17 +1,20 @@
 <script setup lang="ts">
+import { Pencil, Plus, RefreshCw, Trash2 } from '@lucide/vue'
 import type { ScopeRequest, ScopeResponse } from '~~/shared/types/admin'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
 
 const filters = ref({})
 const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious }
   = useAdminList<ScopeResponse>('scopes', filters)
 await refresh()
-
-const columns = [
-  { accessorKey: 'name', header: 'Name' },
-  { accessorKey: 'displayName', header: 'Display name' },
-  { accessorKey: 'resources', header: 'Resources' },
-  { id: 'actions', header: '' }
-]
 
 const isModalOpen = ref(false)
 const editing = ref<ScopeResponse | null>(null)
@@ -87,71 +90,107 @@ async function remove(scope: ScopeResponse) {
 </script>
 
 <template>
-  <UDashboardPanel
-    id="scopes-panel"
-    :ui="{ body: 'gap-4' }"
-  >
-    <template #header>
-      <UDashboardNavbar title="Scopes">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
-        <template #right>
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="subtle"
-            :loading="loading"
+  <div>
+    <div class="flex flex-col gap-4 p-4 md:p-6">
+      <div class="flex items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold tracking-tight">
+          Scopes
+        </h1>
+        <div class="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            :disabled="loading"
             @click="refresh"
-          />
-          <UButton
-            label="New scope"
-            icon="i-lucide-plus"
-            @click="openCreate"
-          />
-        </template>
-      </UDashboardNavbar>
-    </template>
+          >
+            <RefreshCw :class="{ 'animate-spin': loading }" />
+          </Button>
+          <Button @click="openCreate">
+            <Plus data-icon="inline-start" />
+            New scope
+          </Button>
+        </div>
+      </div>
 
-    <template #body>
-      <UAlert
+      <Alert
         v-if="error && !loading"
-        color="error"
-        variant="subtle"
-        :title="error"
-      />
-
-      <UTable
-        :data="items"
-        :columns="columns"
-        :loading="loading"
+        variant="destructive"
       >
-        <template #displayName-cell="{ row }">
-          {{ row.original.displayName || '—' }}
-        </template>
-        <template #resources-cell="{ row }">
-          <span class="text-sm text-muted">{{ row.original.resources.join(', ') || '—' }}</span>
-        </template>
-        <template #actions-cell="{ row }">
-          <div class="flex gap-1 justify-end">
-            <UButton
-              icon="i-lucide-pencil"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              @click="openEdit(row.original)"
-            />
-            <UButton
-              icon="i-lucide-trash-2"
-              color="error"
-              variant="ghost"
-              size="sm"
-              :loading="deletingId === row.original.id"
-              @click="remove(row.original)"
-            />
-          </div>
-        </template>
-      </UTable>
+        <AlertDescription>{{ error }}</AlertDescription>
+      </Alert>
+
+      <div class="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Display name</TableHead>
+              <TableHead>Resources</TableHead>
+              <TableHead class="w-0" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="loading && !items.length">
+              <TableRow
+                v-for="n in 5"
+                :key="n"
+              >
+                <TableCell
+                  v-for="col in 4"
+                  :key="col"
+                >
+                  <Skeleton class="h-5 w-full" />
+                </TableCell>
+              </TableRow>
+            </template>
+            <TableEmpty
+              v-else-if="!items.length"
+              :colspan="4"
+            >
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <RefreshCw />
+                  </EmptyMedia>
+                  <EmptyTitle>No scopes yet</EmptyTitle>
+                  <EmptyDescription>Define a scope to gate access to a resource.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </TableEmpty>
+            <TableRow
+              v-for="scope in items"
+              :key="scope.id"
+            >
+              <TableCell class="font-medium">
+                {{ scope.name }}
+              </TableCell>
+              <TableCell>{{ scope.displayName || '—' }}</TableCell>
+              <TableCell class="text-sm text-muted-foreground">
+                {{ scope.resources.join(', ') || '—' }}
+              </TableCell>
+              <TableCell>
+                <div class="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="openEdit(scope)"
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :disabled="deletingId === scope.id"
+                    @click="remove(scope)"
+                  >
+                    <Trash2 class="text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
 
       <AdminPager
         :has-previous="hasPrevious"
@@ -160,80 +199,70 @@ async function remove(scope: ScopeResponse) {
         @previous="goPrevious"
         @next="goNext"
       />
-    </template>
-  </UDashboardPanel>
+    </div>
 
-  <UModal
-    v-model:open="isModalOpen"
-    :title="editing ? 'Edit scope' : 'New scope'"
-  >
-    <template #body>
-      <UForm
-        :state="form"
-        class="flex flex-col gap-4"
-        @submit="submit"
-      >
-        <UFormField
-          label="Name"
-          name="name"
-        >
-          <UInput
-            v-model="form.name"
-            :disabled="!!editing"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          label="Display name"
-          name="displayName"
-        >
-          <UInput
-            v-model="form.displayName"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField
-          label="Description"
-          name="description"
-        >
-          <UTextarea
-            v-model="form.description"
-            class="w-full"
-            :rows="2"
-          />
-        </UFormField>
-        <UFormField
-          label="Resources (comma-separated)"
-          name="resources"
-        >
-          <UInput
-            v-model="form.resources"
-            placeholder="todo-api"
-            class="w-full"
-          />
-        </UFormField>
+    <Dialog v-model:open="isModalOpen">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{{ editing ? 'Edit scope' : 'New scope' }}</DialogTitle>
+        </DialogHeader>
 
-        <UAlert
-          v-if="formError"
-          color="error"
-          variant="subtle"
-          :title="formError"
-        />
+        <form
+          class="flex flex-col gap-4"
+          @submit.prevent="submit"
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel>Name</FieldLabel>
+              <Input
+                v-model="form.name"
+                :disabled="!!editing"
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Display name</FieldLabel>
+              <Input v-model="form.displayName" />
+            </Field>
+            <Field>
+              <FieldLabel>Description</FieldLabel>
+              <Textarea
+                v-model="form.description"
+                :rows="2"
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Resources (comma-separated)</FieldLabel>
+              <Input
+                v-model="form.resources"
+                placeholder="todo-api"
+              />
+            </Field>
+          </FieldGroup>
 
-        <div class="flex justify-end gap-2">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            variant="subtle"
-            @click="isModalOpen = false"
-          />
-          <UButton
-            label="Save"
-            type="submit"
-            :loading="saving"
-          />
-        </div>
-      </UForm>
-    </template>
-  </UModal>
+          <Alert
+            v-if="formError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ formError }}</AlertDescription>
+          </Alert>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              @click="isModalOpen = false"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              :disabled="saving"
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  </div>
 </template>

@@ -1,5 +1,13 @@
 <script setup lang="ts">
+import { Ban, RefreshCw, Search } from '@lucide/vue'
 import type { AuthorizationResponse } from '~~/shared/types/admin'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const subject = ref('')
 const clientId = ref('')
@@ -11,15 +19,6 @@ const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevi
   = useAdminList<AuthorizationResponse>('authorizations', filters)
 await refresh()
 watch([subject, clientId], reset)
-
-const columns = [
-  { accessorKey: 'subject', header: 'Subject' },
-  { accessorKey: 'applicationClientId', header: 'Client ID' },
-  { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'scopes', header: 'Scopes' },
-  { accessorKey: 'creationDate', header: 'Created' },
-  { id: 'actions', header: '' }
-]
 
 const revoking = ref<string | null>(null)
 
@@ -39,90 +38,133 @@ function formatDate(value: string | null) {
 </script>
 
 <template>
-  <UDashboardPanel
-    id="authorizations-panel"
-    :ui="{ body: 'gap-4' }"
-  >
-    <template #header>
-      <UDashboardNavbar title="Authorizations">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
-        <template #right>
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="subtle"
-            :loading="loading"
-            @click="refresh"
-          />
-        </template>
-      </UDashboardNavbar>
-    </template>
+  <div class="flex flex-col gap-4 p-4 md:p-6">
+    <div class="flex items-center justify-between gap-4">
+      <h1 class="text-2xl font-semibold tracking-tight">
+        Authorizations
+      </h1>
+      <Button
+        variant="outline"
+        size="icon"
+        :disabled="loading"
+        @click="refresh"
+      >
+        <RefreshCw :class="{ 'animate-spin': loading }" />
+      </Button>
+    </div>
 
-    <template #body>
-      <div class="flex gap-3">
-        <UInput
+    <div class="flex flex-wrap gap-3">
+      <InputGroup class="max-w-xs">
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput
           v-model="subject"
           placeholder="Filter by subject (user id)…"
-          icon="i-lucide-search"
-          class="max-w-xs"
         />
-        <UInput
+      </InputGroup>
+      <InputGroup class="max-w-xs">
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput
           v-model="clientId"
           placeholder="Filter by client id…"
-          icon="i-lucide-search"
-          class="max-w-xs"
         />
-      </div>
+      </InputGroup>
+    </div>
 
-      <UAlert
-        v-if="error && !loading"
-        color="error"
-        variant="subtle"
-        :title="error"
-      />
+    <Alert
+      v-if="error && !loading"
+      variant="destructive"
+    >
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
 
-      <UTable
-        :data="items"
-        :columns="columns"
-        :loading="loading"
-      >
-        <template #status-cell="{ row }">
-          <UBadge
-            :color="row.original.status === 'valid' ? 'success' : 'neutral'"
-            variant="subtle"
+    <div class="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Subject</TableHead>
+            <TableHead>Client ID</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Scopes</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead class="w-0" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <template v-if="loading && !items.length">
+            <TableRow
+              v-for="n in 5"
+              :key="n"
+            >
+              <TableCell
+                v-for="col in 6"
+                :key="col"
+              >
+                <Skeleton class="h-5 w-full" />
+              </TableCell>
+            </TableRow>
+          </template>
+          <TableEmpty
+            v-else-if="!items.length"
+            :colspan="6"
           >
-            {{ row.original.status || '—' }}
-          </UBadge>
-        </template>
-        <template #scopes-cell="{ row }">
-          <span class="text-sm text-muted">{{ row.original.scopes.join(', ') || '—' }}</span>
-        </template>
-        <template #creationDate-cell="{ row }">
-          {{ formatDate(row.original.creationDate) }}
-        </template>
-        <template #actions-cell="{ row }">
-          <UButton
-            label="Revoke"
-            icon="i-lucide-ban"
-            color="error"
-            variant="ghost"
-            size="sm"
-            :disabled="row.original.status !== 'valid'"
-            :loading="revoking === row.original.id"
-            @click="revoke(row.original)"
-          />
-        </template>
-      </UTable>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <RefreshCw />
+                </EmptyMedia>
+                <EmptyTitle>No authorizations found</EmptyTitle>
+                <EmptyDescription>Try a different subject or client id filter.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </TableEmpty>
+          <TableRow
+            v-for="authorization in items"
+            :key="authorization.id"
+          >
+            <TableCell class="font-medium">
+              {{ authorization.subject }}
+            </TableCell>
+            <TableCell>{{ authorization.applicationClientId }}</TableCell>
+            <TableCell>
+              <Badge :variant="authorization.status === 'valid' ? 'default' : 'secondary'">
+                {{ authorization.status || '—' }}
+              </Badge>
+            </TableCell>
+            <TableCell class="text-sm text-muted-foreground">
+              {{ authorization.scopes.join(', ') || '—' }}
+            </TableCell>
+            <TableCell>{{ formatDate(authorization.creationDate) }}</TableCell>
+            <TableCell>
+              <div class="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  :disabled="authorization.status !== 'valid' || revoking === authorization.id"
+                  @click="revoke(authorization)"
+                >
+                  <Ban
+                    data-icon="inline-start"
+                    class="text-destructive"
+                  />
+                  Revoke
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
 
-      <AdminPager
-        :has-previous="hasPrevious"
-        :has-next="!!nextCursor"
-        :loading="loading"
-        @previous="goPrevious"
-        @next="goNext"
-      />
-    </template>
-  </UDashboardPanel>
+    <AdminPager
+      :has-previous="hasPrevious"
+      :has-next="!!nextCursor"
+      :loading="loading"
+      @previous="goPrevious"
+      @next="goNext"
+    />
+  </div>
 </template>

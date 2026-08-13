@@ -1,14 +1,18 @@
 <script setup lang="ts">
+import { Pencil, Plus, RefreshCw, Trash2, Users } from '@lucide/vue'
 import type { RoleMemberResponse, RoleResponse } from '~~/shared/types/admin'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const filters = ref({})
 const { items, loading, error, refresh } = useAdminList<RoleResponse>('roles', filters)
 await refresh()
-
-const columns = [
-  { accessorKey: 'name', header: 'Name' },
-  { id: 'actions', header: '' }
-]
 
 // --- Create/rename ---
 const isEditModalOpen = ref(false)
@@ -80,147 +84,187 @@ async function openMembers(role: RoleResponse) {
 </script>
 
 <template>
-  <UDashboardPanel
-    id="roles-panel"
-    :ui="{ body: 'gap-4' }"
-  >
-    <template #header>
-      <UDashboardNavbar title="Roles">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
-        <template #right>
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="subtle"
-            :loading="loading"
+  <div>
+    <div class="flex flex-col gap-4 p-4 md:p-6">
+      <div class="flex items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold tracking-tight">
+          Roles
+        </h1>
+        <div class="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            :disabled="loading"
             @click="refresh"
-          />
-          <UButton
-            label="New role"
-            icon="i-lucide-plus"
-            @click="openCreate"
-          />
-        </template>
-      </UDashboardNavbar>
-    </template>
+          >
+            <RefreshCw :class="{ 'animate-spin': loading }" />
+          </Button>
+          <Button @click="openCreate">
+            <Plus data-icon="inline-start" />
+            New role
+          </Button>
+        </div>
+      </div>
 
-    <template #body>
-      <UAlert
+      <Alert
         v-if="error && !loading"
-        color="error"
-        variant="subtle"
-        :title="error"
-      />
-
-      <UTable
-        :data="items"
-        :columns="columns"
-        :loading="loading"
+        variant="destructive"
       >
-        <template #actions-cell="{ row }">
-          <div class="flex gap-1 justify-end">
-            <UButton
-              icon="i-lucide-users"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              title="Members"
-              @click="openMembers(row.original)"
-            />
-            <UButton
-              icon="i-lucide-pencil"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              @click="openEdit(row.original)"
-            />
-            <UButton
-              icon="i-lucide-trash-2"
-              color="error"
-              variant="ghost"
-              size="sm"
-              :loading="deletingId === row.original.id"
-              @click="remove(row.original)"
-            />
-          </div>
-        </template>
-      </UTable>
-    </template>
-  </UDashboardPanel>
+        <AlertDescription>{{ error }}</AlertDescription>
+      </Alert>
 
-  <UModal
-    v-model:open="isEditModalOpen"
-    :title="editing ? 'Rename role' : 'New role'"
-  >
-    <template #body>
-      <UForm
-        :state="{ name }"
-        class="flex flex-col gap-4"
-        @submit="submit"
-      >
-        <UFormField
-          label="Name"
-          name="name"
+      <div class="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead class="w-0" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="loading && !items.length">
+              <TableRow
+                v-for="n in 5"
+                :key="n"
+              >
+                <TableCell
+                  v-for="col in 2"
+                  :key="col"
+                >
+                  <Skeleton class="h-5 w-full" />
+                </TableCell>
+              </TableRow>
+            </template>
+            <TableEmpty
+              v-else-if="!items.length"
+              :colspan="2"
+            >
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <RefreshCw />
+                  </EmptyMedia>
+                  <EmptyTitle>No roles yet</EmptyTitle>
+                  <EmptyDescription>Create a role to assign it to users.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </TableEmpty>
+            <TableRow
+              v-for="role in items"
+              :key="role.id"
+            >
+              <TableCell class="font-medium">
+                {{ role.name }}
+              </TableCell>
+              <TableCell>
+                <div class="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Members"
+                    @click="openMembers(role)"
+                  >
+                    <Users />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="openEdit(role)"
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :disabled="deletingId === role.id"
+                    @click="remove(role)"
+                  >
+                    <Trash2 class="text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+
+    <Dialog v-model:open="isEditModalOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{{ editing ? 'Rename role' : 'New role' }}</DialogTitle>
+        </DialogHeader>
+
+        <form
+          class="flex flex-col gap-4"
+          @submit.prevent="submit"
         >
-          <UInput
-            v-model="name"
-            class="w-full"
-          />
-        </UFormField>
-        <UAlert
-          v-if="formError"
-          color="error"
-          variant="subtle"
-          :title="formError"
-        />
-        <div class="flex justify-end gap-2">
-          <UButton
-            label="Cancel"
-            color="neutral"
-            variant="subtle"
-            @click="isEditModalOpen = false"
-          />
-          <UButton
-            label="Save"
-            type="submit"
-            :loading="saving"
+          <FieldGroup>
+            <Field>
+              <FieldLabel>Name</FieldLabel>
+              <Input v-model="name" />
+            </Field>
+          </FieldGroup>
+          <Alert
+            v-if="formError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ formError }}</AlertDescription>
+          </Alert>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              @click="isEditModalOpen = false"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              :disabled="saving"
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="isMembersModalOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Members — {{ membersTarget?.name ?? '' }}</DialogTitle>
+        </DialogHeader>
+
+        <div
+          v-if="membersLoading"
+          class="flex flex-col gap-2"
+        >
+          <Skeleton
+            v-for="n in 3"
+            :key="n"
+            class="h-5 w-full"
           />
         </div>
-      </UForm>
-    </template>
-  </UModal>
-
-  <UModal
-    v-model:open="isMembersModalOpen"
-    :title="`Members — ${membersTarget?.name ?? ''}`"
-  >
-    <template #body>
-      <div
-        v-if="membersLoading"
-        class="text-muted text-sm"
-      >
-        Loading…
-      </div>
-      <ul
-        v-else-if="members.length"
-        class="flex flex-col gap-1"
-      >
-        <li
-          v-for="member in members"
-          :key="member.id"
-          class="text-sm"
+        <ul
+          v-else-if="members.length"
+          class="flex flex-col gap-1"
         >
-          {{ member.email }}
-        </li>
-      </ul>
-      <p
-        v-else
-        class="text-muted text-sm"
-      >
-        No members yet.
-      </p>
-    </template>
-  </UModal>
+          <li
+            v-for="member in members"
+            :key="member.id"
+            class="text-sm"
+          >
+            {{ member.email }}
+          </li>
+        </ul>
+        <p
+          v-else
+          class="text-sm text-muted-foreground"
+        >
+          No members yet.
+        </p>
+      </DialogContent>
+    </Dialog>
+  </div>
 </template>

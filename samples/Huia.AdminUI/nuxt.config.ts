@@ -1,10 +1,11 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import tailwindcss from '@tailwindcss/vite'
+
 const issuer = process.env.HUIA_ISSUER || 'https://localhost:5041'
 
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
-    '@nuxt/ui',
     'nuxt-oidc-auth',
     'nuxt-api-party'
   ],
@@ -16,6 +17,15 @@ export default defineNuxtConfig({
   },
 
   css: ['~/assets/css/main.css'],
+
+  // @nuxt/ui used to register this itself (it bundles Tailwind v4 internally) — now that shadcn-vue owns
+  // the UI layer instead, nothing else processes the `@import "tailwindcss"` in main.css without it. Its
+  // absence doesn't fail the client build (Vite's dev/client CSS pipeline tolerates the unprocessed
+  // `@theme`/`@utility`/`@apply` at-rules and just never generates utility classes from them), only the
+  // Nitro/SSR build, which resolves `@import` through plain postcss-import instead and needs a real file.
+  vite: {
+    plugins: [tailwindcss()]
+  },
 
   compatibilityDate: '2026-06-30',
 
@@ -75,6 +85,20 @@ export default defineNuxtConfig({
         // is a real signed JWT, so validateIdToken is left at its default (true).
         skipAccessTokenParsing: true,
         validateAccessToken: false,
+        // Without these, logout() still clears the local session and redirects to Huia's /connect/logout,
+        // but with no post_logout_redirect_uri — the generic "oidc" provider preset (unlike keycloak/entra/
+        // etc.) sets neither by default, so OpenIddict's end-session endpoint has nowhere registered to send
+        // the browser back to and the user is stranded there instead of landing back in the app.
+        // logoutRedirectUri matches Oidc:AdminPostLogoutRedirectUri (see samples/Huia.TodoApi/appsettings.json
+        // and AppHost.cs's HUIA_POST_LOGOUT_REDIRECT_URI), the address actually registered for this client.
+        logoutRedirectParameterName: 'post_logout_redirect_uri',
+        logoutRedirectUri: process.env.HUIA_POST_LOGOUT_REDIRECT_URI || 'http://localhost:3100',
+        // id_token_hint isn't strictly required — OpenIddict falls back to matching post_logout_redirect_uri
+        // against any client that registered it, and only admin-ui registers this one — but sending it is
+        // what avoids relying on that uniqueness, so requires exposing the id_token into the session to fill
+        // it in (see logout.get.js: the idTokenHint key here is only populated when one exists).
+        exposeIdToken: true,
+        additionalLogoutParameters: { idTokenHint: '' },
         // Without this, nuxt-oidc-auth just discards the raw access_token string after the callback (it's
         // only ever used transiently to read `.exp`) unless a refresh_token came back too — now that
         // "offline_access" is requested above, Huia does issue one, and nuxt-oidc-auth's own

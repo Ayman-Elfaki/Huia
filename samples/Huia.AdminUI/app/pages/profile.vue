@@ -6,12 +6,18 @@ import type {
   TwoFactorResponse,
   UpdateInfoRequest
 } from '~~/shared/types/manage'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 
 const info = ref<ManageInfoResponse | null>(null)
 const infoError = ref<string | null>(null)
 const infoSaved = ref(false)
 const infoSaving = ref(false)
-const infoForm = reactive({firstName: '', lastName: ''})
+const infoForm = reactive({ firstName: '', lastName: '' })
 
 async function loadInfo() {
   infoError.value = null
@@ -43,8 +49,8 @@ async function saveInfo() {
   infoError.value = null
   infoSaved.value = false
   try {
-    const body: UpdateInfoRequest = {firstName: infoForm.firstName, lastName: infoForm.lastName}
-    info.value = await $huiaManage<ManageInfoResponse>('info', {method: 'POST', body})
+    const body: UpdateInfoRequest = { firstName: infoForm.firstName, lastName: infoForm.lastName }
+    info.value = await $huiaManage<ManageInfoResponse>('info', { method: 'POST', body })
     infoSaved.value = true
   } catch (err) {
     infoError.value = adminErrorMessage(err)
@@ -53,7 +59,7 @@ async function saveInfo() {
   }
 }
 
-const passwordForm = reactive({oldPassword: '', newPassword: ''})
+const passwordForm = reactive({ oldPassword: '', newPassword: '' })
 const passwordSaving = ref(false)
 const passwordError = ref<string | null>(null)
 const passwordSaved = ref(false)
@@ -63,8 +69,8 @@ async function changePassword() {
   passwordError.value = null
   passwordSaved.value = false
   try {
-    const body: UpdateInfoRequest = {oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword}
-    await $huiaManage('info', {method: 'POST', body})
+    const body: UpdateInfoRequest = { oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword }
+    await $huiaManage('info', { method: 'POST', body })
     passwordSaved.value = true
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
@@ -84,7 +90,7 @@ async function loadTwoFactor() {
   twoFactorError.value = null
   try {
     const body: TwoFactorRequest = {}
-    twoFactor.value = await $huiaManage<TwoFactorResponse>('2fa', {method: 'POST', body})
+    twoFactor.value = await $huiaManage<TwoFactorResponse>('2fa', { method: 'POST', body })
   } catch (err) {
     twoFactorError.value = adminErrorMessage(err)
   }
@@ -94,7 +100,7 @@ async function submitTwoFactor(body: TwoFactorRequest) {
   twoFactorBusy.value = true
   twoFactorError.value = null
   try {
-    twoFactor.value = await $huiaManage<TwoFactorResponse>('2fa', {method: 'POST', body})
+    twoFactor.value = await $huiaManage<TwoFactorResponse>('2fa', { method: 'POST', body })
   } catch (err) {
     twoFactorError.value = adminErrorMessage(err)
   } finally {
@@ -103,13 +109,13 @@ async function submitTwoFactor(body: TwoFactorRequest) {
 }
 
 async function enableTwoFactor() {
-  await submitTwoFactor({enable: true, twoFactorCode: twoFactorCode.value})
+  await submitTwoFactor({ enable: true, twoFactorCode: twoFactorCode.value })
   twoFactorCode.value = ''
 }
 
-const disableTwoFactor = () => submitTwoFactor({enable: false})
-const regenerateRecoveryCodes = () => submitTwoFactor({resetRecoveryCodes: true})
-const startTwoFactorSetup = () => submitTwoFactor({resetSharedKey: true})
+const disableTwoFactor = () => submitTwoFactor({ enable: false })
+const regenerateRecoveryCodes = () => submitTwoFactor({ resetRecoveryCodes: true })
+const startTwoFactorSetup = () => submitTwoFactor({ resetSharedKey: true })
 
 /** Groups a raw authenticator key into 4-char chunks — matches how authenticator apps display/expect a
  * manually-entered secret. */
@@ -129,244 +135,220 @@ if (hasPassword.value) {
 </script>
 
 <template>
-  <UDashboardPanel
-    id="profile-panel"
-    :ui="{ body: 'gap-4' }"
-  >
-    <template #header>
-      <UDashboardNavbar title="Profile">
-        <template #leading>
-          <UDashboardSidebarCollapse/>
-        </template>
-      </UDashboardNavbar>
-    </template>
+  <div class="mx-auto flex w-full max-w-lg flex-col gap-4 p-4 md:p-6">
+    <h1 class="text-2xl font-semibold tracking-tight">
+      Profile
+    </h1>
 
-    <template #body>
-      <div class="mx-auto flex w-full max-w-lg flex-col gap-4">
-        <UCard>
-          <template #header>
-            <span class="font-semibold">Account info</span>
-          </template>
-
-          <UForm
-            :state="infoForm"
-            class="flex flex-col gap-4"
-            @submit="saveInfo"
-          >
-            <UFormField label="Email">
-              <UInput
+    <Card>
+      <CardHeader>
+        <CardTitle>Account info</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          class="flex flex-col gap-4"
+          @submit.prevent="saveInfo"
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel>Email</FieldLabel>
+              <Input
                 :model-value="info?.email"
                 disabled
-                class="w-full"
               />
-            </UFormField>
-            <UFormField
-              label="First name"
-              name="firstName"
-            >
-              <UInput
-                v-model="infoForm.firstName"
-                class="w-full"
-              />
-            </UFormField>
-            <UFormField
-              label="Last name"
-              name="lastName"
-            >
-              <UInput
-                v-model="infoForm.lastName"
-                class="w-full"
-              />
-            </UFormField>
-            <UAlert
-              v-if="infoError"
-              color="error"
-              variant="subtle"
-              :title="infoError"
-            />
-            <p
-              v-if="infoSaved"
-              class="text-sm text-muted"
-            >
-              Saved.
-            </p>
-            <UButton
-              label="Save"
-              type="submit"
-              :loading="infoSaving"
-              class="self-start"
-            />
-          </UForm>
-        </UCard>
-
-        <UCard v-if="hasPassword">
-          <template #header>
-            <span class="font-semibold">Password</span>
-          </template>
-
-          <UForm
-            :state="passwordForm"
-            class="flex flex-col gap-4"
-            @submit="changePassword"
+            </Field>
+            <Field>
+              <FieldLabel>First name</FieldLabel>
+              <Input v-model="infoForm.firstName" />
+            </Field>
+            <Field>
+              <FieldLabel>Last name</FieldLabel>
+              <Input v-model="infoForm.lastName" />
+            </Field>
+          </FieldGroup>
+          <Alert
+            v-if="infoError"
+            variant="destructive"
           >
-            <UFormField
-              label="Current password"
-              name="oldPassword"
-            >
-              <UInput
+            <AlertDescription>{{ infoError }}</AlertDescription>
+          </Alert>
+          <p
+            v-if="infoSaved"
+            class="text-sm text-muted-foreground"
+          >
+            Saved.
+          </p>
+          <Button
+            type="submit"
+            :disabled="infoSaving"
+            class="self-start"
+          >
+            Save
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    <Card v-if="hasPassword">
+      <CardHeader>
+        <CardTitle>Password</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          class="flex flex-col gap-4"
+          @submit.prevent="changePassword"
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel>Current password</FieldLabel>
+              <Input
                 v-model="passwordForm.oldPassword"
                 type="password"
-                class="w-full"
               />
-            </UFormField>
-            <UFormField
-              label="New password"
-              name="newPassword"
-            >
-              <UInput
+            </Field>
+            <Field>
+              <FieldLabel>New password</FieldLabel>
+              <Input
                 v-model="passwordForm.newPassword"
                 type="password"
-                class="w-full"
               />
-            </UFormField>
-            <UAlert
-              v-if="passwordError"
-              color="error"
-              variant="subtle"
-              :title="passwordError"
-            />
-            <p
-              v-if="passwordSaved"
-              class="text-sm text-muted"
-            >
-              Password changed.
-            </p>
-            <UButton
-              label="Change password"
-              type="submit"
-              :loading="passwordSaving"
-              class="self-start"
-            />
-          </UForm>
-        </UCard>
+            </Field>
+          </FieldGroup>
+          <Alert
+            v-if="passwordError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ passwordError }}</AlertDescription>
+          </Alert>
+          <p
+            v-if="passwordSaved"
+            class="text-sm text-muted-foreground"
+          >
+            Password changed.
+          </p>
+          <Button
+            type="submit"
+            :disabled="passwordSaving"
+            class="self-start"
+          >
+            Change password
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
 
-        <UCard v-if="hasPassword">
-          <template #header>
-            <span class="font-semibold">Two-factor authentication</span>
+    <Card v-if="hasPassword">
+      <CardHeader>
+        <CardTitle>Two-factor authentication</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">Status</span>
+            <Badge :variant="twoFactor?.isTwoFactorEnabled ? 'default' : 'secondary'">
+              {{ twoFactor?.isTwoFactorEnabled ? 'Enabled' : 'Disabled' }}
+            </Badge>
+          </div>
+
+          <Alert
+            v-if="twoFactorError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ twoFactorError }}</AlertDescription>
+          </Alert>
+
+          <div
+            v-if="twoFactor?.recoveryCodes"
+            class="flex flex-col gap-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3"
+          >
+            <p class="text-sm font-medium">
+              Save your recovery codes
+            </p>
+            <p class="text-xs text-muted-foreground">
+              Each code can be used once if you lose access to your authenticator app. This is the only
+              time they'll be shown.
+            </p>
+            <ul class="grid grid-cols-2 gap-1 font-mono text-xs">
+              <li
+                v-for="code in twoFactor.recoveryCodes"
+                :key="code"
+              >
+                {{ code }}
+              </li>
+            </ul>
+          </div>
+
+          <template v-if="twoFactor?.isTwoFactorEnabled">
+            <p class="text-sm text-muted-foreground">
+              {{ twoFactor.recoveryCodesLeft }} recovery codes left
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                :disabled="twoFactorBusy"
+                @click="regenerateRecoveryCodes"
+              >
+                Regenerate recovery codes
+              </Button>
+              <Button
+                variant="secondary"
+                :disabled="twoFactorBusy"
+                @click="disableTwoFactor"
+              >
+                Disable two-factor authentication
+              </Button>
+            </div>
           </template>
 
-          <div class="flex flex-col gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm">Status</span>
-              <UBadge
-                :color="twoFactor?.isTwoFactorEnabled ? 'success' : 'neutral'"
-                variant="subtle"
+          <template v-else-if="twoFactor?.sharedKey">
+            <div class="flex flex-col gap-2">
+              <p class="text-sm text-muted-foreground">
+                Scan this QR code with your authenticator app, or enter the key manually:
+              </p>
+              <QrCode
+                v-if="otpauthUrl"
+                :value="otpauthUrl"
+              />
+              <code class="rounded-md bg-muted px-2 py-1 text-xs break-all">{{ formatSharedKey(twoFactor.sharedKey) }}</code>
+              <a
+                v-if="otpauthUrl"
+                :href="otpauthUrl"
+                class="text-xs text-muted-foreground underline underline-offset-2"
               >
-                {{ twoFactor?.isTwoFactorEnabled ? 'Enabled' : 'Disabled' }}
-              </UBadge>
+                Open in authenticator app
+              </a>
             </div>
 
-            <UAlert
-              v-if="twoFactorError"
-              color="error"
-              variant="subtle"
-              :title="twoFactorError"
-            />
-
-            <div
-              v-if="twoFactor?.recoveryCodes"
-              class="flex flex-col gap-2 rounded-lg border border-error/50 bg-error/5 p-3"
+            <FieldGroup>
+              <Field>
+                <FieldLabel>6-digit code</FieldLabel>
+                <Input v-model="twoFactorCode" />
+              </Field>
+            </FieldGroup>
+            <Button
+              :disabled="twoFactorBusy"
+              class="self-start"
+              @click="enableTwoFactor"
             >
-              <p class="text-sm font-medium">
-                Save your recovery codes
-              </p>
-              <p class="text-xs text-muted">
-                Each code can be used once if you lose access to your authenticator app. This is the only
-                time they'll be shown.
-              </p>
-              <ul class="grid grid-cols-2 gap-1 font-mono text-xs">
-                <li
-                  v-for="code in twoFactor.recoveryCodes"
-                  :key="code"
-                >
-                  {{ code }}
-                </li>
-              </ul>
-            </div>
+              Enable two-factor authentication
+            </Button>
+          </template>
 
-            <template v-if="twoFactor?.isTwoFactorEnabled">
-              <p class="text-sm text-muted">
-                {{ twoFactor.recoveryCodesLeft }} recovery codes left
-              </p>
-              <div class="flex flex-wrap gap-2">
-                <UButton
-                  label="Regenerate recovery codes"
-                  color="neutral"
-                  variant="subtle"
-                  :loading="twoFactorBusy"
-                  @click="regenerateRecoveryCodes"
-                />
-                <UButton
-                  label="Disable two-factor authentication"
-                  color="neutral"
-                  variant="subtle"
-                  :loading="twoFactorBusy"
-                  @click="disableTwoFactor"
-                />
-              </div>
-            </template>
-
-            <template v-else-if="twoFactor?.sharedKey">
-              <div class="flex flex-col gap-2">
-                <p class="text-sm text-muted">
-                  Scan this QR code with your authenticator app, or enter the key manually:
-                </p>
-                <QrCode v-if="otpauthUrl" :value="otpauthUrl" />
-                <code class="rounded-md bg-elevated px-2 py-1 text-xs break-all">{{
-                    formatSharedKey(twoFactor.sharedKey)
-                  }}</code>
-                <a
-                  v-if="otpauthUrl"
-                  :href="otpauthUrl"
-                  class="text-xs text-muted underline underline-offset-2"
-                >
-                  Open in authenticator app
-                </a>
-              </div>
-
-              <UFormField
-                label="6-digit code"
-                name="code"
-              >
-                <UInput
-                  v-model="twoFactorCode"
-                  class="w-full"
-                />
-              </UFormField>
-              <UButton
-                label="Enable two-factor authentication"
-                :loading="twoFactorBusy"
-                class="self-start"
-                @click="enableTwoFactor"
-              />
-            </template>
-
-            <template v-else>
-              <p class="text-sm text-muted">
-                Set up an authenticator app to require a code at sign-in.
-              </p>
-              <UButton
-                label="Set up two-factor authentication"
-                color="neutral"
-                variant="subtle"
-                :loading="twoFactorBusy"
-                class="self-start"
-                @click="startTwoFactorSetup"
-              />
-            </template>
-          </div>
-        </UCard>
-      </div>
-    </template>
-  </UDashboardPanel>
+          <template v-else>
+            <p class="text-sm text-muted-foreground">
+              Set up an authenticator app to require a code at sign-in.
+            </p>
+            <Button
+              variant="secondary"
+              :disabled="twoFactorBusy"
+              class="self-start"
+              @click="startTwoFactorSetup"
+            >
+              Set up two-factor authentication
+            </Button>
+          </template>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 </template>
