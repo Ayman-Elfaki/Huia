@@ -60,8 +60,10 @@ public class ExternalLoginConfirmationModel(
         return Page();
     }
 
-    /// <summary>Creates the account, links the external login, and either sends a confirmation email or
-    /// signs the user in immediately.</summary>
+    /// <summary>
+    /// Creates the account, links the external login, and either sends a confirmation email or
+    /// signs the user in immediately.
+    /// </summary>
     // One line over MA0051's default 60-line limit; splitting this single linear confirmation flow wouldn't
     // reduce its actual complexity, just spread it across an extra method.
 #pragma warning disable MA0051
@@ -163,20 +165,28 @@ public class ExternalLoginConfirmationModel(
     }
 #pragma warning restore MA0051
 
-    /// <summary>The confirmation form fields, pre-filled from the external provider's claims where available.</summary>
+    /// <summary>
+    /// The confirmation form fields, pre-filled from the external provider's claims where available.
+    /// </summary>
     public sealed class InputModel
     {
-        /// <summary>The new account's given (first) name.</summary>
+        /// <summary>
+        /// The new account's given (first) name.
+        /// </summary>
         [Required(ErrorMessage = "First name is required.")]
         [Display(Name = "First name")]
         public string FirstName { get; set; } = string.Empty;
 
-        /// <summary>The new account's family (last) name.</summary>
+        /// <summary>
+        /// The new account's family (last) name.
+        /// </summary>
         [Required(ErrorMessage = "Last name is required.")]
         [Display(Name = "Last name")]
         public string LastName { get; set; } = string.Empty;
 
-        /// <summary>The new account's email address (also used as the username).</summary>
+        /// <summary>
+        /// The new account's email address (also used as the username).
+        /// </summary>
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string Email { get; set; } = string.Empty;

@@ -14,9 +14,15 @@ var postgresPassword = builder.AddParameter("postgres-password", "todo-postgres-
 var mailpit = builder.AddMailPit("mailpit");
 
 // One server, one logical database per app. Persistent so local dev data (accounts, todos) survives an
-// AppHost restart.
+// AppHost restart. WithDataVolume names the volume explicitly (e.g. "huia.apphost-postgres-data") instead
+// of leaving Docker to attach an anonymous one — without a name, the volume is just a 64-character hash in
+// Docker Desktop indistinguishable from any other container's data, making it easy to delete the wrong one
+// (or lose track of which volume belongs to this container) when resetting the local dev database. Docker
+// also auto-recreates a *named* volume if it's ever missing when this container starts, which doesn't hold
+// for an anonymous one.
 var postgres = builder.AddPostgres("postgres", password: postgresPassword)
-    .WithLifetime(ContainerLifetime.Persistent);
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume();
 
 var todoApiDb = postgres.AddDatabase("todoapidb");
 

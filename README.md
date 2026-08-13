@@ -1,6 +1,20 @@
+
 # Huia
 
-**Huia** is an OpenIddict-based identity and authentication library for ASP.NET Core applications. It provides a complete identity solution with built-in UI, OAuth 2.0 / OpenID Connect server capabilities, and flexible key management.
+<div align="center">
+    <img src="assets/huia-icon.svg" alt="Huia Logo" width="100" />
+</div>
+
+--- 
+
+<div align="center" style="margin-top: 20px;">
+
+[![stable](https://img.shields.io/nuget/vpre/Huia.svg?label=alpha)](https://www.nuget.org/packages/Huia/)
+
+</div>
+
+**Huia** is an OpenIddict-based identity and authentication library for ASP.NET Core applications. 
+It provides a complete identity solution with built-in UI, OAuth 2.0 / OpenID Connect server capabilities, and flexible key management.
 
 ## Features
 

@@ -19,6 +19,14 @@ internal static class AdminTestHelpers
     private const string ClientId = "todo-web";
     private const string ClientSecret = "todo-web-dev-secret";
     private const string RedirectUri = "http://localhost:3000/api/auth/callback/huia";
+
+    // The only client MapHuiaAdminEndpoints' RequirePresenter("admin-ui") policy accepts (Program.cs) — the
+    // admin-endpoint success-path tests need a token minted from this client specifically, distinct from
+    // "todo-web" above (which every other caller here, e.g. ReportsEndpointsTests, still relies on).
+    private const string AdminUiClientId = "admin-ui";
+    private const string AdminUiClientSecret = "admin-ui-dev-secret";
+    private const string AdminUiRedirectUri = "http://localhost:3100/auth/oidc/callback";
+
     private const string Password = "P@ssw0rd123!";
 
     public static Task<HttpClient> CreateAdminAuthorizedClientAsync(TodoApiFactory factory) =>
@@ -32,24 +40,61 @@ internal static class AdminTestHelpers
     public static async Task<(HttpClient Client, string Subject)> CreateAdminAuthorizedClientWithSubjectAsync(
         TodoApiFactory factory)
     {
-        var (client, _, subject) = await CreateAuthorizedClientCoreAsync(factory, roles: ["Admin"]);
+        var (client, _, subject) = await CreateAuthorizedClientCoreAsync(factory, roles: ["Admin"],
+            ClientId, ClientSecret, RedirectUri, oauthScope: "openid profile email todos roles reports");
         return (client, subject);
     }
 
     public static async Task<HttpClient> CreateAuthorizedClientAsync(TodoApiFactory factory, string[] roles)
     {
-        var (client, _, _) = await CreateAuthorizedClientCoreAsync(factory, roles);
+        var (client, _, _) = await CreateAuthorizedClientCoreAsync(factory, roles,
+            ClientId, ClientSecret, RedirectUri, oauthScope: "openid profile email todos roles reports");
         return client;
+    }
+
+    /// <summary>
+    /// Same as <see cref="CreateAdminAuthorizedClientAsync"/>, but mints the token from the "admin-ui" client
+    /// instead of "todo-web" — the client <c>RequirePresenter("admin-ui")</c> actually lets through. Use this
+    /// (not <see cref="CreateAdminAuthorizedClientAsync"/>) for any test expecting a call to
+    /// <c>/api/identity/admin/...</c> to succeed.
+    /// </summary>
+    public static Task<HttpClient> CreateAdminUiAuthorizedClientAsync(TodoApiFactory factory) =>
+        CreateAdminUiAuthorizedClientAsync(factory, roles: ["Admin"]);
+
+    public static async Task<HttpClient> CreateAdminUiAuthorizedClientAsync(TodoApiFactory factory, string[] roles)
+    {
+        // "reports" is omitted (unlike the todo-web helpers above): admin-ui's own AllowScopes (Program.cs)
+        // doesn't include it, so requesting it here would make /connect/authorize reject the request outright.
+        var (client, _, _) = await CreateAuthorizedClientCoreAsync(factory, roles,
+            AdminUiClientId, AdminUiClientSecret, AdminUiRedirectUri, oauthScope: "openid profile email todos roles");
+        return client;
+    }
+
+    /// <summary>Same as <see cref="CreateAdminUiAuthorizedClientAsync(TodoApiFactory)"/>, also returning the
+    /// token's <c>sub</c> claim.</summary>
+    public static async Task<(HttpClient Client, string Subject)> CreateAdminUiAuthorizedClientWithSubjectAsync(
+        TodoApiFactory factory)
+    {
+        var (client, _, subject) = await CreateAuthorizedClientCoreAsync(factory, roles: ["Admin"],
+            AdminUiClientId, AdminUiClientSecret, AdminUiRedirectUri, oauthScope: "openid profile email todos roles");
+        return (client, subject);
     }
 
     /// <summary>Same as <see cref="CreateAuthorizedClientAsync"/>, also returning the registered email and
     /// subject — for tests (e.g. <c>ManageEndpointsTests</c>) that need to assert against the caller's own
-    /// identity rather than just checking status codes.</summary>
+    /// identity rather than just checking status codes. Mints against the "todo-web" client, same as every
+    /// other caller in this file that doesn't need the "admin-ui" one specifically.</summary>
+    internal static Task<(HttpClient Client, string Email, string Subject)> CreateAuthorizedClientCoreAsync(
+        TodoApiFactory factory, string[] roles) =>
+        CreateAuthorizedClientCoreAsync(factory, roles,
+            ClientId, ClientSecret, RedirectUri, oauthScope: "openid profile email todos roles reports");
+
     // Long because it's a single linear register-confirm-authorize-redeem sequence; splitting it would just
     // relocate, not reduce, that sequence.
 #pragma warning disable MA0051
-    internal static async Task<(HttpClient Client, string Email, string Subject)> CreateAuthorizedClientCoreAsync(
-        TodoApiFactory factory, string[] roles)
+    private static async Task<(HttpClient Client, string Email, string Subject)> CreateAuthorizedClientCoreAsync(
+        TodoApiFactory factory, string[] roles,
+        string clientId, string clientSecret, string redirectUri, string oauthScope)
     {
         var uiClient = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -83,15 +128,15 @@ internal static class AdminTestHelpers
         var query = string.Join('&', new[]
         {
             "response_type=code",
-            $"client_id={Uri.EscapeDataString(ClientId)}",
-            $"redirect_uri={Uri.EscapeDataString(RedirectUri)}",
+            $"client_id={Uri.EscapeDataString(clientId)}",
+            $"redirect_uri={Uri.EscapeDataString(redirectUri)}",
             // "todos" is requested only so the token carries the "todo-api" audience TodoApi's Program.cs
             // requires server-wide (HuiaServerOptions.RequireAudiences) — that check gates authentication
             // itself, before any endpoint-specific authorization runs, so every admin-API call needs it too
-            // even though the admin endpoints never touch /api/todos. "reports" is requested so this same
-            // client can also satisfy ReportsEndpointsTests' RequireScope("reports")/RequireAudience
-            // ("reports-api") check.
-            $"scope={Uri.EscapeDataString("openid profile email todos roles reports")}",
+            // even though the admin endpoints never touch /api/todos. "reports" (when included in
+            // `oauthScope`) is requested so the todo-web client can also satisfy ReportsEndpointsTests'
+            // RequireScope("reports")/RequireAudience("reports-api") check.
+            $"scope={Uri.EscapeDataString(oauthScope)}",
             $"state={Guid.NewGuid():N}",
         });
         using var authorizeResponse = await uiClient.GetAsync($"/connect/authorize?{query}");
@@ -108,9 +153,9 @@ internal static class AdminTestHelpers
             {
                 ["grant_type"] = "authorization_code",
                 ["code"] = code,
-                ["redirect_uri"] = RedirectUri,
-                ["client_id"] = ClientId,
-                ["client_secret"] = ClientSecret,
+                ["redirect_uri"] = redirectUri,
+                ["client_id"] = clientId,
+                ["client_secret"] = clientSecret,
             }));
         tokenResponse.EnsureSuccessStatusCode();
 

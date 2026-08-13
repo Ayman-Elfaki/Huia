@@ -19,7 +19,7 @@ import { navigationItems } from '@/lib/navigation'
 useHead({
   meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
   link: [{ rel: 'icon', href: '/favicon.ico' }],
-  htmlAttrs: { lang: 'en' }
+  htmlAttrs: { lang: 'en', class: 'dark' }
 })
 
 useSeoMeta({
@@ -42,23 +42,14 @@ const accountInitial = computed(() => accountLabel.value.charAt(0).toUpperCase()
 <template>
   <Toaster />
 
-  <div
-    v-if="!loggedIn"
-    class="flex items-center justify-center h-screen"
-  >
-    <Button
-      size="lg"
-      @click="() => useOidcAuth().login()"
-    >
+  <div v-if="!loggedIn" class="flex items-center justify-center h-screen">
+    <Button size="lg" @click="() => useOidcAuth().login()">
       <LogIn data-icon="inline-start" />
       Sign in
     </Button>
   </div>
 
-  <div
-    v-else-if="!isAdmin"
-    class="flex items-center justify-center h-screen"
-  >
+  <div v-else-if="!isAdmin" class="flex items-center justify-center h-screen">
     <Card class="max-w-sm">
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
@@ -72,10 +63,7 @@ const accountInitial = computed(() => accountLabel.value.charAt(0).toUpperCase()
         </p>
       </CardContent>
       <CardFooter>
-        <Button
-          variant="secondary"
-          @click="() => logout()"
-        >
+        <Button variant="secondary" @click="() => logout()">
           Sign out
         </Button>
       </CardFooter>
@@ -90,10 +78,8 @@ const accountInitial = computed(() => accountLabel.value.charAt(0).toUpperCase()
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                  <SidebarMenuButton
-                    size="lg"
-                    class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                  >
+                  <SidebarMenuButton size="lg"
+                    class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
                     <Avatar class="size-8 rounded-lg">
                       <AvatarFallback class="rounded-lg">
                         {{ accountInitial }}
@@ -103,11 +89,7 @@ const accountInitial = computed(() => accountLabel.value.charAt(0).toUpperCase()
                     <ChevronsUpDown class="ml-auto" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="top"
-                  align="start"
-                  class="w-56"
-                >
+                <DropdownMenuContent side="top" align="start" class="w-56">
                   <DropdownMenuLabel class="truncate">
                     {{ accountLabel }}
                   </DropdownMenuLabel>

@@ -2,6 +2,7 @@ using Huia.Applications;
 using Huia.Branding;
 using Huia.Keys;
 using Huia.Localization;
+using Huia.Scheduling;
 using Huia.Scopes;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -94,6 +95,12 @@ public sealed class HuiaOptions
     public KeyManagementBuilder KeysManagement { get; }
 
     /// <summary>
+    /// Configures the Quartz job that prunes OpenIddict's own orphaned authorizations/tokens — e.g.
+    /// <c>huia.Scheduler.SetMinimumAuthorizationLifespan(...)</c>. See <see cref="SchedulerBuilder"/>.
+    /// </summary>
+    public SchedulerBuilder Scheduler { get; }
+
+    /// <summary>
     /// Configures which cultures Huia.UI's pages and transactional emails are localized into. English
     /// and Arabic (right-to-left) are supported out of the box.
     /// </summary>
@@ -156,6 +163,7 @@ public sealed class HuiaOptions
         Issuer = issuer;
         Applications = new ApplicationsBuilder(services);
         KeysManagement = new KeyManagementBuilder(services);
+        Scheduler = new SchedulerBuilder(services);
 
         // The standard Identity.Application cookie scheme, not a custom one: SignInManager<HuiaUser>'s
         // high-level methods (PasswordSignInAsync, TwoFactorSignInAsync, lockout handling, etc. — all used

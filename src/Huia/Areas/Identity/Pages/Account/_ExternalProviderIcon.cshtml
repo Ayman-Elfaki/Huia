@@ -5,7 +5,7 @@
    be anything. *@
 @model string
 @{
-    var provider = (Model ?? string.Empty).Trim().ToLowerInvariant();
+    var provider = Model.Trim().ToLowerInvariant();
     var iconClass = provider switch
     {
         "google" => "fa-brands fa-google",
@@ -13,8 +13,9 @@
         "github" => "fa-brands fa-github",
         "gitlab" => "fa-brands fa-gitlab",
         "apple" => "fa-brands fa-apple",
+        "twitter" => "fa-brands fa-x-twitter",
         "facebook" => "fa-brands fa-facebook",
-        _ => "fa-solid fa-right-to-bracket"
+        _ => "fa-brands fa-openid"
     };
 }
 <i class="@iconClass" aria-hidden="true"></i>

@@ -149,7 +149,7 @@ builder.Services.AddHuia(issuer, huia =>
         huia.EnableExternalLoginPasswordLinking();
 
         huia.KeysManagement.UseAutomaticKeyManagement();
-
+        
         // A token's aud claim is only populated for scopes that have a resource registered against them —
         // this seeds "todos" with one on startup, idempotently, the same way huia.Applications above seeds
         // client applications.
@@ -247,9 +247,15 @@ app.UseAntiforgery();
 app.MapHuiaConnectEndpoints();
 app.MapHuiaManageEndpoints();
 // Huia's built-in CRUD over applications/scopes/authorizations/users/roles — unauthenticated by default
-// (see its own doc comment), so every route in the group is gated here behind the "Admin" role seeded by
-// SeedAdminAsync below.
-app.MapHuiaAdminEndpoints().RequireAuthorization(policy => policy.RequireRole("Admin"));
+// (see its own doc comment), so every route in the group is gated here behind both the "Admin" role seeded
+// by SeedAdminAsync below and RequirePresenter: RequireRole alone isn't enough, since any client that
+// requested the "roles" scope (see AllowScopes above) could otherwise mint a token for an Admin user and
+// reach these endpoints. "admin-ui" is the admin console itself; "huia-cli" is also allowed since its whole
+// purpose (see DeviceFlowTests) is letting a signed-in Admin drive this same API from the command line.
+app.MapHuiaAdminEndpoints().RequireAuthorization(policy => policy
+    .RequireRole("Admin")
+    .RequirePresenter("admin-ui", "huia-cli"));
+
 app.MapRazorPages();
 app.MapTodoEndpoints();
 app.MapReportsEndpoints();

@@ -40,6 +40,14 @@ pruning), so no extra wiring is needed there. If you're backing key storage with
 `IHuiaSigningKeyStore` directly (bypassing `WithStore`), call `services.AddQuartzHostedService()` yourself so
 the rotation job actually runs.
 
+That same Quartz job also prunes OpenIddict's own orphaned authorizations/tokens; tune how it does that via
+`huia.Scheduler`:
+
+```csharp
+huia.Scheduler.SetMinimumAuthorizationLifespan(TimeSpan.FromDays(30)); // OpenIddict's own default: 14 days
+huia.Scheduler.SetMinimumTokenLifespan(TimeSpan.FromDays(30));
+```
+
 ## Manual key management
 
 You decide when a key is created or retired — from an admin action, a CLI command, your own schedule,

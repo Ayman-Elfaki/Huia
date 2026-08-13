@@ -8,11 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Huia.Tests.Integration;
 
 /// <summary>
-/// Covers <c>MapHuiaAdminEndpoints</c> (<see cref="TodoApi.Program"/> gates the whole group behind
-/// <c>RequireRole("Admin")</c>, same as <c>ReportsEndpoints</c>): the unauthenticated/non-admin gating each
+/// Covers <c>MapHuiaAdminEndpoints</c> (<see cref="TodoApi.Program"/> gates the whole group behind both
+/// <c>RequireRole("Admin")</c>, same as <c>ReportsEndpoints</c>, and <c>RequirePresenter("admin-ui")</c> so
+/// only the admin console's own client can reach it): the unauthenticated/non-admin/wrong-client gating each
 /// resource group inherits from that gate, plus a full CRUD (or list+revoke, where that's all the API
 /// exposes) lifecycle per resource type, exercised against real tokens minted by
-/// <see cref="AdminTestHelpers"/> rather than mocked auth.
+/// <see cref="AdminTestHelpers"/> (from the "admin-ui" client specifically — the one client this policy lets
+/// through) rather than mocked auth.
 /// </summary>
 public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApiFactory>
 {
@@ -48,10 +50,32 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    /// <summary>
+    /// An Admin-role user's token still isn't enough on its own — <c>RequirePresenter("admin-ui")</c> (see
+    /// this class' own doc comment) rejects it unless it was minted for the admin-ui client specifically.
+    /// "todo-web" stands in for any other client here: it requests the same "roles" scope as admin-ui (see
+    /// its own <c>AllowScopes</c> in Program.cs), so without RequirePresenter its Admin-role users could
+    /// otherwise reach these endpoints too.
+    /// </summary>
+    [Theory]
+    [InlineData("applications")]
+    [InlineData("scopes")]
+    [InlineData("users")]
+    [InlineData("roles")]
+    [InlineData("authorizations")]
+    public async Task List_WithAdminRoleFromAnotherClient_ReturnsForbidden(string resource)
+    {
+        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+
+        using var response = await client.GetAsync($"{BasePath}/{resource}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     [Fact]
     public async Task Applications_Crud_FullLifecycle_Succeeds()
     {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
         var clientId = $"test-app-{Guid.NewGuid():N}";
 
         var created = await client.PostAsJsonAsync($"{BasePath}/applications", new
@@ -100,7 +124,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [Fact]
     public async Task Applications_CursorPagination_WalksEveryItemExactlyOnceWithoutTotalCount()
     {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
 
         // More than one default-sized (25) page, so paging through requires at least one NextCursor hop.
         var createdIds = new List<string>();
@@ -143,7 +167,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [Fact]
     public async Task Scopes_Crud_FullLifecycle_Succeeds()
     {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
         var name = $"test-scope-{Guid.NewGuid():N}";
 
         var created = await client.PostAsJsonAsync($"{BasePath}/scopes", new
@@ -188,7 +212,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 #pragma warning disable MA0051
     public async Task Users_Crud_FullLifecycle_Succeeds()
     {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
         var email = $"admin-crud-{Guid.NewGuid():N}@example.com";
 
         var created = await client.PostAsJsonAsync($"{BasePath}/users", new
@@ -270,7 +294,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [Fact]
     public async Task Users_Get_ReflectsExternalLoginsAndPicture()
     {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
         var email = $"admin-external-{Guid.NewGuid():N}@example.com";
 
         var created = await client.PostAsJsonAsync($"{BasePath}/users", new
@@ -306,7 +330,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [Fact]
     public async Task Roles_Crud_FullLifecycle_Succeeds()
     {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
         var name = $"test-role-{Guid.NewGuid():N}";
 
         var created = await client.PostAsJsonAsync($"{BasePath}/roles", new { Name = name });
@@ -339,14 +363,14 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 
     /// <summary>
     /// AdminTestHelpers' authorization_code exchange (used to get the admin's own bearer token) itself
-    /// creates a live OpenIddict authorization for the admin's subject/the "todo-web" client — that's the
+    /// creates a live OpenIddict authorization for the admin's subject/the "admin-ui" client — that's the
     /// fixture this test lists/revokes rather than seeding one separately, since authorizations can only be
     /// created by a real OAuth flow (AuthorizationsEndpoints has no create endpoint).
     /// </summary>
     [Fact]
     public async Task Authorizations_List_GetAndRevoke_Succeeds()
     {
-        var (client, subject) = await AdminTestHelpers.CreateAdminAuthorizedClientWithSubjectAsync(factory);
+        var (client, subject) = await AdminTestHelpers.CreateAdminUiAuthorizedClientWithSubjectAsync(factory);
 
         var list = await client.GetFromJsonAsync<PagedResult<AuthorizationResponse>>(
             $"{BasePath}/authorizations?subject={Uri.EscapeDataString(subject)}");
@@ -368,7 +392,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [Fact]
     public async Task Authorizations_Revoke_UnknownId_ReturnsNotFound()
     {
-        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
 
         var response = await client.PostAsync($"{BasePath}/authorizations/does-not-exist/revoke", content: null);
 

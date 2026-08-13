@@ -1,43 +1,42 @@
 <Project>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <WarningsAsErrors>nullable</WarningsAsErrors>
-    <GenerateDocumentationFile Condition="$(MSBuildProjectDirectory.Contains('\src\'))">true</GenerateDocumentationFile>
-    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
-    <Deterministic>true</Deterministic>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <WarningsAsErrors>nullable</WarningsAsErrors>
+        <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+        <Deterministic>true</Deterministic>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
 
-  <PropertyGroup Label="Package metadata" Condition="$(MSBuildProjectDirectory.Contains('/src/')) Or $(MSBuildProjectDirectory.Contains('\src\'))">
-    <IsPackable>true</IsPackable>
-    <Authors>Ayman Elfaki</Authors>
-    <Company>Huia</Company>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/Ayman-Elfaki/Huia</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Ayman-Elfaki/Huia</RepositoryUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>identity;openiddict;oauth;oidc;aspnetcore;efcore</PackageTags>
-    <Version>1.0.0</Version>
-  </PropertyGroup>
+    <PropertyGroup Label="Package metadata" Condition="$(MSBuildProjectDirectory.Contains('/src/')) Or $(MSBuildProjectDirectory.Contains('\src\'))">
+        <IsPackable>true</IsPackable>
+        <Authors>Ayman Elfaki</Authors>
+        <Company>Huia</Company>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/Ayman-Elfaki/Huia</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Ayman-Elfaki/Huia</RepositoryUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>huia-icon.png</PackageIcon>
+        <PackageTags>identity;openiddict;oauth;oidc;aspnetcore;efcore</PackageTags>
+        <Version>1.0.0</Version>
+    </PropertyGroup>
 
-  <!-- ✅ FIX 1: Explicitly include the README.md file in the package payload -->
-  <ItemGroup Label="Readme" Condition="$(MSBuildProjectDirectory.Contains('/src/')) Or $(MSBuildProjectDirectory.Contains('\src\'))">
-    <!-- $(MSBuildThisFileDirectory) automatically points to the directory where this .props file lives (the repo root) -->
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+    <ItemGroup Label="Readme" Condition="$(MSBuildProjectDirectory.Contains('/src/')) Or $(MSBuildProjectDirectory.Contains('\src\'))">
+        <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\"/>
+        <None Include="$(MSBuildThisFileDirectory)assets/huia-icon.png" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
-   <PropertyGroup Label="Test/sample projects" Condition="!$(MSBuildProjectDirectory.Contains('/src/')) And !$(MSBuildProjectDirectory.Contains('\src\'))">
-    <IsPackable>false</IsPackable>
-    <NoWarn>$(NoWarn);CA1707;MA0004</NoWarn>
-  </PropertyGroup>
+    <PropertyGroup Label="Test/sample projects" Condition="!$(MSBuildProjectDirectory.Contains('/src/')) And !$(MSBuildProjectDirectory.Contains('\src\'))">
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);CA1707;MA0004</NoWarn>
+    </PropertyGroup>
 
-  <ItemGroup Label="Analyzers">
-    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
-  </ItemGroup>
+    <ItemGroup Label="Analyzers">
+        <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all"/>
+    </ItemGroup>
 
 </Project>
