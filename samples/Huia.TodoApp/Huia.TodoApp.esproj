@@ -1,41 +1,17 @@
 <Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.4110890">
 
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
         <StartupCommand>npm run dev</StartupCommand>
         <!-- Aspire's AddNextJsApp runs/builds this app itself (see samples/Huia.AppHost/Program.cs); this
              project file exists only so the app shows up in Huia.slnx/the IDE with JS tooling support. -->
         <ShouldRunBuildScript>false</ShouldRunBuildScript>
         <BuildOutputFolder>$(MSBuildProjectDirectory)\.next</BuildOutputFolder>
+        <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+        <BuildCommand></BuildCommand>
+        <TestCommand></TestCommand>
+        <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     </PropertyGroup>
 
-    <ItemGroup>
-        <!-- Exclude installed/generated files from IDE indexing, matching .gitignore. -->
-        <Content Remove="node_modules\**" />
-        <Content Remove=".next\**" />
-        <None Remove="node_modules\**" />
-        <None Remove=".next\**" />
-        <TypeScriptCompile Remove="node_modules\**" />
-        <TypeScriptCompile Remove=".next\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Script Include="next-env.d.ts" />
-      <Script Include="next.config.ts" />
-      <Script Include="src\components\admin-panel.tsx" />
-      <Script Include="src\components\auth-buttons.tsx" />
-      <Script Include="src\components\id-token-panel.tsx" />
-      <Script Include="src\components\locale-switcher.tsx" />
-      <Script Include="src\components\new-todo-form.tsx" />
-      <Script Include="src\components\theme-provider.tsx" />
-      <Script Include="src\components\theme-toggle.tsx" />
-      <Script Include="src\components\todo-item-row.tsx" />
-      <Script Include="src\i18n\navigation.ts" />
-      <Script Include="src\i18n\request.ts" />
-      <Script Include="src\i18n\routing.ts" />
-      <Script Include="src\lib\todo-api.ts" />
-      <Script Include="src\lib\utils.ts" />
-      <Script Include="src\proxy.ts" />
-      <Script Include="src\types\next-auth.d.ts" />
-    </ItemGroup>
 
 </Project>

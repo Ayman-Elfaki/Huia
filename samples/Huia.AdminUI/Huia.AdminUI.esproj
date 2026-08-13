@@ -1,38 +1,17 @@
 <Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.4110890">
 
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
         <StartupCommand>npm run dev</StartupCommand>
         <!-- Aspire's AddJavaScriptApp runs/builds this app itself (see samples/Huia.AppHost/AppHost.cs);
              this project file exists only so the app shows up in Huia.slnx/the IDE with JS tooling support. -->
         <ShouldRunBuildScript>false</ShouldRunBuildScript>
         <BuildOutputFolder>$(MSBuildProjectDirectory)\.output</BuildOutputFolder>
+        <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+        <BuildCommand></BuildCommand>
+        <TestCommand></TestCommand>
+        <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     </PropertyGroup>
 
-    <ItemGroup>
-        <!-- Exclude installed/generated files from IDE indexing, matching .gitignore. -->
-        <Content Remove="node_modules\**" />
-        <Content Remove=".nuxt\**" />
-        <Content Remove=".output\**" />
-        <None Remove="node_modules\**" />
-        <None Remove=".nuxt\**" />
-        <None Remove=".output\**" />
-        <TypeScriptCompile Remove="node_modules\**" />
-        <TypeScriptCompile Remove=".nuxt\**" />
-        <TypeScriptCompile Remove=".output\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Script Include="nuxt.config.ts" />
-      <Script Include="app\app.vue" />
-      <Script Include="app\composables\useAdminList.ts" />
-      <Script Include="app\pages\applications\index.vue" />
-      <Script Include="app\pages\scopes\index.vue" />
-      <Script Include="app\pages\users\index.vue" />
-      <Script Include="app\pages\roles\index.vue" />
-      <Script Include="app\pages\authorizations\index.vue" />
-      <Script Include="server\api\admin\[...path].ts" />
-      <Script Include="shared\types\admin.ts" />
-      <Script Include="shared\utils\roles.ts" />
-    </ItemGroup>
 
 </Project>
