@@ -69,10 +69,10 @@ export function updateInfo(
 }
 
 /**
- * POSTing an all-empty body returns the current 2FA status without changing anything — unless no
- * authenticator key exists yet, in which case one is generated lazily (the same "get or create" behavior
- * ASP.NET Identity's own manage-2FA page relies on; there's no separate read endpoint). Used to load the
- * panel's initial state.
+ * POSTing an all-empty body returns the current 2FA status without changing anything — including
+ * `sharedKey`, which stays null until enrollment is explicitly started via `setTwoFactor(..., {resetSharedKey:
+ * true})` (see two-factor-panel.tsx's "start setup" action). Used to load the panel's initial state; must
+ * stay a pure read, since it also runs on every profile page load.
  */
 export function getTwoFactorStatus(accessToken: string): Promise<TwoFactorStatus> {
     return manageFetch("/api/identity/manage/2fa", accessToken, {

@@ -1,0 +1,20 @@
+@* Renders a per-provider brand icon for an external login button, using Font Awesome (see _Layout.cshtml's
+   fontawesome.min.css link) rather than Lucide — the icon set the rest of Huia's Identity pages use — since
+   Lucide doesn't ship brand logos. Known providers get their real brand mark; anything else falls back to a
+   generic icon, since an external login provider is caller-registered (docs/external-providers.md) and can
+   be anything. *@
+@model string
+@{
+    var provider = (Model ?? string.Empty).Trim().ToLowerInvariant();
+    var iconClass = provider switch
+    {
+        "google" => "fa-brands fa-google",
+        "microsoft" => "fa-brands fa-microsoft",
+        "github" => "fa-brands fa-github",
+        "gitlab" => "fa-brands fa-gitlab",
+        "apple" => "fa-brands fa-apple",
+        "facebook" => "fa-brands fa-facebook",
+        _ => "fa-solid fa-right-to-bracket"
+    };
+}
+<i class="@iconClass" aria-hidden="true"></i>

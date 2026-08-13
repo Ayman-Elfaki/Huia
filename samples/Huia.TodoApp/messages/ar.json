@@ -77,6 +77,8 @@
     "regenerateRecoveryCodes": "إعادة إنشاء رموز الاسترداد",
     "disableTwoFactor": "تعطيل المصادقة الثنائية",
     "twoFactorSetupHint": "امسح هذا المفتاح باستخدام تطبيق المصادقة، أو أدخله يدويًا:",
+    "twoFactorSetupPrompt": "أعدّ تطبيق مصادقة لطلب رمز عند تسجيل الدخول.",
+    "startTwoFactorSetup": "إعداد المصادقة الثنائية",
     "openInAuthenticatorApp": "فتح في تطبيق المصادقة",
     "twoFactorCode": "رمز مكوّن من 6 أرقام",
     "enableTwoFactor": "تفعيل المصادقة الثنائية"

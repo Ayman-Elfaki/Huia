@@ -52,6 +52,9 @@ export async function twoFactorAction(_prev: TwoFactorState, formData: FormData)
     try {
         let result: manageApi.TwoFactorStatus;
         switch (intent) {
+            case "start-setup":
+                result = await manageApi.setTwoFactor(accessToken, {resetSharedKey: true});
+                break;
             case "enable": {
                 const code = String(formData.get("code") ?? "").trim();
                 result = await manageApi.setTwoFactor(accessToken, {enable: true, twoFactorCode: code});

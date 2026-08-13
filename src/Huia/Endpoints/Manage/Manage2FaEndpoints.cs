@@ -62,8 +62,11 @@ internal static class Manage2FaEndpoints
                 ?.ToArray();
         }
 
-        if (request.ResetSharedKey == true ||
-            await userManager.GetAuthenticatorKeyAsync(user).ConfigureAwait(false) is null)
+        // Only provisions a key on an explicit ResetSharedKey request — never implicitly just because none
+        // exists yet, or a bare status-check call (every field null, used to render the current state)
+        // would silently generate and persist an authenticator secret nobody asked for. A caller wanting to
+        // start enrollment sends ResetSharedKey explicitly to get one.
+        if (request.ResetSharedKey == true)
         {
             await userManager.ResetAuthenticatorKeyAsync(user).ConfigureAwait(false);
         }

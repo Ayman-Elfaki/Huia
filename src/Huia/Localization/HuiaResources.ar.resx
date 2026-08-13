@@ -21,6 +21,7 @@
     <data name="PasswordLabel" xml:space="preserve"><value>كلمة المرور</value></data>
     <data name="RememberMeLabel" xml:space="preserve"><value>تذكرني</value></data>
     <data name="SignInButton" xml:space="preserve"><value>تسجيل الدخول</value></data>
+    <data name="OrContinueWith" xml:space="preserve"><value>أو تابع باستخدام</value></data>
     <data name="ForgotPasswordLink" xml:space="preserve"><value>هل نسيت كلمة المرور؟</value></data>
     <data name="CreateAccountLink" xml:space="preserve"><value>إنشاء حساب</value></data>
 

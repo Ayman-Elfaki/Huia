@@ -107,6 +107,21 @@ body {
     margin-top: 1.5rem;
 }
 
+/* Basecoat's .field-separator assumes it sits between two elements that already share a field group's
+   gap (its negative margin-block pulls it snug against that gap) — here it sits between the sign-in form
+   and the external-login buttons, two unrelated blocks with no shared gap to pull into, so that negative
+   margin needs overriding to a normal one instead. */
+.huia-divider {
+    margin-block: 1.5rem;
+}
+
+/* Basecoat's span punches through the separator line using --color-background (the page background) —
+   right for a separator sitting directly on the page, but this one sits inside .card, whose background
+   (--color-card) is a different shade in dark mode, so it needs to punch through with that instead. */
+.huia-divider > span {
+    background-color: var(--color-card);
+}
+
 .huia-footer-links {
     display: flex;
     flex-direction: column;

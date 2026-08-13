@@ -46,11 +46,19 @@
 
         @if (Model.ExternalLogins.Count > 0)
         {
+            <div class="field-separator huia-divider">
+                <hr role="separator" />
+                <span>@Localizer["OrContinueWith"]</span>
+            </div>
+
             <div class="huia-field-group">
                 @foreach (var scheme in Model.ExternalLogins)
                 {
                     <form method="post" asp-page="./ExternalLogin" asp-route-provider="@scheme.Name" asp-route-returnUrl="@Model.ReturnUrl">
-                        <button type="submit" class="btn huia-full-width" data-variant="outline">@scheme.DisplayName</button>
+                        <button type="submit" class="btn huia-full-width" data-variant="outline">
+                            <partial name="_ExternalProviderIcon" model="scheme.Name" />
+                            @scheme.DisplayName
+                        </button>
                     </form>
                 }
             </div>
