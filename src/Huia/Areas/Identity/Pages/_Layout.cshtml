@@ -53,6 +53,13 @@
     <link rel="stylesheet" href="~/_content/Huia/lib/basecoat/basecoat.min.css"
           asp-fallback-href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.min.css"
           asp-fallback-test-class="btn" asp-fallback-test-property="display" asp-fallback-test-value="inline-flex" />
+
+    @* Font Awesome Free (brands + solid subset only — no regular/v4compat, to keep the vendored webfonts
+       small): the external-login button icons' brand marks (Google, Microsoft, GitHub, ...) come from here
+       rather than Lucide, which doesn't ship brand logos. *@
+    <link rel="stylesheet" href="~/_content/Huia/lib/fontawesome/css/fontawesome.min.css"
+          asp-fallback-href="https://cdn.jsdelivr.net/npm/@@fortawesome/fontawesome-free@6.7.2/css/all.min.css"
+          asp-fallback-test-class="fa" asp-fallback-test-property="font-weight" asp-fallback-test-value="900" />
     <link rel="stylesheet" href="~/_content/Huia/css/site.css" />
 
     @if (!string.IsNullOrEmpty(branding.PrimaryColor))

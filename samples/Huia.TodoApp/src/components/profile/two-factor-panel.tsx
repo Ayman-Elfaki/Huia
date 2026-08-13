@@ -71,22 +71,20 @@ export function TwoFactorPanel({email, initial}: { email: string; initial: TwoFa
                         </form>
                     </div>
                 </div>
-            ) : (
+            ) : state.sharedKey ? (
                 <div className="flex flex-col gap-3">
-                    {state.sharedKey ? (
-                        <div className="flex flex-col gap-2">
-                            <p className="text-sm text-muted-foreground">{t("twoFactorSetupHint")}</p>
-                            {otpauthUrl ? <QrCode value={otpauthUrl} /> : null}
-                            <code className="rounded-md bg-muted px-2 py-1 text-xs break-all">
-                                {formatSharedKey(state.sharedKey)}
-                            </code>
-                            {otpauthUrl ? (
-                                <a href={otpauthUrl} className="text-xs text-muted-foreground underline underline-offset-2">
-                                    {t("openInAuthenticatorApp")}
-                                </a>
-                            ) : null}
-                        </div>
-                    ) : null}
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-muted-foreground">{t("twoFactorSetupHint")}</p>
+                        {otpauthUrl ? <QrCode value={otpauthUrl} /> : null}
+                        <code className="rounded-md bg-muted px-2 py-1 text-xs break-all">
+                            {formatSharedKey(state.sharedKey)}
+                        </code>
+                        {otpauthUrl ? (
+                            <a href={otpauthUrl} className="text-xs text-muted-foreground underline underline-offset-2">
+                                {t("openInAuthenticatorApp")}
+                            </a>
+                        ) : null}
+                    </div>
 
                     <Separator />
 
@@ -98,6 +96,16 @@ export function TwoFactorPanel({email, initial}: { email: string; initial: TwoFa
                         </div>
                         <Button type="submit" disabled={isPending} className="self-start">
                             {t("enableTwoFactor")}
+                        </Button>
+                    </form>
+                </div>
+            ) : (
+                <div className="flex flex-col gap-3">
+                    <p className="text-sm text-muted-foreground">{t("twoFactorSetupPrompt")}</p>
+                    <form action={formAction}>
+                        <input type="hidden" name="intent" value="start-setup" />
+                        <Button type="submit" variant="outline" disabled={isPending} className="self-start">
+                            {t("startTwoFactorSetup")}
                         </Button>
                     </form>
                 </div>

@@ -29,3 +29,14 @@ export interface TwoFactorRequest {
   resetSharedKey?: boolean | null
   resetRecoveryCodes?: boolean | null
 }
+
+export interface ExternalLoginResponse {
+  loginProvider: string
+  providerDisplayName: string | null
+  providerKey: string
+}
+
+export interface ExternalLoginsResponse {
+  logins: ExternalLoginResponse[]
+  hasPassword: boolean
+}

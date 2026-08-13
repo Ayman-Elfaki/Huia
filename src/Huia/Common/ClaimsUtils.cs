@@ -19,6 +19,7 @@ internal static class ClaimsUtils
             .SetClaim(OpenIddictConstants.Claims.PreferredUsername, await userManager.GetUserNameAsync(user).ConfigureAwait(false))
             .SetClaim(OpenIddictConstants.Claims.GivenName, user.FirstName)
             .SetClaim(OpenIddictConstants.Claims.FamilyName, user.LastName)
+            .SetClaim(OpenIddictConstants.Claims.Picture, user.Picture)
             .SetClaims(OpenIddictConstants.Claims.Role, [.. await userManager.GetRolesAsync(user).ConfigureAwait(false)]);
 
         identity.SetScopes(scopes);
@@ -38,6 +39,7 @@ internal static class ClaimsUtils
         {
             case OpenIddictConstants.Claims.Name or OpenIddictConstants.Claims.PreferredUsername
                 or OpenIddictConstants.Claims.GivenName or OpenIddictConstants.Claims.FamilyName
+                or OpenIddictConstants.Claims.Picture
                 when identity.HasScope(OpenIddictConstants.Scopes.Profile):
             case OpenIddictConstants.Claims.Email when identity.HasScope(OpenIddictConstants.Scopes.Email):
             case OpenIddictConstants.Claims.Role when identity.HasScope(OpenIddictConstants.Scopes.Roles):

@@ -6,6 +6,7 @@
 
 - 🏗️ **OpenIddict Integration** - Full OAuth 2.0 / OpenID Connect authorization server
 - 🎨 **Built-in Identity UI** - Razor Pages for login, register, 2FA, password reset, and more
+- 🔗 **External Providers** - Sign in with Google, Microsoft, GitHub, or any OAuth2/OIDC provider
 - 🌍 **Localization** - English and Arabic (RTL) out of the box, easily extensible
 - 🔐 **Key Management** - Automatic or manual signing/encryption key rotation
 - 📦 **EF Core Support** - Ready-to-use Entity Framework Core stores
@@ -81,6 +82,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
 - [Getting Started](docs/getting-started.md) - Installation and setup guide
 - [Architecture](docs/architecture.md) - How Huia works internally
+- [External Providers](docs/external-providers.md) - Sign in with Google, Microsoft, GitHub, and more
 - [Localization](docs/localization.md) - Multi-language support (English/Arabic)
 - [Key Management](docs/key-management.md) - Signing and encryption key rotation
 - [Custom Stores](docs/custom-store.md) - Implement your own persistence layer
@@ -100,8 +102,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 After calling `app.UseHuia()` and mapping endpoints:
 
 - `/connect/*` - OpenIddict OAuth/OIDC endpoints (authorize, token, userinfo, logout, device)
-- `/identity/account/*` - Identity UI pages (login, register, 2FA, password reset)
-- `/identity/manage/api/*` - User account management API
+- `/identity/account/*` - Identity UI pages (login, register, 2FA, password reset, external sign-in)
+- `/api/identity/manage/*` - User account management API, including linking/unlinking external providers
 - `/identity/admin/api/*` - Admin CRUD for applications, scopes, users, roles
 
 ## Samples

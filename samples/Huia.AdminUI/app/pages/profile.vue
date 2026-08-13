@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  ExternalLoginsResponse,
   ManageInfoResponse,
   TwoFactorRequest,
   TwoFactorResponse,
@@ -20,6 +21,20 @@ async function loadInfo() {
     infoForm.lastName = info.value.lastName ?? ''
   } catch (err) {
     infoError.value = adminErrorMessage(err)
+  }
+}
+
+// A user signed in only through an external provider (Google, etc.) has no local password. The
+// change-password form needs a current password to prove ownership, so it's hidden without one; 2FA setup
+// is hidden alongside it too, to keep this page's own account-security section scoped to password accounts.
+const hasPassword = ref(true)
+
+async function loadHasPassword() {
+  try {
+    const externalLogins = await $huiaManage<ExternalLoginsResponse>('external-logins')
+    hasPassword.value = externalLogins.hasPassword
+  } catch {
+    hasPassword.value = true
   }
 }
 
@@ -94,6 +109,7 @@ async function enableTwoFactor() {
 
 const disableTwoFactor = () => submitTwoFactor({enable: false})
 const regenerateRecoveryCodes = () => submitTwoFactor({resetRecoveryCodes: true})
+const startTwoFactorSetup = () => submitTwoFactor({resetSharedKey: true})
 
 /** Groups a raw authenticator key into 4-char chunks — matches how authenticator apps display/expect a
  * manually-entered secret. */
@@ -106,7 +122,10 @@ const otpauthUrl = computed(() => {
   return `otpauth://totp/Huia%20Admin:${encodeURIComponent(info.value.email)}?secret=${twoFactor.value.sharedKey}&issuer=Huia%20Admin&digits=6`
 })
 
-await Promise.all([loadInfo(), loadTwoFactor()])
+await Promise.all([loadInfo(), loadHasPassword()])
+if (hasPassword.value) {
+  await loadTwoFactor()
+}
 </script>
 
 <template>
@@ -180,7 +199,7 @@ await Promise.all([loadInfo(), loadTwoFactor()])
           </UForm>
         </UCard>
 
-        <UCard>
+        <UCard v-if="hasPassword">
           <template #header>
             <span class="font-semibold">Password</span>
           </template>
@@ -231,7 +250,7 @@ await Promise.all([loadInfo(), loadTwoFactor()])
           </UForm>
         </UCard>
 
-        <UCard>
+        <UCard v-if="hasPassword">
           <template #header>
             <span class="font-semibold">Two-factor authentication</span>
           </template>
@@ -297,11 +316,8 @@ await Promise.all([loadInfo(), loadTwoFactor()])
               </div>
             </template>
 
-            <template v-else>
-              <div
-                v-if="twoFactor?.sharedKey"
-                class="flex flex-col gap-2"
-              >
+            <template v-else-if="twoFactor?.sharedKey">
+              <div class="flex flex-col gap-2">
                 <p class="text-sm text-muted">
                   Scan this QR code with your authenticator app, or enter the key manually:
                 </p>
@@ -332,6 +348,20 @@ await Promise.all([loadInfo(), loadTwoFactor()])
                 :loading="twoFactorBusy"
                 class="self-start"
                 @click="enableTwoFactor"
+              />
+            </template>
+
+            <template v-else>
+              <p class="text-sm text-muted">
+                Set up an authenticator app to require a code at sign-in.
+              </p>
+              <UButton
+                label="Set up two-factor authentication"
+                color="neutral"
+                variant="subtle"
+                :loading="twoFactorBusy"
+                class="self-start"
+                @click="startTwoFactorSetup"
               />
             </template>
           </div>

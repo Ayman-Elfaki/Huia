@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Huia.Common;
+using Huia.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Tests.Integration;
 
@@ -257,6 +260,49 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     }
 #pragma warning restore MA0051
 
+    /// <summary>
+    /// The admin API's own view of which external (third-party) provider(s) a user signed in with, and
+    /// their avatar — the same data <c>ManageExternalLoginsEndpoints</c> exposes for self-service, surfaced
+    /// here for an admin looking at someone else's account. Links the login directly via
+    /// <c>UserManager.AddLoginAsync</c> rather than driving a real OAuth round trip — that mechanism itself
+    /// is covered by <c>ExternalLoginTests</c>; this test is only about the admin endpoint's response shape.
+    /// </summary>
+    [Fact]
+    public async Task Users_Get_ReflectsExternalLoginsAndPicture()
+    {
+        var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
+        var email = $"admin-external-{Guid.NewGuid():N}@example.com";
+
+        var created = await client.PostAsJsonAsync($"{BasePath}/users", new
+        {
+            Email = email,
+            Password = "P@ssw0rd123!",
+            FirstName = "External",
+            LastName = "Target",
+            EmailConfirmed = true,
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var user = await created.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.NotNull(user);
+        Assert.True(user!.HasPassword);
+        Assert.Empty(user.ExternalLogins);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var huiaUser = await userManager.FindByIdAsync(user.Id) ?? throw new InvalidOperationException("User not found.");
+            huiaUser.Picture = "https://example.com/avatar.png";
+            await userManager.UpdateAsync(huiaUser);
+            await userManager.AddLoginAsync(huiaUser, new UserLoginInfo("google", "fake-provider-key", "Google"));
+        }
+
+        var fetched = await client.GetFromJsonAsync<UserResponse>($"{BasePath}/users/{user.Id}");
+        Assert.Equal("https://example.com/avatar.png", fetched!.Picture);
+        var login = Assert.Single(fetched.ExternalLogins);
+        Assert.Equal("google", login.LoginProvider);
+        Assert.Equal("Google", login.ProviderDisplayName);
+    }
+
     [Fact]
     public async Task Roles_Crud_FullLifecycle_Succeeds()
     {
@@ -352,11 +398,16 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         string Email,
         string? FirstName,
         string? LastName,
+        string? Picture,
         bool EmailConfirmed,
         string? PhoneNumber,
         bool IsLockedOut,
         bool TwoFactorEnabled,
-        string[] Roles);
+        bool HasPassword,
+        string[] Roles,
+        ExternalLoginResponse[] ExternalLogins);
+
+    private sealed record ExternalLoginResponse(string LoginProvider, string? ProviderDisplayName);
 
     private sealed record RoleResponse(string Id, string Name);
 

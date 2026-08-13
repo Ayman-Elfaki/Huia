@@ -21,6 +21,7 @@
     <data name="PasswordLabel" xml:space="preserve"><value>Password</value></data>
     <data name="RememberMeLabel" xml:space="preserve"><value>Remember me</value></data>
     <data name="SignInButton" xml:space="preserve"><value>Sign in</value></data>
+    <data name="OrContinueWith" xml:space="preserve"><value>Or continue with</value></data>
     <data name="ForgotPasswordLink" xml:space="preserve"><value>Forgot your password?</value></data>
     <data name="CreateAccountLink" xml:space="preserve"><value>Create an account</value></data>
 
@@ -136,4 +137,8 @@
     <data name="DeviceApprovedMessage" xml:space="preserve"><value>Signed in. You can close this window and return to your device.</value></data>
     <data name="DeviceDeniedMessage" xml:space="preserve"><value>Sign-in denied. You can close this window.</value></data>
     <data name="DeviceInvalidCodeMessage" xml:space="preserve"><value>This code is invalid or has expired. Ask your device to show a new one.</value></data>
+
+    <data name="LinkAccountTitle" xml:space="preserve"><value>Confirm your password</value></data>
+    <data name="LinkAccountSubtitle" xml:space="preserve"><value>An account already exists for {0}. Enter its password to link {1} to it.</value></data>
+    <data name="LinkAccountButton" xml:space="preserve"><value>Link account</value></data>
 </root>

@@ -77,6 +77,8 @@
     "regenerateRecoveryCodes": "Regenerate recovery codes",
     "disableTwoFactor": "Disable two-factor authentication",
     "twoFactorSetupHint": "Scan this key with your authenticator app, or enter it manually:",
+    "twoFactorSetupPrompt": "Set up an authenticator app to require a code at sign-in.",
+    "startTwoFactorSetup": "Set up two-factor authentication",
     "openInAuthenticatorApp": "Open in authenticator app",
     "twoFactorCode": "6-digit code",
     "enableTwoFactor": "Enable two-factor authentication"

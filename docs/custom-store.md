@@ -19,13 +19,19 @@ builder.Services.AddHuia(issuer, huia =>
 
 public class MyStore : IHuiaStore<MyApplication, MyAuthorization, MyScope, MyToken>
 {
-    // IUserStore<HuiaUser>, IRoleStore<HuiaRole>,
+    // IUserStore<HuiaUser>, IUserLoginStore<HuiaUser>, IRoleStore<HuiaRole>,
     // IOpenIddictApplicationStore<MyApplication>, IOpenIddictAuthorizationStore<MyAuthorization>,
     // IOpenIddictScopeStore<MyScope>, IOpenIddictTokenStore<MyToken>,
     // ISigningKeyStore: GetValidKeysAsync, CreateKeyAsync, RetireKeyAsync, PurgeExpiredKeysAsync
     // (private key material must be encrypted at rest by your implementation)
 }
 ```
+
+> **Breaking change note**: `IHuiaStore` now also composes `IUserLoginStore<HuiaUser>` (`GetLoginsAsync`,
+> `AddLoginAsync`, `RemoveLoginAsync`, `FindByLoginAsync`, `AddLoginAsync`'s siblings), which backs external
+> (third-party) sign-in providers — see [external-providers.md](external-providers.md). An existing custom
+> `IHuiaStore` implementation needs these members added even if you don't use external providers yet, since
+> they're part of the interface unconditionally (the same way `ISigningKeyStore`'s members are).
 
 `WithStore<TStore, TApplication, TAuthorization, TScope, TToken>()` wires `MyStore` in as the Identity
 user/role store, the OpenIddict application/authorization/scope/token store, and (since `IHuiaStore`

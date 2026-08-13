@@ -1,5 +1,7 @@
+using Huia.Identity;
 using Huia.Keys;
 using Huia.Stores;
+using Microsoft.AspNetCore.Identity;
 
 namespace Huia.Tests.Unit.Stores;
 
@@ -18,5 +20,20 @@ public class IHuiaStoreTests
         var interfaces = typeof(IHuiaStore<,,,>).GetInterfaces();
 
         Assert.Contains(typeof(ISigningKeyStore), interfaces);
+    }
+
+    /// <summary>
+    /// A type implementing IHuiaStore also implements IUserLoginStore&lt;HuiaUser&gt; — the interface backing
+    /// external (third-party) sign-in providers. WithStore&lt;TStore, ...&gt;() registers TStore as
+    /// IUserStore&lt;HuiaUser&gt; only; UserManager&lt;HuiaUser&gt; resolves IUserLoginStore&lt;HuiaUser&gt; by
+    /// casting that same injected instance, so no separate registration is needed as long as this
+    /// composition holds.
+    /// </summary>
+    [Fact]
+    public void IHuiaStore_ComposesIUserLoginStore()
+    {
+        var interfaces = typeof(IHuiaStore<,,,>).GetInterfaces();
+
+        Assert.Contains(typeof(IUserLoginStore<HuiaUser>), interfaces);
     }
 }

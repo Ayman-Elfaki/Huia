@@ -21,6 +21,7 @@
     <data name="PasswordLabel" xml:space="preserve"><value>كلمة المرور</value></data>
     <data name="RememberMeLabel" xml:space="preserve"><value>تذكرني</value></data>
     <data name="SignInButton" xml:space="preserve"><value>تسجيل الدخول</value></data>
+    <data name="OrContinueWith" xml:space="preserve"><value>أو تابع باستخدام</value></data>
     <data name="ForgotPasswordLink" xml:space="preserve"><value>هل نسيت كلمة المرور؟</value></data>
     <data name="CreateAccountLink" xml:space="preserve"><value>إنشاء حساب</value></data>
 
@@ -136,4 +137,8 @@
     <data name="DeviceApprovedMessage" xml:space="preserve"><value>تم تسجيل الدخول. يمكنك إغلاق هذه النافذة والعودة إلى جهازك.</value></data>
     <data name="DeviceDeniedMessage" xml:space="preserve"><value>تم رفض تسجيل الدخول. يمكنك إغلاق هذه النافذة.</value></data>
     <data name="DeviceInvalidCodeMessage" xml:space="preserve"><value>هذا الرمز غير صالح أو منتهي الصلاحية. اطلب من جهازك عرض رمز جديد.</value></data>
+
+    <data name="LinkAccountTitle" xml:space="preserve"><value>تأكيد كلمة المرور</value></data>
+    <data name="LinkAccountSubtitle" xml:space="preserve"><value>يوجد حساب بالفعل لـ {0}. أدخل كلمة مروره لربط {1} به.</value></data>
+    <data name="LinkAccountButton" xml:space="preserve"><value>ربط الحساب</value></data>
 </root>

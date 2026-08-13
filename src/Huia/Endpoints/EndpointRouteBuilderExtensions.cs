@@ -36,10 +36,13 @@ public static class EndpointRouteBuilderExtensions
 
         /// <summary>
         /// Maps the account-management JSON endpoints a signed-in user calls to manage their own account:
-        /// <c>/api/identity/manage/2fa</c>, <c>/api/identity/manage/info</c> — for an SPA/native/server-side
-        /// OAuth client to build its own account-settings UI against. Accepts either the
-        /// <c>Identity.Application</c> cookie (same-origin server-rendered callers) or a bearer access token
-        /// validated by OpenIddict (cross-origin OAuth clients, the same scheme <c>userinfo</c> uses).
+        /// <c>/api/identity/manage/2fa</c>, <c>/api/identity/manage/info</c>,
+        /// <c>/api/identity/manage/external-logins</c> — for an SPA/native/server-side OAuth client to build
+        /// its own account-settings UI against. Accepts either the <c>Identity.Application</c> cookie
+        /// (same-origin server-rendered callers) or a bearer access token validated by OpenIddict
+        /// (cross-origin OAuth clients, the same scheme <c>userinfo</c> uses) — except
+        /// <c>external-logins/{provider}/link(-callback)</c>, which redirect through a browser challenge and
+        /// so only make sense for a cookie-authenticated caller in practice.
         /// Returns the <see cref="RouteGroupBuilder"/> for further customization.
         /// </summary>
         public RouteGroupBuilder MapHuiaManageEndpoints()
@@ -51,6 +54,7 @@ public static class EndpointRouteBuilderExtensions
 
             group.MapManageInfoEndpoints();
             group.MapManage2FaEndpoints();
+            group.MapManageExternalLoginsEndpoints();
 
             return group;
         }
