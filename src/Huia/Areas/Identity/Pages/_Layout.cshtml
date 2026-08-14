@@ -69,6 +69,23 @@
             :root.dark { --primary: @branding.PrimaryColor; }
         </style>
     }
+
+    @if (!string.IsNullOrEmpty(branding.BackgroundImageUrl))
+    {
+        <style>
+            .huia-page {
+                background-image: url("@branding.BackgroundImageUrl");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+            }
+        </style>
+    }
+
+    @if (!string.IsNullOrEmpty(branding.CustomCss))
+    {
+        <style>@Html.Raw(branding.CustomCss)</style>
+    }
 </head>
 <body data-huia-authenticated="@(isAuthenticated ? "true" : "false")"
       data-huia-react-to-sign-in="@(ViewData["ReactToSignIn"] is true ? "true" : "false")">

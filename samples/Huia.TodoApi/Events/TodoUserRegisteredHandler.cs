@@ -12,9 +12,9 @@ namespace Huia.TodoApi.Events;
 /// <c>WebApplicationBuilderExtensions.SeedAdminAsync</c>, which publishes the same event for the seeded demo
 /// admin so it goes through this one code path too.
 /// </summary>
-public sealed class TodoUserRegisteredHandler(TodoDbContext db) : IEventHandler<UserRegisteredEvent>
+public sealed class TodoUserRegisteredHandler(TodoDbContext db) : IEventHandler<UserRegisteredEvent<string>>
 {
-    public async Task HandleAsync(UserRegisteredEvent @event, CancellationToken cancellationToken = default)
+    public async Task HandleAsync(UserRegisteredEvent<string> @event, CancellationToken cancellationToken = default)
     {
         var exists = await db.Users.AnyAsync(u => u.Id == @event.UserId, cancellationToken);
         if (exists) return;

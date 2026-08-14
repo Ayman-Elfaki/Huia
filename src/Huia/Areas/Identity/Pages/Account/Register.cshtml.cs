@@ -15,8 +15,9 @@ using OpenIddict.Abstractions;
 
 namespace Huia.Areas.Identity.Pages.Account;
 
-/// <summary>Registers a new account, publishing <see cref="UserRegisteredEvent"/> and (if email confirmation
-/// isn't required) <see cref="UserSignedInEvent"/>.</summary>
+/// <summary>
+/// Registers a new account, publishing <see cref="UserRegisteredEvent{TKey}"/> and (if email confirmation isn't required) <see cref="UserSignedInEvent{TKey}"/>.
+/// </summary>
 [AllowAnonymous]
 public class RegisterModel(
     UserManager<HuiaUser> userManager,
@@ -83,7 +84,7 @@ public class RegisterModel(
         logger.LogInformation("User created a new account.");
 
         var userId = await userManager.GetUserIdAsync(user);
-        await events.PublishAsync(new UserRegisteredEvent(userId, Input.Email));
+        await events.PublishAsync(new UserRegisteredEvent<string>(userId, Input.Email));
 
         var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
@@ -116,7 +117,7 @@ public class RegisterModel(
 
         await signInManager.SignInAsync(user, isPersistent: false);
 
-        await events.PublishAsync(new UserSignedInEvent(userId, Input.Email));
+        await events.PublishAsync(new UserSignedInEvent<string>(userId, Input.Email));
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
     }

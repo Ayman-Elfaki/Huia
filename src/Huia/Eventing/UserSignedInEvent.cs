@@ -6,4 +6,5 @@ namespace Huia.Eventing;
 /// <param name="UserId">The signed-in user's id.</param>
 /// <param name="Email">The signed-in user's email.</param>
 /// </summary>
-public sealed record UserSignedInEvent(string UserId, string Email);
+/// <typeparam name="TKey">The identity user's key type (<c>string</c> for Huia's own <c>HuiaUser</c>).</typeparam>
+public sealed record UserSignedInEvent<TKey>(TKey UserId, string Email);

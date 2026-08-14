@@ -137,7 +137,7 @@ public class ExternalLoginLinkConfirmationModel(
         }
 
         // Already signed in by PasswordSignInAsync above.
-        await events.PublishAsync(new UserSignedInEvent(user.Id, user.Email!));
+        await events.PublishAsync(new UserSignedInEvent<string>(user.Id, user.Email!));
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));

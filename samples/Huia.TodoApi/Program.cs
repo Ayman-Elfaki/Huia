@@ -31,7 +31,7 @@ builder.Services.AddSingleton<IEmailSender<HuiaUser>, SmtpEmailSender>();
 
 // Gives every newly-registered account a TodoUser row (see TodoUserRegisteredHandler) — the sample's
 // demonstration of Huia's eventing hook.
-builder.Services.AddScoped<IEventHandler<UserRegisteredEvent>, TodoUserRegisteredHandler>();
+builder.Services.AddScoped<IEventHandler<UserRegisteredEvent<string>>, TodoUserRegisteredHandler>();
 
 var issuer = builder.ResolveIssuer();
 

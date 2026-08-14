@@ -14,7 +14,7 @@
         </div>
     </header>
     <section>
-        <form method="post" class="huia-field-group" novalidate>
+        <form method="post" class="huia-field-group" id="huia-login-form" novalidate>
             <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
             <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
             @if (Model.ExternalLoginError is not null)
@@ -22,51 +22,73 @@
                 <div class="huia-validation-summary" role="alert">@Model.ExternalLoginError</div>
             }
 
-            <div role="group" class="field">
-                <label asp-for="Input.Email">@Localizer["EmailLabel"]</label>
-                <input asp-for="Input.Email" autocomplete="username" placeholder="email@example.com" />
-                <span asp-validation-for="Input.Email" role="alert"></span>
+            @* Step 1: email only. huia-login-steps.js reveals step 2 (and hides this one) once the email
+               passes validation — without it, both steps render open, same as a classic single-step form. *@
+            <div id="huia-login-step-email">
+                <div role="group" class="field">
+                    <label asp-for="Input.Email">@Localizer["EmailLabel"]</label>
+                    <input asp-for="Input.Email" autocomplete="username" placeholder="email@example.com" />
+                    <span asp-validation-for="Input.Email" role="alert"></span>
+                </div>
+
+                <div class="huia-actions">
+                    <button type="button" id="huia-login-next" class="btn huia-full-width">@Localizer["NextButton"]</button>
+                </div>
             </div>
 
-            <div role="group" class="field">
-                <label asp-for="Input.Password">@Localizer["PasswordLabel"]</label>
-                <input asp-for="Input.Password" autocomplete="current-password" />
-                <span asp-validation-for="Input.Password" role="alert"></span>
-            </div>
+            @* Step 2: password, for the email entered in step 1. *@
+            <div id="huia-login-step-password">
+                <div class="huia-login-identity">
+                    <span id="huia-login-identity-email">@Model.Input.Email</span>
+                    <button type="button" id="huia-login-change-email" data-variant="link" data-size="sm" class="btn">@Localizer["UseDifferentEmailLink"]</button>
+                </div>
 
-            <div role="group" class="field" data-orientation="horizontal">
-                <input asp-for="Input.RememberMe" type="checkbox" role="switch" class="input" />
-                <label asp-for="Input.RememberMe">@Localizer["RememberMeLabel"]</label>
-            </div>
+                <div role="group" class="field">
+                    <label asp-for="Input.Password">@Localizer["PasswordLabel"]</label>
+                    <input asp-for="Input.Password" autocomplete="current-password" />
+                    <span asp-validation-for="Input.Password" role="alert"></span>
+                </div>
 
-            <div class="huia-actions">
-                <button type="submit" class="btn huia-full-width">@Localizer["SignInButton"]</button>
+                <div role="group" class="field" data-orientation="horizontal">
+                    <input asp-for="Input.RememberMe" type="checkbox" role="switch" class="input" />
+                    <label asp-for="Input.RememberMe">@Localizer["RememberMeLabel"]</label>
+                </div>
+
+                <div class="huia-actions">
+                    <button type="submit" class="btn huia-full-width">@Localizer["SignInButton"]</button>
+                </div>
             </div>
         </form>
 
-        @if (Model.ExternalLogins.Count > 0)
-        {
-            <div class="field-separator huia-divider">
-                <hr role="separator" />
-                <span>@Localizer["OrContinueWith"]</span>
-            </div>
+        <div id="huia-login-alt-options">
+            @if (Model.ExternalLogins.Count > 0)
+            {
+                <div class="field-separator huia-divider">
+                    <hr role="separator" />
+                    <span>@Localizer["OrContinueWith"]</span>
+                </div>
 
-            <div class="huia-field-group">
-                @foreach (var scheme in Model.ExternalLogins)
-                {
-                    <form method="post" asp-page="./ExternalLogin" asp-route-provider="@scheme.Name" asp-route-returnUrl="@Model.ReturnUrl">
-                        <button type="submit" class="btn huia-full-width" data-variant="outline">
-                            <partial name="_ExternalProviderIcon" model="scheme.Name" />
-                            @scheme.DisplayName
-                        </button>
-                    </form>
-                }
-            </div>
-        }
+                <div class="huia-field-group">
+                    @foreach (var scheme in Model.ExternalLogins)
+                    {
+                        <form method="post" asp-page="./ExternalLogin" asp-route-provider="@scheme.Name" asp-route-returnUrl="@Model.ReturnUrl">
+                            <button type="submit" class="btn huia-full-width" data-variant="outline">
+                                <partial name="_ExternalProviderIcon" model="scheme.Name" />
+                                @scheme.DisplayName
+                            </button>
+                        </form>
+                    }
+                </div>
+            }
 
-        <div class="huia-footer-links">
-            <a asp-page="./ForgotPassword" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["ForgotPasswordLink"]</a>
-            <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["CreateAccountLink"]</a>
+            <div class="huia-footer-links">
+                <a asp-page="./ForgotPassword" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["ForgotPasswordLink"]</a>
+                <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["CreateAccountLink"]</a>
+            </div>
         </div>
     </section>
 </div>
+
+@section Scripts {
+    <script src="~/_content/Huia/js/huia-login-steps.js"></script>
+}

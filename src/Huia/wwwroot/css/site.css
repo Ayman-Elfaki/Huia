@@ -143,6 +143,17 @@ body {
     width: 100%;
 }
 
+/* Login.cshtml's step-2 "continue as {email}" row, above the password field. */
+.huia-login-identity {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    overflow-wrap: anywhere;
+}
+
 .huia-validation-summary {
     color: var(--destructive, #e11d48);
     font-size: 0.875rem;

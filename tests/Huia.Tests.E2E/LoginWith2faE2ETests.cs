@@ -56,6 +56,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
         await Assertions.Expect(_page.GetByLabel("Email")).ToBeVisibleAsync();
 
         await _page.GetByLabel("Email").FillAsync(email);
+        await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Next" }).ClickAsync();
         await _page.GetByLabel("Password", new PageGetByLabelOptions { Exact = true }).FillAsync(password);
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign in" }).ClickAsync();
 

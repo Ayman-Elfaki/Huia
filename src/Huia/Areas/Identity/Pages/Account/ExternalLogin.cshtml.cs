@@ -69,7 +69,7 @@ public class ExternalLoginModel(
             if (user is not null)
             {
                 logger.LogInformation("User signed in with {LoginProvider}.", info.LoginProvider);
-                await events.PublishAsync(new UserSignedInEvent(user.Id, user.Email!));
+                await events.PublishAsync(new UserSignedInEvent<string>(user.Id, user.Email!));
             }
 
             // Consumed: clears the short-lived external cookie so the same provider round trip can't be

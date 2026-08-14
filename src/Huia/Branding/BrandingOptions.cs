@@ -44,9 +44,24 @@ public sealed class BrandingOptions
     public string? PrimaryColor { get; set; }
 
     /// <summary>
-    /// URL of a favicon to use instead of Huia.UI's bundled default.
+    /// URL of a favicon to use instead of Huia's bundled default.
     /// </summary>
     public string? FaviconUrl { get; set; }
+
+    /// <summary>
+    /// URL of a background image covering the full page, behind the sign-in panel (rendered
+    /// <c>background-size: cover; background-position: center;</c>). Leave unset for no background image —
+    /// just the page's plain background color.
+    /// </summary>
+    public string? BackgroundImageUrl { get; set; }
+
+    /// <summary>
+    /// Raw CSS injected verbatim into a <c>&lt;style&gt;</c> block on every Identity page, after Huia's
+    /// own stylesheet and after <see cref="PrimaryColor"/>/<see cref="BackgroundImageUrl"/> — use it for
+    /// anything those don't already cover. Rendered unescaped: only ever set this from a trusted,
+    /// developer-controlled source, never from user input.
+    /// </summary>
+    public string? CustomCss { get; set; }
 
     /// <summary>
     /// Show toggle theme button

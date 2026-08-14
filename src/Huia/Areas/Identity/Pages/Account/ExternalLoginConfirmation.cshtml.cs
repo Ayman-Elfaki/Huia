@@ -18,8 +18,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// Explicit-consent account creation for a first-time external sign-in — reached from
 /// <see cref="ExternalLoginModel.OnGetCallbackAsync"/> when the provider's identity isn't linked to any
 /// local account yet. Creates the account (no password) and links the external login, publishing
-/// <see cref="UserRegisteredEvent"/> and (if email confirmation isn't required)
-/// <see cref="UserSignedInEvent"/> — the same events <c>RegisterModel</c> publishes.
+/// <see cref="UserRegisteredEvent{TKey}"/> and (if email confirmation isn't required)
+/// <see cref="UserSignedInEvent{TKey}"/> — the same events <c>RegisterModel</c> publishes.
 /// </summary>
 [AllowAnonymous]
 public class ExternalLoginConfirmationModel(
@@ -129,7 +129,7 @@ public class ExternalLoginConfirmationModel(
         logger.LogInformation("User created a new account via {LoginProvider}.", info.LoginProvider);
 
         var userId = await userManager.GetUserIdAsync(user);
-        await events.PublishAsync(new UserRegisteredEvent(userId, Input.Email));
+        await events.PublishAsync(new UserRegisteredEvent<string>(userId, Input.Email));
 
         var emailVerifiedByProvider = ExternalClaimsMapper.IsEmailVerified(info.Principal);
         if (emailVerifiedByProvider)
@@ -155,7 +155,7 @@ public class ExternalLoginConfirmationModel(
         }
 
         await signInManager.SignInAsync(user, isPersistent: false);
-        await events.PublishAsync(new UserSignedInEvent(userId, Input.Email));
+        await events.PublishAsync(new UserSignedInEvent<string>(userId, Input.Email));
 
         // Consumed: clears the short-lived external cookie so the same provider round trip can't be replayed
         // to link/create a second account.

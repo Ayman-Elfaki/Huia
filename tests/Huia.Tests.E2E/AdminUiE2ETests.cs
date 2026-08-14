@@ -84,6 +84,7 @@ public sealed class AdminUiE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         await _page.GotoAsync(adminBaseUrl);
 
         await _page.GetByLabel("Email").FillAsync("admin@example.com");
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Next" }).ClickAsync();
         await _page.GetByLabel("Password", new() { Exact = true }).FillAsync("Admin123!Demo");
         await _page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
 

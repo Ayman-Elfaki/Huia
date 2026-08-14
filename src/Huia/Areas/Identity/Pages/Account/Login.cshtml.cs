@@ -79,7 +79,7 @@ public class LoginModel(
             var user = await userManager.FindByEmailAsync(Input.Email);
             if (user is not null)
             {
-                await events.PublishAsync(new UserSignedInEvent(user.Id, Input.Email));
+                await events.PublishAsync(new UserSignedInEvent<string>(user.Id, Input.Email));
             }
 
             return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));

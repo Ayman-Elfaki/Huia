@@ -99,10 +99,11 @@ granted (everything always reaches the access token).
 ## Events
 
 `IHuiaEventPublisher`/`IHuiaEventHandler<TEvent>` is a lightweight pub/sub hook for things happening inside
-Huia's own pages — currently `UserRegisteredEvent` and `UserSignedInEvent`, published from the Register page
-and equally from the external-login sign-in/confirmation pages. Register your own `IHuiaEventHandler<T>`
-implementations to react to them (e.g. send a welcome email, publish to a message bus) without forking the
-pages themselves.
+Huia's own pages — currently `UserRegisteredEvent<TKey>` and `UserSignedInEvent<TKey>` (generic over the
+identity user's key type; Huia's own pages always publish `<string>`, since `HuiaUser` uses `IdentityUser`'s
+default string key), published from the Register page and equally from the external-login
+sign-in/confirmation pages. Register your own `IHuiaEventHandler<T>` implementations to react to them (e.g.
+send a welcome email, publish to a message bus) without forking the pages themselves.
 
 ## Sample architecture
 

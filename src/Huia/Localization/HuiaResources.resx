@@ -21,6 +21,8 @@
     <data name="PasswordLabel" xml:space="preserve"><value>Password</value></data>
     <data name="RememberMeLabel" xml:space="preserve"><value>Remember me</value></data>
     <data name="SignInButton" xml:space="preserve"><value>Sign in</value></data>
+    <data name="NextButton" xml:space="preserve"><value>Next</value></data>
+    <data name="UseDifferentEmailLink" xml:space="preserve"><value>Use a different email</value></data>
     <data name="OrContinueWith" xml:space="preserve"><value>Or continue with</value></data>
     <data name="ForgotPasswordLink" xml:space="preserve"><value>Forgot your password?</value></data>
     <data name="CreateAccountLink" xml:space="preserve"><value>Create an account</value></data>
