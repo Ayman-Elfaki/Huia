@@ -176,7 +176,7 @@ public class ExternalLoginConfirmationModel(
         if (EmailFromProvider)
         {
             Input.Email = email!;
-            ModelState.Remove("Input.Email");
+            RemoveModelState(nameof(Input.Email));
         }
 
         var firstName = ExternalClaimsMapper.GetFirstName(info.Principal);
@@ -184,7 +184,7 @@ public class ExternalLoginConfirmationModel(
         if (FirstNameFromProvider)
         {
             Input.FirstName = firstName!;
-            ModelState.Remove("Input.FirstName");
+            RemoveModelState(nameof(Input.FirstName));
         }
 
         var lastName = ExternalClaimsMapper.GetLastName(info.Principal);
@@ -192,8 +192,26 @@ public class ExternalLoginConfirmationModel(
         if (LastNameFromProvider)
         {
             Input.LastName = lastName!;
-            ModelState.Remove("Input.LastName");
+            RemoveModelState(nameof(Input.LastName));
         }
+    }
+
+    /// <summary>
+    /// Clears any binding/validation error recorded for a disabled provider-supplied field under both keys
+    /// it could end up bound to: the normal prefixed key ("Input.Email") a partially-submitted form produces,
+    /// and the bare property name ("Email") ASP.NET Core's model binder falls back to when a disabled input
+    /// means the whole "Input.*" prefix has zero matches in the posted form — which happens here whenever
+    /// every field on the page is provider-supplied (all three disabled), the common case for a
+    /// Google/Microsoft-style provider. Removing only the prefixed key left the bare-key error in
+    /// <see cref="ModelState"/> in that case, so <c>ModelState.IsValid</c> stayed false and this page kept
+    /// silently re-rendering itself instead of creating the account — invisibly, since neither
+    /// <c>asp-validation-for="Input.Email"</c> (a different key) nor <c>asp-validation-summary="ModelOnly"</c>
+    /// (a model-level, not field-level, key) ever displays an error stored under the bare key.
+    /// </summary>
+    private void RemoveModelState(string propertyName)
+    {
+        ModelState.Remove($"{nameof(Input)}.{propertyName}");
+        ModelState.Remove(propertyName);
     }
 
     /// <summary>

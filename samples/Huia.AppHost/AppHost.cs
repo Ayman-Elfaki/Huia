@@ -8,6 +8,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var webClientSecret = builder.AddParameter("web-client-secret", "todo-web-dev-secret", secret: true);
 var testClientSecret = builder.AddParameter("test-client-secret", "todo-tests-dev-secret", secret: true);
 var adminClientSecret = builder.AddParameter("admin-client-secret", "admin-ui-dev-secret", secret: true);
+var identityServerClientSecret =
+    builder.AddParameter("identityserver-client-secret", "todoapi-idp-dev-secret", secret: true);
 var authSecret = builder.AddParameter("auth-secret", "insecure-dev-only-auth-secret-change-me", secret: true);
 var postgresPassword = builder.AddParameter("postgres-password", "todo-postgres-dev-secret", secret: true);
 
@@ -25,6 +27,7 @@ var postgres = builder.AddPostgres("postgres", password: postgresPassword)
     .WithDataVolume();
 
 var todoApiDb = postgres.AddDatabase("todoapidb");
+var identityServerDb = postgres.AddDatabase("identityserverdb");
 
 var api = builder.AddProject<Projects.Huia_TodoApi>("todoapi")
     // Pinned and unproxied: TodoApi reports its own issuer (in tokens and the discovery document) based on
@@ -39,6 +42,19 @@ var api = builder.AddProject<Projects.Huia_TodoApi>("todoapi")
     .WithEnvironment("Oidc__WebClientSecret", webClientSecret)
     .WithEnvironment("Oidc__TestClientSecret", testClientSecret)
     .WithEnvironment("Oidc__AdminClientSecret", adminClientSecret)
+    .WithEnvironment("Oidc__ExternalIdp__ClientSecret", identityServerClientSecret)
+    .WithExternalHttpEndpoints();
+
+// A second, independent Huia instance playing the role of an external/upstream identity provider — see
+// docs/external-providers.md and the "huia-idp" registration in Huia.TodoApi/Program.cs. Pinned and
+// unproxied for the same issuer-consistency reason as "api" above: this app reports its own issuer (in
+// tokens and discovery metadata) based on the address it's actually bound to, and TodoApi's OpenIdConnect
+// handler validates that issuer against the fixed Authority it's given below.
+var identityServer = builder.AddProject<Projects.Huia_IdentityServer>("identityserver")
+    .WithHttpsEndpoint(port: 5051, targetPort: 5051, isProxied: false)
+    .WithReference(identityServerDb)
+    .WaitFor(identityServerDb)
+    .WithEnvironment("Oidc__TodoApiClientSecret", identityServerClientSecret)
     .WithExternalHttpEndpoints();
 
 var web = builder.AddNextJsApp("web", "../Huia.TodoApp")
@@ -127,7 +143,23 @@ api.WithEnvironment("Oidc__WebRedirectUri",
     // string concatenation (not a normalizing `new Uri(...)`, unlike SetIssuer itself), so a trailing slash
     // here would double up into "https://localhost:5041//scalar" — a 404, since ASP.NET Core's router
     // doesn't collapse repeated slashes.
-    .WithEnvironment("Oidc__Issuer", api.GetEndpoint("https"));
+    .WithEnvironment("Oidc__Issuer", api.GetEndpoint("https"))
+    // OpenIdConnectHandler validates the identity token's iss claim against this with strict string
+    // equality, same trailing-slash reasoning as AUTH_HUIA_ISSUER above.
+    .WithEnvironment("Oidc__ExternalIdp__Issuer", ReferenceExpression.Create($"{identityServer.GetEndpoint("https")}/"));
 
+// identityServer's own client registration for "todoapi" isn't known until api itself is declared above —
+// same chicken-and-egg reasoning as api.WithEnvironment("Oidc__WebRedirectUri", ...) further up.
+identityServer.WithEnvironment("Oidc__TodoApiRedirectUri",
+        ReferenceExpression.Create($"{api.GetEndpoint("https")}/signin-oidc-huia-idp"))
+    .WithEnvironment("Oidc__TodoApiPartialRedirectUri",
+        ReferenceExpression.Create($"{api.GetEndpoint("https")}/signin-oidc-huia-idp-partial"))
+    .WithEnvironment("Oidc__TodoApiPostLogoutRedirectUri", api.GetEndpoint("https"))
+    .WithEnvironment("Oidc__TodoApiHomeUri",
+        ReferenceExpression.Create($"{api.GetEndpoint("https")}/identity/account/login"))
+    // Same reasoning as api's own Oidc__Issuer above: identityServer's ResolveIssuer would otherwise fall
+    // back to parsing ASPNETCORE_URLS, and any mismatch against the fixed Authority api's OpenIdConnect
+    // handler is given (Oidc__ExternalIdp__Issuer above) breaks issuer validation on every callback.
+    .WithEnvironment("Oidc__Issuer", identityServer.GetEndpoint("https"));
 
 builder.Build().Run();

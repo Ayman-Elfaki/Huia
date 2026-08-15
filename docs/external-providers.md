@@ -35,8 +35,21 @@ dotnet add package Microsoft.AspNetCore.Authentication.Google
 
 Only the generic `AddOAuth` (for a provider without a dedicated package — GitHub, for instance, via
 [`AspNet.Security.OAuth.GitHub`](https://github.com/aspnet-contrib/AspNet.Security.OAuth.Providers), or any
-other OAuth2 provider) and `AddOpenIdConnect` ship with ASP.NET Core itself. Huia doesn't special-case any
-specific provider by name — register as many as you like, using whichever handler fits.
+other OAuth2 provider) ships with ASP.NET Core itself; `AddOpenIdConnect` needs its own package too
+(`Microsoft.AspNetCore.Authentication.OpenIdConnect`), same as `AddGoogle`/`AddMicrosoftAccount`. Huia
+doesn't special-case any specific provider by name — register as many as you like, using whichever handler
+fits.
+
+**Runnable example**: `samples/Huia.IdentityServer` is a second, independent Huia instance playing the role
+of a third-party identity provider — registered on `Huia.TodoApi` as the generic `huia-idp`
+`AddOpenIdConnect` provider (see `Huia.TodoApi/Program.cs`). Because it's Huia on both ends, it's a real,
+controllable external IdP that an automated test can actually sign in to (unlike a real Google/Microsoft
+account) — see `tests/Huia.Tests.E2E/ExternalIdentityServerLoginE2ETests.cs`, which drives the whole
+challenge → external sign-in → callback → account-creation round trip against it in a real browser. The same
+sample is registered a second time as `huia-idp-partial`, requesting no `profile` scope, to demonstrate and
+test the other branch: a provider that doesn't supply every profile claim (a generic, non-Google/Microsoft
+registration isn't guaranteed to) routes to `ExternalLoginConfirmation` with editable, blank name fields
+instead of auto-provisioning — the same test file's second `[Fact]` drives that path too.
 
 You don't need to set `SignInScheme` on a provider — `AddHuia` already defaults
 `AuthenticationOptions.DefaultSignInScheme` to `IdentityConstants.ExternalScheme`, the scheme

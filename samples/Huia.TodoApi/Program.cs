@@ -148,20 +148,65 @@ builder.Services.AddHuia(issuer, huia =>
         // back to Huia's default NoOpSmsSender, which logs the OTP code in Development instead of sending it.
         huia.Authentication.UsePasswordlessFlow();
 
-        // Demonstrates Huia's external-provider support (docs/external-providers.md): once a Google client
-        // is registered, "Sign in with Google" appears on the login page automatically — no other wiring
-        // needed. Skipped when no client id is configured (e.g. a fresh clone before the sample's own
-        // appsettings.json/user-secrets carry one) so the sample still starts without it.
+        // Demonstrates Huia's external-provider support (docs/external-providers.md): once a provider is
+        // registered, its button appears on the login page automatically — no other wiring needed. Each
+        // provider below is skipped when it isn't configured (e.g. a fresh clone before the sample's own
+        // appsettings.json/user-secrets carry Google credentials, or a bare `dotnet run` outside the
+        // Aspire-orchestrated AppHost that wires up Oidc:ExternalIdp:*), so the sample still starts without
+        // either.
         var googleClientId = builder.Configuration["Google:ClientId"];
-        if (!string.IsNullOrEmpty(googleClientId))
+        var externalIdpIssuer = builder.Configuration["Oidc:ExternalIdp:Issuer"];
+        if (!string.IsNullOrEmpty(googleClientId) || !string.IsNullOrEmpty(externalIdpIssuer))
         {
             huia.Authentication.UseExternalAuthenticationFlow(ext =>
             {
-                ext.Providers.AddGoogle(google =>
+                if (!string.IsNullOrEmpty(googleClientId))
                 {
-                    google.ClientId = googleClientId;
-                    google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
-                });
+                    ext.Providers.AddGoogle(google =>
+                    {
+                        google.ClientId = googleClientId;
+                        google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+                    });
+                }
+
+                // Demonstrates a generic AddOpenIdConnect registration against samples/Huia.IdentityServer —
+                // a second, independent Huia instance the AppHost stands up as a real, controllable external
+                // identity provider (unlike Google above, which needs real credentials and can't be scripted
+                // through in a test). See docs/external-providers.md and
+                // tests/Huia.Tests.E2E/ExternalIdentityServerLoginE2ETests.cs, which drives the whole
+                // challenge -> IdentityServer sign-in -> callback -> account-creation round trip against it.
+                if (!string.IsNullOrEmpty(externalIdpIssuer))
+                {
+                    ext.Providers.AddOpenIdConnect("huia-idp", "Huia IdP", oidc =>
+                    {
+                        oidc.Authority = externalIdpIssuer;
+                        oidc.ClientId = "todoapi";
+                        oidc.ClientSecret = builder.Configuration["Oidc:ExternalIdp:ClientSecret"];
+                        oidc.CallbackPath = "/signin-oidc-huia-idp";
+                        oidc.ResponseType = "code";
+                        oidc.Scope.Add("email");
+                    });
+
+                    // A second registration against the same IdentityServer client, deliberately requesting
+                    // no "profile" scope — so the identity/access token it gets back never carries
+                    // given_name/family_name (Huia bundles both under that one scope, see ClaimsUtils), no
+                    // matter how complete the signed-in IdentityServer account's own name actually is.
+                    // Demonstrates and tests Huia's other branch of external sign-in (docs/external-providers.md):
+                    // a provider that doesn't supply every profile claim routes to ExternalLoginConfirmation
+                    // with editable (not disabled) name fields instead of auto-provisioning — see
+                    // tests/Huia.Tests.E2E/ExternalIdentityServerLoginE2ETests.cs.
+                    ext.Providers.AddOpenIdConnect("huia-idp-partial", "Huia IdP (Partial Profile)", oidc =>
+                    {
+                        oidc.Authority = externalIdpIssuer;
+                        oidc.ClientId = "todoapi";
+                        oidc.ClientSecret = builder.Configuration["Oidc:ExternalIdp:ClientSecret"];
+                        oidc.CallbackPath = "/signin-oidc-huia-idp-partial";
+                        oidc.ResponseType = "code";
+                        oidc.Scope.Clear();
+                        oidc.Scope.Add("openid");
+                        oidc.Scope.Add("email");
+                    });
+                }
 
                 // Also demonstrates the opt-in password-confirmed linking shortcut: an external sign-in
                 // whose email matches an existing password account links itself once the user proves

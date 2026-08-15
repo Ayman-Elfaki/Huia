@@ -128,6 +128,7 @@ The repository includes complete sample applications:
 - **Huia.TodoApi** - A Todo CRUD API with Huia authentication
 - **Huia.TodoApp** - Next.js frontend consuming the API
 - **Huia.AdminUI** - Administrative interface example
+- **Huia.IdentityServer** - A second Huia instance acting as an external OIDC identity provider, demonstrating (and end-to-end testing) sign-in through a third-party provider
 
 Run the samples with .NET Aspire:
 

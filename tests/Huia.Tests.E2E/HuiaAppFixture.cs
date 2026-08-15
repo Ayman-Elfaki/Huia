@@ -2,8 +2,9 @@
 
 /// <summary>
 /// Starts the real <c>Huia.AppHost</c> distributed application (todoapi + mailpit + the Next.js web app +
-/// the Nuxt admin-ui app) once and shares it across every test in the <c>"Huia E2E"</c> collection —
-/// spinning up containers and running <c>npm install</c> per test would be far too slow.
+/// the Nuxt admin-ui app + the identityserver sample, a second Huia instance acting as an external OIDC
+/// provider) once and shares it across every test in the <c>"Huia E2E"</c> collection — spinning up
+/// containers and running <c>npm install</c> per test would be far too slow.
 /// </summary>
 public sealed class HuiaAppFixture : IAsyncLifetime
 {
@@ -22,6 +23,7 @@ public sealed class HuiaAppFixture : IAsyncLifetime
 
         await App.ResourceNotifications.WaitForResourceHealthyAsync("mailpit").WaitAsync(StartupTimeout);
         await App.ResourceNotifications.WaitForResourceHealthyAsync("todoapi").WaitAsync(StartupTimeout);
+        await App.ResourceNotifications.WaitForResourceHealthyAsync("identityserver").WaitAsync(StartupTimeout);
         await App.ResourceNotifications.WaitForResourceHealthyAsync("web").WaitAsync(StartupTimeout);
         await App.ResourceNotifications.WaitForResourceHealthyAsync("admin-ui").WaitAsync(StartupTimeout);
     }

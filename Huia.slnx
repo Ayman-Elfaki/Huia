@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Huia.AppHost/Huia.AppHost.csproj" />
+    <Project Path="samples/Huia.IdentityServer/Huia.IdentityServer.csproj" />
     <Project Path="samples/Huia.ServiceDefaults/Huia.ServiceDefaults.csproj" />
     <Project Path="samples/Huia.TodoApi/Huia.TodoApi.csproj" />
   </Folder>

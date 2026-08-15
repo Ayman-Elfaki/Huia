@@ -22,8 +22,11 @@ namespace Huia.Tests.E2E;
 /// is out of scope regardless — Google's login flow expects a real user and actively challenges automated
 /// clients, so there's nothing reliable or appropriate to automate past this boundary. The full challenge →
 /// callback → account-linking round trip Huia's own code drives after the provider redirects back is
-/// covered end-to-end against a fake in-process IdP instead, see
-/// <c>tests/Huia.Tests.Integration/ExternalLogin</c>.
+/// covered end-to-end two other ways instead: against a fake in-process IdP, see
+/// <c>tests/Huia.Tests.Integration/ExternalLogin</c>; and, in a real browser against a real second HTTP
+/// server, see <see cref="ExternalIdentityServerLoginE2ETests"/>, which scripts the whole thing against
+/// <c>samples/Huia.IdentityServer</c> — a controllable Huia-powered external IdP that (unlike Google) can
+/// actually be signed into by an automated test.
 /// </remarks>
 [Collection("Huia E2E")]
 public sealed class ExternalLoginE2ETests(HuiaAppFixture fixture) : IAsyncLifetime

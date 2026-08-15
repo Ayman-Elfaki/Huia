@@ -18,6 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Huia.IdentityServer\Huia.IdentityServer.csproj" />
         <ProjectReference Include="..\Huia.TodoApi\Huia.TodoApi.csproj" />
     </ItemGroup>
 

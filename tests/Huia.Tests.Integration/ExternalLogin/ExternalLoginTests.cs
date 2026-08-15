@@ -125,6 +125,44 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         Assert.Equal("Name", realUser.LastName);
     }
 
+    /// <summary>
+    /// A real browser never submits a <c>disabled</c> input's value at all — unlike
+    /// <see cref="CompleteConfirmationAsync"/>'s own POST, which (deliberately, for the tampering test above)
+    /// always includes "Input.Email"/"Input.FirstName"/"Input.LastName" as form keys. When every field on the
+    /// page is provider-supplied (so all three are disabled, the common case for a Google/Microsoft-style
+    /// provider), that means the posted form carries none of them — the whole "Input.*" prefix is absent, not
+    /// just empty. Confirms account creation still succeeds in that shape of request, i.e. against a real
+    /// browser's actual POST rather than one that happens to include every field's key regardless.
+    /// </summary>
+    [Fact]
+    public async Task NewIdentity_ConfirmationSubmittedWithoutDisabledFieldKeys_StillCreatesAccount()
+    {
+        var email = $"external-nokeys-{Guid.NewGuid():N}@example.com";
+        factory.FakeIdentityProvider.NextIdentity = new FakeExternalIdentity(
+            Subject: $"sub-{Guid.NewGuid():N}", email, "Real", "Name", EmailVerified: false);
+
+        using var client = factory.CreateClient();
+        using var callbackResult = await DriveExternalSignInAsync(client);
+        Assert.Contains("/identity/account/externalloginconfirmation",
+            callbackResult.Headers.Location!.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var confirmationUrl = callbackResult.Headers.Location!;
+        var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, confirmationUrl.ToString());
+
+        using var finalResponse = await client.PostAsync(confirmationUrl,
+            new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Found, finalResponse.StatusCode);
+
+        var user = await FindUserAsync(email);
+        Assert.NotNull(user);
+        Assert.Equal("Real", user.FirstName);
+        Assert.Equal("Name", user.LastName);
+    }
+
     [Fact]
     public async Task AlreadyLinkedIdentity_SignsInDirectly_NoDuplicateAccountCreated()
     {
