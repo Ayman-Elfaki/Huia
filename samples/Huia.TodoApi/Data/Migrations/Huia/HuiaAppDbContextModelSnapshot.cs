@@ -114,12 +114,19 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("NormalizedPhoneNumber")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
+
+                    b.Property<bool>("PasswordlessLoginEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("text");
@@ -145,6 +152,8 @@ namespace Huia.TodoApi.Data.Migrations.Huia
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedPhoneNumber");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()

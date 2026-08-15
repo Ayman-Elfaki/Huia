@@ -5,6 +5,7 @@
     <File Path="docs/getting-started.md" />
     <File Path="docs/key-management.md" />
     <File Path="docs/localization.md" />
+    <File Path="docs/passwordless.md" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Huia.AppHost/Huia.AppHost.csproj" />

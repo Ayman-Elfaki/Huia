@@ -37,9 +37,16 @@ whatever else it needs.
   target, so Huia's own Razor Pages and any custom pages you add work identically. `DefaultSignInScheme` is
   `IdentityConstants.ExternalScheme` (not `ApplicationScheme`) — every `SignInAsync`/`AuthenticateAsync` call
   Huia itself makes passes its scheme explicitly, so this only affects a provider registered via
-  `huia.ExternalLogins` (see [external-providers.md](external-providers.md)) without its own `SignInScheme`:
-  it lands in the external cookie `SignInManager.GetExternalLoginInfoAsync()` reads from, the same default
-  plain ASP.NET Core Identity uses, instead of signing straight into the main application cookie unvalidated.
+  `huia.Authentication.UseExternalAuthenticationFlow(ext => ext.Providers...)` (see
+  [external-providers.md](external-providers.md)) without its own `SignInScheme`: it lands in the external
+  cookie `SignInManager.GetExternalLoginInfoAsync()` reads from, the same default plain ASP.NET Core Identity
+  uses, instead of signing straight into the main application cookie unvalidated.
+- Sign-in methods are configured via `huia.Authentication` — `UseEmailAndPasswordFlow()` (Huia's original
+  method), `UsePasswordlessFlow()` (phone number + SMS OTP, no password — see
+  [passwordless.md](passwordless.md)), and `UseExternalAuthenticationFlow(...)`. At least one of the first two
+  must be called — `AddHuia` throws otherwise — and any combination may be active at once; the Identity UI's
+  `Login` page renders a Basecoat UI tab per active
+  1FA method (email+password, phone) when more than one is enabled.
 - An OpenIddict authorization server (`AddOpenIddict().AddServer(...)`) with authorization code, refresh
   token, client credentials, and device authorization flows enabled, plus local token validation
   (`AddValidation().UseLocalServer()`) so the same app that issues tokens can also protect its own endpoints
@@ -81,13 +88,25 @@ automatically.
 
 ## External providers
 
-`huia.ExternalLogins` is the `AuthenticationBuilder` `AddHuia` itself uses for the Identity cookie schemes,
-exposed directly so any standard ASP.NET Core remote-authentication handler (`AddGoogle`, `AddOpenIdConnect`,
-`AddOAuth`, ...) registers against it unmodified. `LoginModel` lists registered schemes via
+`ext.Providers` (inside `huia.Authentication.UseExternalAuthenticationFlow(ext => {...})`) is the same
+`AuthenticationBuilder` `AddHuia` itself uses for the Identity cookie schemes, exposed directly so any
+standard ASP.NET Core remote-authentication handler (`AddGoogle`, `AddOpenIdConnect`, `AddOAuth`, ...)
+registers against it unmodified. `LoginModel` lists registered schemes via
 `SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()`; `ExternalLoginModel`/
 `ExternalLoginConfirmationModel` (`Areas/Identity/Pages/Account`) drive the challenge/callback/account-
 creation flow, and `ManageExternalLoginsEndpoints` lets a signed-in user list/link/unlink providers on their
 own account. See [external-providers.md](external-providers.md).
+
+## Passwordless phone sign-in
+
+`huia.Authentication.UsePasswordlessFlow(...)` enables phone number + SMS one-time-code sign-in — no
+password. `PhoneLoginModel`/`PhoneLoginVerifyModel`/`PhoneLoginConfirmationModel`
+(`Areas/Identity/Pages/Account`) drive the request-code/verify-code/collect-name-on-first-sign-in flow, backed
+by a dedicated `Huia.PhoneVerification` cookie scheme (not TempData) to carry the pending phone number
+tamper-proof between the GET and POST steps, `IPhoneOtpRateLimiter` (configurable per-phone-number rate
+limiting), `IHuiaPhoneNumberStore` (phone-number lookup, composed into `IHuiaStore`), and
+`ISmsSender<HuiaUser>` for delivery. See [passwordless.md](passwordless.md), including its hybrid-auth
+security considerations for when this and email+password are both enabled.
 
 ## Claims and tokens
 

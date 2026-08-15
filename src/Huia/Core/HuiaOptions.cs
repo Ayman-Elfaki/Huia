@@ -1,10 +1,14 @@
 using Huia.Applications;
 using Huia.Branding;
+using Huia.Core.Authentication;
 using Huia.Keys;
 using Huia.Localization;
+using Huia.Passwordless;
 using Huia.Scheduling;
 using Huia.Scopes;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
@@ -112,47 +116,13 @@ public sealed class HuiaOptions
     public BrandingOptions Branding { get; } = new();
 
     /// <summary>
-    /// Customizes ASP.NET Core Identity's <see cref="IdentityOptions"/> Runs after Huia's own defaults, so this can override them.
+    /// Configures which sign-in methods this app accepts — email+password, passwordless phone/OTP,
+    /// external (third-party) providers, or any combination. Replaces the old, removed <c>Identity</c>
+    /// (<see cref="IdentityOptions"/>) and <c>ExternalLogins</c> (<see cref="AuthenticationBuilder"/>)
+    /// properties and <c>EnableExternalLoginPasswordLinking()</c> method. See
+    /// <see cref="HuiaAuthenticationBuilder"/>.
     /// </summary>
-    public IdentityOptions Identity { get; set; } = new();
-
-    /// <summary>
-    /// Registers external (third-party) sign-in providers — e.g. <c>huia.ExternalLogins.AddGoogle(google =>
-    /// {...})</c>. This is the same <see cref="Microsoft.AspNetCore.Authentication.AuthenticationBuilder"/>
-    /// <c>AddHuia</c> itself uses for the <c>Identity.Application</c>/<c>Identity.External</c> cookie schemes,
-    /// exposed directly rather than wrapped, so any standard ASP.NET Core remote-authentication handler works
-    /// unmodified — call whichever of <c>AddGoogle</c>/<c>AddMicrosoftAccount</c>/<c>AddOpenIdConnect</c>/
-    /// <c>AddOAuth</c> fits. Only <c>AddOAuth</c> (a generic OAuth2 handler) ships in the ASP.NET Core shared
-    /// framework; the others need their own NuGet package (e.g. <c>dotnet add package
-    /// Microsoft.AspNetCore.Authentication.Google</c>). A provider registered here needs no explicit
-    /// <c>SignInScheme</c> — <c>AddHuia</c> sets <see cref="Microsoft.AspNetCore.Authentication.AuthenticationOptions.DefaultSignInScheme"/>
-    /// to <see cref="Microsoft.AspNetCore.Identity.IdentityConstants.ExternalScheme"/>, the scheme
-    /// <c>SignInManager&lt;HuiaUser&gt;.GetExternalLoginInfoAsync()</c> reads from, so every remote handler
-    /// lands there by default the same way it would under plain ASP.NET Core Identity. See
-    /// docs/external-providers.md.
-    /// </summary>
-    public AuthenticationBuilder ExternalLogins { get; }
-
-    /// <summary>
-    /// Whether an external sign-in whose provider-reported email matches an existing password account may
-    /// be linked to it after the user proves ownership by entering that account's password, instead of
-    /// always requiring them to sign in first and link from account settings. See
-    /// <see cref="EnableExternalLoginPasswordLinking"/>.
-    /// </summary>
-    internal bool ExternalLoginPasswordLinkingEnabled { get; private set; }
-
-    /// <summary>
-    /// Opts into letting an external sign-in with an email that collides with an existing password account
-    /// link itself to that account, once the user proves ownership by entering its password (routed through
-    /// the same lockout tracking as a normal password sign-in) — rather than Huia's default of always
-    /// redirecting them to sign in first and link the provider from account settings afterward. Off by
-    /// default: proving password ownership is a reasonable bar, but it does mean a compromised or
-    /// unverified provider-reported email could otherwise link an attacker's external identity onto a
-    /// victim's account purely by knowing their password already grants full access — the same access a
-    /// signed-in "link from settings" flow assumes, so this only meaningfully changes convenience, not the
-    /// actual security boundary. See docs/external-providers.md.
-    /// </summary>
-    public void EnableExternalLoginPasswordLinking() => ExternalLoginPasswordLinkingEnabled = true;
+    public HuiaAuthenticationBuilder Authentication { get; }
 
     /// <summary>
     /// Creates a new <see cref="HuiaOptions"/> with <see cref="Applications"/>
@@ -170,14 +140,36 @@ public sealed class HuiaOptions
         // by Huia's Razor Pages) target IdentityConstants.ApplicationScheme by convention, always passing it
         // explicitly rather than relying on this default. DefaultSignInScheme is instead
         // IdentityConstants.ExternalScheme — the same default plain ASP.NET Core Identity's own AddIdentity
-        // uses — so a remote-authentication handler registered via ExternalLogins below, without setting its
-        // own SignInScheme, lands in the external cookie SignInManager.GetExternalLoginInfoAsync() reads
-        // from, instead of signing directly into the main application cookie unvalidated.
-        ExternalLogins = services.AddAuthentication(auth =>
+        // uses — so a remote-authentication handler registered via Authentication.UseExternalAuthenticationFlow
+        // below, without setting its own SignInScheme, lands in the external cookie
+        // SignInManager.GetExternalLoginInfoAsync() reads from, instead of signing directly into the main
+        // application cookie unvalidated.
+        var providers = services.AddAuthentication(auth =>
         {
             auth.DefaultScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
             auth.DefaultSignInScheme = IdentityConstants.ExternalScheme;
         });
-        ExternalLogins.AddIdentityCookies();
+        providers.AddIdentityCookies();
+
+        // Registered unconditionally (cheap — it's just a cookie handler registration) rather than only when
+        // huia.Authentication.UsePasswordlessFlow() is called, since HuiaOptions's constructor runs before
+        // configure(options) — the consumer's own callback — so whether that flow will be enabled isn't
+        // known yet here. It's only ever actually issued by PhoneLoginModel. This is the tamper-proof
+        // GET-to-POST phone-number hand-off (see docs/passwordless.md) — a Data-Protection-encrypted+signed
+        // cookie, unforgeable client-side, mirroring IdentityConstants.TwoFactorUserIdScheme's existing role
+        // for the password-to-2FA hand-off. TempData is deliberately not used for this: the only TempData key
+        // Huia's own pages use (ExternalLoginError) carries just a display string, never security-sensitive
+        // state, and this stays consistent with that.
+        providers.AddCookie(PhoneVerificationScheme.Name, cookie =>
+        {
+            cookie.Cookie.Name = PhoneVerificationScheme.Name;
+            cookie.Cookie.HttpOnly = true;
+            cookie.Cookie.SameSite = SameSiteMode.Strict;
+            cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            cookie.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+            cookie.SlidingExpiration = false;
+        });
+
+        Authentication = new HuiaAuthenticationBuilder(providers);
     }
 }

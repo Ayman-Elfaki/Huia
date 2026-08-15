@@ -213,26 +213,29 @@ async function remove(scope: ScopeResponse) {
         >
           <FieldGroup>
             <Field>
-              <FieldLabel>Name</FieldLabel>
+              <FieldLabel for="scope-name">Name</FieldLabel>
               <Input
+                id="scope-name"
                 v-model="form.name"
                 :disabled="!!editing"
               />
             </Field>
             <Field>
-              <FieldLabel>Display name</FieldLabel>
-              <Input v-model="form.displayName" />
+              <FieldLabel for="scope-display-name">Display name</FieldLabel>
+              <Input id="scope-display-name" v-model="form.displayName" />
             </Field>
             <Field>
-              <FieldLabel>Description</FieldLabel>
+              <FieldLabel for="scope-description">Description</FieldLabel>
               <Textarea
+                id="scope-description"
                 v-model="form.description"
                 :rows="2"
               />
             </Field>
             <Field>
-              <FieldLabel>Resources (comma-separated)</FieldLabel>
+              <FieldLabel for="scope-resources">Resources (comma-separated)</FieldLabel>
               <Input
+                id="scope-resources"
                 v-model="form.resources"
                 placeholder="todo-api"
               />

@@ -3,11 +3,13 @@ using Huia.Common;
 using Huia.Core;
 using Huia.Eventing;
 using Huia.Identity;
+using Huia.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 
@@ -15,8 +17,9 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>
 /// Reached from <see cref="ExternalLoginModel.OnGetCallbackAsync"/> only when
-/// <c>huia.EnableExternalLoginPasswordLinking()</c> is on and the external provider's email collides with an
-/// existing password account. Links the external identity to that account once the user proves ownership by
+/// <c>ext.EnablePasswordLinking()</c> (inside <c>huia.Authentication.UseExternalAuthenticationFlow</c>) is on
+/// and the external provider's email collides with an existing password account. Links the external identity
+/// to that account once the user proves ownership by
 /// entering its password — via the same <c>PasswordSignInAsync</c> overload the normal login form uses
 /// (lockout tracking and 2FA routing included, not <c>CheckPasswordSignInAsync</c>, which only checks the
 /// password and skips 2FA entirely) — rather than requiring a separate sign-in-then-link-from-settings round
@@ -29,6 +32,7 @@ public class ExternalLoginLinkConfirmationModel(
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
     HuiaOptions options,
+    IStringLocalizer<HuiaResources> localizer,
     ILogger<ExternalLoginLinkConfirmationModel> logger) : PageModel
 {
     /// <summary>The submitted form data.</summary>
@@ -109,13 +113,14 @@ public class ExternalLoginLinkConfirmationModel(
 
         if (!result.Succeeded && !result.RequiresTwoFactor)
         {
-            ModelState.AddModelError(string.Empty, "Incorrect password.");
+            ModelState.AddModelError(string.Empty, localizer["ExternalLoginIncorrectPasswordError"]);
             return Page();
         }
 
         // The password alone is the proof of ownership this flow requires to link — see
-        // HuiaOptions.EnableExternalLoginPasswordLinking's own doc comment. Whether 2FA still needs to run
-        // afterward only affects when the session itself is established, not whether linking already happened.
+        // ExternalAuthenticationFlowBuilder.EnablePasswordLinking's own doc comment. Whether 2FA still needs
+        // to run afterward only affects when the session itself is established, not whether linking already
+        // happened.
         var addLoginResult = await userManager.AddLoginAsync(user, info);
         if (!addLoginResult.Succeeded)
         {
@@ -151,7 +156,7 @@ public class ExternalLoginLinkConfirmationModel(
     /// </summary>
     private async Task<(ExternalLoginInfo? Info, IActionResult? Redirect)> LoadPendingLinkAsync(string returnUrl)
     {
-        if (!options.ExternalLoginPasswordLinkingEnabled)
+        if (!options.Authentication.ExternalLoginPasswordLinkingEnabled)
         {
             return (null, RedirectToPage("./Login", new { returnUrl }));
         }
@@ -159,7 +164,7 @@ public class ExternalLoginLinkConfirmationModel(
         var info = await signInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            TempData["ExternalLoginError"] = "Error loading external login information during confirmation.";
+            TempData["ExternalLoginError"] = (string)localizer["ExternalLoginConfirmationInfoMissingError"];
             return (null, RedirectToPage("./Login", new { returnUrl }));
         }
 

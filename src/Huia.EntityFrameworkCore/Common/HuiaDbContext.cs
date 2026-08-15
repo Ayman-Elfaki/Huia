@@ -30,6 +30,13 @@ public abstract class HuiaDbContext<TUser, TRole>(DbContextOptions options)
             user.Property(u => u.FirstName).HasMaxLength(256);
             user.Property(u => u.LastName).HasMaxLength(256);
             user.Property(u => u.Picture).HasMaxLength(2048);
+            user.Property(u => u.NormalizedPhoneNumber).HasMaxLength(64);
+
+            // Non-unique, mirroring NormalizedEmail's own treatment (ASP.NET Core Identity itself only
+            // uniquely indexes NormalizedUserName) — uniqueness is enforced at the application layer in
+            // PhoneLoginModel, not the database, since two accounts may legitimately share a phone number
+            // (see IHuiaPhoneNumberStore and docs/passwordless.md's hybrid-auth security considerations).
+            user.HasIndex(u => u.NormalizedPhoneNumber);
         });
     }
 }

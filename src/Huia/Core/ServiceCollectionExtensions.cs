@@ -4,7 +4,11 @@ using Huia.Applications;
 using Huia.Emails;
 using Huia.Eventing;
 using Huia.Identity;
+using Huia.Localization;
+using Huia.Passwordless;
 using Huia.Scopes;
+using Huia.Sms;
+using Huia.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -39,6 +43,15 @@ public static class ServiceCollectionExtensions
         var options = new HuiaOptions(issuer, services);
         configure(options);
 
+        // No implicit default: which 1FA method(s) an app accepts is a conscious choice, not something to
+        // silently infer from what a consumer forgot to call.
+        if (!options.Authentication.PasswordlessFlowEnabled && !options.Authentication.EmailAndPasswordFlowEnabled)
+        {
+            throw new InvalidOperationException(
+                "No sign-in flow is enabled. Call huia.Authentication.UseEmailAndPasswordFlow() and/or " +
+                "huia.Authentication.UsePasswordlessFlow() inside services.AddHuia(issuer, huia => {...}).");
+        }
+
         services.AddSingleton(options);
         services.AddSingleton(options.Applications);
         services.AddSingleton(options.Scopes);
@@ -60,7 +73,18 @@ public static class ServiceCollectionExtensions
         // Huia pages (Areas/Identity/Pages) and error page are Razor Pages; consumers still need to
         // call app.MapRazorPages() themselves, but registering the services here means they don't also need
         // to remember services.AddRazorPages().
-        services.AddRazorPages();
+        // AddDataAnnotationsLocalization routes every InputModel's [Required]/[EmailAddress]/[StringLength]/
+        // [Compare]/[Display] message through IStringLocalizer<HuiaResources> too — both server-side
+        // ModelState validation and the client-side unobtrusive data-val-* attributes — using each
+        // attribute's own hardcoded ErrorMessage/Name string as the lookup key (see HuiaResources.resx's own
+        // comment on that convention), so it doesn't fall back to English-only DataAnnotations attributes
+        // like the rest of Huia.UI does correctly localize.
+        services.AddRazorPages()
+            .AddDataAnnotationsLocalization(localizationOptions =>
+            {
+                localizationOptions.DataAnnotationLocalizerProvider =
+                    (_, factory) => factory.Create(typeof(HuiaResources));
+            });
 
         // Razor's default HtmlEncoder only allows Basic Latin through as-is; anything else (Arabic and every
         // other non-Latin culture Huia.Localization might be configured for) gets rewritten as numeric HTML
@@ -91,16 +115,34 @@ public static class ServiceCollectionExtensions
         services.AddIdentityCore<HuiaUser>(identity =>
             {
                 identity.SignIn.RequireConfirmedAccount = false;
-                options.Identity = identity;
+
+                // Invoked directly against the real IdentityOptions instance ASP.NET Core Identity itself
+                // builds — fixes a bug in the old, removed HuiaOptions.Identity property, where a consumer's
+                // mutation was captured only after configure(options) (and so this delegate) had already run,
+                // silently discarding it.
+                options.Authentication.EmailAndPasswordIdentityConfigure?.Invoke(identity);
+                options.Authentication.PasswordlessIdentityConfigure?.Invoke(identity);
             })
             .AddRoles<HuiaRole>()
             .AddSignInManager()
             .AddDefaultTokenProviders()
             .AddErrorDescriber<IdentityErrorDescriber>();
 
-        // Authentication (default schemes, Identity cookies) is already registered by HuiaOptions's
-        // constructor above — before this method runs — so ExternalLogins (an AuthenticationBuilder) is
-        // available inside the configure(options) callback itself.
+        if (options.Authentication.PasswordlessFlowEnabled)
+        {
+            services.AddSingleton(options.Authentication.PhoneOtpRateLimit);
+            services.TryAddSingleton<IPhoneOtpRateLimiter, PhoneOtpRateLimiter>();
+            services.TryAddSingleton<ISmsSender<HuiaUser>, NoOpSmsSender>();
+
+            // TryAdd so .WithEntityFrameworkStores<TContext>()/.WithStore<TStore,...>() (called after AddHuia
+            // returns) can register the real store and have it win — see the matching comments there.
+            services.TryAddScoped<IHuiaPhoneNumberStore, ThrowingPhoneNumberStore>();
+        }
+
+        // Authentication (default schemes, Identity cookies, the phone-verification cookie) is already
+        // registered by HuiaOptions's constructor above — before this method runs — so
+        // options.Authentication.UseExternalAuthenticationFlow(...) is available inside the configure(options)
+        // callback itself.
         services.ConfigureApplicationCookie(cookie =>
         {
             cookie.ExpireTimeSpan = TimeSpan.FromMinutes(10);

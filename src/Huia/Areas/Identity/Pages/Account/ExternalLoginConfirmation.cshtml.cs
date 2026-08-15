@@ -3,12 +3,14 @@ using System.Text;
 using Huia.Common;
 using Huia.Eventing;
 using Huia.Identity;
+using Huia.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 
@@ -16,8 +18,10 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>
 /// Explicit-consent account creation for a first-time external sign-in — reached from
-/// <see cref="ExternalLoginModel.OnGetCallbackAsync"/> when the provider's identity isn't linked to any
-/// local account yet. Creates the account (no password) and links the external login, publishing
+/// <see cref="ExternalLoginModel.OnGetCallbackAsync"/> when the provider's identity isn't linked to any local
+/// account yet <em>and</em> auto-provisioning there didn't apply: the provider left out a claim (no verified
+/// email, or no given/family name — common for a generic <c>AddOAuth</c> registration) or account creation
+/// itself failed. Creates the account (no password) and links the external login, publishing
 /// <see cref="UserRegisteredEvent{TKey}"/> and (if email confirmation isn't required)
 /// <see cref="UserSignedInEvent{TKey}"/> — the same events <c>RegisterModel</c> publishes.
 /// </summary>
@@ -28,6 +32,7 @@ public class ExternalLoginConfirmationModel(
     IEmailSender<HuiaUser> emailSender,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
+    IStringLocalizer<HuiaResources> localizer,
     ILogger<ExternalLoginConfirmationModel> logger) : PageModel
 {
     /// <summary>The submitted form data.</summary>
@@ -40,6 +45,19 @@ public class ExternalLoginConfirmationModel(
     /// <summary>The provider the pending external identity came from, for display.</summary>
     public string ProviderDisplayName { get; set; } = string.Empty;
 
+    /// <summary>Whether <see cref="InputModel.Email"/> came from the provider and should be rendered
+    /// read-only — a generic provider isn't guaranteed to supply it (see <see cref="ExternalClaimsMapper"/>),
+    /// in which case the user still has to type one in.</summary>
+    public bool EmailFromProvider { get; set; }
+
+    /// <summary>Whether <see cref="InputModel.FirstName"/> came from the provider and should be rendered
+    /// read-only. See <see cref="EmailFromProvider"/>.</summary>
+    public bool FirstNameFromProvider { get; set; }
+
+    /// <summary>Whether <see cref="InputModel.LastName"/> came from the provider and should be rendered
+    /// read-only. See <see cref="EmailFromProvider"/>.</summary>
+    public bool LastNameFromProvider { get; set; }
+
     /// <summary>Renders the page, pre-filled from the pending external identity's claims.</summary>
     public async Task<IActionResult> OnGetAsync(string? returnUrl = null)
     {
@@ -48,14 +66,12 @@ public class ExternalLoginConfirmationModel(
         var info = await signInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            TempData["ExternalLoginError"] = "Error loading external login information during confirmation.";
+            TempData["ExternalLoginError"] = (string)localizer["ExternalLoginConfirmationInfoMissingError"];
             return RedirectToPage("./Login", new { ReturnUrl });
         }
 
         ProviderDisplayName = info.ProviderDisplayName ?? info.LoginProvider;
-        Input.Email = ExternalClaimsMapper.GetEmail(info.Principal) ?? string.Empty;
-        Input.FirstName = ExternalClaimsMapper.GetFirstName(info.Principal) ?? string.Empty;
-        Input.LastName = ExternalClaimsMapper.GetLastName(info.Principal) ?? string.Empty;
+        ApplyProviderSuppliedFields(info);
 
         return Page();
     }
@@ -77,11 +93,17 @@ public class ExternalLoginConfirmationModel(
         var info = await signInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            TempData["ExternalLoginError"] = "Error loading external login information during confirmation.";
+            TempData["ExternalLoginError"] = (string)localizer["ExternalLoginConfirmationInfoMissingError"];
             return RedirectToPage("./Login", new { ReturnUrl });
         }
 
         ProviderDisplayName = info.ProviderDisplayName ?? info.LoginProvider;
+
+        // Fields the provider already supplied are never taken from the posted form — a disabled input
+        // doesn't stop a tampered request from including one anyway, so this re-derives them from the
+        // still-live external identity's own claims (same as the GET above) and drops whatever validation
+        // the posted value triggered, rather than trusting the client not to have changed them.
+        ApplyProviderSuppliedFields(info);
 
         if (!ModelState.IsValid)
         {
@@ -91,36 +113,18 @@ public class ExternalLoginConfirmationModel(
         if (await userManager.FindByEmailAsync(Input.Email) is not null)
         {
             ModelState.AddModelError(string.Empty,
-                $"An account already exists for {Input.Email}. Sign in with your password, then link {ProviderDisplayName} from your account settings.");
+                localizer["ExternalLoginEmailCollisionError", Input.Email, ProviderDisplayName]);
             return Page();
         }
 
-        var user = new HuiaUser
+        var emailVerifiedByProvider = ExternalClaimsMapper.IsEmailVerified(info.Principal);
+        var (user, errors) = await ExternalAccountFactory.CreateAsync(userManager, info, Input.Email,
+            Input.FirstName, Input.LastName, emailConfirmed: emailVerifiedByProvider);
+        if (user is null)
         {
-            UserName = Input.Email,
-            Email = Input.Email,
-            FirstName = Input.FirstName,
-            LastName = Input.LastName,
-            Picture = ExternalClaimsMapper.GetPicture(info.Principal),
-        };
-
-        var createResult = await userManager.CreateAsync(user);
-        if (!createResult.Succeeded)
-        {
-            foreach (var error in createResult.Errors)
+            foreach (var error in errors)
             {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            return Page();
-        }
-
-        var addLoginResult = await userManager.AddLoginAsync(user, info);
-        if (!addLoginResult.Succeeded)
-        {
-            foreach (var error in addLoginResult.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
+                ModelState.AddModelError(string.Empty, error);
             }
 
             return Page();
@@ -130,13 +134,6 @@ public class ExternalLoginConfirmationModel(
 
         var userId = await userManager.GetUserIdAsync(user);
         await events.PublishAsync(new UserRegisteredEvent<string>(userId, Input.Email));
-
-        var emailVerifiedByProvider = ExternalClaimsMapper.IsEmailVerified(info.Principal);
-        if (emailVerifiedByProvider)
-        {
-            user.EmailConfirmed = true;
-            await userManager.UpdateAsync(user);
-        }
 
         if (!emailVerifiedByProvider && userManager.Options.SignIn.RequireConfirmedAccount)
         {
@@ -164,6 +161,40 @@ public class ExternalLoginConfirmationModel(
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
     }
 #pragma warning restore MA0051
+
+    /// <summary>
+    /// Fills <see cref="Input"/> from whatever profile claims <paramref name="info"/> carries, marking each
+    /// field the provider actually supplied so the page can render it read-only — and, on a POST, discarding
+    /// any validation error binding recorded against it, since its value came from here rather than the
+    /// posted form. A field the provider didn't supply (e.g. a generic OAuth provider with no email claim)
+    /// is left alone for the user to fill in.
+    /// </summary>
+    private void ApplyProviderSuppliedFields(ExternalLoginInfo info)
+    {
+        var email = ExternalClaimsMapper.GetEmail(info.Principal);
+        EmailFromProvider = !string.IsNullOrEmpty(email);
+        if (EmailFromProvider)
+        {
+            Input.Email = email!;
+            ModelState.Remove("Input.Email");
+        }
+
+        var firstName = ExternalClaimsMapper.GetFirstName(info.Principal);
+        FirstNameFromProvider = !string.IsNullOrEmpty(firstName);
+        if (FirstNameFromProvider)
+        {
+            Input.FirstName = firstName!;
+            ModelState.Remove("Input.FirstName");
+        }
+
+        var lastName = ExternalClaimsMapper.GetLastName(info.Principal);
+        LastNameFromProvider = !string.IsNullOrEmpty(lastName);
+        if (LastNameFromProvider)
+        {
+            Input.LastName = lastName!;
+            ModelState.Remove("Input.LastName");
+        }
+    }
 
     /// <summary>
     /// The confirmation form fields, pre-filled from the external provider's claims where available.

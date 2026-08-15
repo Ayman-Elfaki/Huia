@@ -17,21 +17,25 @@
             <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
             <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
 
+            @* Fields the provider already supplied are shown disabled rather than editable: the value shown
+               here is purely informational (ExternalLoginConfirmationModel re-derives it from the provider's
+               own claims on POST regardless of what's submitted), so nothing needs to round-trip through a
+               hidden input. *@
             <div role="group" class="field">
                 <label asp-for="Input.FirstName">@Localizer["FirstNameLabel"]</label>
-                <input asp-for="Input.FirstName" autocomplete="given-name" />
+                <input asp-for="Input.FirstName" autocomplete="given-name" disabled="@Model.FirstNameFromProvider" />
                 <span asp-validation-for="Input.FirstName" role="alert"></span>
             </div>
 
             <div role="group" class="field">
                 <label asp-for="Input.LastName">@Localizer["LastNameLabel"]</label>
-                <input asp-for="Input.LastName" autocomplete="family-name" />
+                <input asp-for="Input.LastName" autocomplete="family-name" disabled="@Model.LastNameFromProvider" />
                 <span asp-validation-for="Input.LastName" role="alert"></span>
             </div>
 
             <div role="group" class="field">
                 <label asp-for="Input.Email">@Localizer["EmailLabel"]</label>
-                <input asp-for="Input.Email" autocomplete="email" placeholder="email@example.com" />
+                <input asp-for="Input.Email" autocomplete="email" placeholder="email@example.com" disabled="@Model.EmailFromProvider" />
                 <span asp-validation-for="Input.Email" role="alert"></span>
             </div>
 

@@ -2,10 +2,12 @@ using System.ComponentModel.DataAnnotations;
 using Huia.Eventing;
 using Huia.Common;
 using Huia.Identity;
+using Huia.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 
@@ -17,6 +19,7 @@ public class LoginWith2faModel(
     SignInManager<HuiaUser> signInManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
+    IStringLocalizer<HuiaResources> localizer,
     ILogger<LoginWith2faModel> logger) : PageModel
 {
     /// <summary>The submitted form data.</summary>
@@ -70,7 +73,7 @@ public class LoginWith2faModel(
             return RedirectToPage("./Lockout");
         }
 
-        ModelState.AddModelError(string.Empty, "Invalid authenticator code.");
+        ModelState.AddModelError(string.Empty, localizer["InvalidAuthenticatorCodeError"]);
         return Page();
     }
 

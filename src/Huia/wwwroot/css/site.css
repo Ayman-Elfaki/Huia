@@ -94,6 +94,30 @@ body {
     }
 }
 
+/* The OTP resend countdown/button row on PhoneLoginVerify.cshtml. */
+.huia-otp-resend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-muted-foreground);
+}
+
+/* The Email/Phone switcher on Login.cshtml, sitting above .card rather than inside it. */
+.huia-login-tabs {
+    margin-bottom: 1rem;
+}
+
+.huia-login-tabs > [role="tablist"] {
+    width: 100%;
+}
+
+.huia-login-tabs > [role="tablist"] > [role="tab"] {
+    flex: 1;
+}
+
 .huia-field-group {
     display: flex;
     flex-direction: column;

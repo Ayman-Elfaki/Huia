@@ -1,0 +1,40 @@
+@page
+@model PhoneLoginVerifyModel
+@{
+    ViewData["Title"] = Localizer["PhoneVerifyTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["PhoneVerifyTitle"]</h2>
+        <p>@Localizer["PhoneVerifySubtitle", Model.MaskedPhoneNumber]</p>
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        <form method="post" class="huia-field-group" novalidate>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.Code">@Localizer["OtpCodeLabel"]</label>
+                <input asp-for="Input.Code" autocomplete="one-time-code" inputmode="numeric" />
+                <span asp-validation-for="Input.Code" role="alert"></span>
+            </div>
+
+            <div class="huia-actions">
+                <button type="submit" class="btn huia-full-width">@Localizer["VerifyButton"]</button>
+            </div>
+        </form>
+
+        <form method="post" asp-page-handler="resend" asp-route-returnUrl="@Model.ReturnUrl" class="huia-otp-resend">
+            <span id="huia-otp-countdown" data-template="@Localizer["ResendCodeCountdown"]" data-seconds="@Model.SecondsUntilResendAllowed" hidden="@(Model.SecondsUntilResendAllowed == 0)"></span>
+            <button type="submit" id="huia-otp-resend-button" data-variant="link" data-size="sm" class="btn" disabled="@(Model.SecondsUntilResendAllowed > 0)">@Localizer["ResendCodeButton"]</button>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/_content/Huia/js/huia-otp-countdown.js"></script>
+}

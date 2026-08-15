@@ -3,62 +3,66 @@
 @{
     ViewData["Title"] = Localizer["SignInTitle"].Value;
     ViewData["ReactToSignIn"] = true;
+    var hybrid = Model.ShowEmailPasswordTab && Model.ShowPasswordlessTab;
+}
+
+@if (hybrid)
+{
+    @* Basecoat's tabs script resolves each panel via the tab's aria-controls id (a plain
+       document.getElementById lookup, not a DOM-nesting requirement), so the tablist can live outside
+       .card while the panels it drives stay inside — only .tabs>[role=tablist] needs to be intact for
+       Basecoat's own styling/init to find it. *@
+    <div class="tabs huia-login-tabs" id="huia-login-tabs">
+        <nav role="tablist" aria-orientation="horizontal" aria-label="@Localizer["SignInMethodLabel"]">
+            <button type="button" role="tab" id="huia-tab-password" aria-controls="huia-tab-panel-password" aria-selected="@(Model.PreferPhoneTab ? "false" : "true")" tabindex="@(Model.PreferPhoneTab ? "-1" : "0")">@Localizer["EmailPasswordTabLabel"]</button>
+            <button type="button" role="tab" id="huia-tab-phone" aria-controls="huia-tab-panel-phone" aria-selected="@(Model.PreferPhoneTab ? "true" : "false")" tabindex="@(Model.PreferPhoneTab ? "0" : "-1")">@Localizer["PhoneTabLabel"]</button>
+        </nav>
+    </div>
 }
 
 <div class="card">
     <header>
         <h2>@Localizer["SignInTitle"]</h2>
-        <p>@Localizer["SignInSubtitle"]</p>
+        <p>@(Model.ShowEmailPasswordTab ? Localizer["SignInSubtitle"] : Localizer["PhoneSignInSubtitle"])</p>
         <div class="card-action">
             <partial name="_ThemeSwitch" />
         </div>
     </header>
     <section>
-        <form method="post" class="huia-field-group" id="huia-login-form" novalidate>
-            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-            <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
-            @if (Model.ExternalLoginError is not null)
-            {
-                <div class="huia-validation-summary" role="alert">@Model.ExternalLoginError</div>
-            }
+        @if (Model.ExternalLoginError is not null)
+        {
+            <div class="huia-validation-summary" role="alert">@Model.ExternalLoginError</div>
+        }
 
-            @* Step 1: email only. huia-login-steps.js reveals step 2 (and hides this one) once the email
-               passes validation — without it, both steps render open, same as a classic single-step form. *@
-            <div id="huia-login-step-email">
-                <div role="group" class="field">
-                    <label asp-for="Input.Email">@Localizer["EmailLabel"]</label>
-                    <input asp-for="Input.Email" autocomplete="username" placeholder="email@example.com" />
-                    <span asp-validation-for="Input.Email" role="alert"></span>
-                </div>
+        @if (Model.PhoneLoginError is not null)
+        {
+            <div class="huia-validation-summary" role="alert">@Model.PhoneLoginError</div>
+        }
 
-                <div class="huia-actions">
-                    <button type="button" id="huia-login-next" class="btn huia-full-width">@Localizer["NextButton"]</button>
-                </div>
+        @if (hybrid)
+        {
+            @* No aria-labelledby here: pointing it at the tab (whose accessible name is just "Email"/
+               "Phone") gives the whole panel that same accessible name via ARIA's labelling rules —
+               which then collides with the "Email" field's own <label> inside it, breaking anything
+               (assistive tech, Playwright's GetByLabel) that looks up an element by that name, since two
+               different things now answer to "Email". role="tabpanel" + the tab's own aria-controls is
+               everything Basecoat's tabs script needs; skipping the panel-to-tab name association avoids
+               the collision. *@
+            <div role="tabpanel" id="huia-tab-panel-password" tabindex="-1" hidden="@Model.PreferPhoneTab">
+                <partial name="_EmailPasswordLoginForm" />
             </div>
-
-            @* Step 2: password, for the email entered in step 1. *@
-            <div id="huia-login-step-password">
-                <div class="huia-login-identity">
-                    <span id="huia-login-identity-email">@Model.Input.Email</span>
-                    <button type="button" id="huia-login-change-email" data-variant="link" data-size="sm" class="btn">@Localizer["UseDifferentEmailLink"]</button>
-                </div>
-
-                <div role="group" class="field">
-                    <label asp-for="Input.Password">@Localizer["PasswordLabel"]</label>
-                    <input asp-for="Input.Password" autocomplete="current-password" />
-                    <span asp-validation-for="Input.Password" role="alert"></span>
-                </div>
-
-                <div role="group" class="field" data-orientation="horizontal">
-                    <input asp-for="Input.RememberMe" type="checkbox" role="switch" class="input" />
-                    <label asp-for="Input.RememberMe">@Localizer["RememberMeLabel"]</label>
-                </div>
-
-                <div class="huia-actions">
-                    <button type="submit" class="btn huia-full-width">@Localizer["SignInButton"]</button>
-                </div>
+            <div role="tabpanel" id="huia-tab-panel-phone" tabindex="-1" hidden="@(!Model.PreferPhoneTab)">
+                <partial name="_PhoneLoginForm" />
             </div>
-        </form>
+        }
+        else if (Model.ShowEmailPasswordTab)
+        {
+            <partial name="_EmailPasswordLoginForm" />
+        }
+        else if (Model.ShowPasswordlessTab)
+        {
+            <partial name="_PhoneLoginForm" />
+        }
 
         <div id="huia-login-alt-options">
             @if (Model.ExternalLogins.Count > 0)
@@ -81,14 +85,27 @@
                 </div>
             }
 
-            <div class="huia-footer-links">
-                <a asp-page="./ForgotPassword" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["ForgotPasswordLink"]</a>
-                <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["CreateAccountLink"]</a>
-            </div>
+            @if (Model.ShowEmailPasswordTab)
+            {
+                <div class="huia-footer-links">
+                    <a asp-page="./ForgotPassword" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["ForgotPasswordLink"]</a>
+                    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["CreateAccountLink"]</a>
+                </div>
+            }
         </div>
     </section>
 </div>
 
 @section Scripts {
-    <script src="~/_content/Huia/js/huia-login-steps.js"></script>
+    @if (Model.ShowEmailPasswordTab)
+    {
+        <script src="~/_content/Huia/js/huia-login-steps.js"></script>
+    }
+    @if (Model.ShowPasswordlessTab)
+    {
+        <script src="~/_content/Huia/lib/libphonenumber-js/libphonenumber-js.min.js"
+                asp-fallback-src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.13.11/bundle/libphonenumber-min.js"
+                asp-fallback-test="window.libphonenumber"></script>
+        <script src="~/_content/Huia/js/huia-phone-validation.js"></script>
+    }
 }

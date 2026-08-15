@@ -24,7 +24,7 @@ public sealed class TodoDbContext(DbContextOptions<TodoDbContext> options) : DbC
         builder.Entity<TodoUser>(user =>
         {
             user.Property(u => u.Id).HasMaxLength(450);
-            user.Property(u => u.Email).HasMaxLength(256).IsRequired();
+            user.Property(u => u.Email).HasMaxLength(256);
         });
 
         builder.Entity<TodoItem>(todo =>
