@@ -7,16 +7,20 @@ uses, so any standard ASP.NET Core remote-authentication handler works unmodifie
 
 ## Registering a provider
 
-Register providers inside the `AddHuia(issuer, huia => {...})` callback, via `huia.ExternalLogins` — the
-same `AuthenticationBuilder` `AddHuia` itself uses internally, exposed directly rather than wrapped:
+Register providers inside the `AddHuia(issuer, huia => {...})` callback, via
+`huia.Authentication.UseExternalAuthenticationFlow(ext => {...})` — `ext.Providers` is the same
+`AuthenticationBuilder` `AddHuia` itself uses internally, exposed directly rather than wrapped:
 
 ```csharp
 builder.Services.AddHuia(issuer, huia =>
     {
-        huia.ExternalLogins.AddGoogle(google =>
+        huia.Authentication.UseExternalAuthenticationFlow(ext =>
         {
-            google.ClientId = builder.Configuration["Google:ClientId"]!;
-            google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+            ext.Providers.AddGoogle(google =>
+            {
+                google.ClientId = builder.Configuration["Google:ClientId"]!;
+                google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+            });
         });
     })
     .WithEntityFrameworkStores<AppDbContext>();
@@ -44,7 +48,7 @@ yourself and set `Events.OnRemoteFailure` so a provider-side error (the user den
 back into Huia's sign-in flow instead of throwing:
 
 ```csharp
-huia.ExternalLogins.AddOAuth("github", "GitHub", oauth =>
+huia.Authentication.UseExternalAuthenticationFlow(ext => ext.Providers.AddOAuth("github", "GitHub", oauth =>
 {
     oauth.ClientId = builder.Configuration["GitHub:ClientId"]!;
     oauth.ClientSecret = builder.Configuration["GitHub:ClientSecret"]!;
@@ -76,7 +80,7 @@ huia.ExternalLogins.AddOAuth("github", "GitHub", oauth =>
         context.HandleResponse();
         return Task.CompletedTask;
     };
-});
+}));
 ```
 
 `AddGoogle`/`AddMicrosoftAccount`/`AddOpenIdConnect` already do the profile fetch and a sensible
@@ -93,14 +97,18 @@ completes at its callback:
 
 - Already linked to a local account → signed in directly (2FA and lockout are honored exactly like a
   password sign-in — an account with 2FA enabled is routed through the existing `LoginWith2fa` page).
-- Not linked yet, and the provider's email doesn't match an existing account → redirected to
-  `ExternalLoginConfirmation`, pre-filled from the provider's claims, for explicit consent before the account
-  is created. If the provider reports `email_verified: true`, the new account's email is confirmed
-  immediately and it signs in right away; otherwise Huia sends the normal confirmation email.
+- Not linked yet, and the provider's email doesn't match an existing account → if the provider reported
+  `email_verified: true` and supplied both a given and family name, the account is created and signed in
+  immediately, no extra step — reliable for Google/Microsoft, not guaranteed for a generic `AddOAuth`
+  registration (see `ExternalClaimsMapper`). Anything less complete is redirected to
+  `ExternalLoginConfirmation` instead, pre-filled from whatever claims the provider did supply, for explicit
+  consent (and to collect what's missing) before the account is created; a field the provider already
+  supplied is shown read-only there rather than editable. If the provider's email wasn't verified, Huia sends
+  the normal confirmation email instead of signing in immediately.
 - Not linked yet, but the provider's email **does** match an existing (password) account → Huia does **not**
   auto-link it. By default, the user has to sign in with their password first, then link the provider from
-  account settings (below); with `huia.EnableExternalLoginPasswordLinking()` (see below), they can instead
-  link it right there by entering that account's password.
+  account settings (below); with `ext.EnablePasswordLinking()` (see below), they can instead link it right
+  there by entering that account's password.
 - The provider returns an error, or the callback can't be completed → back to `Login` with an explanatory
   message.
 
@@ -111,17 +119,20 @@ see [Avatars](#avatars) below.
 
 By default, an external sign-in whose email collides with an existing password account is rejected outright
 (the bullet above) — a forged or compromised external claim shouldn't silently gain access to an existing
-account on the strength of an unverified email match alone. `huia.EnableExternalLoginPasswordLinking()` opts
-into a middle ground: instead of rejecting it, Huia asks the user to type that account's password. Getting it
-right proves ownership — the same bar a signed-in "link from settings" flow already assumes — and links the
-external identity to it right there, going through the same lockout tracking and 2FA routing as a normal
-password sign-in:
+account on the strength of an unverified email match alone. `ext.EnablePasswordLinking()` opts into a middle
+ground: instead of rejecting it, Huia asks the user to type that account's password. Getting it right proves
+ownership — the same bar a signed-in "link from settings" flow already assumes — and links the external
+identity to it right there, going through the same lockout tracking and 2FA routing as a normal password
+sign-in:
 
 ```csharp
 builder.Services.AddHuia(issuer, huia =>
     {
-        huia.ExternalLogins.AddGoogle(google => { /* ... */ });
-        huia.EnableExternalLoginPasswordLinking();
+        huia.Authentication.UseExternalAuthenticationFlow(ext =>
+        {
+            ext.Providers.AddGoogle(google => { /* ... */ });
+            ext.EnablePasswordLinking();
+        });
     })
     .WithEntityFrameworkStores<AppDbContext>();
 ```

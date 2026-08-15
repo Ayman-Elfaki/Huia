@@ -98,9 +98,15 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
         // signals the profile page has rendered.
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Profile" }).ClickAsync();
 
-        // getTwoFactorStatus (called on the server during the page's own render) lazily generates and returns
-        // a shared key the first time it's called for an account, so it's already on the page once this
-        // <code> element — the only one on the profile page — is visible (see two-factor-panel.tsx).
+        // getTwoFactorStatus (the profile page's own server-side loader) deliberately stays a pure read and
+        // never generates a shared key on its own — see its doc comment in manage-api.ts. The panel starts
+        // in a third, pre-setup state (two-factor-panel.tsx) prompting to begin enrollment explicitly; only
+        // that submission (intent: "start-setup") actually calls setTwoFactor(..., { resetSharedKey: true })
+        // and gets one back.
+        await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Set up two-factor authentication" })
+            .ClickAsync();
+
+        // The only <code> element on the profile page once the shared key comes back from that submission.
         var sharedKeyLocator = _page.Locator("code");
         await Assertions.Expect(sharedKeyLocator).ToBeVisibleAsync(new() { Timeout = 30000 });
         var sharedKey = (await sharedKeyLocator.InnerTextAsync()).Replace(" ", string.Empty);

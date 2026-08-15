@@ -1,0 +1,37 @@
+@page
+@model PhoneLoginConfirmationModel
+@{
+    ViewData["Title"] = Localizer["PhoneLoginConfirmationTitle"].Value;
+}
+
+<div class="card">
+    <header>
+        <h2>@Localizer["PhoneLoginConfirmationTitle"]</h2>
+        <p>@Localizer["PhoneLoginConfirmationSubtitle"]</p>
+        <div class="card-action">
+            <partial name="_ThemeSwitch" />
+        </div>
+    </header>
+    <section>
+        <form method="post" class="huia-field-group" novalidate>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.FirstName">@Localizer["FirstNameLabel"]</label>
+                <input asp-for="Input.FirstName" autocomplete="given-name" />
+                <span asp-validation-for="Input.FirstName" role="alert"></span>
+            </div>
+
+            <div role="group" class="field">
+                <label asp-for="Input.LastName">@Localizer["LastNameLabel"]</label>
+                <input asp-for="Input.LastName" autocomplete="family-name" />
+                <span asp-validation-for="Input.LastName" role="alert"></span>
+            </div>
+
+            <div class="huia-actions">
+                <button type="submit" class="btn huia-full-width">@Localizer["ContinueButton"]</button>
+            </div>
+        </form>
+    </section>
+</div>

@@ -1,8 +1,10 @@
 using Huia.Core;
 using Huia.EntityFrameworkCore.Common;
+using Huia.EntityFrameworkCore.Identity;
 using Huia.EntityFrameworkCore.Keys;
 using Huia.Identity;
 using Huia.Keys;
+using Huia.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +71,11 @@ public static class ServiceCollectionExtensions
         // (configured inside AddHuia, so it always runs before this) alone.
         services.TryAddSingleton(new KeyManagementOptions());
         services.AddScoped<ISigningKeyStore, EfCoreSigningKeyStore<TContext>>();
+
+        // A plain Add (not TryAdd) so it wins over the ThrowingPhoneNumberStore AddHuia registers by default
+        // when huia.Authentication.UsePasswordlessFlow() is enabled — the last registration for a service
+        // type is what DI resolves, and this method always runs after AddHuia returns.
+        services.AddScoped<IHuiaPhoneNumberStore, EfCoreHuiaPhoneNumberStore<TContext>>();
 
         services.AddOpenIddict()
             .AddCore(options =>

@@ -1,0 +1,7 @@
+@page
+@model PhoneLoginModel
+@{
+    // Handler-only page: OnPostAsync validates/rate-limits/sends the OTP and redirects away, and a bare GET
+    // (OnGet) redirects to Login — there's nothing for this page to actually render. The phone-entry form
+    // itself lives on Login.cshtml (either as its only form, or as one of the hybrid tabs) and posts here.
+}

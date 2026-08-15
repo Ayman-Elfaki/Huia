@@ -143,4 +143,54 @@
     <data name="LinkAccountTitle" xml:space="preserve"><value>تأكيد كلمة المرور</value></data>
     <data name="LinkAccountSubtitle" xml:space="preserve"><value>يوجد حساب بالفعل لـ {0}. أدخل كلمة مروره لربط {1} به.</value></data>
     <data name="LinkAccountButton" xml:space="preserve"><value>ربط الحساب</value></data>
+
+    <data name="SignInMethodLabel" xml:space="preserve"><value>طريقة تسجيل الدخول</value></data>
+    <data name="EmailPasswordTabLabel" xml:space="preserve"><value>البريد الإلكتروني</value></data>
+    <data name="PhoneTabLabel" xml:space="preserve"><value>الهاتف</value></data>
+    <data name="PhoneSignInSubtitle" xml:space="preserve"><value>أدخل رقم هاتفك أدناه لتسجيل الدخول.</value></data>
+    <data name="PhoneNumberLabel" xml:space="preserve"><value>رقم الهاتف</value></data>
+    <data name="SendCodeButton" xml:space="preserve"><value>إرسال الرمز</value></data>
+
+    <data name="PhoneVerifyTitle" xml:space="preserve"><value>تحقق من هاتفك</value></data>
+    <data name="PhoneVerifySubtitle" xml:space="preserve"><value>أدخل الرمز الذي أرسلناه إلى {0}.</value></data>
+    <data name="OtpCodeLabel" xml:space="preserve"><value>الرمز المؤقت</value></data>
+    <data name="ResendCodeButton" xml:space="preserve"><value>إعادة إرسال الرمز</value></data>
+    <data name="ResendCodeCountdown" xml:space="preserve"><value>إعادة إرسال الرمز خلال {0} ثانية</value></data>
+
+    <data name="PhoneLoginConfirmationTitle" xml:space="preserve"><value>أخبرنا عن نفسك</value></data>
+    <data name="PhoneLoginConfirmationSubtitle" xml:space="preserve"><value>أدخل اسمك أدناه لإكمال إعداد حسابك.</value></data>
+    <data name="ContinueButton" xml:space="preserve"><value>متابعة</value></data>
+
+    <data name="InvalidCredentialsError" xml:space="preserve"><value>البريد الإلكتروني أو كلمة المرور غير صحيحة.</value></data>
+    <data name="InvalidAuthenticatorCodeError" xml:space="preserve"><value>رمز المصادقة غير صالح.</value></data>
+    <data name="InvalidPhoneNumberError" xml:space="preserve"><value>أدخل رقم هاتف صالحًا.</value></data>
+    <data name="InvalidOrExpiredCodeError" xml:space="preserve"><value>الرمز غير صالح أو منتهي الصلاحية.</value></data>
+    <data name="GenericRetryError" xml:space="preserve"><value>حدث خطأ ما. يرجى المحاولة مرة أخرى.</value></data>
+    <data name="PhoneCooldownMessageSingular" xml:space="preserve"><value>لقد طلبت رموزًا كثيرة جدًا. يمكنك المحاولة مرة أخرى خلال دقيقة واحدة.</value></data>
+    <data name="PhoneCooldownMessagePlural" xml:space="preserve"><value>لقد طلبت رموزًا كثيرة جدًا. يمكنك المحاولة مرة أخرى خلال {0} دقائق.</value></data>
+
+    <data name="ExternalProviderErrorMessage" xml:space="preserve"><value>خطأ من مزود الخدمة الخارجي: {0}</value></data>
+    <data name="ExternalLoginInfoMissingError" xml:space="preserve"><value>حدث خطأ أثناء تحميل معلومات تسجيل الدخول الخارجي.</value></data>
+    <data name="ExternalLoginConfirmationInfoMissingError" xml:space="preserve"><value>حدث خطأ أثناء تحميل معلومات تسجيل الدخول الخارجي أثناء التأكيد.</value></data>
+    <data name="ExternalLoginEmailCollisionError" xml:space="preserve"><value>يوجد حساب بالفعل لـ {0}. سجّل الدخول بكلمة المرور الخاصة بك، ثم اربط {1} من إعدادات حسابك.</value></data>
+    <data name="ExternalLoginIncorrectPasswordError" xml:space="preserve"><value>كلمة المرور غير صحيحة.</value></data>
+
+    <!-- DataAnnotations validation messages — see HuiaResources.resx's own comment on why these are keyed by
+         the literal English string each attribute hardcodes rather than a PascalCase identifier. -->
+    <data name="Email is required." xml:space="preserve"><value>البريد الإلكتروني مطلوب.</value></data>
+    <data name="Enter a valid email address." xml:space="preserve"><value>أدخل عنوان بريد إلكتروني صالحًا.</value></data>
+    <data name="Password is required." xml:space="preserve"><value>كلمة المرور مطلوبة.</value></data>
+    <data name="Remember me" xml:space="preserve"><value>تذكرني</value></data>
+    <data name="{0} must be at least {2} characters long." xml:space="preserve"><value>يجب أن يتكون {0} من {2} أحرف على الأقل.</value></data>
+    <data name="Confirm password" xml:space="preserve"><value>تأكيد كلمة المرور</value></data>
+    <data name="The password and confirmation password do not match." xml:space="preserve"><value>كلمة المرور وتأكيدها غير متطابقين.</value></data>
+    <data name="Authenticator code is required." xml:space="preserve"><value>رمز المصادقة مطلوب.</value></data>
+    <data name="Authenticator code" xml:space="preserve"><value>رمز المصادقة</value></data>
+    <data name="Remember this machine" xml:space="preserve"><value>تذكر هذا الجهاز</value></data>
+    <data name="First name is required." xml:space="preserve"><value>الاسم الأول مطلوب.</value></data>
+    <data name="First name" xml:space="preserve"><value>الاسم الأول</value></data>
+    <data name="Last name is required." xml:space="preserve"><value>اسم العائلة مطلوب.</value></data>
+    <data name="Last name" xml:space="preserve"><value>اسم العائلة</value></data>
+    <data name="Code is required." xml:space="preserve"><value>الرمز مطلوب.</value></data>
+    <data name="Phone number is required." xml:space="preserve"><value>رقم الهاتف مطلوب.</value></data>
 </root>

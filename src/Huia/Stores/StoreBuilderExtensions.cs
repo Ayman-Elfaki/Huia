@@ -45,6 +45,11 @@ public static class StoreBuilderExtensions
         services.AddScoped<IRoleStore<HuiaRole>, TStore>();
         services.AddScoped<ISigningKeyStore, TStore>();
 
+        // A plain Add (not TryAdd) so it wins over the ThrowingPhoneNumberStore AddHuia registers by default
+        // when huia.Authentication.UsePasswordlessFlow() is enabled — see the matching comment in
+        // Huia.EntityFrameworkCore's WithEntityFrameworkStores.
+        services.AddScoped<IHuiaPhoneNumberStore, TStore>();
+
         services.AddOpenIddict()
             .AddCore(core =>
             {

@@ -96,6 +96,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
 - [Getting Started](docs/getting-started.md) - Installation and setup guide
 - [Architecture](docs/architecture.md) - How Huia works internally
+- [Passwordless Phone Sign-in](docs/passwordless.md) - Phone number + SMS OTP sign-in, no password
 - [External Providers](docs/external-providers.md) - Sign in with Google, Microsoft, GitHub, and more
 - [Localization](docs/localization.md) - Multi-language support (English/Arabic)
 - [Key Management](docs/key-management.md) - Signing and encryption key rotation

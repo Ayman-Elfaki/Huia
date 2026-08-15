@@ -19,13 +19,15 @@ namespace Huia.Stores;
 /// <c>UseManualKeyManagement()</c>, but implemented regardless since it's part of this interface.
 /// <c>WithStore&lt;TStore, ...&gt;()</c> registers <c>TStore</c> as
 /// <see cref="Huia.Keys.ISigningKeyStore"/> too. <see cref="IUserLoginStore{TUser}"/> backs external
-/// (third-party) sign-in providers registered via <c>huia.ExternalLogins</c> — needed only if you register
-/// any, but implemented regardless since it's part of this interface. See docs/custom-store.md,
-/// docs/key-management.md, and docs/external-providers.md.
+/// (third-party) sign-in providers registered via <c>huia.Authentication.UseExternalAuthenticationFlow(...)</c>
+/// — needed only if you register any, but implemented regardless since it's part of this interface.
+/// <see cref="IHuiaPhoneNumberStore"/> backs <c>huia.Authentication.UsePasswordlessFlow(...)</c> likewise.
+/// See docs/custom-store.md, docs/key-management.md, docs/external-providers.md, and docs/passwordless.md.
 /// </remarks>
 public interface IHuiaStore<TApplication, TAuthorization, TScope, TToken> :
     IUserStore<HuiaUser>,
     IUserLoginStore<HuiaUser>,
+    IHuiaPhoneNumberStore,
     IRoleStore<HuiaRole>,
     IOpenIddictApplicationStore<TApplication>,
     IOpenIddictAuthorizationStore<TAuthorization>,

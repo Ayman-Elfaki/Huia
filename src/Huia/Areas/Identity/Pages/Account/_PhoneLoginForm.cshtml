@@ -1,0 +1,13 @@
+@model LoginModel
+
+<form method="post" asp-page="./PhoneLogin" asp-route-returnUrl="@Model.ReturnUrl" class="huia-field-group" id="huia-phone-login-form" novalidate>
+    <div role="group" class="field">
+        <label for="huia-phone-input">@Localizer["PhoneNumberLabel"]</label>
+        <input id="huia-phone-input" name="Input.PhoneNumber" type="tel" autocomplete="tel" inputmode="tel" />
+        <span id="huia-phone-input-error" role="alert"></span>
+    </div>
+
+    <div class="huia-actions">
+        <button type="submit" class="btn huia-full-width">@Localizer["SendCodeButton"]</button>
+    </div>
+</form>

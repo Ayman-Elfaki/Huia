@@ -33,6 +33,11 @@ public class MyStore : IHuiaStore<MyApplication, MyAuthorization, MyScope, MyTok
 > `IHuiaStore` implementation needs these members added even if you don't use external providers yet, since
 > they're part of the interface unconditionally (the same way `ISigningKeyStore`'s members are).
 
+> **Breaking change note**: `IHuiaStore` also composes `IHuiaPhoneNumberStore`
+> (`FindByNormalizedPhoneNumberAsync`), which backs `huia.Authentication.UsePasswordlessFlow(...)` — see
+> [passwordless.md](passwordless.md). An existing custom `IHuiaStore` implementation needs this member added
+> even if you don't use passwordless sign-in, for the same reason as above.
+
 `WithStore<TStore, TApplication, TAuthorization, TScope, TToken>()` wires `MyStore` in as the Identity
 user/role store, the OpenIddict application/authorization/scope/token store, and (since `IHuiaStore`
 includes it) the `ISigningKeyStore` key management uses — and starts Quartz's hosted service (needed for

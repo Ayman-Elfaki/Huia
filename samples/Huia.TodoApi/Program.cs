@@ -3,11 +3,13 @@ using Huia.Endpoints;
 using Huia.EntityFrameworkCore.Extensions;
 using Huia.Eventing;
 using Huia.Identity;
+using Huia.Sms;
 using Huia.TodoApi.Common;
 using Huia.TodoApi.Data;
 using Huia.TodoApi.Email;
 using Huia.TodoApi.Endpoints;
 using Huia.TodoApi.Events;
+using Huia.TodoApi.Sms;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -28,6 +30,13 @@ builder.Services.AddDbContext<HuiaAppDbContext>(options => options.UseNpgsql(app
 
 // Registered before AddHuia so it wins over the NoOpEmailSender that AddHuia registers with TryAddSingleton.
 builder.Services.AddSingleton<IEmailSender<HuiaUser>, SmtpEmailSender>();
+
+// Registered only when Twilio is actually configured, so a fresh clone still starts (and can still exercise
+// the passwordless flow, reading the OTP from NoOpSmsSender's dev-only log output instead) without it.
+if (!string.IsNullOrEmpty(builder.Configuration["Twilio:AccountSid"]))
+{
+    builder.Services.AddHttpClient<ISmsSender<HuiaUser>, TwilioSmsSender>();
+}
 
 // Gives every newly-registered account a TodoUser row (see TodoUserRegisteredHandler) — the sample's
 // demonstration of Huia's eventing hook.
@@ -129,6 +138,16 @@ builder.Services.AddHuia(issuer, huia =>
             app.AllowScopes("roles", "todos");
         });
 
+        // Email+password is Huia's original sign-in method. At least one of this and UsePasswordlessFlow()
+        // below is required — AddHuia throws if neither is called.
+        huia.Authentication.UseEmailAndPasswordFlow();
+
+        // Demonstrates passwordless phone/OTP sign-in (docs/passwordless.md) alongside email+password — with
+        // both enabled, the login page renders them as tabs. Works out of the box even without Twilio
+        // configured: TwilioSmsSender below is only registered when Twilio config is present, so this falls
+        // back to Huia's default NoOpSmsSender, which logs the OTP code in Development instead of sending it.
+        huia.Authentication.UsePasswordlessFlow();
+
         // Demonstrates Huia's external-provider support (docs/external-providers.md): once a Google client
         // is registered, "Sign in with Google" appears on the login page automatically — no other wiring
         // needed. Skipped when no client id is configured (e.g. a fresh clone before the sample's own
@@ -136,17 +155,21 @@ builder.Services.AddHuia(issuer, huia =>
         var googleClientId = builder.Configuration["Google:ClientId"];
         if (!string.IsNullOrEmpty(googleClientId))
         {
-            huia.ExternalLogins.AddGoogle(google =>
+            huia.Authentication.UseExternalAuthenticationFlow(ext =>
             {
-                google.ClientId = googleClientId;
-                google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+                ext.Providers.AddGoogle(google =>
+                {
+                    google.ClientId = googleClientId;
+                    google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+                });
+
+                // Also demonstrates the opt-in password-confirmed linking shortcut: an external sign-in
+                // whose email matches an existing password account links itself once the user proves
+                // ownership by entering that password, instead of always requiring a separate
+                // sign-in-then-link-from-settings round trip.
+                ext.EnablePasswordLinking();
             });
         }
-
-        // Also demonstrates the opt-in password-confirmed linking shortcut: an external sign-in whose email
-        // matches an existing password account links itself once the user proves ownership by entering that
-        // password, instead of always requiring a separate sign-in-then-link-from-settings round trip.
-        huia.EnableExternalLoginPasswordLinking();
 
         huia.KeysManagement.UseAutomaticKeyManagement();
         

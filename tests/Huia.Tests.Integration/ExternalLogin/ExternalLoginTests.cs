@@ -7,20 +7,59 @@ namespace Huia.Tests.Integration.ExternalLogin;
 
 /// <summary>
 /// End-to-end coverage for external (third-party) sign-in: the challenge/callback round trip driven against
-/// <see cref="FakeIdentityProvider"/>, first-time account creation via the confirmation page, returning-user
-/// direct sign-in, provider errors, email collisions, 2FA, and the Manage link/unlink endpoints.
+/// <see cref="FakeIdentityProvider"/>, first-time account creation — both auto-provisioned in one round trip
+/// and via the confirmation page when the provider's claims are incomplete — returning-user direct sign-in,
+/// provider errors, email collisions, 2FA, and the Manage link/unlink endpoints.
 /// </summary>
 public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixture<ExternalLoginTestFactory>
 {
     private const string Password = "P@ssw0rd123!";
 
     [Fact]
-    public async Task NewIdentity_CompletesConfirmation_CreatesAccountAndSignsIn()
+    public async Task NewIdentity_VerifiedEmailAndBothNames_AutoProvisionsAndSignsInWithoutConfirmation()
+    {
+        var email = $"external-auto-{Guid.NewGuid():N}@example.com";
+        const string picture = "https://example.com/avatar.png";
+        var subject = $"sub-{Guid.NewGuid():N}";
+        factory.FakeIdentityProvider.NextIdentity = new FakeExternalIdentity(
+            subject, email, "External", "User", EmailVerified: true, picture);
+
+        using var client = factory.CreateClient();
+        using var callbackResult = await DriveExternalSignInAsync(client);
+
+        // Straight to the returnUrl — no confirmation-page round trip at all (see
+        // ExternalLoginModel.OnGetCallbackAsync's conditional auto-provisioning).
+        Assert.Equal(HttpStatusCode.Found, callbackResult.StatusCode);
+        Assert.DoesNotContain("externalloginconfirmation", callbackResult.Headers.Location!.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+
+        var user = await FindUserAsync(email);
+        Assert.NotNull(user);
+        Assert.True(user.EmailConfirmed);
+        Assert.Equal("External", user.FirstName);
+        Assert.Equal("User", user.LastName);
+        Assert.Equal(picture, user.Picture);
+
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var logins = await userManager.GetLoginsAsync(user);
+        Assert.Single(logins);
+        Assert.Equal(ExternalLoginTestFactory.ProviderScheme, logins[0].LoginProvider);
+
+        // Already signed in — Login redirects away instead of rendering the form.
+        using var loginPage = await client.GetAsync("/identity/account/login");
+        Assert.Equal(HttpStatusCode.Found, loginPage.StatusCode);
+    }
+
+    [Fact]
+    public async Task NewIdentity_MissingGivenName_RoutesToConfirmation_CompletesAndSignsIn()
     {
         var email = $"external-new-{Guid.NewGuid():N}@example.com";
         const string picture = "https://example.com/avatar.png";
+        // No GivenName — a generic provider isn't guaranteed to send one (see ExternalClaimsMapper) — is
+        // exactly what keeps OnGetCallbackAsync from auto-provisioning and routes here instead.
         factory.FakeIdentityProvider.NextIdentity = new FakeExternalIdentity(
-            Subject: $"sub-{Guid.NewGuid():N}", email, "External", "User", EmailVerified: true, picture);
+            Subject: $"sub-{Guid.NewGuid():N}", email, GivenName: null, "User", EmailVerified: true, picture);
 
         using var client = factory.CreateClient();
         using var callbackResult = await DriveExternalSignInAsync(client);
@@ -44,6 +83,48 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         Assert.Equal(ExternalLoginTestFactory.ProviderScheme, logins[0].LoginProvider);
     }
 
+    /// <summary>
+    /// ExternalLoginConfirmation.cshtml renders the provider-supplied Email/FirstName/LastName fields
+    /// disabled so the user can't edit them in the browser — but a disabled input is only a client-side
+    /// nicety, so this proves the server side of that: ExternalLoginConfirmationModel.OnPostAsync re-derives
+    /// those fields from the still-live external identity's own claims regardless of what's posted,
+    /// discarding a tampered value rather than trusting it. EmailVerified: false, despite every field
+    /// otherwise being present, is what keeps this on the confirmation page at all — a fully verified,
+    /// complete identity now auto-provisions with no page here to tamper with (see
+    /// NewIdentity_VerifiedEmailAndBothNames_AutoProvisionsAndSignsInWithoutConfirmation).
+    /// </summary>
+    [Fact]
+    public async Task NewIdentity_TamperedProviderFields_AreIgnored_AccountUsesProviderValues()
+    {
+        var email = $"external-tamper-{Guid.NewGuid():N}@example.com";
+        factory.FakeIdentityProvider.NextIdentity = new FakeExternalIdentity(
+            Subject: $"sub-{Guid.NewGuid():N}", email, "Real", "Name", EmailVerified: false);
+
+        using var client = factory.CreateClient();
+        using var callbackResult = await DriveExternalSignInAsync(client);
+        Assert.Contains("/identity/account/externalloginconfirmation",
+            callbackResult.Headers.Location!.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        using var confirmationPage = await client.GetAsync(callbackResult.Headers.Location);
+        var html = await confirmationPage.Content.ReadAsStringAsync();
+        Assert.Matches(DisabledInputPattern("Input_Email"), html);
+        Assert.Matches(DisabledInputPattern("Input_FirstName"), html);
+        Assert.Matches(DisabledInputPattern("Input_LastName"), html);
+
+        var tamperedEmail = $"attacker-{Guid.NewGuid():N}@example.com";
+        using var finalResponse = await CompleteConfirmationAsync(client, callbackResult.Headers.Location!,
+            tamperedEmail, "Fake", "Person");
+        Assert.Equal(HttpStatusCode.Found, finalResponse.StatusCode);
+
+        var tamperedUser = await FindUserAsync(tamperedEmail);
+        Assert.Null(tamperedUser);
+
+        var realUser = await FindUserAsync(email);
+        Assert.NotNull(realUser);
+        Assert.Equal("Real", realUser.FirstName);
+        Assert.Equal("Name", realUser.LastName);
+    }
+
     [Fact]
     public async Task AlreadyLinkedIdentity_SignsInDirectly_NoDuplicateAccountCreated()
     {
@@ -52,11 +133,14 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         factory.FakeIdentityProvider.NextIdentity = new FakeExternalIdentity(subject, email, "External", "User",
             EmailVerified: true);
 
+        // A verified email plus both names auto-provisions in one round trip (see
+        // ExternalLoginModel.OnGetCallbackAsync) — no separate confirmation step to drive through here.
         using (var firstClient = factory.CreateClient())
         {
             using var firstCallback = await DriveExternalSignInAsync(firstClient);
-            using var confirmResponse = await CompleteConfirmationAsync(firstClient, firstCallback.Headers.Location!, email);
-            Assert.Equal(HttpStatusCode.Found, confirmResponse.StatusCode);
+            Assert.Equal(HttpStatusCode.Found, firstCallback.StatusCode);
+            Assert.DoesNotContain("externalloginconfirmation", firstCallback.Headers.Location!.ToString(),
+                StringComparison.OrdinalIgnoreCase);
         }
 
         using var secondClient = factory.CreateClient();
@@ -93,8 +177,9 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
     }
 
     /// <summary>
-    /// The sample enables <c>huia.EnableExternalLoginPasswordLinking()</c> (see <c>Huia.TodoApi/Program.cs</c>),
-    /// so an email collision doesn't hard-error — it routes to <c>ExternalLoginLinkConfirmation</c> instead,
+    /// The sample enables password linking via <c>huia.Authentication.UseExternalAuthenticationFlow(ext =>
+    /// ext.EnablePasswordLinking())</c> (see <c>Huia.TodoApi/Program.cs</c>), so an email collision doesn't
+    /// hard-error — it routes to <c>ExternalLoginLinkConfirmation</c> instead,
     /// and nothing is linked or created until the user actually proves ownership there (covered by the
     /// tests below). Never auto-links without that proof, regardless of the setting.
     /// </summary>
@@ -228,11 +313,14 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         factory.FakeIdentityProvider.NextIdentity = new FakeExternalIdentity(subject, email, "External", "User",
             EmailVerified: true);
 
+        // A verified email plus both names auto-provisions in one round trip (see
+        // ExternalLoginModel.OnGetCallbackAsync) — no separate confirmation step to drive through here.
         using (var firstClient = factory.CreateClient())
         {
             using var firstCallback = await DriveExternalSignInAsync(firstClient);
-            using var confirmResponse = await CompleteConfirmationAsync(firstClient, firstCallback.Headers.Location!, email);
-            Assert.Equal(HttpStatusCode.Found, confirmResponse.StatusCode);
+            Assert.Equal(HttpStatusCode.Found, firstCallback.StatusCode);
+            Assert.DoesNotContain("externalloginconfirmation", firstCallback.Headers.Location!.ToString(),
+                StringComparison.OrdinalIgnoreCase);
         }
 
         using (var scope = factory.Services.CreateScope())
@@ -261,8 +349,11 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
 
         using var client = factory.CreateClient();
         using var callbackResult = await DriveExternalSignInAsync(client);
-        using var confirmResponse = await CompleteConfirmationAsync(client, callbackResult.Headers.Location!, email);
-        Assert.Equal(HttpStatusCode.Found, confirmResponse.StatusCode);
+        // A verified email plus both names auto-provisions in one round trip (see
+        // ExternalLoginModel.OnGetCallbackAsync) — no separate confirmation step to drive through here.
+        Assert.Equal(HttpStatusCode.Found, callbackResult.StatusCode);
+        Assert.DoesNotContain("externalloginconfirmation", callbackResult.Headers.Location!.ToString(),
+            StringComparison.OrdinalIgnoreCase);
 
         // The user has no password yet — this login is their only credential, so removing it must be blocked.
         using var blockedResponse =
@@ -350,6 +441,11 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
                 ["__RequestVerificationToken"] = token,
             }));
     }
+
+    /// <summary>Matches a self-closing <c>&lt;input&gt;</c> tag carrying both the given id and a
+    /// <c>disabled</c> attribute, regardless of attribute order.</summary>
+    private static System.Text.RegularExpressions.Regex DisabledInputPattern(string id) => new(
+        $"<input(?=[^>]*\\bid=\"{System.Text.RegularExpressions.Regex.Escape(id)}\")(?=[^>]*\\bdisabled\\b)[^>]*>");
 
     private async Task<HuiaUser?> FindUserAsync(string email)
     {

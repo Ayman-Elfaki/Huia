@@ -1,24 +1,35 @@
 using System.ComponentModel.DataAnnotations;
+using Huia.Core;
 using Huia.Eventing;
 using Huia.Common;
 using Huia.Identity;
+using Huia.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 
 namespace Huia.Areas.Identity.Pages.Account;
 
-/// <summary>Signs a user in with email/password, publishing <see cref="UserSignedInEvent"/> on success.</summary>
+/// <summary>
+/// Signs a user in with whichever 1FA method(s) are enabled (see <see cref="HuiaOptions.Authentication"/>) —
+/// email/password itself, via <see cref="OnPostAsync"/>; passwordless phone/OTP posts to
+/// <c>PhoneLoginModel</c> instead. Renders both as Basecoat UI tabs when both are enabled (see
+/// docs/passwordless.md's hybrid-auth security considerations). Publishes <see cref="UserSignedInEvent{TKey}"/>
+/// on a successful email/password sign-in.
+/// </summary>
 [AllowAnonymous]
 public class LoginModel(
     SignInManager<HuiaUser> signInManager,
     UserManager<HuiaUser> userManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
+    HuiaOptions options,
+    IStringLocalizer<HuiaResources> localizer,
     ILogger<LoginModel> logger) : PageModel
 {
     /// <summary>The submitted form data.</summary>
@@ -31,10 +42,26 @@ public class LoginModel(
     /// <summary>Registered external (third-party) sign-in providers, for rendering one button each.</summary>
     public IList<AuthenticationScheme> ExternalLogins { get; set; } = [];
 
+    /// <summary>Whether <c>huia.Authentication.UseEmailAndPasswordFlow()</c> is enabled.</summary>
+    public bool ShowEmailPasswordTab => options.Authentication.EmailAndPasswordFlowEnabled;
+
+    /// <summary>Whether <c>huia.Authentication.UsePasswordlessFlow()</c> is enabled.</summary>
+    public bool ShowPasswordlessTab => options.Authentication.PasswordlessFlowEnabled;
+
     /// <summary>Set by <c>ExternalLoginModel</c>/<c>ExternalLoginConfirmationModel</c> when an external
     /// sign-in couldn't complete, carried across the redirect back to this page.</summary>
     [TempData]
     public string? ExternalLoginError { get; set; }
+
+    /// <summary>Set by <c>PhoneLoginModel</c> when a phone number has hit its OTP request cooldown, carried
+    /// across the redirect back to this page.</summary>
+    [TempData]
+    public string? PhoneLoginError { get; set; }
+
+    /// <summary>Whether the hybrid tab switcher (see Login.cshtml) should default to the Phone tab instead
+    /// of Email — true whenever this page was reached because of <see cref="PhoneLoginError"/>, so the
+    /// cooldown message shows up next to the form the user was actually using.</summary>
+    public bool PreferPhoneTab => PhoneLoginError is not null;
 
     /// <summary>
     /// Renders the page, or — if the user is already signed in (e.g. another browser tab just completed a
@@ -95,7 +122,7 @@ public class LoginModel(
             return RedirectToPage("./Lockout");
         }
 
-        ModelState.AddModelError(string.Empty, "Invalid email or password.");
+        ModelState.AddModelError(string.Empty, localizer["InvalidCredentialsError"]);
         return Page();
     }
 

@@ -62,7 +62,6 @@ namespace Huia.TodoApi.Data.Migrations.Todo
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 

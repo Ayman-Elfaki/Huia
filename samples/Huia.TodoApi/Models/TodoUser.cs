@@ -14,7 +14,10 @@ public sealed class TodoUser
     /// </summary>
     public required string Id { get; set; }
 
-    public required string Email { get; set; }
+    /// <summary>
+    /// <see langword="null"/> for a phone-only (passwordless) account with no email on file.
+    /// </summary>
+    public string? Email { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

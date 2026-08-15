@@ -49,7 +49,11 @@ public sealed class AdminUiE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         // "Unauthorized" from requireUserSession for a few seconds, then it just starts working) — the cookie
         // itself needs a moment to become valid for requireUserSession's lookup. GotoWithRetryAsync reloads
         // past that window instead of asserting once and failing on it.
-        await GotoWithRetryAsync($"{adminBaseUrl}users", _page.GetByText("admin@example.com"));
+        // GetByRole(Cell, ...) rather than GetByText: the signed-in admin's own email also renders in the
+        // sidebar's persistent account footer (app.vue) on every page, so a plain text locator matches both
+        // that and the actual table row — scoping to the table cell's role is what the row is uniquely.
+        await GotoWithRetryAsync($"{adminBaseUrl}users",
+            _page.GetByRole(AriaRole.Cell, new() { Name = "admin@example.com" }));
 
         await GotoWithRetryAsync($"{adminBaseUrl}scopes", _page.GetByRole(AriaRole.Button, new() { Name = "New scope" }));
         var scopeName = $"e2e-scope-{Guid.NewGuid():N}";
