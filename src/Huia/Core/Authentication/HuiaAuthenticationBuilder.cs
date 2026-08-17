@@ -1,3 +1,4 @@
+using Huia.Common;
 using Huia.Passwordless;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -42,6 +43,10 @@ public sealed class HuiaAuthenticationBuilder
 
     internal PhoneOtpRateLimitOptions PhoneOtpRateLimit { get; } = new();
 
+    /// <summary>ISO 3166-1 alpha-2 code (e.g. <c>"US"</c>) the phone sign-in form's country selector
+    /// preselects, or <see langword="null"/> for no default — see <see cref="UsePasswordlessFlow"/>.</summary>
+    internal string? DefaultCountryCode { get; private set; }
+
     internal bool ExternalLoginPasswordLinkingEnabled { get; private set; }
 
     /// <summary>
@@ -61,17 +66,36 @@ public sealed class HuiaAuthenticationBuilder
     /// Customizes the per-phone-number OTP request rate limit (defaults: 1/minute, 3/hour, 10/day). See
     /// <see cref="PhoneOtpRateLimitOptions"/>.
     /// </param>
+    /// <param name="defaultCountryCode">
+    /// ISO 3166-1 alpha-2 code (e.g. <c>"US"</c>) the phone form's country picker preselects, instead of
+    /// requiring every sign-in to pick a country explicitly. Must be one of the regions libphonenumber
+    /// recognizes — throws <see cref="ArgumentException"/> otherwise, since a typo here would otherwise only
+    /// surface as a country that silently never appears preselected.
+    /// </param>
     /// <remarks>
     /// See docs/passwordless.md, including its hybrid-auth security considerations if
     /// <see cref="UseEmailAndPasswordFlow"/> is also enabled.
     /// </remarks>
     public HuiaAuthenticationBuilder UsePasswordlessFlow(
         Action<IdentityOptions>? configureIdentity = null,
-        Action<PhoneOtpRateLimitOptions>? configureRateLimit = null)
+        Action<PhoneOtpRateLimitOptions>? configureRateLimit = null,
+        string? defaultCountryCode = null)
     {
         PasswordlessFlowEnabled = true;
         PasswordlessIdentityConfigure = configureIdentity;
         configureRateLimit?.Invoke(PhoneOtpRateLimit);
+
+        if (defaultCountryCode is not null)
+        {
+            if (!CountryPhoneCodeProvider.IsSupportedRegion(defaultCountryCode))
+            {
+                throw new ArgumentException(
+                    $"'{defaultCountryCode}' isn't a region libphonenumber recognizes.", nameof(defaultCountryCode));
+            }
+
+            DefaultCountryCode = defaultCountryCode.ToUpperInvariant();
+        }
+
         return this;
     }
 

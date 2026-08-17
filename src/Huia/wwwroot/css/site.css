@@ -184,10 +184,146 @@ body {
     margin-bottom: 1rem;
 }
 
+/* _PhoneLoginForm.cshtml's country picker (a Basecoat dropdown-menu) and phone number input, side by side —
+   two separate controls, not a joined Basecoat input-group. */
+.huia-phone-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.huia-phone-row > .dropdown-menu {
+    flex-shrink: 0;
+}
+
+.huia-phone-row > .dropdown-menu > .btn {
+    height: 100%;
+}
+
+.huia-phone-row > input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#huia-country-flag {
+    flex-shrink: 0;
+}
+
+/* Mobile gets the OS's own native <select> picker instead of the custom dropdown-menu popover — much more
+   usable for a long list on a touch keyboard/screen than a custom-positioned popover. Both always render
+   (see _PhoneLoginForm.cshtml's own comment); this is the only thing choosing between them, so there's no
+   flash-of-wrong-widget while JS loads. */
+.huia-country-native-select {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .huia-country-menu {
+        display: none;
+    }
+
+    .huia-country-native-select {
+        display: block;
+        flex-shrink: 0;
+        max-width: 45%;
+    }
+}
+
+/* The country popover's row list: Basecoat's dropdown-menu has no built-in max-height/scroll (that's only
+   documented for its dedicated Scroll Area component), so ~240 countries need this spelled out explicitly to
+   scroll instead of pushing the popover off-screen. .scrollbar-sm is Basecoat's own thin-scrollbar styling. */
+#huia-country-menu-list {
+    max-height: 16rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#huia-country-popover {
+    max-width: min(20rem, calc(100vw - 2rem));
+}
+
+/* Basecoat's own [role=menuitemradio] styling already flexes each row's children; these just keep a long
+   localized country name from pushing the dial code (or the popup itself) off the edge of a narrow phone
+   screen, and leave room for the checkmark indicator Basecoat positions at the row's far end. */
+#huia-country-menu-list [role="menuitemradio"] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-inline-end: 1.75rem;
+}
+
+.huia-country-name {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.huia-country-dial {
+    flex-shrink: 0;
+    color: var(--color-muted-foreground);
+}
+
+#huia-country-menu-list .fi {
+    flex-shrink: 0;
+}
+
+/* Momentary highlight huia-country-select.js applies to the row a typeahead search just jumped to — kept
+   deliberately distinct from Basecoat's own .active (arrow-key hover) styling, since it's driven by a
+   completely separate mechanism (see that file's own comment on why). */
+#huia-country-menu-list [role="menuitemradio"].huia-typeahead-match {
+    background-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+}
+
+/* Basecoat's dropdown-menu shows/hides [data-indicator] itself based on the row's aria-checked (visibility:
+   hidden/visible) and positions it — this just supplies the checkmark glyph inside it, without needing an
+   embedded <svg> repeated in all ~240 rows. */
+#huia-country-menu-list [data-indicator]::before {
+    content: "";
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") no-repeat center / contain;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+
+/* Client-side validation (huia-phone-validation.js) marks the trigger aria-invalid — outside an input-group,
+   nothing reddens its border for that automatically the way Basecoat's own .input-group:has(...) rule does
+   for the phone <input> beside it. */
+#huia-country-trigger[aria-invalid="true"] {
+    border-color: var(--color-destructive, #e11d48);
+}
+
 .huia-status-message {
     padding: 0.75rem 1rem;
     border-radius: var(--radius, 0.5rem);
     border: 1px solid var(--border);
     margin-bottom: 1rem;
     font-size: 0.875rem;
+}
+
+/* The boxed one-time-code entry on PhoneLoginVerify.cshtml (huia-otp-input.js) — six individually-focusable
+   .input boxes standing in for the single bound Input.Code field they keep in sync. Specificity has to match
+   Basecoat's own ".field>:is(fieldset,[role=group],...):not(.field){flex-direction:column}" rule (there to
+   stack a nested field-group vertically) — this container also has role="group" (for its aria-labelledby),
+   which that rule otherwise catches and forces into a column regardless of source order. */
+.field > .huia-otp-boxes[role="group"] {
+    flex-direction: row;
+}
+
+.huia-otp-boxes {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.huia-otp-box {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    text-align: center;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
 }

@@ -56,25 +56,28 @@ public class PhoneLoginModel(
     {
         returnUrl ??= Url.Content("~/");
 
+        // PhoneLogin.cshtml itself renders nothing (see its own doc comment) — the phone form this posts from
+        // lives on LoginModel's page instead, so any validation failure here (missing country, or a number
+        // that doesn't check out for it) hands the message back the same way the rate-limit cooldown below
+        // does: via TempData and a redirect, rather than a ModelState error this page has nowhere to show.
         if (!ModelState.IsValid)
         {
-            return Page();
+            TempData["PhoneLoginError"] = localizer["InvalidPhoneNumberError"];
+            return RedirectToPage("./Login", new { returnUrl });
         }
 
-        var normalized = PhoneNumberValidator.TryNormalize(Input.PhoneNumber);
+        var normalized = PhoneNumberValidator.TryNormalize(Input.PhoneNumber, Input.CountryCode);
         if (normalized is null)
         {
-            ModelState.AddModelError(nameof(Input.PhoneNumber), localizer["InvalidPhoneNumberError"]);
-            return Page();
+            TempData["PhoneLoginError"] = localizer["InvalidPhoneNumberError"];
+            return RedirectToPage("./Login", new { returnUrl });
         }
 
         var acquireResult = await rateLimiter.TryAcquireAsync(normalized, HttpContext.RequestAborted);
         if (!acquireResult.IsAcquired)
         {
-            // PhoneLogin.cshtml itself renders nothing (see its own doc comment) — the message and the
-            // phone form it applies to both live on LoginModel's page, so this hands the cooldown across via
-            // TempData (the same pattern ExternalLoginModel uses for its own error) and round-trips
-            // returnUrl through the redirect so it isn't lost.
+            // Same TempData-and-redirect pattern as the validation failures above (and ExternalLoginModel's
+            // own error) — round-trips returnUrl through the redirect so it isn't lost.
             TempData["PhoneLoginError"] = PhoneOtpCooldownFormatter.FormatMessage(localizer, acquireResult.RetryAfter);
             return RedirectToPage("./Login", new { returnUrl });
         }
@@ -143,7 +146,13 @@ public class PhoneLoginModel(
     /// <summary>The phone-entry form fields.</summary>
     public sealed class InputModel
     {
-        /// <summary>The phone number to sign in with, in whatever format the client submits.</summary>
+        /// <summary>ISO 3166-1 alpha-2 code of the country picked in the phone form's country selector
+        /// (e.g. <c>"US"</c>) — see <see cref="Huia.Common.CountryPhoneCodeProvider"/>.</summary>
+        [Required(ErrorMessage = "Country is required.")]
+        public string CountryCode { get; set; } = string.Empty;
+
+        /// <summary>The phone number to sign in with, in whatever format the client submits — validated
+        /// against <see cref="CountryCode"/>, not assumed to already be a full international number.</summary>
         [Required(ErrorMessage = "Phone number is required.")]
         public string PhoneNumber { get; set; } = string.Empty;
     }

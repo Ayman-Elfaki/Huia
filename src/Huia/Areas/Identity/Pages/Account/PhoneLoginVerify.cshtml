@@ -18,8 +18,16 @@
             <div asp-validation-summary="ModelOnly" class="huia-validation-summary" role="alert"></div>
 
             <div role="group" class="field">
-                <label asp-for="Input.Code">@Localizer["OtpCodeLabel"]</label>
-                <input asp-for="Input.Code" autocomplete="one-time-code" inputmode="numeric" />
+                <label id="huia-otp-label">@Localizer["OtpCodeLabel"]</label>
+                <div class="huia-otp-boxes" role="group" aria-labelledby="huia-otp-label">
+                    @for (var i = 0; i < 6; i++)
+                    {
+                        <input type="text" class="input huia-otp-box" data-otp-box inputmode="numeric"
+                               autocomplete="one-time-code" maxlength="1"
+                               aria-label="@string.Format(Localizer["OtpDigitLabel"].Value, i + 1, 6)" />
+                    }
+                </div>
+                <input type="hidden" asp-for="Input.Code" id="huia-otp-value" />
                 <span asp-validation-for="Input.Code" role="alert"></span>
             </div>
 
@@ -37,4 +45,5 @@
 
 @section Scripts {
     <script src="~/_content/Huia/js/huia-otp-countdown.js"></script>
+    <script src="~/_content/Huia/js/huia-otp-input.js"></script>
 }

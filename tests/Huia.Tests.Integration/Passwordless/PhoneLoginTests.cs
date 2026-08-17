@@ -274,6 +274,7 @@ public class PhoneLoginTests(PhoneLoginTestFactory factory) : IClassFixture<Phon
         return await client.PostAsync("/identity/account/phonelogin",
             new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["Input.CountryCode"] = "US",
                 ["Input.PhoneNumber"] = phoneNumber,
                 ["__RequestVerificationToken"] = token,
             }));

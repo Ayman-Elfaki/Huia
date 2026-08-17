@@ -1,9 +1,58 @@
 @model LoginModel
 
+@{
+    var defaultCountry = Model.CountryOptions.FirstOrDefault(c => c.RegionCode == Model.DefaultCountryCode);
+}
+
 <form method="post" asp-page="./PhoneLogin" asp-route-returnUrl="@Model.ReturnUrl" class="huia-field-group" id="huia-phone-login-form" novalidate>
     <div role="group" class="field">
         <label for="huia-phone-input">@Localizer["PhoneNumberLabel"]</label>
-        <input id="huia-phone-input" name="Input.PhoneNumber" type="tel" autocomplete="tel" inputmode="tel" />
+
+        @* dir="ltr" regardless of the page's own direction: flags, dial codes, and country names read
+           left-to-right internationally and shouldn't mirror, and the picker's position before the phone
+           input (huia-phone-row's flex order) shouldn't flip either. Two alternative widgets for the same
+           value, toggled by a CSS media query (site.css) rather than JS/UA sniffing: a Basecoat dropdown-menu
+           on wider viewports (rich rows — flag + localized name + dial code, keyboard typeahead via
+           huia-country-select.js) and a native <select> below the mobile breakpoint (the OS's own picker
+           beats a custom popover there — see Basecoat's own Native Select component). Neither carries
+           Input.CountryCode's name directly; both just drive the one shared hidden input below, so only one
+           value is ever actually submitted regardless of which is visible. *@
+        <div class="huia-phone-row" dir="ltr">
+            <div id="huia-country-menu" class="dropdown-menu huia-country-menu" data-required-message="@Localizer["CountryRequiredError"]">
+                <button type="button" id="huia-country-trigger" class="btn" data-variant="outline"
+                        aria-haspopup="menu" aria-controls="huia-country-menu-list" aria-expanded="false"
+                        aria-label="@Localizer["CountryCodeLabel"]">
+                    <i class="fi @(defaultCountry is null ? "" : $"fi-{defaultCountry.RegionCode.ToLowerInvariant()}")" id="huia-country-flag" aria-hidden="true"></i>
+                    <span class="truncate" id="huia-country-trigger-label">@(defaultCountry?.DialCode ?? Localizer["CountryPlaceholder"].Value)</span>
+                    <i data-lucide="chevron-down" class="text-muted-foreground opacity-50 shrink-0" aria-hidden="true"></i>
+                </button>
+                <div id="huia-country-popover" data-popover aria-hidden="true">
+                    <div role="menu" id="huia-country-menu-list" aria-labelledby="huia-country-trigger" class="scrollbar-sm">
+                        @foreach (var country in Model.CountryOptions)
+                        {
+                            var isDefault = country.RegionCode == Model.DefaultCountryCode;
+                            <div role="menuitemradio" aria-checked="@(isDefault ? "true" : "false")" data-value="@country.RegionCode" data-label="@country.DialCode">
+                                <span data-indicator aria-hidden="true"></span>
+                                <i class="fi fi-@country.RegionCode.ToLowerInvariant()" aria-hidden="true"></i>
+                                <span class="huia-country-name">@country.DisplayName</span>
+                                <span class="huia-country-dial">@country.DialCode</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <select id="huia-country-native-select" class="select huia-country-native-select" aria-label="@Localizer["CountryCodeLabel"]">
+                <option value="" disabled selected="@(defaultCountry is null)">@Localizer["CountryPlaceholder"]</option>
+                @foreach (var country in Model.CountryOptions)
+                {
+                    <option value="@country.RegionCode" selected="@(country.RegionCode == Model.DefaultCountryCode)">@country.DisplayName (@country.DialCode)</option>
+                }
+            </select>
+            <input type="hidden" name="Input.CountryCode" id="huia-country-value" value="@defaultCountry?.RegionCode" />
+            <input id="huia-phone-input" class="input" name="Input.PhoneNumber" type="tel" autocomplete="tel" inputmode="tel"
+                   data-invalid-message="@Localizer["InvalidPhoneNumberError"]" />
+        </div>
+        <span id="huia-country-select-error" role="alert"></span>
         <span id="huia-phone-input-error" role="alert"></span>
     </div>
 

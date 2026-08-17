@@ -149,11 +149,14 @@
     <data name="PhoneTabLabel" xml:space="preserve"><value>الهاتف</value></data>
     <data name="PhoneSignInSubtitle" xml:space="preserve"><value>أدخل رقم هاتفك أدناه لتسجيل الدخول.</value></data>
     <data name="PhoneNumberLabel" xml:space="preserve"><value>رقم الهاتف</value></data>
+    <data name="CountryPlaceholder" xml:space="preserve"><value>الدولة</value></data>
+    <data name="CountryCodeLabel" xml:space="preserve"><value>رمز الدولة</value></data>
     <data name="SendCodeButton" xml:space="preserve"><value>إرسال الرمز</value></data>
 
     <data name="PhoneVerifyTitle" xml:space="preserve"><value>تحقق من هاتفك</value></data>
     <data name="PhoneVerifySubtitle" xml:space="preserve"><value>أدخل الرمز الذي أرسلناه إلى {0}.</value></data>
     <data name="OtpCodeLabel" xml:space="preserve"><value>الرمز المؤقت</value></data>
+    <data name="OtpDigitLabel" xml:space="preserve"><value>الرقم {0} من {1}</value></data>
     <data name="ResendCodeButton" xml:space="preserve"><value>إعادة إرسال الرمز</value></data>
     <data name="ResendCodeCountdown" xml:space="preserve"><value>إعادة إرسال الرمز خلال {0} ثانية</value></data>
 
@@ -164,6 +167,7 @@
     <data name="InvalidCredentialsError" xml:space="preserve"><value>البريد الإلكتروني أو كلمة المرور غير صحيحة.</value></data>
     <data name="InvalidAuthenticatorCodeError" xml:space="preserve"><value>رمز المصادقة غير صالح.</value></data>
     <data name="InvalidPhoneNumberError" xml:space="preserve"><value>أدخل رقم هاتف صالحًا.</value></data>
+    <data name="CountryRequiredError" xml:space="preserve"><value>اختر دولة.</value></data>
     <data name="InvalidOrExpiredCodeError" xml:space="preserve"><value>الرمز غير صالح أو منتهي الصلاحية.</value></data>
     <data name="GenericRetryError" xml:space="preserve"><value>حدث خطأ ما. يرجى المحاولة مرة أخرى.</value></data>
     <data name="PhoneCooldownMessageSingular" xml:space="preserve"><value>لقد طلبت رموزًا كثيرة جدًا. يمكنك المحاولة مرة أخرى خلال دقيقة واحدة.</value></data>
@@ -193,4 +197,5 @@
     <data name="Last name" xml:space="preserve"><value>اسم العائلة</value></data>
     <data name="Code is required." xml:space="preserve"><value>الرمز مطلوب.</value></data>
     <data name="Phone number is required." xml:space="preserve"><value>رقم الهاتف مطلوب.</value></data>
+    <data name="Country is required." xml:space="preserve"><value>الدولة مطلوبة.</value></data>
 </root>

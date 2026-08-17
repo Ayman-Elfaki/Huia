@@ -62,6 +62,36 @@ public class HuiaOptionsTests
     }
 
     [Fact]
+    public void UsePasswordlessFlow_DefaultCountryCodeUnset_LeavesDefaultCountryCodeNull()
+    {
+        var options = CreateOptions();
+
+        options.Authentication.UsePasswordlessFlow();
+
+        Assert.Null(options.Authentication.DefaultCountryCode);
+    }
+
+    [Theory]
+    [InlineData("US", "US")]
+    [InlineData("gb", "GB")]
+    public void UsePasswordlessFlow_DefaultCountryCodeSupported_NormalizesToUppercase(string input, string expected)
+    {
+        var options = CreateOptions();
+
+        options.Authentication.UsePasswordlessFlow(defaultCountryCode: input);
+
+        Assert.Equal(expected, options.Authentication.DefaultCountryCode);
+    }
+
+    [Fact]
+    public void UsePasswordlessFlow_DefaultCountryCodeNotARealRegion_Throws()
+    {
+        var options = CreateOptions();
+
+        Assert.Throws<ArgumentException>(() => options.Authentication.UsePasswordlessFlow(defaultCountryCode: "ZZ"));
+    }
+
+    [Fact]
     public void UseEmailAndPasswordFlow_SetsFlag()
     {
         var options = CreateOptions();

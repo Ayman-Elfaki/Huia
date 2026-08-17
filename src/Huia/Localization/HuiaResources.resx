@@ -149,11 +149,14 @@
     <data name="PhoneTabLabel" xml:space="preserve"><value>Phone</value></data>
     <data name="PhoneSignInSubtitle" xml:space="preserve"><value>Enter your phone number below to sign in.</value></data>
     <data name="PhoneNumberLabel" xml:space="preserve"><value>Phone number</value></data>
+    <data name="CountryPlaceholder" xml:space="preserve"><value>Country</value></data>
+    <data name="CountryCodeLabel" xml:space="preserve"><value>Country code</value></data>
     <data name="SendCodeButton" xml:space="preserve"><value>Send code</value></data>
 
     <data name="PhoneVerifyTitle" xml:space="preserve"><value>Check your phone</value></data>
     <data name="PhoneVerifySubtitle" xml:space="preserve"><value>Enter the code we sent to {0}.</value></data>
     <data name="OtpCodeLabel" xml:space="preserve"><value>One-time code</value></data>
+    <data name="OtpDigitLabel" xml:space="preserve"><value>Digit {0} of {1}</value></data>
     <data name="ResendCodeButton" xml:space="preserve"><value>Resend code</value></data>
     <data name="ResendCodeCountdown" xml:space="preserve"><value>Resend code in {0}s</value></data>
 
@@ -167,6 +170,7 @@
     <data name="InvalidCredentialsError" xml:space="preserve"><value>Invalid email or password.</value></data>
     <data name="InvalidAuthenticatorCodeError" xml:space="preserve"><value>Invalid authenticator code.</value></data>
     <data name="InvalidPhoneNumberError" xml:space="preserve"><value>Enter a valid phone number.</value></data>
+    <data name="CountryRequiredError" xml:space="preserve"><value>Select a country.</value></data>
     <data name="InvalidOrExpiredCodeError" xml:space="preserve"><value>Invalid or expired code.</value></data>
     <data name="GenericRetryError" xml:space="preserve"><value>Something went wrong. Please try again.</value></data>
     <data name="PhoneCooldownMessageSingular" xml:space="preserve"><value>You've requested too many codes. You can try again in 1 minute.</value></data>
@@ -203,4 +207,5 @@
     <data name="Last name" xml:space="preserve"><value>Last name</value></data>
     <data name="Code is required." xml:space="preserve"><value>Code is required.</value></data>
     <data name="Phone number is required." xml:space="preserve"><value>Phone number is required.</value></data>
+    <data name="Country is required." xml:space="preserve"><value>Country is required.</value></data>
 </root>

@@ -48,6 +48,16 @@ public class LoginModel(
     /// <summary>Whether <c>huia.Authentication.UsePasswordlessFlow()</c> is enabled.</summary>
     public bool ShowPasswordlessTab => options.Authentication.PasswordlessFlowEnabled;
 
+    /// <summary>Countries offered by the phone form's country selector (see <c>_PhoneLoginForm.cshtml</c>),
+    /// each paired with its calling code and a localized display name. Left empty when
+    /// <see cref="ShowPasswordlessTab"/> is false, since building it is pure overhead otherwise.</summary>
+    public IReadOnlyList<CountryPhoneCode> CountryOptions { get; private set; } = [];
+
+    /// <summary>ISO 3166-1 alpha-2 code the phone form's country selector preselects, from
+    /// <c>huia.Authentication.UsePasswordlessFlow(defaultCountryCode: ...)</c> — <see langword="null"/> for no
+    /// default.</summary>
+    public string? DefaultCountryCode { get; private set; }
+
     /// <summary>Set by <c>ExternalLoginModel</c>/<c>ExternalLoginConfirmationModel</c> when an external
     /// sign-in couldn't complete, carried across the redirect back to this page.</summary>
     [TempData]
@@ -72,6 +82,11 @@ public class LoginModel(
     {
         ReturnUrl = returnUrl ?? Url.Content("~/");
         ExternalLogins = (await signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        if (ShowPasswordlessTab)
+        {
+            CountryOptions = CountryPhoneCodeProvider.GetAll();
+            DefaultCountryCode = options.Authentication.DefaultCountryCode;
+        }
 
         // HttpContext.User (the default-scheme principal) isn't the sign-in cookie here — Huia's default
         // authentication scheme is the OpenIddict bearer validator (see ServiceCollectionExtensions), so
@@ -89,6 +104,11 @@ public class LoginModel(
     {
         ReturnUrl = returnUrl ?? Url.Content("~/");
         ExternalLogins = (await signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        if (ShowPasswordlessTab)
+        {
+            CountryOptions = CountryPhoneCodeProvider.GetAll();
+            DefaultCountryCode = options.Authentication.DefaultCountryCode;
+        }
 
         if (!ModelState.IsValid)
         {

@@ -146,7 +146,7 @@ builder.Services.AddHuia(issuer, huia =>
         // both enabled, the login page renders them as tabs. Works out of the box even without Twilio
         // configured: TwilioSmsSender below is only registered when Twilio config is present, so this falls
         // back to Huia's default NoOpSmsSender, which logs the OTP code in Development instead of sending it.
-        huia.Authentication.UsePasswordlessFlow();
+        huia.Authentication.UsePasswordlessFlow(defaultCountryCode: "SA");
 
         // Demonstrates Huia's external-provider support (docs/external-providers.md): once a provider is
         // registered, its button appears on the login page automatically — no other wiring needed. Each
@@ -217,7 +217,7 @@ builder.Services.AddHuia(issuer, huia =>
         }
 
         huia.KeysManagement.UseAutomaticKeyManagement();
-        
+
         // A token's aud claim is only populated for scopes that have a resource registered against them —
         // this seeds "todos" with one on startup, idempotently, the same way huia.Applications above seeds
         // client applications.

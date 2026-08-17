@@ -107,6 +107,7 @@ public class PhoneOtpRateLimitTests(PhoneLoginRateLimitTestFactory factory) : IC
         return await client.PostAsync(url,
             new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["Input.CountryCode"] = "US",
                 ["Input.PhoneNumber"] = phoneNumber,
                 ["__RequestVerificationToken"] = token,
             }));
