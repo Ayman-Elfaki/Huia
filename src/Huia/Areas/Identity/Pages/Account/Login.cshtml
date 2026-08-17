@@ -108,5 +108,12 @@
                 asp-fallback-test="window.libphonenumber"></script>
         <script src="~/_content/Huia/js/huia-country-select.js"></script>
         <script src="~/_content/Huia/js/huia-phone-validation.js"></script>
+        @if (Model.TurnstileSiteKey is not null)
+        {
+            @* Unlike every other vendored script on this page, Turnstile can't be self-hosted — Cloudflare's
+               terms require loading it live from their own domain, since the challenge itself is served
+               dynamically, not a static bundle a fallback copy could stand in for. *@
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+        }
     }
 }

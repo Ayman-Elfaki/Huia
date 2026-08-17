@@ -54,9 +54,15 @@ public class LoginModel(
     public IReadOnlyList<CountryPhoneCode> CountryOptions { get; private set; } = [];
 
     /// <summary>ISO 3166-1 alpha-2 code the phone form's country selector preselects, from
-    /// <c>huia.Authentication.UsePasswordlessFlow(defaultCountryCode: ...)</c> — <see langword="null"/> for no
-    /// default.</summary>
+    /// <c>huia.Authentication.UsePasswordlessFlow(passwordless => passwordless.DefaultCountryCode = ...)</c> —
+    /// <see langword="null"/> for no default.</summary>
     public string? DefaultCountryCode { get; private set; }
+
+    /// <summary>The Cloudflare Turnstile site key the phone form's widget renders with, from
+    /// <c>huia.Authentication.UsePasswordlessFlow(passwordless => passwordless.UseTurnstile(...))</c> —
+    /// <see langword="null"/> when Turnstile isn't configured, in which case the form renders no widget at
+    /// all.</summary>
+    public string? TurnstileSiteKey { get; private set; }
 
     /// <summary>Set by <c>ExternalLoginModel</c>/<c>ExternalLoginConfirmationModel</c> when an external
     /// sign-in couldn't complete, carried across the redirect back to this page.</summary>
@@ -85,7 +91,8 @@ public class LoginModel(
         if (ShowPasswordlessTab)
         {
             CountryOptions = CountryPhoneCodeProvider.GetAll();
-            DefaultCountryCode = options.Authentication.DefaultCountryCode;
+            DefaultCountryCode = options.Authentication.Passwordless.DefaultCountryCode;
+            TurnstileSiteKey = options.Authentication.Passwordless.Turnstile?.SiteKey;
         }
 
         // HttpContext.User (the default-scheme principal) isn't the sign-in cookie here — Huia's default
@@ -107,7 +114,8 @@ public class LoginModel(
         if (ShowPasswordlessTab)
         {
             CountryOptions = CountryPhoneCodeProvider.GetAll();
-            DefaultCountryCode = options.Authentication.DefaultCountryCode;
+            DefaultCountryCode = options.Authentication.Passwordless.DefaultCountryCode;
+            TurnstileSiteKey = options.Authentication.Passwordless.Turnstile?.SiteKey;
         }
 
         if (!ModelState.IsValid)

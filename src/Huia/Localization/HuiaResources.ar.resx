@@ -172,6 +172,7 @@
     <data name="GenericRetryError" xml:space="preserve"><value>حدث خطأ ما. يرجى المحاولة مرة أخرى.</value></data>
     <data name="PhoneCooldownMessageSingular" xml:space="preserve"><value>لقد طلبت رموزًا كثيرة جدًا. يمكنك المحاولة مرة أخرى خلال دقيقة واحدة.</value></data>
     <data name="PhoneCooldownMessagePlural" xml:space="preserve"><value>لقد طلبت رموزًا كثيرة جدًا. يمكنك المحاولة مرة أخرى خلال {0} دقائق.</value></data>
+    <data name="BotVerificationFailedError" xml:space="preserve"><value>تعذر التحقق من أنك لست روبوتًا. يرجى المحاولة مرة أخرى.</value></data>
 
     <data name="ExternalProviderErrorMessage" xml:space="preserve"><value>خطأ من مزود الخدمة الخارجي: {0}</value></data>
     <data name="ExternalLoginInfoMissingError" xml:space="preserve"><value>حدث خطأ أثناء تحميل معلومات تسجيل الدخول الخارجي.</value></data>

@@ -1,7 +1,4 @@
-using Huia.Common;
-using Huia.Passwordless;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
 
 namespace Huia.Core.Authentication;
 
@@ -37,15 +34,12 @@ public sealed class HuiaAuthenticationBuilder
     /// </summary>
     internal bool ExternalFlowEnabled { get; private set; }
 
-    internal Action<IdentityOptions>? PasswordlessIdentityConfigure { get; private set; }
-
-    internal Action<IdentityOptions>? EmailAndPasswordIdentityConfigure { get; private set; }
-
-    internal PhoneOtpRateLimitOptions PhoneOtpRateLimit { get; } = new();
-
-    /// <summary>ISO 3166-1 alpha-2 code (e.g. <c>"US"</c>) the phone sign-in form's country selector
-    /// preselects, or <see langword="null"/> for no default — see <see cref="UsePasswordlessFlow"/>.</summary>
-    internal string? DefaultCountryCode { get; private set; }
+    /// <summary>
+    /// Passwordless phone/OTP sign-in's own configuration — see <see cref="UsePasswordlessFlow"/>. Always
+    /// present (with defaults) regardless of whether the flow is actually enabled, so other code can read it
+    /// unconditionally; only <see cref="PasswordlessFlowEnabled"/> gates whether it's ever actually applied.
+    /// </summary>
+    internal PasswordlessFlowOptions Passwordless { get; } = new();
 
     internal bool ExternalLoginPasswordLinkingEnabled { get; private set; }
 
@@ -56,63 +50,32 @@ public sealed class HuiaAuthenticationBuilder
     /// Requires an <c>IHuiaPhoneNumberStore</c> to be registered — <c>.WithEntityFrameworkStores&lt;TContext&gt;()</c>
     /// provides one automatically.
     /// </summary>
-    /// <param name="configureIdentity">
-    /// Customizes ASP.NET Core Identity's shared <see cref="IdentityOptions"/> (e.g. <c>identity.Lockout</c>)
-    /// for this flow. Runs directly against the same <see cref="IdentityOptions"/> instance ASP.NET Core
-    /// Identity itself builds, so changes here take effect (unlike the old, removed
-    /// <c>HuiaOptions.Identity</c> property, whose mutations were silently discarded).
-    /// </param>
-    /// <param name="configureRateLimit">
-    /// Customizes the per-phone-number OTP request rate limit (defaults: 1/minute, 3/hour, 10/day). See
-    /// <see cref="PhoneOtpRateLimitOptions"/>.
-    /// </param>
-    /// <param name="defaultCountryCode">
-    /// ISO 3166-1 alpha-2 code (e.g. <c>"US"</c>) the phone form's country picker preselects, instead of
-    /// requiring every sign-in to pick a country explicitly. Must be one of the regions libphonenumber
-    /// recognizes — throws <see cref="ArgumentException"/> otherwise, since a typo here would otherwise only
-    /// surface as a country that silently never appears preselected.
+    /// <param name="configure">
+    /// Customizes this flow's own settings — rate limits (per-phone-number always, per-IP and Turnstile bot
+    /// protection both opt-in) and the country picker's default. See <see cref="PasswordlessFlowOptions"/>;
+    /// for ASP.NET Core Identity's own shared <c>IdentityOptions</c> (lockout, etc.), see
+    /// <c>HuiaOptions.Identity</c> instead.
     /// </param>
     /// <remarks>
     /// See docs/passwordless.md, including its hybrid-auth security considerations if
     /// <see cref="UseEmailAndPasswordFlow"/> is also enabled.
     /// </remarks>
-    public HuiaAuthenticationBuilder UsePasswordlessFlow(
-        Action<IdentityOptions>? configureIdentity = null,
-        Action<PhoneOtpRateLimitOptions>? configureRateLimit = null,
-        string? defaultCountryCode = null)
+    public HuiaAuthenticationBuilder UsePasswordlessFlow(Action<PasswordlessFlowOptions>? configure = null)
     {
         PasswordlessFlowEnabled = true;
-        PasswordlessIdentityConfigure = configureIdentity;
-        configureRateLimit?.Invoke(PhoneOtpRateLimit);
-
-        if (defaultCountryCode is not null)
-        {
-            if (!CountryPhoneCodeProvider.IsSupportedRegion(defaultCountryCode))
-            {
-                throw new ArgumentException(
-                    $"'{defaultCountryCode}' isn't a region libphonenumber recognizes.", nameof(defaultCountryCode));
-            }
-
-            DefaultCountryCode = defaultCountryCode.ToUpperInvariant();
-        }
-
+        configure?.Invoke(Passwordless);
         return this;
     }
 
     /// <summary>
     /// Enables email+password sign-in — Huia's original sign-in method (registration, login, forgot/reset
     /// password, authenticator 2FA). Either this, <see cref="UsePasswordlessFlow"/>, or both must be called —
-    /// <c>AddHuia</c> throws otherwise.
+    /// <c>AddHuia</c> throws otherwise. For ASP.NET Core Identity's own shared <c>IdentityOptions</c>
+    /// (lockout, password policy, etc.), see <c>HuiaOptions.Identity</c>.
     /// </summary>
-    /// <param name="configureIdentity">
-    /// Customizes ASP.NET Core Identity's shared <see cref="IdentityOptions"/> (e.g. <c>identity.Password</c>,
-    /// <c>identity.Lockout</c>) for this flow. Runs directly against the same <see cref="IdentityOptions"/>
-    /// instance ASP.NET Core Identity itself builds.
-    /// </param>
-    public HuiaAuthenticationBuilder UseEmailAndPasswordFlow(Action<IdentityOptions>? configureIdentity = null)
+    public HuiaAuthenticationBuilder UseEmailAndPasswordFlow()
     {
         EmailAndPasswordFlowEnabled = true;
-        EmailAndPasswordIdentityConfigure = configureIdentity;
         return this;
     }
 

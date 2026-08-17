@@ -46,34 +46,97 @@ directly (see [custom-store.md](custom-store.md)).
    `ExternalLoginConfirmation`'s explicit-consent step for a first-time external sign-in. A **returning**
    passwordless user signs in immediately.
 
-## Configuring which `IdentityOptions` apply
+## Configuring the flow
+
+Passwordless-specific settings — rate limits, the country picker's default, IP rate limiting, Turnstile —
+live on one `PasswordlessFlowOptions` object, configured via a single callback:
 
 ```csharp
-huia.Authentication.UsePasswordlessFlow(configureIdentity: identity =>
+huia.Authentication.UsePasswordlessFlow(passwordless =>
 {
-    identity.Lockout.MaxFailedAccessAttempts = 5;
+    passwordless.DefaultCountryCode = "US"; // the phone form's country picker preselects this
 });
 ```
 
-Runs directly against the same `IdentityOptions` instance ASP.NET Core Identity itself builds — unlike the
-old, removed `HuiaOptions.Identity` property, changes made here actually take effect.
+ASP.NET Core Identity's own shared `IdentityOptions` (lockout, password policy, etc.) isn't configured
+per-flow — it's inherently one shared configuration space regardless of which sign-in method(s) are enabled,
+so it lives directly on `HuiaOptions` instead:
+
+```csharp
+huia.Identity = identity =>
+{
+    identity.Lockout.MaxFailedAccessAttempts = 5;
+};
+```
+
+Runs directly against the same `IdentityOptions` instance ASP.NET Core Identity itself builds — unlike an
+even older, removed `HuiaOptions.Identity` property that mutated a disconnected instance `AddIdentityCore`
+never read from, changes made here actually take effect.
 
 ## Rate limiting
 
-Configurable, per phone number, checked before any user lookup/creation — so it throttles a number with no
-account at all just as well as a registered one:
+### Per phone number
+
+Always enforced, checked before any user lookup/creation — so it throttles a number with no account at all
+just as well as a registered one:
 
 ```csharp
-huia.Authentication.UsePasswordlessFlow(configureRateLimit: rateLimit =>
+huia.Authentication.UsePasswordlessFlow(passwordless =>
 {
-    rateLimit.RequestsPerMinute = 1; // default
-    rateLimit.RequestsPerHour = 3;   // default
-    rateLimit.RequestsPerDay = 10;   // default
+    passwordless.RateLimit.RequestsPerMinute = 1; // default
+    passwordless.RateLimit.RequestsPerHour = 3;   // default
+    passwordless.RateLimit.RequestsPerDay = 10;   // default
 });
 ```
 
 The default `IPhoneOtpRateLimiter` is in-memory (per instance); register your own implementation (e.g.
 Redis-backed) before calling `AddHuia` if limits need to be shared across a scaled-out deployment.
+
+### Per client IP address
+
+Off by default — opt in with `EnableIpRateLimiting()`. This is a coarser, additional layer that catches a
+script enumerating many different phone numbers from one source (each individual number never trips its own
+limit, so the per-phone-number check alone can't):
+
+```csharp
+huia.Authentication.UsePasswordlessFlow(passwordless =>
+{
+    passwordless.EnableIpRateLimiting(ip =>
+    {
+        ip.RequestsPerMinute = 5;  // default
+        ip.RequestsPerHour = 20;   // default
+        ip.RequestsPerDay = 50;    // default
+    });
+});
+```
+
+The defaults are deliberately looser than the per-phone-number ones — a shared/NATed IP (corporate network,
+mobile carrier CGNAT, VPN exit node) can plausibly represent many genuine users behind one address, so tune
+this to the app's own expected traffic shape. `HttpContext.Connection.RemoteIpAddress` is what's partitioned
+on; behind a reverse proxy, configure `UseForwardedHeaders()` yourself so this reflects the real client IP
+rather than the proxy's. Like the per-phone-number limiter, register your own `IPhoneIpRateLimiter` before
+`AddHuia` for a shared, scaled-out deployment.
+
+## Bot protection (Cloudflare Turnstile)
+
+Off by default — opt in with `UseTurnstile(siteKey, secretKey)` (get a pair from the Cloudflare dashboard,
+dash.cloudflare.com → Turnstile). An additional, configurable layer against automated SMS-bombing scripts, on
+top of both rate limits above:
+
+```csharp
+huia.Authentication.UsePasswordlessFlow(passwordless =>
+{
+    passwordless.UseTurnstile(
+        siteKey: builder.Configuration["Turnstile:SiteKey"]!,
+        secretKey: builder.Configuration["Turnstile:SecretKey"]!);
+});
+```
+
+When configured, the phone sign-in form renders Cloudflare's widget (loaded live from
+`challenges.cloudflare.com` — unlike every other script Huia.UI ships, this one can't be vendored, since
+Cloudflare's own terms require serving it fresh rather than from a static copy) and `PhoneLoginModel`
+verifies the resulting token against Cloudflare's `siteverify` endpoint before sending a code. Register your
+own `ITurnstileVerifier` before `AddHuia` to swap in a different provider (e.g. hCaptcha, reCAPTCHA) instead.
 
 ## PII protection
 

@@ -131,6 +131,14 @@ body {
     margin-top: 1.5rem;
 }
 
+/* The Turnstile widget on _PhoneLoginForm.cshtml, between the phone field and the submit button — sits
+   outside .huia-field-group's own gap (it's not a field), so needs its own top margin to match. */
+.cf-turnstile {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+}
+
 /* Basecoat's .field-separator assumes it sits between two elements that already share a field group's
    gap (its negative margin-block pulls it snug against that gap) — here it sits between the sign-in form
    and the external-login buttons, two unrelated blocks with no shared gap to pull into, so that negative

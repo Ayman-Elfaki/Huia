@@ -115,13 +115,7 @@ public static class ServiceCollectionExtensions
         services.AddIdentityCore<HuiaUser>(identity =>
             {
                 identity.SignIn.RequireConfirmedAccount = false;
-
-                // Invoked directly against the real IdentityOptions instance ASP.NET Core Identity itself
-                // builds — fixes a bug in the old, removed HuiaOptions.Identity property, where a consumer's
-                // mutation was captured only after configure(options) (and so this delegate) had already run,
-                // silently discarding it.
-                options.Authentication.EmailAndPasswordIdentityConfigure?.Invoke(identity);
-                options.Authentication.PasswordlessIdentityConfigure?.Invoke(identity);
+                options.Identity?.Invoke(identity);
             })
             .AddRoles<HuiaRole>()
             .AddSignInManager()
@@ -130,13 +124,36 @@ public static class ServiceCollectionExtensions
 
         if (options.Authentication.PasswordlessFlowEnabled)
         {
-            services.AddSingleton(options.Authentication.PhoneOtpRateLimit);
+            services.AddSingleton(options.Authentication.Passwordless.RateLimit);
             services.TryAddSingleton<IPhoneOtpRateLimiter, PhoneOtpRateLimiter>();
             services.TryAddSingleton<ISmsSender<HuiaUser>, NoOpSmsSender>();
 
             // TryAdd so .WithEntityFrameworkStores<TContext>()/.WithStore<TStore,...>() (called after AddHuia
             // returns) can register the real store and have it win — see the matching comments there.
             services.TryAddScoped<IHuiaPhoneNumberStore, ThrowingPhoneNumberStore>();
+
+            // Both registered unconditionally regardless of whether PasswordlessFlowOptions actually turned
+            // them on, so PhoneLoginModel can call either one without branching — see NoOpPhoneIpRateLimiter's
+            // and NoOpTurnstileVerifier's own doc comments.
+            if (options.Authentication.Passwordless.IpRateLimitEnabled)
+            {
+                services.AddSingleton(options.Authentication.Passwordless.IpRateLimit);
+                services.TryAddSingleton<IPhoneIpRateLimiter, PhoneIpRateLimiter>();
+            }
+            else
+            {
+                services.TryAddSingleton<IPhoneIpRateLimiter, NoOpPhoneIpRateLimiter>();
+            }
+
+            if (options.Authentication.Passwordless.Turnstile is { } turnstile)
+            {
+                services.AddSingleton(turnstile);
+                services.AddHttpClient<ITurnstileVerifier, CloudflareTurnstileVerifier>();
+            }
+            else
+            {
+                services.TryAddSingleton<ITurnstileVerifier, NoOpTurnstileVerifier>();
+            }
         }
 
         // Authentication (default schemes, Identity cookies, the phone-verification cookie) is already

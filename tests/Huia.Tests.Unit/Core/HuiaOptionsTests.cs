@@ -46,9 +46,9 @@ public class HuiaOptionsTests
         options.Authentication.UsePasswordlessFlow();
 
         Assert.True(options.Authentication.PasswordlessFlowEnabled);
-        Assert.Equal(1, options.Authentication.PhoneOtpRateLimit.RequestsPerMinute);
-        Assert.Equal(3, options.Authentication.PhoneOtpRateLimit.RequestsPerHour);
-        Assert.Equal(10, options.Authentication.PhoneOtpRateLimit.RequestsPerDay);
+        Assert.Equal(1, options.Authentication.Passwordless.RateLimit.RequestsPerMinute);
+        Assert.Equal(3, options.Authentication.Passwordless.RateLimit.RequestsPerHour);
+        Assert.Equal(10, options.Authentication.Passwordless.RateLimit.RequestsPerDay);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class HuiaOptionsTests
     {
         var options = CreateOptions();
 
-        options.Authentication.UsePasswordlessFlow(configureRateLimit: rateLimit => rateLimit.RequestsPerMinute = 5);
+        options.Authentication.UsePasswordlessFlow(passwordless => passwordless.RateLimit.RequestsPerMinute = 5);
 
-        Assert.Equal(5, options.Authentication.PhoneOtpRateLimit.RequestsPerMinute);
+        Assert.Equal(5, options.Authentication.Passwordless.RateLimit.RequestsPerMinute);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class HuiaOptionsTests
 
         options.Authentication.UsePasswordlessFlow();
 
-        Assert.Null(options.Authentication.DefaultCountryCode);
+        Assert.Null(options.Authentication.Passwordless.DefaultCountryCode);
     }
 
     [Theory]
@@ -78,9 +78,9 @@ public class HuiaOptionsTests
     {
         var options = CreateOptions();
 
-        options.Authentication.UsePasswordlessFlow(defaultCountryCode: input);
+        options.Authentication.UsePasswordlessFlow(passwordless => passwordless.DefaultCountryCode = input);
 
-        Assert.Equal(expected, options.Authentication.DefaultCountryCode);
+        Assert.Equal(expected, options.Authentication.Passwordless.DefaultCountryCode);
     }
 
     [Fact]
@@ -88,7 +88,79 @@ public class HuiaOptionsTests
     {
         var options = CreateOptions();
 
-        Assert.Throws<ArgumentException>(() => options.Authentication.UsePasswordlessFlow(defaultCountryCode: "ZZ"));
+        Assert.Throws<ArgumentException>(
+            () => options.Authentication.UsePasswordlessFlow(passwordless => passwordless.DefaultCountryCode = "ZZ"));
+    }
+
+    [Fact]
+    public void UsePasswordlessFlow_IpRateLimitNotEnabled_LeavesIpRateLimitEnabledFalse()
+    {
+        var options = CreateOptions();
+
+        options.Authentication.UsePasswordlessFlow();
+
+        Assert.False(options.Authentication.Passwordless.IpRateLimitEnabled);
+    }
+
+    [Fact]
+    public void UsePasswordlessFlow_EnableIpRateLimiting_SetsFlagAndDefaults()
+    {
+        var options = CreateOptions();
+
+        options.Authentication.UsePasswordlessFlow(passwordless => passwordless.EnableIpRateLimiting());
+
+        Assert.True(options.Authentication.Passwordless.IpRateLimitEnabled);
+        Assert.Equal(5, options.Authentication.Passwordless.IpRateLimit.RequestsPerMinute);
+        Assert.Equal(20, options.Authentication.Passwordless.IpRateLimit.RequestsPerHour);
+        Assert.Equal(50, options.Authentication.Passwordless.IpRateLimit.RequestsPerDay);
+    }
+
+    [Fact]
+    public void UsePasswordlessFlow_EnableIpRateLimitingWithConfigure_OverridesDefaults()
+    {
+        var options = CreateOptions();
+
+        options.Authentication.UsePasswordlessFlow(
+            passwordless => passwordless.EnableIpRateLimiting(ip => ip.RequestsPerMinute = 2));
+
+        Assert.Equal(2, options.Authentication.Passwordless.IpRateLimit.RequestsPerMinute);
+    }
+
+    [Fact]
+    public void UsePasswordlessFlow_TurnstileNotConfigured_LeavesTurnstileNull()
+    {
+        var options = CreateOptions();
+
+        options.Authentication.UsePasswordlessFlow();
+
+        Assert.Null(options.Authentication.Passwordless.Turnstile);
+    }
+
+    [Fact]
+    public void UsePasswordlessFlow_UseTurnstile_SetsSiteKeyAndSecretKey()
+    {
+        var options = CreateOptions();
+
+        options.Authentication.UsePasswordlessFlow(passwordless => passwordless.UseTurnstile("site-key", "secret-key"));
+
+        Assert.Equal("site-key", options.Authentication.Passwordless.Turnstile?.SiteKey);
+        Assert.Equal("secret-key", options.Authentication.Passwordless.Turnstile?.SecretKey);
+    }
+
+    [Theory]
+    [InlineData(null, "secret-key")]
+    [InlineData("", "secret-key")]
+    [InlineData("site-key", null)]
+    [InlineData("site-key", "")]
+    public void UsePasswordlessFlow_UseTurnstileWithMissingKey_Throws(string? siteKey, string? secretKey)
+    {
+        var options = CreateOptions();
+
+        // ThrowsAny, not Throws: a null key throws ArgumentNullException specifically (ArgumentException.
+        // ThrowIfNullOrWhiteSpace's own documented behavior), which xUnit's Throws<T> treats as a mismatch
+        // since it requires the exact type, not just an assignable one.
+        Assert.ThrowsAny<ArgumentException>(
+            () => options.Authentication.UsePasswordlessFlow(passwordless => passwordless.UseTurnstile(siteKey!, secretKey!)));
     }
 
     [Fact]
@@ -99,6 +171,33 @@ public class HuiaOptionsTests
         options.Authentication.UseEmailAndPasswordFlow();
 
         Assert.True(options.Authentication.EmailAndPasswordFlowEnabled);
+    }
+
+    [Fact]
+    public void Identity_Unset_IsNull()
+    {
+        var options = CreateOptions();
+
+        Assert.Null(options.Identity);
+    }
+
+    [Fact]
+    public void Identity_Set_IsInvokedAgainstTheRealIdentityOptions()
+    {
+        var options = CreateOptions();
+        var invoked = false;
+
+        options.Identity = identity =>
+        {
+            invoked = true;
+            identity.Lockout.MaxFailedAccessAttempts = 7;
+        };
+
+        var identityOptions = new IdentityOptions();
+        options.Identity!.Invoke(identityOptions);
+
+        Assert.True(invoked);
+        Assert.Equal(7, identityOptions.Lockout.MaxFailedAccessAttempts);
     }
 
     /// <summary>

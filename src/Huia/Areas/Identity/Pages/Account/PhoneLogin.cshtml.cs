@@ -17,8 +17,11 @@ using Microsoft.Extensions.Logging;
 namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>
-/// Starts passwordless phone sign-in: validates and rate-limits the submitted phone number, looks up or
-/// creates the account, sends an OTP, and hands off to <see cref="PhoneLoginVerifyModel"/> via the
+/// Starts passwordless phone sign-in: validates the submitted phone number against a per-phone-number rate
+/// limit, a per-IP rate limit (opt-in — see <see cref="Huia.Core.Authentication.PasswordlessFlowOptions.EnableIpRateLimiting"/>),
+/// and a Cloudflare Turnstile challenge (also opt-in — see
+/// <see cref="Huia.Core.Authentication.PasswordlessFlowOptions.UseTurnstile"/>), looks up or creates the
+/// account, sends an OTP, and hands off to <see cref="PhoneLoginVerifyModel"/> via the
 /// <c>Huia.PhoneVerification</c> cookie. Registered via <c>huia.Authentication.UsePasswordlessFlow()</c>.
 /// Not meant to be navigated to directly; reached by posting from the phone form on <see cref="LoginModel"/>'s
 /// page.
@@ -28,6 +31,8 @@ public class PhoneLoginModel(
     UserManager<HuiaUser> userManager,
     IHuiaPhoneNumberStore phoneNumberStore,
     IPhoneOtpRateLimiter rateLimiter,
+    IPhoneIpRateLimiter ipRateLimiter,
+    ITurnstileVerifier turnstileVerifier,
     ISmsSender<HuiaUser> smsSender,
     IStringLocalizer<HuiaResources> localizer,
     ILogger<PhoneLoginModel> logger) : PageModel
@@ -35,6 +40,12 @@ public class PhoneLoginModel(
     /// <summary>The submitted form data.</summary>
     [BindProperty]
     public InputModel Input { get; set; } = new();
+
+    /// <summary>The Cloudflare Turnstile widget's response token, if the phone form rendered one — Cloudflare's
+    /// own script names this field itself, unprefixed by <see cref="Input"/>, so it's bound separately here
+    /// rather than as an <see cref="InputModel"/> property.</summary>
+    [BindProperty(Name = "cf-turnstile-response")]
+    public string? TurnstileToken { get; set; }
 
     /// <summary>Redirects here directly (no phone number submitted) back to <c>Login</c>.</summary>
     public IActionResult OnGet() => RedirectToPage("./Login");
@@ -62,14 +73,33 @@ public class PhoneLoginModel(
         // does: via TempData and a redirect, rather than a ModelState error this page has nowhere to show.
         if (!ModelState.IsValid)
         {
-            TempData["PhoneLoginError"] = localizer["InvalidPhoneNumberError"];
+            TempData["PhoneLoginError"] = (string)localizer["InvalidPhoneNumberError"];
             return RedirectToPage("./Login", new { returnUrl });
         }
 
         var normalized = PhoneNumberValidator.TryNormalize(Input.PhoneNumber, Input.CountryCode);
         if (normalized is null)
         {
-            TempData["PhoneLoginError"] = localizer["InvalidPhoneNumberError"];
+            TempData["PhoneLoginError"] = (string)localizer["InvalidPhoneNumberError"];
+            return RedirectToPage("./Login", new { returnUrl });
+        }
+
+        // Both checked before the per-phone-number rate limit below — cheapest-first, since an in-memory IP
+        // check is far cheaper than a Cloudflare round trip, and both should reject before that round trip
+        // ever happens for traffic already caught by the coarser IP limit. IPhoneIpRateLimiter and
+        // ITurnstileVerifier are always registered (no-op unless PasswordlessFlowOptions actually turned them
+        // on — see their own doc comments), so both calls are unconditional here.
+        var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var ipAcquireResult = await ipRateLimiter.TryAcquireAsync(clientIp ?? "unknown", HttpContext.RequestAborted);
+        if (!ipAcquireResult.IsAcquired)
+        {
+            TempData["PhoneLoginError"] = PhoneOtpCooldownFormatter.FormatMessage(localizer, ipAcquireResult.RetryAfter);
+            return RedirectToPage("./Login", new { returnUrl });
+        }
+
+        if (!await turnstileVerifier.VerifyAsync(TurnstileToken, clientIp, HttpContext.RequestAborted))
+        {
+            TempData["PhoneLoginError"] = (string)localizer["BotVerificationFailedError"];
             return RedirectToPage("./Login", new { returnUrl });
         }
 

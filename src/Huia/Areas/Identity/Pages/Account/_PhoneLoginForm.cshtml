@@ -56,6 +56,16 @@
         <span id="huia-phone-input-error" role="alert"></span>
     </div>
 
+    @if (Model.TurnstileSiteKey is not null)
+    {
+        @* Cloudflare's own script (loaded in Login.cshtml's Scripts section) finds this div, renders the
+           challenge into it, and — once it resolves — injects a hidden "cf-turnstile-response" input right
+           here that PhoneLoginModel.TurnstileToken binds by that exact name. Nothing here submits the form
+           itself; PhoneLoginModel.OnPostAsync is the actual verification boundary regardless of what this
+           widget reports client-side. *@
+        <div class="cf-turnstile" data-sitekey="@Model.TurnstileSiteKey"></div>
+    }
+
     <div class="huia-actions">
         <button type="submit" class="btn huia-full-width">@Localizer["SendCodeButton"]</button>
     </div>

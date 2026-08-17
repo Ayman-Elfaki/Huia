@@ -117,12 +117,22 @@ public sealed class HuiaOptions
 
     /// <summary>
     /// Configures which sign-in methods this app accepts — email+password, passwordless phone/OTP,
-    /// external (third-party) providers, or any combination. Replaces the old, removed <c>Identity</c>
-    /// (<see cref="IdentityOptions"/>) and <c>ExternalLogins</c> (<see cref="AuthenticationBuilder"/>)
-    /// properties and <c>EnableExternalLoginPasswordLinking()</c> method. See
-    /// <see cref="HuiaAuthenticationBuilder"/>.
+    /// external (third-party) providers, or any combination. Replaces the old, removed
+    /// <c>ExternalLogins</c> (<see cref="AuthenticationBuilder"/>) property and
+    /// <c>EnableExternalLoginPasswordLinking()</c> method. See <see cref="HuiaAuthenticationBuilder"/>.
     /// </summary>
     public HuiaAuthenticationBuilder Authentication { get; }
+
+    /// <summary>
+    /// Customizes ASP.NET Core Identity's shared <see cref="IdentityOptions"/> (e.g. <c>identity.Lockout</c>,
+    /// <c>identity.Password</c>) — one callback, applying regardless of which sign-in flow(s) are enabled,
+    /// since <see cref="IdentityOptions"/> is inherently a single, shared configuration space (lockout policy,
+    /// say, isn't meaningfully "per-flow"). Runs directly against the same <see cref="IdentityOptions"/>
+    /// instance ASP.NET Core Identity itself builds, so changes here actually take effect — unlike an
+    /// even-older, removed <c>HuiaOptions.Identity</c> property that mutated a disconnected
+    /// <see cref="IdentityOptions"/> instance <c>AddIdentityCore</c> never read from.
+    /// </summary>
+    public Action<IdentityOptions>? Identity { get; set; }
 
     /// <summary>
     /// Creates a new <see cref="HuiaOptions"/> with <see cref="Applications"/>

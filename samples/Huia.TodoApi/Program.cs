@@ -146,7 +146,12 @@ builder.Services.AddHuia(issuer, huia =>
         // both enabled, the login page renders them as tabs. Works out of the box even without Twilio
         // configured: TwilioSmsSender below is only registered when Twilio config is present, so this falls
         // back to Huia's default NoOpSmsSender, which logs the OTP code in Development instead of sending it.
-        huia.Authentication.UsePasswordlessFlow(defaultCountryCode: "SA");
+        // The additional per-IP rate limit (PasswordlessFlowOptions.EnableIpRateLimiting) and Cloudflare
+        // Turnstile bot check (PasswordlessFlowOptions.UseTurnstile) aren't demonstrated here deliberately —
+        // both would partition/gate on this sample's own integration test suite hitting this same endpoint
+        // from one shared address in rapid succession, which is exactly the traffic shape those features
+        // exist to catch.
+        huia.Authentication.UsePasswordlessFlow(passwordless => passwordless.DefaultCountryCode = "SA");
 
         // Demonstrates Huia's external-provider support (docs/external-providers.md): once a provider is
         // registered, its button appears on the login page automatically — no other wiring needed. Each
