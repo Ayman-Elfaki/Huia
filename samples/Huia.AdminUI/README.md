@@ -10,7 +10,8 @@ server-rendered OIDC client (the `admin-ui` client Program.cs registers) — the
 access token never reaches the browser: every page calls this app's own `/api/admin/**` routes
 (`server/api/admin/[...path].ts`), which attach the token server-side and proxy straight through to
 `/api/identity/admin/**`. Access is gated on the `Admin` role both in that proxy and, ultimately, by
-`MapHuiaAdminEndpoints` itself.
+`MapHuiaAdminEndpoints` itself. See the [repository tutorial](../../docs/tutorial.md) for the complete
+Aspire walkthrough.
 
 ## Running
 
@@ -24,7 +25,7 @@ npm run dev
 ```
 
 This assumes `Huia.TodoApi` is running standalone too, on its default fallback address
-(`https://localhost:5041`) — see [`../Huia.TodoApi`](../Huia.TodoApi). Sign in with the seeded demo admin
+(`https://localhost:5041`) — see [`Program.cs`](../Huia.TodoApi/Program.cs). Sign in with the seeded demo admin
 account (`admin@example.com` / `Admin123!Demo`).
 
 ## Environment variables

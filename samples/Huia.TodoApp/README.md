@@ -5,8 +5,8 @@ Todo sample. [Auth.js](https://authjs.dev) signs in against `Huia.TodoApi` as a 
 server-rendered OIDC client; the todo list is fetched/mutated via React Server Components and Server
 Actions calling `TodoApi`'s CRUD endpoints with the session's access token.
 
-See [`../../docs/samples.md`](../../docs/samples.md) for how this fits together with `TodoApi`, Mailpit, and
-the Aspire AppHost.
+See [`../../docs/tutorial.md`](../../docs/tutorial.md) for the complete walkthrough with `TodoApi`, Mailpit,
+and the Aspire AppHost.
 
 ## Running
 
@@ -21,7 +21,7 @@ npm run dev
 ```
 
 This assumes `Huia.TodoApi` is running standalone too, on its default fallback address
-(`https://localhost:5041`) — see [`../Huia.TodoApi`](../Huia.TodoApi).
+(`https://localhost:5041`) — see [`Program.cs`](../Huia.TodoApi/Program.cs).
 
 ## Environment variables
 

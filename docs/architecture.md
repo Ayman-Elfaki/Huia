@@ -126,5 +126,5 @@ send a welcome email, publish to a message bus) without forking the pages themse
 
 ## Sample architecture
 
-The [Todo sample](samples.md) demonstrates all of this in one combined host (the API that issues tokens is
-also the API that's protected by them) — see [samples.md](samples.md) for how the pieces there fit together.
+The [Todo sample](tutorial.md) demonstrates all of this in one combined host (the API that issues tokens is
+also the API that's protected by them) — see [tutorial.md](tutorial.md) for how the pieces there fit together.

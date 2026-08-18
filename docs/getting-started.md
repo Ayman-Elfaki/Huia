@@ -75,7 +75,7 @@ Every registration needs at least `SetClientId(...)`; confidential clients also 
 `offline_access`, where applicable) are granted automatically.
 
 A device application's own approval step (a signed-in user confirming a pending device code at
-`/connect/verify` — see [`Huia.Cli`](cli.md), which authenticates this way) needs
+`/connect/verify`) needs
 `app.UseAntiforgery()` added to the pipeline after `app.UseAuthentication()`/`app.UseAuthorization()` and
 before `MapHuiaConnectEndpoints()`, the same way those two are wired explicitly rather than bundled into
 `app.UseHuia()`:
@@ -111,7 +111,7 @@ huia.Applications.AddSinglePageApplication(app =>
 ```
 
 Leave unset to fall back to the server-wide lifetime. The same three fields are also settable per client
-through the admin `/applications` API (and `huia applications create/update`, see [cli.md](cli.md)) — useful
+through the admin `/applications` API — useful
 for tightening access tokens on a high-security client or extending refresh tokens for a trusted native app,
 without changing the lifetime for every other client.
 
@@ -137,11 +137,11 @@ See [key-management.md](key-management.md) for the full policy knobs.
   [external-providers.md](external-providers.md)).
 - `app.MapHuiaAdminEndpoints()` — JSON CRUD over applications, scopes, live authorizations, users, and roles
   at `/identity/admin/api/*`. **Not authorized by default** — chain `.RequireAuthorization(...)` onto the
-  returned `RouteGroupBuilder` yourself. [`Huia.Cli`](cli.md) is a terminal client for this API.
+  returned `RouteGroupBuilder` yourself.
 - `app.MapRazorPages()` — Huia's own server-rendered Identity pages (login, register, 2FA, password reset,
   device code approval, ...) live under `/identity/account/*` as Razor Pages bundled with the `Huia` package
   itself. The device page (`/identity/account/device`) is what `verification_uri` points a real user's
-  browser at by default for the [device authorization flow](cli.md) — `/connect/verify` stays mapped
+  browser at by default for the device authorization flow — `/connect/verify` stays mapped
   alongside it as a secondary URI exposing the same approval step as JSON, for a client that wants to render
   its own UI instead.
 
@@ -192,4 +192,4 @@ for a complete example that sends over SMTP to [Mailpit](https://mailpit.axllent
 - [External providers](external-providers.md) — sign in with Google, Microsoft, GitHub, and more.
 - [Localization](localization.md) — English/Arabic out of the box, add more.
 - [Custom stores](custom-store.md) — back persistence with something other than EF Core.
-- [Samples](samples.md) — a complete Todo CRUD API + Next.js frontend, run with Aspire.
+- [Tutorial](tutorial.md) — a complete Todo CRUD API + Next.js frontend, run with Aspire.

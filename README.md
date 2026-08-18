@@ -94,6 +94,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
 ## Documentation
 
+- [Tutorial](docs/tutorial.md) - Run the complete Todo sample with .NET Aspire
 - [Getting Started](docs/getting-started.md) - Installation and setup guide
 - [Architecture](docs/architecture.md) - How Huia works internally
 - [Passwordless Phone Sign-in](docs/passwordless.md) - Phone number + SMS OTP sign-in, no password
@@ -123,7 +124,8 @@ After calling `app.UseHuia()` and mapping endpoints:
 
 ## Samples
 
-The repository includes complete sample applications:
+The repository includes complete sample applications. Start with the [tutorial](docs/tutorial.md), then
+open the individual sample guides:
 
 - **Huia.TodoApi** - A Todo CRUD API with Huia authentication
 - **Huia.TodoApp** - Next.js frontend consuming the API
