@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 import { Textarea } from '@/components/ui/textarea'
 
 const filters = ref({})
-const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious }
+const { items, hasPrevious, hasNext, loading, error, refresh, goNext, goPrevious }
   = useAdminList<ApplicationResponse>('applications', filters)
 await refresh()
 
@@ -244,7 +244,7 @@ const needsSecret = computed(() => form.kind === 'web' || form.kind === 'm2m')
 
       <AdminPager
         :has-previous="hasPrevious"
-        :has-next="!!nextCursor"
+        :has-next="hasNext"
         :loading="loading"
         @previous="goPrevious"
         @next="goNext"

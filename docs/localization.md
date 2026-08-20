@@ -35,6 +35,20 @@ with the same keys as `HuiaResources.resx` — see
 [src/Huia/Localization/HuiaResources.resx](../src/Huia/Localization/HuiaResources.resx) for the full key
 list.
 
+## Custom `ValidationAttribute`s
+
+`AddDataAnnotationsLocalization`'s `DataAnnotationsModelValidatorProvider` re-localizes *built-in*
+DataAnnotations attributes' (`[Required]`, `[EmailAddress]`, `[StringLength]`, ...) server-side error
+message automatically, using their `ErrorMessage` as the lookup key — but not a *custom*
+`ValidationAttribute` subclass's: its `data-val-*` client-side hint localizes correctly, but the rendered
+server-side `ModelState` error stays English regardless of a matching resx entry (confirmed empirically,
+not documented behavior). A custom attribute needs to resolve `IStringLocalizer<HuiaResources>` itself and
+look its own `ErrorMessage` up explicitly — see
+[PersonNameAttribute.cs](../src/Huia/Common/PersonNameAttribute.cs) (used by `FirstName`/`LastName` on the
+Register/external-login/phone-login-confirmation pages) for the pattern: resolve the localizer via
+`ValidationContext.GetService(typeof(IStringLocalizer<HuiaResources>))` inside `IsValid`, then index into it
+with the same literal `ErrorMessage` string convention every other entry in `HuiaResources.resx` uses.
+
 ## Identity's validation messages
 
 ASP.NET Core Identity's own validation messages (`IdentityErrorDescriber` — e.g. "Passwords must have at

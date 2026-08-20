@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Key, Lock, LockOpen, Pencil, Plus, RefreshCw, Search, Shield, Trash2 } from '@lucide/vue'
-import type { CreateUserRequest, PagedResult, RoleResponse, UpdateUserRequest, UserResponse } from '~~/shared/types/admin'
+import type { CreateUserRequest, KeysetPage, RoleResponse, UpdateUserRequest, UserResponse } from '~~/shared/types/admin'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableR
 
 const search = ref('')
 const filters = computed(() => ({ search: search.value || undefined }))
-const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious, reset }
+const { items, hasPrevious, hasNext, loading, error, refresh, goNext, goPrevious, reset }
   = useAdminList<UserResponse>('users', filters)
 await refresh()
 watch(search, reset)
@@ -113,8 +113,8 @@ const rolesBusy = ref<string | null>(null)
 async function openRoles(user: UserResponse) {
   rolesTarget.value = user
   isRolesModalOpen.value = true
-  const result = await $huiaAdmin<PagedResult<RoleResponse>>('roles')
-  allRoles.value = result.items
+  const result = await $huiaAdmin<KeysetPage<RoleResponse>>('roles')
+  allRoles.value = result.data
 }
 
 async function toggleRole(role: RoleResponse, add: boolean) {
@@ -333,7 +333,7 @@ async function submitReset() {
 
       <AdminPager
         :has-previous="hasPrevious"
-        :has-next="!!nextCursor"
+        :has-next="hasNext"
         :loading="loading"
         @previous="goPrevious"
         @next="goNext"

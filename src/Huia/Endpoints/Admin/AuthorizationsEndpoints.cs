@@ -1,7 +1,9 @@
 using Huia.Applications;
 using Huia.Common;
+using Huia.Pagination;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
 
@@ -29,13 +31,13 @@ internal static class AuthorizationsEndpoints
     private static async Task<IResult> ListAsync(
         string? cursor, int? pageSize, string? subject, string? clientId,
         IOpenIddictAuthorizationManager manager, IOpenIddictApplicationManager applicationManager,
-        CancellationToken cancellationToken)
+        [FromServices] IAdminEfCorePaginator? paginator, CancellationToken cancellationToken)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
-        var offset = OffsetCursor.Decode(cursor);
 
         // The admin surface only ever knows an application by its public client_id (see ApplicationsEndpoints),
         // so a client_id filter is resolved down to OpenIddict's internal application id before querying.
+        // Shared by both the EF-Core and fallback paths below.
         string? applicationId = null;
         if (!string.IsNullOrWhiteSpace(clientId))
         {
@@ -48,6 +50,14 @@ internal static class AuthorizationsEndpoints
 
             applicationId = await applicationManager.GetIdAsync(application, cancellationToken).ConfigureAwait(false);
         }
+
+        if (paginator is not null)
+        {
+            return await paginator.ListAuthorizationsAsync(size, subject, applicationId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var offset = OffsetCursor.Decode(cursor);
 
         // Fetches one extra candidate (rather than a separate count) to know whether a next page exists -
         // see OffsetCursor's own doc comment for why this stays offset-based rather than a real keyset query.
@@ -133,7 +143,7 @@ internal static class AuthorizationsEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<AuthorizationResponse> ToResponseAsync(object authorization,
+    internal static async Task<AuthorizationResponse> ToResponseAsync(object authorization,
         IOpenIddictAuthorizationManager manager, IOpenIddictApplicationManager applicationManager,
         Dictionary<string, string?> clientIdCache, CancellationToken cancellationToken)
         => new(
@@ -147,7 +157,7 @@ internal static class AuthorizationsEndpoints
             await manager.GetCreationDateAsync(authorization, cancellationToken).ConfigureAwait(false),
             [.. await manager.GetScopesAsync(authorization, cancellationToken).ConfigureAwait(false)]);
 
-    private sealed record AuthorizationResponse(
+    internal sealed record AuthorizationResponse(
         string Id,
         string? ApplicationClientId,
         string? Subject,

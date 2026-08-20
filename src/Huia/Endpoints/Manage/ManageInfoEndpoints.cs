@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using Huia.Common;
 using Huia.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -51,6 +52,23 @@ internal static class ManageInfoEndpoints
         if (user is null)
         {
             return Results.Unauthorized();
+        }
+
+        // FirstName/LastName is a partial update: omitting the field (null) leaves the existing value alone,
+        // but a field that IS included must still be a valid name - it can't be blanked out to empty/invalid
+        // via this endpoint. Minimal API records aren't DataAnnotations-validated automatically in this
+        // codebase (unlike the Identity UI's Razor Page InputModels, see PersonNameAttribute), so this checks
+        // explicitly.
+        if (request.FirstName is not null && !PersonNameValidator.IsValid(request.FirstName))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
+                { [nameof(request.FirstName)] = [PersonNameValidator.DescribeError("First name")] });
+        }
+
+        if (request.LastName is not null && !PersonNameValidator.IsValid(request.LastName))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>(StringComparer.Ordinal)
+                { [nameof(request.LastName)] = [PersonNameValidator.DescribeError("Last name")] });
         }
 
         if (request.FirstName is not null)

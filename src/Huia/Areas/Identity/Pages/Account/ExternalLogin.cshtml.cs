@@ -128,7 +128,11 @@ public class ExternalLoginModel(
             var firstName = ExternalClaimsMapper.GetFirstName(info.Principal);
             var lastName = ExternalClaimsMapper.GetLastName(info.Principal);
 
-            if (!string.IsNullOrEmpty(firstName) && !string.IsNullOrEmpty(lastName))
+            // A name failing PersonNameValidator (too long, or containing characters it rejects) falls
+            // through to the confirmation page below the same as a missing one - that page treats an invalid
+            // provider-supplied name as not-supplied and lets the user fill in a valid one themselves (see
+            // ExternalLoginConfirmationModel.ApplyProviderSuppliedFields).
+            if (PersonNameValidator.IsValid(firstName) && PersonNameValidator.IsValid(lastName))
             {
                 var autoProvisioned = await TryAutoProvisionAsync(info, email, firstName, lastName, returnUrl);
                 if (autoProvisioned is not null)

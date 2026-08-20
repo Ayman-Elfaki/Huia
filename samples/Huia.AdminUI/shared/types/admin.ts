@@ -1,10 +1,18 @@
 // Mirrors the response/request record shapes in src/Huia/Endpoints/Admin/*.cs and
 // samples/Huia.TodoApi's MapHuiaAdminEndpoints() (proxied through nuxt-api-party's huiaAdmin endpoint).
 
-export interface PagedResult<T> {
-  items: T[]
-  /** Opaque token to pass back as the next request's `cursor` query param, or null on the last page. */
-  nextCursor: string | null
+/**
+ * Mirrors MR.AspNetCore.Pagination's KeysetPaginationResult<T> - what every admin list endpoint returns when
+ * Huia is configured with an EF Core store (see WithEntityFrameworkStores). There's no cursor token in the
+ * response itself: the next/previous page is requested by sending the id of the last/first item already on
+ * screen as the `after`/`before` query param (see useAdminList.ts).
+ */
+export interface KeysetPage<T> {
+  data: T[]
+  totalCount: number
+  pageSize: number
+  hasPrevious: boolean
+  hasNext: boolean
 }
 
 export type ApplicationKind = 'spa' | 'native' | 'web' | 'm2m' | 'device'

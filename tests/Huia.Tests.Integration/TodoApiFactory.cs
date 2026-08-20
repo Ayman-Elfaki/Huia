@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenIddict.Server;
 
 namespace Huia.Tests.Integration;
@@ -51,6 +53,15 @@ public sealed class TodoApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            // Every host bootstraps Quartz (OpenIddict's pruning job, Huia's key-rotation job), which wires
+            // its logging through an unsynchronized *process-wide static* rather than this container, so it
+            // can end up bound to a *different*, disposed host's ILoggerFactory and throw
+            // ObjectDisposedException. NullLoggerFactory.Instance's Dispose() is a no-op, so it's safe no
+            // matter which host's factory Quartz's static state lands on. Same fix needed in every other
+            // WebApplicationFactory in this project — Quartz's static state is shared process-wide.
+            services.RemoveAll<ILoggerFactory>();
+            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+
             // The sample's own Program.cs already configured these two contexts for Npgsql. AddDbContext's
             // options-configuration is composable, not last-one-wins — EF Core merges every registered
             // IDbContextOptionsConfiguration<T> when it builds the final DbContextOptions<T>, so on top of

@@ -2,8 +2,10 @@ using Huia.Core;
 using Huia.EntityFrameworkCore.Common;
 using Huia.EntityFrameworkCore.Identity;
 using Huia.EntityFrameworkCore.Keys;
+using Huia.EntityFrameworkCore.Pagination;
 using Huia.Identity;
 using Huia.Keys;
+using Huia.Pagination;
 using Huia.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -97,6 +99,14 @@ public static class ServiceCollectionExtensions
             options.WaitForJobsToComplete = true;
             configureHostedService?.Invoke(options);
         });
+
+        // Backs the admin list endpoints' real keyset pagination (MR.AspNetCore.Pagination needs a live EF
+        // Core IQueryable, so this is only wired up here, not in the store-agnostic src/Huia). A consumer
+        // using .WithStore<...>() instead never registers IAdminEfCorePaginator, so those endpoints resolve
+        // null and keep using their own store-agnostic offset-cursor pagination unchanged.
+        services.AddHttpContextAccessor();
+        services.AddPagination();
+        services.AddScoped<IAdminEfCorePaginator, EfCoreAdminPaginator<TContext>>();
 
         return builder;
     }

@@ -1,40 +1,42 @@
-import type { PagedResult } from '~~/shared/types/admin'
+import type { KeysetPage } from '~~/shared/types/admin'
 
 /**
- * Fetches a cursor-paged admin resource through nuxt-api-party's huiaAdmin endpoint (see nuxt.config.ts and
+ * Fetches a keyset-paged admin resource through nuxt-api-party's huiaAdmin endpoint (see nuxt.config.ts and
  * server/plugins/apiPartyAuth.ts). Every list endpoint under MapHuiaAdminEndpoints returns the same
- * PagedResult<T> shape (see src/Huia/Common/PagedResult.cs — an opaque nextCursor token, not a page number
- * or total count), so this one composable covers every paginated resource page.
+ * KeysetPage<T> shape when Huia is configured with an EF Core store (see shared/types/admin.ts) - there's no
+ * cursor token in the response; the next/previous page is requested by sending the id of the last/first item
+ * already on screen as the `after`/`before` query param (MR.AspNetCore.Pagination's own convention), so this
+ * composable requires T to carry an `id`.
  *
  * `filters` carries only non-pagination query params (e.g. `search`, `subject`) — this composable owns
- * `cursor`/`pageSize` itself. Callers that change a filter should call `reset()` (not `refresh()`) so
+ * `after`/`before`/`pageSize` itself. Callers that change a filter should call `reset()` (not `refresh()`) so
  * pagination starts over from the first page under the new filter.
  */
-export function useAdminList<T>(
+export function useAdminList<T extends { id: string }>(
   path: string,
   filters: Ref<Record<string, string | undefined>>,
   pageSize = 25
 ) {
   const items = ref<T[]>([]) as Ref<T[]>
-  const nextCursor = ref<string | null>(null)
-  const currentCursor = ref<string | null>(null)
-  // Cursors used to reach the current page, oldest first — popped to go back a page.
-  const cursorHistory = ref<(string | null)[]>([])
+  const hasPrevious = ref(false)
+  const hasNext = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const hasPrevious = computed(() => cursorHistory.value.length > 0)
+  // The direction used to reach the page currently on screen - replayed as-is by refresh().
+  let currentDirection: { after?: string, before?: string } = {}
 
-  async function fetchPage(cursor: string | null) {
+  async function fetchPage(direction: { after?: string, before?: string }) {
     loading.value = true
     error.value = null
     try {
-      const result = await $huiaAdmin<PagedResult<T>>(path, {
-        query: { ...filters.value, cursor: cursor ?? undefined, pageSize }
+      const result = await $huiaAdmin<KeysetPage<T>>(path, {
+        query: { ...filters.value, ...direction, pageSize }
       })
-      items.value = result.items
-      nextCursor.value = result.nextCursor
-      currentCursor.value = cursor
+      items.value = result.data
+      hasPrevious.value = result.hasPrevious
+      hasNext.value = result.hasNext
+      currentDirection = direction
     } catch (err) {
       error.value = adminErrorMessage(err)
     } finally {
@@ -44,27 +46,25 @@ export function useAdminList<T>(
 
   /** Re-fetches the current page as-is (e.g. after a create/edit/delete, or the refresh button). */
   function refresh() {
-    return fetchPage(currentCursor.value)
+    return fetchPage(currentDirection)
   }
 
   function goNext() {
-    if (!nextCursor.value) return Promise.resolve()
-    cursorHistory.value.push(currentCursor.value)
-    return fetchPage(nextCursor.value)
+    if (!hasNext.value || !items.value.length) return Promise.resolve()
+    return fetchPage({ after: items.value[items.value.length - 1]!.id })
   }
 
   function goPrevious() {
-    if (!hasPrevious.value) return Promise.resolve()
-    return fetchPage(cursorHistory.value.pop() ?? null)
+    if (!hasPrevious.value || !items.value.length) return Promise.resolve()
+    return fetchPage({ before: items.value[0]!.id })
   }
 
   /** Starts over from the first page - call after a filter changes. */
   function reset() {
-    cursorHistory.value = []
-    return fetchPage(null)
+    return fetchPage({})
   }
 
-  return { items, nextCursor, hasPrevious, loading, error, refresh, goNext, goPrevious, reset }
+  return { items, hasPrevious, hasNext, loading, error, refresh, goNext, goPrevious, reset }
 }
 
 /** Unwraps a ProblemDetails/ValidationProblem body (or a plain string) from a failed $fetch call. */

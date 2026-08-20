@@ -77,4 +77,32 @@ public class IdentityUiLocalizationTests(TodoApiFactory factory) : IClassFixture
         Assert.Contains("البريد الإلكتروني مطلوب", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Email is required.", html, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task Register_InvalidFirstName_WithArabicCulture_ShowsTheArabicPersonNameMessage()
+    {
+        using var client = CreateClient();
+        var registerUrl = "/identity/account/register?culture=ar&ui-culture=ar";
+        var token = await IdentityUiTestHelpers.GetAntiforgeryTokenAsync(client, registerUrl);
+
+        using var response = await client.PostAsync(registerUrl,
+            new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["Input.FirstName"] = "Ada99",
+                ["Input.LastName"] = "Valid",
+                ["Input.Email"] = $"ar-register-{Guid.NewGuid():N}@example.com",
+                ["Input.Password"] = "P@ssw0rd123!",
+                ["Input.ConfirmPassword"] = "P@ssw0rd123!",
+                ["culture"] = "ar",
+                ["ui-culture"] = "ar",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var html = await response.Content.ReadAsStringAsync();
+        // [PersonName(ErrorMessage = "First name may only contain...")] on RegisterModel.InputModel.FirstName.
+        Assert.Contains("يجب ألا يحتوي الاسم الأول إلا على أحرف ومسافات وشرطات وفواصل عليا", html,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("First name may only contain letters", html, StringComparison.Ordinal);
+    }
 }

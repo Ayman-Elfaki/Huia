@@ -1,6 +1,8 @@
 using Huia.Common;
+using Huia.Pagination;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
 
@@ -27,9 +29,15 @@ internal static class ScopesEndpoints
     }
 
     private static async Task<IResult> ListAsync(string? cursor, int? pageSize, IOpenIddictScopeManager manager,
-        CancellationToken cancellationToken)
+        [FromServices] IAdminEfCorePaginator? paginator, CancellationToken cancellationToken)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
+
+        if (paginator is not null)
+        {
+            return await paginator.ListScopesAsync(size, cancellationToken).ConfigureAwait(false);
+        }
+
         var offset = OffsetCursor.Decode(cursor);
 
         // Fetches one extra row to know whether a next page exists, rather than a separate CountAsync
@@ -138,7 +146,7 @@ internal static class ScopesEndpoints
         return descriptor;
     }
 
-    private static async Task<ScopeResponse> ToResponseAsync(object scope, IOpenIddictScopeManager manager,
+    internal static async Task<ScopeResponse> ToResponseAsync(object scope, IOpenIddictScopeManager manager,
         CancellationToken cancellationToken)
         => new(
             (await manager.GetIdAsync(scope, cancellationToken).ConfigureAwait(false))!,
@@ -147,7 +155,7 @@ internal static class ScopesEndpoints
             await manager.GetDescriptionAsync(scope, cancellationToken).ConfigureAwait(false),
             [.. await manager.GetResourcesAsync(scope, cancellationToken).ConfigureAwait(false)]);
 
-    private sealed record ScopeResponse(
+    internal sealed record ScopeResponse(
         string Id,
         string Name,
         string? DisplayName,

@@ -167,7 +167,10 @@ public class ExternalLoginConfirmationModel(
     /// field the provider actually supplied so the page can render it read-only — and, on a POST, discarding
     /// any validation error binding recorded against it, since its value came from here rather than the
     /// posted form. A field the provider didn't supply (e.g. a generic OAuth provider with no email claim)
-    /// is left alone for the user to fill in.
+    /// is left alone for the user to fill in — as is a supplied name that fails <see cref="PersonNameValidator"/>
+    /// (too long, or containing characters <see cref="PersonNameAttribute"/> would reject): since this field
+    /// would otherwise render disabled, an invalid provider-supplied value would be a dead end the user
+    /// couldn't fix, so it's treated the same as "not supplied" instead, leaving an empty, editable input.
     /// </summary>
     private void ApplyProviderSuppliedFields(ExternalLoginInfo info)
     {
@@ -180,7 +183,7 @@ public class ExternalLoginConfirmationModel(
         }
 
         var firstName = ExternalClaimsMapper.GetFirstName(info.Principal);
-        FirstNameFromProvider = !string.IsNullOrEmpty(firstName);
+        FirstNameFromProvider = PersonNameValidator.IsValid(firstName);
         if (FirstNameFromProvider)
         {
             Input.FirstName = firstName!;
@@ -188,7 +191,7 @@ public class ExternalLoginConfirmationModel(
         }
 
         var lastName = ExternalClaimsMapper.GetLastName(info.Principal);
-        LastNameFromProvider = !string.IsNullOrEmpty(lastName);
+        LastNameFromProvider = PersonNameValidator.IsValid(lastName);
         if (LastNameFromProvider)
         {
             Input.LastName = lastName!;
@@ -223,6 +226,7 @@ public class ExternalLoginConfirmationModel(
         /// The new account's given (first) name.
         /// </summary>
         [Required(ErrorMessage = "First name is required.")]
+        [PersonName(ErrorMessage = "First name may only contain letters, spaces, hyphens, and apostrophes, and be at most 256 characters.")]
         [Display(Name = "First name")]
         public string FirstName { get; set; } = string.Empty;
 
@@ -230,6 +234,7 @@ public class ExternalLoginConfirmationModel(
         /// The new account's family (last) name.
         /// </summary>
         [Required(ErrorMessage = "Last name is required.")]
+        [PersonName(ErrorMessage = "Last name may only contain letters, spaces, hyphens, and apostrophes, and be at most 256 characters.")]
         [Display(Name = "Last name")]
         public string LastName { get; set; } = string.Empty;
 

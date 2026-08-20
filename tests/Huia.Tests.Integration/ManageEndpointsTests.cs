@@ -53,6 +53,40 @@ public class ManageEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoAp
         Assert.Equal("Name", info.LastName);
     }
 
+    [Theory]
+    [InlineData("Invalid123", null)]
+    [InlineData(null, "Invalid!")]
+    public async Task UpdateInfo_WithInvalidName_ReturnsValidationProblemAndLeavesNameUnchanged(string? firstName,
+        string? lastName)
+    {
+        var (client, _, _) = await AdminTestHelpers.CreateAuthorizedClientCoreAsync(factory, roles: []);
+        var seeded = await client.PostAsJsonAsync(InfoPath, new { FirstName = "Original", LastName = "Name" });
+        Assert.Equal(HttpStatusCode.OK, seeded.StatusCode);
+
+        var response = await client.PostAsJsonAsync(InfoPath, new { FirstName = firstName, LastName = lastName });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var fetched = await client.GetFromJsonAsync<InfoResponse>(InfoPath);
+        Assert.Equal("Original", fetched!.FirstName);
+        Assert.Equal("Name", fetched.LastName);
+    }
+
+    /// <summary>Omitting FirstName/LastName from the request leaves the existing value alone - only a field
+    /// that's actually included must be a valid name (see ManageInfoEndpoints.UpdateInfoAsync).</summary>
+    [Fact]
+    public async Task UpdateInfo_OmittingName_LeavesExistingNameUnchanged()
+    {
+        var (client, _, _) = await AdminTestHelpers.CreateAuthorizedClientCoreAsync(factory, roles: []);
+        var seeded = await client.PostAsJsonAsync(InfoPath, new { FirstName = "Kept", LastName = "Name" });
+        Assert.Equal(HttpStatusCode.OK, seeded.StatusCode);
+
+        var response = await client.PostAsJsonAsync(InfoPath, new { NewEmail = (string?)null });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var info = await response.Content.ReadFromJsonAsync<InfoResponse>();
+        Assert.Equal("Kept", info!.FirstName);
+        Assert.Equal("Name", info.LastName);
+    }
+
     /// <summary>Regression guard for the pre-existing same-origin (server-rendered) usage this endpoint group
     /// was originally built for, alongside the bearer path added for cross-origin OAuth clients above.</summary>
     [Fact]
