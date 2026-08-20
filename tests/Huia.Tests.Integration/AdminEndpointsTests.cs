@@ -73,6 +73,10 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     }
 
     [Fact]
+    // Long because the page-walk needed to make the list assertion immune to sibling tests' seed data
+    // (see the comment at the walk itself) pushes this past the line-count threshold; splitting a single
+    // linear CRUD lifecycle into multiple methods would fragment one scenario, not simplify it.
+#pragma warning disable MA0051
     public async Task Applications_Crud_FullLifecycle_Succeeds()
     {
         var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
@@ -94,8 +98,28 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal(clientId, app!.ClientId);
         Assert.Equal("spa", app.Kind);
 
-        var list = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>($"{BasePath}/applications");
-        Assert.Contains(list!.Items, a => string.Equals(a.ClientId, clientId, StringComparison.Ordinal));
+        // Walks every page rather than asserting against just the first: this class shares one database via
+        // IClassFixture<TodoApiFactory>, and xUnit doesn't guarantee test order, so a sibling test that seeds
+        // many applications (Applications_CursorPagination_WalksEveryItemExactlyOnceWithoutTotalCount) can push
+        // this one past the default 25-item first page if it happens to run first.
+        var foundInList = false;
+        var listCursor = (string?)null;
+        do
+        {
+            var url = listCursor is null
+                ? $"{BasePath}/applications"
+                : $"{BasePath}/applications?cursor={Uri.EscapeDataString(listCursor)}";
+            var page = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>(url);
+            if (page!.Items.Any(a => string.Equals(a.ClientId, clientId, StringComparison.Ordinal)))
+            {
+                foundInList = true;
+                break;
+            }
+
+            listCursor = page.NextCursor;
+        } while (listCursor is not null);
+
+        Assert.True(foundInList, $"Expected application '{clientId}' to appear in the applications list.");
 
         var fetched = await client.GetFromJsonAsync<ApplicationResponse>($"{BasePath}/applications/{app.Id}");
         Assert.Equal(clientId, fetched!.ClientId);
@@ -120,6 +144,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         var afterDelete = await client.GetAsync($"{BasePath}/applications/{app.Id}");
         Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
     }
+#pragma warning restore MA0051
 
     [Fact]
     public async Task Applications_CursorPagination_WalksEveryItemExactlyOnceWithoutTotalCount()
