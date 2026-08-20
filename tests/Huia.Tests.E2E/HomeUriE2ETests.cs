@@ -45,7 +45,7 @@ public sealed partial class HomeUriE2ETests(HuiaAppFixture fixture) : IAsyncLife
         await RegisterAsync(webBaseUrl, email, password);
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
-        await Assertions.Expect(_page.GetByText("E2E HomeUri")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd HomeUri")).ToBeVisibleAsync();
 
         var confirmationLink = await GetConfirmationLinkFromMailpitAsync(email);
 
@@ -59,7 +59,7 @@ public sealed partial class HomeUriE2ETests(HuiaAppFixture fixture) : IAsyncLife
         await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 120000 });
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
-        await Assertions.Expect(_page.GetByText("E2E HomeUri")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd HomeUri")).ToBeVisibleAsync();
     }
 
     private async Task RegisterAsync(string webBaseUrl, string email, string password)
@@ -68,7 +68,7 @@ public sealed partial class HomeUriE2ETests(HuiaAppFixture fixture) : IAsyncLife
         await _page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
         await _page.GetByRole(AriaRole.Link, new() { Name = "Create an account" }).ClickAsync();
 
-        await _page.GetByLabel("First name").FillAsync("E2E");
+        await _page.GetByLabel("First name").FillAsync("EndToEnd");
         await _page.GetByLabel("Last name").FillAsync("HomeUri");
         await _page.GetByLabel("Email").FillAsync(email);
         await _page.GetByLabel("Password", new() { Exact = true }).FillAsync(password);

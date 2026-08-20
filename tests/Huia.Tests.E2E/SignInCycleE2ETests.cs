@@ -39,7 +39,7 @@ public sealed class SignInCycleE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign in" }).ClickAsync();
         await _page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "Create an account" }).ClickAsync();
 
-        await _page.GetByLabel("First name").FillAsync("E2E");
+        await _page.GetByLabel("First name").FillAsync("EndToEnd");
         await _page.GetByLabel("Last name").FillAsync("Cycle");
         await _page.GetByLabel("Email").FillAsync(email);
         await _page.GetByLabel("Password", new PageGetByLabelOptions { Exact = true }).FillAsync(password);
@@ -49,7 +49,7 @@ public sealed class SignInCycleE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 180000 });
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
-        await Assertions.Expect(_page.GetByText("E2E Cycle")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd Cycle")).ToBeVisibleAsync();
 
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign out" }).ClickAsync();
         await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 120000 });
@@ -69,7 +69,7 @@ public sealed class SignInCycleE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 180000 });
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
-        await Assertions.Expect(_page.GetByText("E2E Cycle")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd Cycle")).ToBeVisibleAsync();
     }
 
     private string GetBaseUrl(string resourceName)

@@ -43,7 +43,7 @@ public sealed class SecondClientSsoE2ETests(HuiaAppFixture fixture) : IAsyncLife
         await _page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
         await _page.GetByRole(AriaRole.Link, new() { Name = "Create an account" }).ClickAsync();
 
-        await _page.GetByLabel("First name").FillAsync("E2E");
+        await _page.GetByLabel("First name").FillAsync("EndToEnd");
         await _page.GetByLabel("Last name").FillAsync("Sso");
         await _page.GetByLabel("Email").FillAsync(email);
         await _page.GetByLabel("Password", new() { Exact = true }).FillAsync(password);
@@ -53,7 +53,7 @@ public sealed class SecondClientSsoE2ETests(HuiaAppFixture fixture) : IAsyncLife
         await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 180000 });
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
-        await Assertions.Expect(_page.GetByText("E2E Sso")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd Sso")).ToBeVisibleAsync();
 
         var query = string.Join('&', new[]
         {

@@ -38,11 +38,11 @@ public sealed class TodoAppE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         var email = $"e2e-{Guid.NewGuid():N}@example.com";
         const string password = "P@ssw0rd123!";
 
-        await RegisterAndSignInAsync(webBaseUrl, "E2E", "Tester", email, password);
+        await RegisterAndSignInAsync(webBaseUrl, "EndToEnd", "Tester", email, password);
 
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
-        await Assertions.Expect(_page.GetByText("E2E Tester")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd Tester")).ToBeVisibleAsync();
 
         await _page.GetByPlaceholder("What needs doing?").FillAsync("Buy milk");
         await _page.GetByRole(AriaRole.Button, new() { Name = "Add" }).ClickAsync();
@@ -63,7 +63,7 @@ public sealed class TodoAppE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         using var mailpitClient = fixture.App.CreateHttpClient("mailpit", "http");
         var email = $"e2e-mail-{Guid.NewGuid():N}@example.com";
 
-        await RegisterAndSignInAsync(webBaseUrl, "E2E", "Mail", email, "P@ssw0rd123!");
+        await RegisterAndSignInAsync(webBaseUrl, "EndToEnd", "Mail", email, "P@ssw0rd123!");
 
         using var response = await mailpitClient.GetAsync($"/api/v1/search?query=to:{email}");
         response.EnsureSuccessStatusCode();
@@ -90,7 +90,11 @@ public sealed class TodoAppE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
 
         // RequireConfirmedAccount is false, so registration signs the user in and the OIDC round trip lands
         // back on the Next.js app, authenticated.
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 180000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new()
+        {
+            Timeout = 180000,
+            WaitUntil = WaitUntilState.DOMContentLoaded
+        });
     }
 
     private string GetBaseUrl(string resourceName)

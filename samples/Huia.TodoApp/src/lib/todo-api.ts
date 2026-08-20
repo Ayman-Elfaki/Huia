@@ -26,9 +26,15 @@ async function apiFetch(path: string, accessToken: string, init?: RequestInit): 
     return response;
 }
 
+// Mirrors MR.AspNetCore.Pagination's KeysetPaginationResult<T> - what GET /api/todos returns (see
+// TodoEndpoints.cs). The todo app never paginates, so only `data` (the single page of every todo the
+// caller owns) is used.
+type KeysetPage<T> = { data: T[] };
+
 export async function listTodos(accessToken: string): Promise<Todo[]> {
     const response = await apiFetch("/api/todos", accessToken);
-    return response.json();
+    const page: KeysetPage<Todo> = await response.json();
+    return page.data;
 }
 
 export async function createTodo(accessToken: string, title: string): Promise<Todo> {

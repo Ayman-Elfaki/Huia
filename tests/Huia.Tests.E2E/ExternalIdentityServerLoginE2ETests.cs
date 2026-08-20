@@ -80,7 +80,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         // Not signed in to IdentityServer yet either — register a brand-new account there.
         await _page.GetByRole(AriaRole.Link, new() { Name = "Create an account" }).ClickAsync();
 
-        await _page.GetByLabel("First name").FillAsync("E2E");
+        await _page.GetByLabel("First name").FillAsync("EndToEnd");
         await _page.GetByLabel("Last name").FillAsync("Idp");
         await _page.GetByLabel("Email").FillAsync(email);
         await _page.GetByLabel("Password", new() { Exact = true }).FillAsync(password);
@@ -105,7 +105,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         // The name/email fields are pre-filled (and disabled) from the claims IdentityServer's own token
         // reported — proves the claims actually made it across the OIDC round trip, not just that some page
         // loaded.
-        await Assertions.Expect(_page.GetByLabel("First name")).ToHaveValueAsync("E2E");
+        await Assertions.Expect(_page.GetByLabel("First name")).ToHaveValueAsync("EndToEnd");
         await Assertions.Expect(_page.GetByLabel("Last name")).ToHaveValueAsync("Idp");
         await Assertions.Expect(_page.GetByLabel("Email")).ToHaveValueAsync(email);
 

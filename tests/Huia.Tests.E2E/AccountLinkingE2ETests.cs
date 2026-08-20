@@ -82,7 +82,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         // otherwise irrelevant — never used again once the round trip returns to TodoApi.
         await _page.GetByRole(AriaRole.Link, new() { Name = "Create an account" }).ClickAsync();
 
-        await _page.GetByLabel("First name").FillAsync("E2E");
+        await _page.GetByLabel("First name").FillAsync("EndToEnd");
         await _page.GetByLabel("Last name").FillAsync("Link");
         await _page.GetByLabel("Email").FillAsync(email);
         await _page.GetByLabel("Password", new() { Exact = true }).FillAsync("Unrelat3dP@ssw0rd!");
@@ -134,7 +134,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         await _page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
         await _page.GetByRole(AriaRole.Link, new() { Name = "Create an account" }).ClickAsync();
 
-        await _page.GetByLabel("First name").FillAsync("E2E");
+        await _page.GetByLabel("First name").FillAsync("EndToEnd");
         await _page.GetByLabel("Last name").FillAsync("Link");
         await _page.GetByLabel("Email").FillAsync(email);
         await _page.GetByLabel("Password", new() { Exact = true }).FillAsync(password);
@@ -142,7 +142,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         await _page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync();
 
         await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 180000 });
-        await Assertions.Expect(_page.GetByText("E2E Link")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd Link")).ToBeVisibleAsync();
     }
 
     private string GetBaseUrl(string resourceName)

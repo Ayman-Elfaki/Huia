@@ -68,7 +68,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Verify" }).ClickAsync();
 
         await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 180000 });
-        await Assertions.Expect(_page.GetByText("E2E TwoFactor")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd TwoFactor")).ToBeVisibleAsync();
     }
 
     private async Task RegisterAsync(string webBaseUrl, string email, string password)
@@ -77,7 +77,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign in" }).ClickAsync();
         await _page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "Create an account" }).ClickAsync();
 
-        await _page.GetByLabel("First name").FillAsync("E2E");
+        await _page.GetByLabel("First name").FillAsync("EndToEnd");
         await _page.GetByLabel("Last name").FillAsync("TwoFactor");
         await _page.GetByLabel("Email").FillAsync(email);
         await _page.GetByLabel("Password", new PageGetByLabelOptions { Exact = true }).FillAsync(password);
@@ -85,7 +85,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Create account" }).ClickAsync();
 
         await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 180000 });
-        await Assertions.Expect(_page.GetByText("E2E TwoFactor")).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("EndToEnd TwoFactor")).ToBeVisibleAsync();
     }
 
     /// <summary>Drives the profile page's own 2FA panel and returns the shared key it enrolled with.</summary>
