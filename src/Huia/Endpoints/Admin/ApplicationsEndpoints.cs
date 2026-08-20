@@ -1,8 +1,10 @@
 using System.Globalization;
 using Huia.Applications;
 using Huia.Common;
+using Huia.Pagination;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -32,9 +34,15 @@ internal static class ApplicationsEndpoints
     }
 
     private static async Task<IResult> ListAsync(string? cursor, int? pageSize,
-        IOpenIddictApplicationManager manager, CancellationToken ct)
+        IOpenIddictApplicationManager manager, [FromServices] IAdminEfCorePaginator? paginator, CancellationToken ct)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
+
+        if (paginator is not null)
+        {
+            return await paginator.ListApplicationsAsync(size, ct).ConfigureAwait(false);
+        }
+
         var offset = OffsetCursor.Decode(cursor);
 
         // Fetches one extra row to know whether a next page exists, rather than a separate CountAsync
@@ -215,7 +223,7 @@ internal static class ApplicationsEndpoints
         return options;
     }
 
-    private static async Task<ApplicationResponse> ToResponseAsync(object app, IOpenIddictApplicationManager manager,
+    internal static async Task<ApplicationResponse> ToResponseAsync(object app, IOpenIddictApplicationManager manager,
         CancellationToken cancellationToken)
     {
         var permissions = await manager.GetPermissionsAsync(app, cancellationToken).ConfigureAwait(false);
@@ -272,7 +280,7 @@ internal static class ApplicationsEndpoints
         return isWeb ? "spa" : "native";
     }
 
-    private sealed record ApplicationResponse(
+    internal sealed record ApplicationResponse(
         string Id,
         string ClientId,
         string? DisplayName,

@@ -17,6 +17,10 @@
     <PackageVersion Include="libphonenumber-csharp" Version="9.0.37" />
   </ItemGroup>
 
+  <ItemGroup Label="Pagination">
+    <PackageVersion Include="MR.AspNetCore.Pagination" Version="3.2.0" />
+  </ItemGroup>
+
   <ItemGroup Label="OpenIddict">
     <PackageVersion Include="OpenIddict.Quartz" Version="7.6.0" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.6.0" />

@@ -15,7 +15,7 @@ const filters = computed(() => ({
   subject: subject.value || undefined,
   clientId: clientId.value || undefined
 }))
-const { items, hasPrevious, nextCursor, loading, error, refresh, goNext, goPrevious, reset }
+const { items, hasPrevious, hasNext, loading, error, refresh, goNext, goPrevious, reset }
   = useAdminList<AuthorizationResponse>('authorizations', filters)
 await refresh()
 watch([subject, clientId], reset)
@@ -161,7 +161,7 @@ function formatDate(value: string | null) {
 
     <AdminPager
       :has-previous="hasPrevious"
-      :has-next="!!nextCursor"
+      :has-next="hasNext"
       :loading="loading"
       @previous="goPrevious"
       @next="goNext"

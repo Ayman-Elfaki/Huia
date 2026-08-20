@@ -110,9 +110,9 @@ public class TodoEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApiF
 
         var client = await CreateAuthorizedClientAsync();
 
-        var todos = await client.GetFromJsonAsync<List<TodoEndpoints.TodoResponse>>("/api/todos");
+        var page = await client.GetFromJsonAsync<KeysetPage<TodoEndpoints.TodoResponse>>("/api/todos");
 
-        Assert.DoesNotContain(todos!, t => string.Equals(t.Title, "Not yours", StringComparison.Ordinal));
+        Assert.DoesNotContain(page!.Data, t => string.Equals(t.Title, "Not yours", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -196,4 +196,8 @@ public class TodoEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApiF
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }
+
+    /// <summary>Mirrors MR.AspNetCore.Pagination's <c>KeysetPaginationResult&lt;T&gt;</c>.</summary>
+    private sealed record KeysetPage<T>(IReadOnlyList<T> Data, int TotalCount, int PageSize, bool HasPrevious,
+        bool HasNext);
 }

@@ -1,4 +1,3 @@
-using Huia.Common;
 using Huia.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -40,9 +39,13 @@ internal static class RolesEndpoints
             .Select(r => new RoleResponse(r.Id, r.Name!))
             .ToList();
 
-        // Unpaginated by design (roles are typically few) - always the whole list, so there's never a next
-        // page to point a cursor at.
-        return Results.Ok(new PagedResult<RoleResponse>(items, null));
+        // Unpaginated by design (roles are typically few) - always the whole list, so there's never a next or
+        // previous page. Field names mirror MR.AspNetCore.Pagination's KeysetPaginationResult<T> (used by the
+        // other four admin list endpoints when an EF Core store is configured) so the admin UI's list
+        // composable can treat every resource uniformly, even though this endpoint never involves that
+        // package - Roles doesn't need real pagination, only the same response shape.
+        return Results.Ok(new RolesPage<RoleResponse>(items, items.Count, items.Count, HasPrevious: false,
+            HasNext: false));
     }
 
     private static async Task<IResult> GetAsync(string id, RoleManager<HuiaRole> roleManager)
@@ -109,6 +112,11 @@ internal static class RolesEndpoints
             .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
 
     private sealed record RoleResponse(string Id, string Name);
+
+    /// <summary>Mirrors MR.AspNetCore.Pagination's <c>KeysetPaginationResult&lt;T&gt;</c> field-for-field - see
+    /// the doc comment on <see cref="ListAsync(RoleManager{HuiaRole})"/>.</summary>
+    private sealed record RolesPage<T>(IReadOnlyList<T> Data, int TotalCount, int PageSize, bool HasPrevious,
+        bool HasNext);
 
     private sealed record RoleMemberResponse(string Id, string Email);
 

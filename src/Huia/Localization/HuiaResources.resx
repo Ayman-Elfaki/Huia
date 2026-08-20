@@ -204,8 +204,10 @@
     <data name="Remember this machine" xml:space="preserve"><value>Remember this machine</value></data>
     <data name="First name is required." xml:space="preserve"><value>First name is required.</value></data>
     <data name="First name" xml:space="preserve"><value>First name</value></data>
+    <data name="First name may only contain letters, spaces, hyphens, and apostrophes, and be at most 256 characters." xml:space="preserve"><value>First name may only contain letters, spaces, hyphens, and apostrophes, and be at most 256 characters.</value></data>
     <data name="Last name is required." xml:space="preserve"><value>Last name is required.</value></data>
     <data name="Last name" xml:space="preserve"><value>Last name</value></data>
+    <data name="Last name may only contain letters, spaces, hyphens, and apostrophes, and be at most 256 characters." xml:space="preserve"><value>Last name may only contain letters, spaces, hyphens, and apostrophes, and be at most 256 characters.</value></data>
     <data name="Code is required." xml:space="preserve"><value>Code is required.</value></data>
     <data name="Phone number is required." xml:space="preserve"><value>Phone number is required.</value></data>
     <data name="Country is required." xml:space="preserve"><value>Country is required.</value></data>

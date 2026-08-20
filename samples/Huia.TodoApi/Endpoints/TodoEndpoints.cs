@@ -3,6 +3,7 @@ using Huia.Identity;
 using Huia.TodoApi.Data;
 using Huia.TodoApi.Models;
 using Microsoft.EntityFrameworkCore;
+using MR.AspNetCore.Pagination;
 using OpenIddict.Abstractions;
 
 namespace Huia.TodoApi.Endpoints;
@@ -32,15 +33,26 @@ public static class TodoEndpoints
             .RequireAuthorization(policy => policy.RequireScope("todos"))
             .WithTags("Todos");
 
-        group.MapGet("/", async (ClaimsPrincipal user, TodoDbContext db, CancellationToken ct) =>
+        group.MapGet("/", async (ClaimsPrincipal user, TodoDbContext db, IPaginationService pagination,
+            CancellationToken ct) =>
         {
             var ownerId = GetOwnerId(user);
-            var todos = await db.Todos
-                .Where(t => t.OwnerId == ownerId)
-                .OrderBy(t => t.CreatedAt)
-                .ToListAsync(ct);
+            var todos = db.Todos.Where(t => t.OwnerId == ownerId);
 
-            return Results.Ok(todos.Select(TodoResponse.FromEntity));
+            // CreatedAt alone can collide within the same tick - Id breaks ties so the keyset ordering stays
+            // fully deterministic, which keyset pagination requires.
+            var page = await pagination.KeysetPaginateAsync(
+                todos,
+                b => b.Ascending(t => t.CreatedAt).Ascending(t => t.Id),
+                id => Guid.TryParse(id, out var todoId)
+                    ? db.Todos.FirstOrDefaultAsync(t => t.Id == todoId, ct)
+                    : Task.FromResult<TodoItem?>(null),
+                q => q,
+                pageSize: null).ConfigureAwait(false);
+
+            return Results.Ok(new KeysetPaginationResult<TodoResponse>(
+                [.. page.Data.Select(TodoResponse.FromEntity)],
+                page.TotalCount, page.PageSize, page.HasPrevious, page.HasNext));
         })
         .WithSummary("List the caller's todos");
 

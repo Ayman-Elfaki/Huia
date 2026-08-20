@@ -22,5 +22,6 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Huia.Tests.Unit"/>
         <InternalsVisibleTo Include="Huia.Tests.Integration"/>
+        <InternalsVisibleTo Include="Huia.EntityFrameworkCore"/>
     </ItemGroup>
 </Project>

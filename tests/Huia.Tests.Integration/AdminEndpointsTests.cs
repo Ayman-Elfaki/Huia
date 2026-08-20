@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using Huia.Common;
 using Huia.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -94,8 +93,11 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal(clientId, app!.ClientId);
         Assert.Equal("spa", app.Kind);
 
-        var list = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>($"{BasePath}/applications");
-        Assert.Contains(list!.Items, a => string.Equals(a.ClientId, clientId, StringComparison.Ordinal));
+        // Ordered by id (a random GUID assigned at creation), not insertion order, so with other tests in
+        // this shared fixture having created dozens of applications already, the one just created here could
+        // land anywhere - the max page size keeps this assertion reliable regardless of test execution order.
+        var list = await client.GetFromJsonAsync<KeysetPage<ApplicationResponse>>($"{BasePath}/applications?pageSize=100");
+        Assert.Contains(list!.Data, a => string.Equals(a.ClientId, clientId, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<ApplicationResponse>($"{BasePath}/applications/{app.Id}");
         Assert.Equal(clientId, fetched!.ClientId);
@@ -122,11 +124,11 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     }
 
     [Fact]
-    public async Task Applications_CursorPagination_WalksEveryItemExactlyOnceWithoutTotalCount()
+    public async Task Applications_KeysetPagination_WalksEveryItemExactlyOnceWithoutTotalCount()
     {
         var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
 
-        // More than one default-sized (25) page, so paging through requires at least one NextCursor hop.
+        // More than one default-sized (25) page, so paging through requires at least one "after" hop.
         var createdIds = new List<string>();
         for (var i = 0; i < 30; i++)
         {
@@ -144,21 +146,26 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
             createdIds.Add(app!.Id);
         }
 
-        var firstPage = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>($"{BasePath}/applications");
-        Assert.Equal(25, firstPage!.Items.Count);
-        Assert.NotNull(firstPage.NextCursor);
+        var firstPage = await client.GetFromJsonAsync<KeysetPage<ApplicationResponse>>($"{BasePath}/applications");
+        Assert.Equal(25, firstPage!.Data.Count);
+        Assert.True(firstPage.HasNext);
 
-        var walkedIds = new List<string>();
-        var cursor = (string?)null;
-        do
+        // MR.AspNetCore.Pagination doesn't hand back an opaque cursor token - the caller derives the next
+        // page's "after" value from the id of the last item it already has.
+        var walkedIds = new List<string>(firstPage.Data.Select(a => a.Id));
+        var hasNext = firstPage.HasNext;
+        var lastId = firstPage.Data[^1].Id;
+        while (hasNext)
         {
-            var url = cursor is null
-                ? $"{BasePath}/applications"
-                : $"{BasePath}/applications?cursor={Uri.EscapeDataString(cursor)}";
-            var page = await client.GetFromJsonAsync<PagedResult<ApplicationResponse>>(url);
-            walkedIds.AddRange(page!.Items.Select(a => a.Id));
-            cursor = page.NextCursor;
-        } while (cursor is not null);
+            var page = await client.GetFromJsonAsync<KeysetPage<ApplicationResponse>>(
+                $"{BasePath}/applications?after={Uri.EscapeDataString(lastId)}");
+            walkedIds.AddRange(page!.Data.Select(a => a.Id));
+            hasNext = page.HasNext;
+            if (page.Data.Count > 0)
+            {
+                lastId = page.Data[^1].Id;
+            }
+        }
 
         Assert.Equal(walkedIds.Count, walkedIds.Distinct(StringComparer.Ordinal).Count());
         Assert.All(createdIds, id => Assert.Contains(id, walkedIds, StringComparer.Ordinal));
@@ -182,8 +189,8 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.NotNull(scope);
         Assert.Equal(name, scope!.Name);
 
-        var list = await client.GetFromJsonAsync<PagedResult<ScopeResponse>>($"{BasePath}/scopes");
-        Assert.Contains(list!.Items, s => string.Equals(s.Name, name, StringComparison.Ordinal));
+        var list = await client.GetFromJsonAsync<KeysetPage<ScopeResponse>>($"{BasePath}/scopes");
+        Assert.Contains(list!.Data, s => string.Equals(s.Name, name, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<ScopeResponse>($"{BasePath}/scopes/{scope.Id}");
         Assert.Equal(name, fetched!.Name);
@@ -228,9 +235,9 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.NotNull(user);
         Assert.Equal(email, user!.Email);
 
-        var found = await client.GetFromJsonAsync<PagedResult<UserResponse>>(
+        var found = await client.GetFromJsonAsync<KeysetPage<UserResponse>>(
             $"{BasePath}/users?search={Uri.EscapeDataString(email)}");
-        Assert.Contains(found!.Items, u => string.Equals(u.Id, user.Id, StringComparison.Ordinal));
+        Assert.Contains(found!.Data, u => string.Equals(u.Id, user.Id, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<UserResponse>($"{BasePath}/users/{user.Id}");
         Assert.Equal(email, fetched!.Email);
@@ -283,6 +290,58 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
     }
 #pragma warning restore MA0051
+
+    [Theory]
+    [InlineData(null, "Valid")]
+    [InlineData("", "Valid")]
+    [InlineData("Ada99", "Valid")]
+    [InlineData("Valid", null)]
+    [InlineData("Valid", "")]
+    [InlineData("Valid", "Ada_Lovelace")]
+    public async Task Users_Create_WithInvalidName_ReturnsValidationProblem(string? firstName, string? lastName)
+    {
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync($"{BasePath}/users", new
+        {
+            Email = $"admin-invalid-name-{Guid.NewGuid():N}@example.com",
+            Password = "P@ssw0rd123!",
+            FirstName = firstName,
+            LastName = lastName,
+            EmailConfirmed = true,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Users_Update_WithInvalidName_ReturnsValidationProblemAndLeavesUserUnchanged()
+    {
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
+        var email = $"admin-update-invalid-{Guid.NewGuid():N}@example.com";
+
+        var created = await client.PostAsJsonAsync($"{BasePath}/users", new
+        {
+            Email = email,
+            Password = "P@ssw0rd123!",
+            FirstName = "Valid",
+            LastName = "Name",
+            EmailConfirmed = true,
+        });
+        var user = await created.Content.ReadFromJsonAsync<UserResponse>();
+
+        var updated = await client.PutAsJsonAsync($"{BasePath}/users/{user!.Id}", new
+        {
+            Email = email,
+            FirstName = "Invalid123",
+            LastName = "Name",
+            EmailConfirmed = true,
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, updated.StatusCode);
+
+        var fetched = await client.GetFromJsonAsync<UserResponse>($"{BasePath}/users/{user.Id}");
+        Assert.Equal("Valid", fetched!.FirstName);
+    }
 
     /// <summary>
     /// The admin API's own view of which external (third-party) provider(s) a user signed in with, and
@@ -339,8 +398,8 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.NotNull(role);
         Assert.Equal(name, role!.Name);
 
-        var list = await client.GetFromJsonAsync<PagedResult<RoleResponse>>($"{BasePath}/roles");
-        Assert.Contains(list!.Items, r => string.Equals(r.Name, name, StringComparison.Ordinal));
+        var list = await client.GetFromJsonAsync<KeysetPage<RoleResponse>>($"{BasePath}/roles");
+        Assert.Contains(list!.Data, r => string.Equals(r.Name, name, StringComparison.Ordinal));
 
         var fetched = await client.GetFromJsonAsync<RoleResponse>($"{BasePath}/roles/{role.Id}");
         Assert.Equal(name, fetched!.Name);
@@ -372,10 +431,10 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     {
         var (client, subject) = await AdminTestHelpers.CreateAdminUiAuthorizedClientWithSubjectAsync(factory);
 
-        var list = await client.GetFromJsonAsync<PagedResult<AuthorizationResponse>>(
+        var list = await client.GetFromJsonAsync<KeysetPage<AuthorizationResponse>>(
             $"{BasePath}/authorizations?subject={Uri.EscapeDataString(subject)}");
-        Assert.NotEmpty(list!.Items);
-        var authorization = list.Items[0];
+        Assert.NotEmpty(list!.Data);
+        var authorization = list.Data[0];
 
         var fetched = await client.GetFromJsonAsync<AuthorizationResponse>(
             $"{BasePath}/authorizations/{authorization.Id}");
@@ -398,6 +457,12 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    /// <summary>Mirrors MR.AspNetCore.Pagination's <c>KeysetPaginationResult&lt;T&gt;</c> - also matches the
+    /// unpaginated shape <c>RolesEndpoints</c> returns for consistency (see its own local <c>RolesPage&lt;T&gt;</c>
+    /// mirror), so this one type covers every admin list endpoint's response.</summary>
+    private sealed record KeysetPage<T>(IReadOnlyList<T> Data, int TotalCount, int PageSize, bool HasPrevious,
+        bool HasNext);
 
     private sealed record ApplicationResponse(
         string Id,
