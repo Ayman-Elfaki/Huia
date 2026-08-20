@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Huia.Tests.Integration.Passwordless;
 
@@ -39,6 +41,11 @@ public sealed class PhoneLoginIpRateLimitTestFactory : WebApplicationFactory<Pro
 
         builder.ConfigureServices(services =>
         {
+            // See TodoApiFactory's own comment on this: pins Quartz's process-wide static log provider
+            // away from any one host's disposable ILoggerFactory.
+            services.RemoveAll<ILoggerFactory>();
+            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+
             var sqliteServices = new ServiceCollection().AddEntityFrameworkSqlite().BuildServiceProvider();
 
             services.RemoveAll<IDbContextOptionsConfiguration<HuiaAppDbContext>>();
