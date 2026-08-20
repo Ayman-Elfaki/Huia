@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using Huia.Authentication;
 using Huia.Common;
 using Huia.Identity;
 using Huia.Localization;
@@ -18,9 +19,9 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>
 /// Starts passwordless phone sign-in: validates the submitted phone number against a per-phone-number rate
-/// limit, a per-IP rate limit (opt-in — see <see cref="Huia.Core.Authentication.PasswordlessFlowOptions.EnableIpRateLimiting"/>),
+/// limit, a per-IP rate limit (opt-in — see <see cref="PasswordlessFlowOptions.EnableIpRateLimiting"/>),
 /// and a Cloudflare Turnstile challenge (also opt-in — see
-/// <see cref="Huia.Core.Authentication.PasswordlessFlowOptions.UseTurnstile"/>), looks up or creates the
+/// <see cref="PasswordlessFlowOptions.UseTurnstile"/>), looks up or creates the
 /// account, sends an OTP, and hands off to <see cref="PhoneLoginVerifyModel"/> via the
 /// <c>Huia.PhoneVerification</c> cookie. Registered via <c>huia.Authentication.UsePasswordlessFlow()</c>.
 /// Not meant to be navigated to directly; reached by posting from the phone form on <see cref="LoginModel"/>'s
@@ -34,6 +35,7 @@ public class PhoneLoginModel(
     IPhoneIpRateLimiter ipRateLimiter,
     ITurnstileVerifier turnstileVerifier,
     ISmsSender<HuiaUser> smsSender,
+    HuiaOptions options,
     IStringLocalizer<HuiaResources> localizer,
     ILogger<PhoneLoginModel> logger) : PageModel
 {
@@ -113,6 +115,15 @@ public class PhoneLoginModel(
         }
 
         var user = await phoneNumberStore.FindByNormalizedPhoneNumberAsync(normalized, HttpContext.RequestAborted);
+        if ((user is null || !user.PasswordlessLoginEnabled) && !options.RegistrationEnabled)
+        {
+            // huia.DisableRegistration() forbids creating new accounts this way — whether this number was
+            // never seen before or belongs to an existing non-passwordless account, the branch below would
+            // otherwise create a brand-new one, so there's nothing left to do but reject the attempt outright.
+            TempData["PhoneLoginError"] = (string)localizer["PhoneNotRegisteredError"];
+            return RedirectToPage("./Login", new { returnUrl });
+        }
+
         if (user is null || !user.PasswordlessLoginEnabled)
         {
             // Either a brand-new number, or one that already belongs to a non-passwordless account (e.g.

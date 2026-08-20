@@ -1,4 +1,3 @@
-using Huia.Core;
 using Huia.EntityFrameworkCore.Common;
 using Huia.EntityFrameworkCore.Identity;
 using Huia.EntityFrameworkCore.Keys;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
 
-namespace Huia.EntityFrameworkCore.Extensions;
+namespace Huia.EntityFrameworkCore;
 
 /// <summary>
 /// Registers EF Core-backed persistence for Huia's Identity, OpenIddict, and key-management stores.

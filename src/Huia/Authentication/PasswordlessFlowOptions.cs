@@ -1,7 +1,7 @@
 using Huia.Common;
 using Huia.Passwordless;
 
-namespace Huia.Core.Authentication;
+namespace Huia.Authentication;
 
 /// <summary>
 /// Configures passwordless phone/OTP sign-in — passed to

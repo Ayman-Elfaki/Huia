@@ -89,7 +89,10 @@
             {
                 <div class="huia-footer-links">
                     <a asp-page="./ForgotPassword" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["ForgotPasswordLink"]</a>
-                    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["CreateAccountLink"]</a>
+                    @if (Model.ShowRegisterLink)
+                    {
+                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" data-variant="link" class="btn" data-size="sm">@Localizer["CreateAccountLink"]</a>
+                    }
                 </div>
             }
         </div>

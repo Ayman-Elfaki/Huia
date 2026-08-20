@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using Huia.Common;
-using Huia.Core;
 using Huia.Eventing;
 using Huia.Identity;
 using Huia.Localization;
@@ -142,7 +141,7 @@ public class ExternalLoginLinkConfirmationModel(
         }
 
         // Already signed in by PasswordSignInAsync above.
-        await events.PublishAsync(new UserSignedInEvent<string>(user.Id, user.Email!));
+        await events.PublishAsync(new UserSignedInEvent<string>(user.Id));
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));

@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Huia.Common;
-using Huia.Core;
 using Huia.Identity;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;

@@ -56,7 +56,7 @@ public static class WebApplicationBuilderExtensions
             // TodoUserRegisteredHandler path every other account does (see TodoUserRegisteredHandler),
             // giving it a TodoUser row too.
             var events = services.GetRequiredService<IEventPublisher>();
-            await events.PublishAsync(new UserRegisteredEvent<string>(admin.Id, admin.Email!));
+            await events.PublishAsync(new UserRegisteredEvent<string>(admin.Id));
         }
 
         if (!await userManager.IsInRoleAsync(admin, "Admin"))

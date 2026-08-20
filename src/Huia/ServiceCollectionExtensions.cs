@@ -19,7 +19,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Abstractions;
 using IdentityErrorDescriber = Microsoft.AspNetCore.Identity.IdentityErrorDescriber;
 
-namespace Huia.Core;
+namespace Huia;
 
 /// <summary>
 /// Registers Huia's ASP.NET Core Identity, OpenIddict, and key-management services.

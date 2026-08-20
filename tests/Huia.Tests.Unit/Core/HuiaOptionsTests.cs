@@ -1,4 +1,3 @@
-using Huia.Core;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -171,6 +170,24 @@ public class HuiaOptionsTests
         options.Authentication.UseEmailAndPasswordFlow();
 
         Assert.True(options.Authentication.EmailAndPasswordFlowEnabled);
+    }
+
+    [Fact]
+    public void RegistrationEnabled_DefaultsToTrue()
+    {
+        var options = CreateOptions();
+
+        Assert.True(options.RegistrationEnabled);
+    }
+
+    [Fact]
+    public void DisableRegistration_SetsRegistrationEnabledToFalse()
+    {
+        var options = CreateOptions();
+
+        options.DisableRegistration();
+
+        Assert.False(options.RegistrationEnabled);
     }
 
     [Fact]

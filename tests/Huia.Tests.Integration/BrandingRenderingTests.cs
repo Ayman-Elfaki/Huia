@@ -1,5 +1,4 @@
 using Huia.Branding;
-using Huia.Core;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Tests.Integration;

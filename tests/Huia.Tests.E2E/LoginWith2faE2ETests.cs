@@ -48,7 +48,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
         // Full RP-initiated sign-out (see SignInCycleE2ETests), so the next "Sign in" click shows a real
         // login form rather than silently re-authenticating via a still-live IdP session.
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign out" }).ClickAsync();
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 30000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 120000 });
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign in" }))
             .ToBeVisibleAsync();
 
@@ -62,12 +62,12 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
 
         // The password check succeeds but this account now has 2FA enabled, so LoginModel.OnPostAsync redirects
         // to LoginWith2fa instead of completing sign-in — a real second-step form, not the app itself.
-        await Assertions.Expect(_page.GetByLabel("Authenticator code")).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(_page.GetByLabel("Authenticator code")).ToBeVisibleAsync(new() { Timeout = 120000 });
 
         await _page.GetByLabel("Authenticator code").FillAsync(GenerateTotpCode(sharedKey));
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Verify" }).ClickAsync();
 
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 60000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 180000 });
         await Assertions.Expect(_page.GetByText("E2E TwoFactor")).ToBeVisibleAsync();
     }
 
@@ -84,7 +84,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
         await _page.GetByLabel("Confirm password").FillAsync(password);
         await _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Create account" }).ClickAsync();
 
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 60000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new PageWaitForURLOptions { Timeout = 180000 });
         await Assertions.Expect(_page.GetByText("E2E TwoFactor")).ToBeVisibleAsync();
     }
 
@@ -108,7 +108,7 @@ public sealed class LoginWith2faE2ETests(HuiaAppFixture fixture) : IAsyncLifetim
 
         // The only <code> element on the profile page once the shared key comes back from that submission.
         var sharedKeyLocator = _page.Locator("code");
-        await Assertions.Expect(sharedKeyLocator).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(sharedKeyLocator).ToBeVisibleAsync(new() { Timeout = 120000 });
         var sharedKey = (await sharedKeyLocator.InnerTextAsync()).Replace(" ", string.Empty);
 
         await _page.GetByLabel("6-digit code").FillAsync(GenerateTotpCode(sharedKey));

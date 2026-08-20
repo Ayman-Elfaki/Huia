@@ -133,7 +133,7 @@ public class ExternalLoginConfirmationModel(
         logger.LogInformation("User created a new account via {LoginProvider}.", info.LoginProvider);
 
         var userId = await userManager.GetUserIdAsync(user);
-        await events.PublishAsync(new UserRegisteredEvent<string>(userId, Input.Email));
+        await events.PublishAsync(new UserRegisteredEvent<string>(userId));
 
         if (!emailVerifiedByProvider && userManager.Options.SignIn.RequireConfirmedAccount)
         {
@@ -152,7 +152,7 @@ public class ExternalLoginConfirmationModel(
         }
 
         await signInManager.SignInAsync(user, isPersistent: false);
-        await events.PublishAsync(new UserSignedInEvent<string>(userId, Input.Email));
+        await events.PublishAsync(new UserSignedInEvent<string>(userId));
 
         // Consumed: clears the short-lived external cookie so the same provider round trip can't be replayed
         // to link/create a second account.

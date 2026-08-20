@@ -69,9 +69,7 @@ huia.Identity = identity =>
 };
 ```
 
-Runs directly against the same `IdentityOptions` instance ASP.NET Core Identity itself builds — unlike an
-even older, removed `HuiaOptions.Identity` property that mutated a disconnected instance `AddIdentityCore`
-never read from, changes made here actually take effect.
+Runs directly against the same `IdentityOptions` instance ASP.NET Core Identity itself builds.
 
 ## Rate limiting
 
@@ -205,6 +203,13 @@ being explicit about:
    cooldown on denial rather than the old pretend-success redirect — safe there for the same reason: it's
    only reachable with a live pending cookie that already proves this number's flow was legitimately
    started, not a blind probe.
+
+   `huia.DisableRegistration()` (see `HuiaOptions`) necessarily narrows this: with it set, a never-seen
+   number (or one colliding with a non-passwordless account) is rejected outright with a distinct
+   "not registered" message instead of silently creating an account and sending an OTP, since there's no
+   account left for it to create. This does let an attacker distinguish "unprovisioned number" from "OTP
+   sent" — an inherent, accepted trade-off for invite-only/admin-provisioned deployments, where phone numbers
+   are only ever added by an administrator rather than self-service.
 
 ## Custom stores
 

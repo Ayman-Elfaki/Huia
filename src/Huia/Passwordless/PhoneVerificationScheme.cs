@@ -4,7 +4,7 @@ namespace Huia.Passwordless;
 /// The cookie authentication scheme and claim types used to carry pending passwordless-phone-sign-in state
 /// between <c>PhoneLogin</c>, <c>PhoneLoginVerify</c>, and <c>PhoneLoginConfirmation</c> — the tamper-proof
 /// GET-to-POST hand-off for the phone number and, once verified, the user id. See
-/// <see cref="Huia.Core.HuiaOptions"/>'s constructor for where the cookie handler is registered, and
+/// <see cref="HuiaOptions"/>'s constructor for where the cookie handler is registered, and
 /// docs/passwordless.md for the full flow.
 /// </summary>
 internal static class PhoneVerificationScheme

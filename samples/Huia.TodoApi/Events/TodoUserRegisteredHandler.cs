@@ -1,6 +1,8 @@
 using Huia.Eventing;
+using Huia.Identity;
 using Huia.TodoApi.Data;
 using Huia.TodoApi.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Huia.TodoApi.Events;
@@ -12,14 +14,17 @@ namespace Huia.TodoApi.Events;
 /// <c>WebApplicationBuilderExtensions.SeedAdminAsync</c>, which publishes the same event for the seeded demo
 /// admin so it goes through this one code path too.
 /// </summary>
-public sealed class TodoUserRegisteredHandler(TodoDbContext db) : IEventHandler<UserRegisteredEvent<string>>
+public sealed class TodoUserRegisteredHandler(TodoDbContext db, UserManager<HuiaUser> userManager)
+    : IEventHandler<UserRegisteredEvent<string>>
 {
     public async Task HandleAsync(UserRegisteredEvent<string> @event, CancellationToken cancellationToken = default)
     {
         var exists = await db.Users.AnyAsync(u => u.Id == @event.UserId, cancellationToken);
         if (exists) return;
 
-        db.Users.Add(new TodoUser { Id = @event.UserId, Email = @event.Email });
+        // The event itself no longer carries the email (see UserRegisteredEvent), so it's looked up here instead.
+        var user = await userManager.FindByIdAsync(@event.UserId);
+        db.Users.Add(new TodoUser { Id = @event.UserId, Email = user?.Email });
         await db.SaveChangesAsync(cancellationToken);
     }
 }

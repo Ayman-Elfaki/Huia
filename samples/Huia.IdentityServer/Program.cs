@@ -1,6 +1,6 @@
-using Huia.Core;
+using Huia;
 using Huia.Endpoints;
-using Huia.EntityFrameworkCore.Extensions;
+using Huia.EntityFrameworkCore;
 using Huia.IdentityServer.Common;
 using Huia.IdentityServer.Data;
 using Microsoft.EntityFrameworkCore;

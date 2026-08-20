@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Huia.Core;
 using Huia.Eventing;
 using Huia.Common;
 using Huia.Identity;
@@ -47,6 +46,10 @@ public class LoginModel(
 
     /// <summary>Whether <c>huia.Authentication.UsePasswordlessFlow()</c> is enabled.</summary>
     public bool ShowPasswordlessTab => options.Authentication.PasswordlessFlowEnabled;
+
+    /// <summary>Whether the "Create account" link should render — email/password sign-in is enabled and
+    /// <c>huia.DisableRegistration()</c> wasn't called.</summary>
+    public bool ShowRegisterLink => ShowEmailPasswordTab && options.RegistrationEnabled;
 
     /// <summary>Countries offered by the phone form's country selector (see <c>_PhoneLoginForm.cshtml</c>),
     /// each paired with its calling code and a localized display name. Left empty when
@@ -134,7 +137,7 @@ public class LoginModel(
             var user = await userManager.FindByEmailAsync(Input.Email);
             if (user is not null)
             {
-                await events.PublishAsync(new UserSignedInEvent<string>(user.Id, Input.Email));
+                await events.PublishAsync(new UserSignedInEvent<string>(user.Id));
             }
 
             return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));

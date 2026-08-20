@@ -1,19 +1,18 @@
 using Huia.Applications;
+using Huia.Authentication;
 using Huia.Branding;
-using Huia.Core.Authentication;
 using Huia.Keys;
 using Huia.Localization;
 using Huia.Passwordless;
 using Huia.Scheduling;
 using Huia.Scopes;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 
-namespace Huia.Core;
+namespace Huia;
 
 /// <summary>
 /// Configuration surface for <c>services.AddHuia(options => {...})</c>.
@@ -52,6 +51,11 @@ public sealed class HuiaOptions
     internal IReadOnlyList<string> RequiredAudiences { get; private set; } = [];
 
     /// <summary>
+    /// Whether new accounts can self-register. See <see cref="DisableRegistration"/>.
+    /// </summary>
+    internal bool RegistrationEnabled { get; private set; } = true;
+
+    /// <summary>
     /// Overrides <see cref="LoginPath"/>.
     /// </summary>
     public void SetLoginPath(string loginPath) => LoginPath = loginPath;
@@ -81,6 +85,15 @@ public sealed class HuiaOptions
     /// </remarks>
     /// </summary>
     public void RequireAudiences(params string[] audiences) => RequiredAudiences = audiences;
+
+    /// <summary>
+    /// Disables self-service account creation: the Register page and Login's "Create account" link become
+    /// unreachable, and passwordless phone sign-in from a previously-unseen number is rejected instead of
+    /// silently creating a new account. Existing accounts can still sign in through any enabled flow. Useful
+    /// for invite-only or admin-provisioned deployments — create accounts directly via
+    /// <c>UserManager&lt;HuiaUser&gt;</c> instead (e.g. from an admin endpoint or a seeding script).
+    /// </summary>
+    public void DisableRegistration() => RegistrationEnabled = false;
 
     /// <summary>
     /// Declaratively register the OAuth/OIDC client applications Huia should seed on startup.

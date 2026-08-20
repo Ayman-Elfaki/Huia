@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.EntityFrameworkCore.Models;
 
-namespace Huia.EntityFrameworkCore.Extensions;
+namespace Huia.EntityFrameworkCore;
 
 /// <summary>
 /// Extensions for configuring Huia's EF Core entities on a <see cref="ModelBuilder"/>.

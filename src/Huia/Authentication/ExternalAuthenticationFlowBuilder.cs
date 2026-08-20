@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 
-namespace Huia.Core.Authentication;
+namespace Huia.Authentication;
 
 /// <summary>
 /// Configures external (third-party) sign-in providers inside

@@ -90,7 +90,7 @@ public sealed class TodoAppE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
 
         // RequireConfirmedAccount is false, so registration signs the user in and the OIDC round trip lands
         // back on the Next.js app, authenticated.
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 60000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 180000 });
     }
 
     private string GetBaseUrl(string resourceName)

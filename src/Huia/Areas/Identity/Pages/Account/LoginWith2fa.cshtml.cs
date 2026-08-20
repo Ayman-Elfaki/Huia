@@ -64,7 +64,7 @@ public class LoginWith2faModel(
         if (result.Succeeded)
         {
             logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", user.Id);
-            await events.PublishAsync(new UserSignedInEvent<string>(user.Id, user.Email!));
+            await events.PublishAsync(new UserSignedInEvent<string>(user.Id));
             return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
         }
 

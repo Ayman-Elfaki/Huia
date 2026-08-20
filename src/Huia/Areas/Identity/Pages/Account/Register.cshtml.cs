@@ -17,6 +17,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>
 /// Registers a new account, publishing <see cref="UserRegisteredEvent{TKey}"/> and (if email confirmation isn't required) <see cref="UserSignedInEvent{TKey}"/>.
+/// Unreachable (404) when <c>huia.DisableRegistration()</c> was called.
 /// </summary>
 [AllowAnonymous]
 public class RegisterModel(
@@ -25,6 +26,7 @@ public class RegisterModel(
     IEmailSender<HuiaUser> emailSender,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
+    HuiaOptions options,
     ILogger<RegisterModel> logger) : PageModel
 {
     /// <summary>The submitted form data.</summary>
@@ -41,6 +43,11 @@ public class RegisterModel(
     /// </summary>
     public async Task<IActionResult> OnGetAsync(string? returnUrl = null)
     {
+        if (!options.RegistrationEnabled)
+        {
+            return NotFound();
+        }
+
         ReturnUrl = returnUrl ?? Url.Content("~/");
 
         // HttpContext.User (the default-scheme principal) isn't the sign-in cookie here — Huia's default
@@ -60,6 +67,11 @@ public class RegisterModel(
 #pragma warning disable MA0051
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
+        if (!options.RegistrationEnabled)
+        {
+            return NotFound();
+        }
+
         ReturnUrl = returnUrl ?? Url.Content("~/");
 
         if (!ModelState.IsValid)
@@ -84,7 +96,7 @@ public class RegisterModel(
         logger.LogInformation("User created a new account.");
 
         var userId = await userManager.GetUserIdAsync(user);
-        await events.PublishAsync(new UserRegisteredEvent<string>(userId, Input.Email));
+        await events.PublishAsync(new UserRegisteredEvent<string>(userId));
 
         var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
@@ -117,7 +129,7 @@ public class RegisterModel(
 
         await signInManager.SignInAsync(user, isPersistent: false);
 
-        await events.PublishAsync(new UserSignedInEvent<string>(userId, Input.Email));
+        await events.PublishAsync(new UserSignedInEvent<string>(userId));
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
     }

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Huia.Core;
+namespace Huia;
 
 /// <summary>
 /// Returned by <c>services.AddHuia(...)</c> so persistence (<c>WithEntityFrameworkStores</c>) can be

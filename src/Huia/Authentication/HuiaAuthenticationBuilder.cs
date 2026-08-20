@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 
-namespace Huia.Core.Authentication;
+namespace Huia.Authentication;
 
 /// <summary>
 /// Configures which sign-in methods a Huia app accepts. Reachable via <c>HuiaOptions.Authentication</c>

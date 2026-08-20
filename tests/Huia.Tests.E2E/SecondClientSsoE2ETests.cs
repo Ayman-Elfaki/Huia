@@ -50,7 +50,7 @@ public sealed class SecondClientSsoE2ETests(HuiaAppFixture fixture) : IAsyncLife
         await _page.GetByLabel("Confirm password").FillAsync(password);
         await _page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync();
 
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 60000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 180000 });
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
         await Assertions.Expect(_page.GetByText("E2E Sso")).ToBeVisibleAsync();

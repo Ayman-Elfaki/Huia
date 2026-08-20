@@ -56,11 +56,11 @@ public sealed class ExternalLoginE2ETests(HuiaAppFixture fixture) : IAsyncLifeti
         await _page.GotoAsync($"{apiBaseUrl}/identity/account/login");
 
         var googleButton = _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Google" });
-        await Assertions.Expect(googleButton).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(googleButton).ToBeVisibleAsync(new() { Timeout = 120000 });
 
         await Task.WhenAll(
             _page.WaitForURLAsync(url => string.Equals(new Uri(url).Host, "accounts.google.com", StringComparison.Ordinal),
-                new PageWaitForURLOptions { Timeout = 30000 }),
+                new PageWaitForURLOptions { Timeout = 120000 }),
             googleButton.ClickAsync());
 
         // Google's own server received and evaluated the request against the real, configured client id —

@@ -1,5 +1,4 @@
 using Huia.Common;
-using Huia.Core;
 using Huia.Eventing;
 using Huia.Identity;
 using Huia.Localization;
@@ -74,7 +73,7 @@ public class ExternalLoginModel(
             if (user is not null)
             {
                 logger.LogInformation("User signed in with {LoginProvider}.", info.LoginProvider);
-                await events.PublishAsync(new UserSignedInEvent<string>(user.Id, user.Email!));
+                await events.PublishAsync(new UserSignedInEvent<string>(user.Id));
             }
 
             // Consumed: clears the short-lived external cookie so the same provider round trip can't be
@@ -168,10 +167,10 @@ public class ExternalLoginModel(
         logger.LogInformation("User created a new account via {LoginProvider}.", info.LoginProvider);
 
         var userId = await userManager.GetUserIdAsync(user);
-        await events.PublishAsync(new UserRegisteredEvent<string>(userId, email));
+        await events.PublishAsync(new UserRegisteredEvent<string>(userId));
 
         await signInManager.SignInAsync(user, isPersistent: false);
-        await events.PublishAsync(new UserSignedInEvent<string>(userId, email));
+        await events.PublishAsync(new UserSignedInEvent<string>(userId));
 
         // Consumed: clears the short-lived external cookie so the same provider round trip can't be replayed
         // to link/create a second account.

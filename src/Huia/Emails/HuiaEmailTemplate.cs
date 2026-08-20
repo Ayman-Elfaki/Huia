@@ -1,4 +1,3 @@
-using Huia.Core;
 using Huia.Localization;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Localization;

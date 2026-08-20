@@ -1,4 +1,3 @@
-using Huia.EntityFrameworkCore.Extensions;
 using Huia.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;

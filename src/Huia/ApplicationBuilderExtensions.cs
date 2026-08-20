@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 
-namespace Huia.Core;
+namespace Huia;
 
 
 /// <summary>

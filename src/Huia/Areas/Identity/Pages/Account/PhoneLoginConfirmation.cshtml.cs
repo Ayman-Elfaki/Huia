@@ -87,10 +87,10 @@ public class PhoneLoginConfirmationModel(
         }
 
         logger.LogInformation("User completed passwordless phone registration.");
-        await events.PublishAsync(new UserRegisteredEvent<string>(user.Id, user.Email));
+        await events.PublishAsync(new UserRegisteredEvent<string>(user.Id));
 
         await signInManager.SignInAsync(user, isPersistent: false);
-        await events.PublishAsync(new UserSignedInEvent<string>(user.Id, user.Email));
+        await events.PublishAsync(new UserSignedInEvent<string>(user.Id));
 
         // Consumed: clears the short-lived phone-verification cookie so the same verified state can't be
         // replayed to reach this page again.

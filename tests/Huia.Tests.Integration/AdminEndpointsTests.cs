@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Huia.Common;
 using Huia.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;

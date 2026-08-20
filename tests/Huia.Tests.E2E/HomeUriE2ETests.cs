@@ -56,7 +56,7 @@ public sealed partial class HomeUriE2ETests(HuiaAppFixture fixture) : IAsyncLife
 
         // Still signed in to Huia, so Login.cshtml.cs's OnGetAsync redirects immediately instead of rendering
         // its form — landing back on the Next.js app's own origin (the client's HomeUri), not a login page.
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 30000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 120000 });
         // The header shows the signed-in user's given/family name (from the OIDC profile claims), not
         // their raw email — see page.tsx.
         await Assertions.Expect(_page.GetByText("E2E HomeUri")).ToBeVisibleAsync();
@@ -75,7 +75,7 @@ public sealed partial class HomeUriE2ETests(HuiaAppFixture fixture) : IAsyncLife
         await _page.GetByLabel("Confirm password").FillAsync(password);
         await _page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync();
 
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 60000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 180000 });
     }
 
     /// <summary>

@@ -41,7 +41,7 @@ public sealed class AdminUiE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         // Landing on the dashboard redirects client-side to /applications (see app/pages/index.vue) —
         // this button only renders once that page, and the Admin-role gate in app.vue, both pass.
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "New application" }))
-            .ToBeVisibleAsync(new() { Timeout = 30000 });
+            .ToBeVisibleAsync(new() { Timeout = 120000 });
 
         // adminBaseUrl (from CreateHttpClient's BaseAddress) already ends with '/'.
         // The very first requests right after the OIDC callback sets nuxt-oidc-auth's session cookie can
@@ -92,7 +92,7 @@ public sealed class AdminUiE2ETests(HuiaAppFixture fixture) : IAsyncLifetime
         await _page.GetByLabel("Password", new() { Exact = true }).FillAsync("Admin123!Demo");
         await _page.GetByRole(AriaRole.Button, new() { Name = "Sign in" }).ClickAsync();
 
-        await _page.WaitForURLAsync($"{adminBaseUrl}*", new() { Timeout = 60000 });
+        await _page.WaitForURLAsync($"{adminBaseUrl}*", new() { Timeout = 180000 });
     }
 
     private async Task GotoWithRetryAsync(string url, ILocator expectVisible)

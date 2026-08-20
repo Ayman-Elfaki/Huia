@@ -203,7 +203,7 @@ public class PhoneLoginVerifyModel(
 
         logger.LogInformation("User signed in via passwordless phone.");
         await signInManager.SignInAsync(user, isPersistent: false);
-        await events.PublishAsync(new UserSignedInEvent<string>(user.Id, user.Email));
+        await events.PublishAsync(new UserSignedInEvent<string>(user.Id));
         await HttpContext.SignOutAsync(PhoneVerificationScheme.Name);
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));

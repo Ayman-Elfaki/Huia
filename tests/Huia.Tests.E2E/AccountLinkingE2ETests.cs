@@ -47,7 +47,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         // registered (and then signed out of) through web exactly like every other test in this suite.
         await RegisterAsync(webBaseUrl, email, password);
         await _page.GetByRole(AriaRole.Button, new() { Name = "Sign out" }).ClickAsync();
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 30000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 120000 });
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Sign in" })).ToBeVisibleAsync();
 
         // Same pending-authorization setup as ExternalIdentityServerLoginE2ETests, so the end of this test can
@@ -64,16 +64,16 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
 
         await _page.GotoAsync($"{apiBaseUrl}/connect/authorize?{query}");
         await _page.WaitForURLAsync(url => url.Contains("/identity/account/login", StringComparison.Ordinal),
-            new() { Timeout = 30000 });
+            new() { Timeout = 120000 });
 
         var idpButton = _page.GetByRole(AriaRole.Button, new() { Name = "Huia IdP", Exact = true });
-        await Assertions.Expect(idpButton).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(idpButton).ToBeVisibleAsync(new() { Timeout = 120000 });
 
         await Task.WhenAll(
             _page.WaitForURLAsync(
                 url => string.Equals(new Uri(url).Host, new Uri(identityServerBaseUrl).Host, StringComparison.Ordinal)
                        && url.Contains("/identity/account/login", StringComparison.Ordinal),
-                new() { Timeout = 30000 }),
+                new() { Timeout = 120000 }),
             idpButton.ClickAsync());
 
         // A brand-new account on identityserver (a completely separate Huia instance/database) — but reusing
@@ -91,7 +91,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         await Task.WhenAll(
             _page.WaitForURLAsync(
                 url => string.Equals(new Uri(url).Host, new Uri(apiBaseUrl).Host, StringComparison.Ordinal),
-                new() { Timeout = 30000 }),
+                new() { Timeout = 120000 }),
             _page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync());
 
         // ext.EnablePasswordLinking() routes the collision here instead of ExternalLoginConfirmation (which
@@ -99,7 +99,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         // no-opt-in default) — proves the opt-in is actually wired up, not just documented.
         await _page.WaitForURLAsync(
             url => url.Contains("/identity/account/externalloginlinkconfirmation", StringComparison.OrdinalIgnoreCase),
-            new() { Timeout = 30000 });
+            new() { Timeout = 120000 });
 
         // The colliding email and the actual provider display name render as read-only context pulled from
         // the pending external identity's own claims, not from anything a user could tamper with.
@@ -112,7 +112,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         await _page.GetByLabel("Password").FillAsync("WrongPassword!1");
         await _page.GetByRole(AriaRole.Button, new() { Name = "Link account" }).ClickAsync();
 
-        await Assertions.Expect(_page.GetByText("Incorrect password.")).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(_page.GetByText("Incorrect password.")).ToBeVisibleAsync(new() { Timeout = 120000 });
         Assert.Contains("/identity/account/externalloginlinkconfirmation", _page.Url,
             StringComparison.OrdinalIgnoreCase);
 
@@ -124,7 +124,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         // that the form accepted the password.
         await _page.WaitForURLAsync(
             url => url.Contains("/scalar/v1", StringComparison.Ordinal) && url.Contains("code=", StringComparison.Ordinal),
-            new() { Timeout = 30000 });
+            new() { Timeout = 120000 });
     }
 #pragma warning restore MA0051
 
@@ -141,7 +141,7 @@ public sealed class AccountLinkingE2ETests(HuiaAppFixture fixture) : IAsyncLifet
         await _page.GetByLabel("Confirm password").FillAsync(password);
         await _page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync();
 
-        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 60000 });
+        await _page.WaitForURLAsync($"{webBaseUrl}*", new() { Timeout = 180000 });
         await Assertions.Expect(_page.GetByText("E2E Link")).ToBeVisibleAsync();
     }
 

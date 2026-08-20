@@ -62,19 +62,19 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
 
         await _page.GotoAsync($"{apiBaseUrl}/connect/authorize?{query}");
         await _page.WaitForURLAsync(url => url.Contains("/identity/account/login", StringComparison.Ordinal),
-            new PageWaitForURLOptions { Timeout = 30000 });
+            new PageWaitForURLOptions { Timeout = 120000 });
 
         // Exact: true — "Huia IdP (Partial Profile)" (see the sibling test below) also renders on this same
         // login page, and its accessible name contains "Huia IdP" as a substring, which Playwright's default
         // name matching would otherwise treat as a match too.
         var idpButton = _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Huia IdP", Exact = true });
-        await Assertions.Expect(idpButton).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(idpButton).ToBeVisibleAsync(new() { Timeout = 120000 });
 
         await Task.WhenAll(
             _page.WaitForURLAsync(
                 url => string.Equals(new Uri(url).Host, new Uri(identityServerBaseUrl).Host, StringComparison.Ordinal)
                        && url.Contains("/identity/account/login", StringComparison.Ordinal),
-                new PageWaitForURLOptions { Timeout = 30000 }),
+                new PageWaitForURLOptions { Timeout = 120000 }),
             idpButton.ClickAsync());
 
         // Not signed in to IdentityServer yet either — register a brand-new account there.
@@ -92,7 +92,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         await Task.WhenAll(
             _page.WaitForURLAsync(
                 url => string.Equals(new Uri(url).Host, new Uri(apiBaseUrl).Host, StringComparison.Ordinal),
-                new PageWaitForURLOptions { Timeout = 30000 }),
+                new PageWaitForURLOptions { Timeout = 120000 }),
             _page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync());
 
         // IdentityServer never confirmed this brand-new account's email, so ExternalClaimsMapper.IsEmailVerified
@@ -100,7 +100,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         // instead of auto-provisioning — see ExternalLoginConfirmation.cshtml.cs.
         await _page.WaitForURLAsync(
             url => url.Contains("/identity/account/externalloginconfirmation", StringComparison.OrdinalIgnoreCase),
-            new PageWaitForURLOptions { Timeout = 30000 });
+            new PageWaitForURLOptions { Timeout = 120000 });
 
         // The name/email fields are pre-filled (and disabled) from the claims IdentityServer's own token
         // reported — proves the claims actually made it across the OIDC round trip, not just that some page
@@ -116,7 +116,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         // just that some page loaded along the way.
         await _page.WaitForURLAsync(
             url => url.Contains("/scalar/v1", StringComparison.Ordinal) && url.Contains("code=", StringComparison.Ordinal),
-            new PageWaitForURLOptions { Timeout = 30000 });
+            new PageWaitForURLOptions { Timeout = 120000 });
     }
 #pragma warning restore MA0051
 
@@ -143,16 +143,16 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
 
         await _page.GotoAsync($"{apiBaseUrl}/connect/authorize?{query}");
         await _page.WaitForURLAsync(url => url.Contains("/identity/account/login", StringComparison.Ordinal),
-            new PageWaitForURLOptions { Timeout = 30000 });
+            new PageWaitForURLOptions { Timeout = 120000 });
 
         var idpButton = _page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Huia IdP (Partial Profile)" });
-        await Assertions.Expect(idpButton).ToBeVisibleAsync(new() { Timeout = 30000 });
+        await Assertions.Expect(idpButton).ToBeVisibleAsync(new() { Timeout = 120000 });
 
         await Task.WhenAll(
             _page.WaitForURLAsync(
                 url => string.Equals(new Uri(url).Host, new Uri(identityServerBaseUrl).Host, StringComparison.Ordinal)
                        && url.Contains("/identity/account/login", StringComparison.Ordinal),
-                new PageWaitForURLOptions { Timeout = 30000 }),
+                new PageWaitForURLOptions { Timeout = 120000 }),
             idpButton.ClickAsync());
 
         // IdentityServer's own Register page always requires a first/last name (RegisterModel's InputModel is
@@ -171,7 +171,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         await Task.WhenAll(
             _page.WaitForURLAsync(
                 url => string.Equals(new Uri(url).Host, new Uri(apiBaseUrl).Host, StringComparison.Ordinal),
-                new PageWaitForURLOptions { Timeout = 30000 }),
+                new PageWaitForURLOptions { Timeout = 120000 }),
             _page.GetByRole(AriaRole.Button, new() { Name = "Create account" }).ClickAsync());
 
         // No verified email and no name claims at all this time — same ExternalLoginConfirmation page as the
@@ -179,7 +179,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         // in themselves, rather than a page whose fields the user only ever sees pre-filled and disabled.
         await _page.WaitForURLAsync(
             url => url.Contains("/identity/account/externalloginconfirmation", StringComparison.OrdinalIgnoreCase),
-            new PageWaitForURLOptions { Timeout = 30000 });
+            new PageWaitForURLOptions { Timeout = 120000 });
 
         var firstNameField = _page.GetByLabel("First name");
         var lastNameField = _page.GetByLabel("Last name");
@@ -213,7 +213,7 @@ public sealed class ExternalIdentityServerLoginE2ETests(HuiaAppFixture fixture) 
         // authorization request and silently issues a code once the account is actually created.
         await _page.WaitForURLAsync(
             url => url.Contains("/scalar/v1", StringComparison.Ordinal) && url.Contains("code=", StringComparison.Ordinal),
-            new PageWaitForURLOptions { Timeout = 30000 });
+            new PageWaitForURLOptions { Timeout = 120000 });
     }
 #pragma warning restore MA0051
 

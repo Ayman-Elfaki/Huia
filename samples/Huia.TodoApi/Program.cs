@@ -1,6 +1,6 @@
-using Huia.Core;
+using Huia;
 using Huia.Endpoints;
-using Huia.EntityFrameworkCore.Extensions;
+using Huia.EntityFrameworkCore;
 using Huia.Eventing;
 using Huia.Identity;
 using Huia.Sms;
@@ -220,6 +220,7 @@ builder.Services.AddHuia(issuer, huia =>
                 ext.EnablePasswordLinking();
             });
         }
+
 
         huia.KeysManagement.UseAutomaticKeyManagement();
 

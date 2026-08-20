@@ -1,6 +1,5 @@
 using System.Globalization;
 using Huia.Branding;
-using Huia.Core;
 using Huia.Emails;
 using Microsoft.Extensions.DependencyInjection;
 
