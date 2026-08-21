@@ -1,123 +1,105 @@
 # External providers
 
 Huia can let a user sign in through a third-party identity provider (Google, Microsoft, GitHub, or any
-OAuth2/OIDC provider) instead of — or alongside — a Huia password. This builds on ASP.NET Core Identity's
-own external-login mechanism (`SignInManager<HuiaUser>`), the same one the classic scaffolded Identity UI
-uses, so any standard ASP.NET Core remote-authentication handler works unmodified.
+OAuth2/OIDC provider) instead of — or alongside — a Huia password. This is built on OpenIddict's own client
+stack (`OpenIddict.Client`/`OpenIddict.Client.WebIntegration`, the same package family Huia's own
+authorization server is built on) rather than ASP.NET Core Identity's generic remote-authentication handlers —
+but the resulting sign-in still flows through `SignInManager<HuiaUser>` exactly the way it always has, so
+everything downstream of "a provider redirected back" (account linking, auto-provisioning, 2FA/lockout
+routing, email-collision handling) is unaffected by which mechanism completed the handshake.
 
 ## Registering a provider
 
 Register providers inside the `AddHuia(issuer, huia => {...})` callback, via
-`huia.Authentication.UseExternalAuthenticationFlow(ext => {...})` — `ext.Providers` is the same
-`AuthenticationBuilder` `AddHuia` itself uses internally, exposed directly rather than wrapped:
+`huia.Authentication.UseExternalAuthenticationFlow(ext => {...})`:
 
 ```csharp
 builder.Services.AddHuia(issuer, huia =>
     {
         huia.Authentication.UseExternalAuthenticationFlow(ext =>
         {
-            ext.Providers.AddGoogle(google =>
-            {
-                google.ClientId = builder.Configuration["Google:ClientId"]!;
-                google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
-            });
+            ext.WebProviders.AddGoogle(google => google
+                .SetClientId(builder.Configuration["Google:ClientId"]!)
+                .SetClientSecret(builder.Configuration["Google:ClientSecret"]!)
+                .SetRedirectUri("callback/login/google"));
         });
     })
     .WithEntityFrameworkStores<AppDbContext>();
 ```
 
-`AddGoogle`/`AddMicrosoftAccount`/`AddOpenIdConnect` aren't part of the ASP.NET Core shared framework —
-each needs its own NuGet package:
+`ext.WebProviders` (an `OpenIddictClientWebIntegrationBuilder`, from the `OpenIddict.Client.WebIntegration`
+package) ships pre-configured settings for Google, Microsoft, GitHub, and 100+ other services — no need to
+look up authorization/token endpoints yourself. Every registration needs its own `SetRedirectUri(...)`, which
+must match the route Huia's own callback bridge is mapped at (see [Wiring it up](#wiring-it-up) below):
+`callback/login/{a name unique to this provider}` — `callback/login/google`, `callback/login/github`, and so
+on if you register more than one.
 
-```bash
-dotnet add package Microsoft.AspNetCore.Authentication.Google
-```
-
-Only the generic `AddOAuth` (for a provider without a dedicated package — GitHub, for instance, via
-[`AspNet.Security.OAuth.GitHub`](https://github.com/aspnet-contrib/AspNet.Security.OAuth.Providers), or any
-other OAuth2 provider) ships with ASP.NET Core itself; `AddOpenIdConnect` needs its own package too
-(`Microsoft.AspNetCore.Authentication.OpenIdConnect`), same as `AddGoogle`/`AddMicrosoftAccount`. Huia
-doesn't special-case any specific provider by name — register as many as you like, using whichever handler
-fits.
-
-**Runnable example**: `samples/Huia.IdentityServer` is a second, independent Huia instance playing the role
-of a third-party identity provider — registered on `Huia.TodoApi` as the generic `huia-idp`
-`AddOpenIdConnect` provider (see `Huia.TodoApi/Program.cs`). Because it's Huia on both ends, it's a real,
-controllable external IdP that an automated test can actually sign in to (unlike a real Google/Microsoft
-account) — see `tests/Huia.Tests.E2E/ExternalIdentityServerLoginE2ETests.cs`, which drives the whole
-challenge → external sign-in → callback → account-creation round trip against it in a real browser. The same
-sample is registered a second time as `huia-idp-partial`, requesting no `profile` scope, to demonstrate and
-test the other branch: a provider that doesn't supply every profile claim (a generic, non-Google/Microsoft
-registration isn't guaranteed to) routes to `ExternalLoginConfirmation` with editable, blank name fields
-instead of auto-provisioning — the same test file's second `[Fact]` drives that path too.
-
-You don't need to set `SignInScheme` on a provider — `AddHuia` already defaults
-`AuthenticationOptions.DefaultSignInScheme` to `IdentityConstants.ExternalScheme`, the scheme
-`SignInManager<HuiaUser>.GetExternalLoginInfoAsync()` reads from, so every remote handler lands there the
-same way it would under plain ASP.NET Core Identity.
-
-For a generic `AddOAuth` provider (no dedicated package), you also need to fetch the user's profile
-yourself and set `Events.OnRemoteFailure` so a provider-side error (the user denying consent, etc.) redirects
-back into Huia's sign-in flow instead of throwing:
+For a provider without a named `WebProviders` integration — most often a custom-issuer OIDC provider, like a
+second Huia instance — use `ext.Client.AddRegistration(...)` instead, the raw `OpenIddict.Client` API:
 
 ```csharp
-huia.Authentication.UseExternalAuthenticationFlow(ext => ext.Providers.AddOAuth("github", "GitHub", oauth =>
+huia.Authentication.UseExternalAuthenticationFlow(ext => ext.Client.AddRegistration(new OpenIddictClientRegistration
 {
-    oauth.ClientId = builder.Configuration["GitHub:ClientId"]!;
-    oauth.ClientSecret = builder.Configuration["GitHub:ClientSecret"]!;
-    oauth.CallbackPath = "/signin-github";
-    oauth.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
-    oauth.TokenEndpoint = "https://github.com/login/oauth/access_token";
-    oauth.UserInformationEndpoint = "https://api.github.com/user";
-
-    oauth.ClaimActions.MapJsonKey(ClaimTypes.Email, "email");
-    oauth.ClaimActions.MapJsonKey(ClaimTypes.GivenName, "name");
-
-    oauth.Events.OnCreatingTicket = async context =>
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
-
-        using var response = await context.Backchannel.SendAsync(request,
-            HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
-        response.EnsureSuccessStatusCode();
-
-        using var user = JsonDocument.Parse(
-            await response.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
-        context.RunClaimActions(user.RootElement);
-    };
-
-    oauth.Events.OnRemoteFailure = context =>
-    {
-        context.Response.Redirect($"/identity/account/externallogin?handler=Callback&remoteError={Uri.EscapeDataString(context.Failure?.Message ?? "unknown_error")}");
-        context.HandleResponse();
-        return Task.CompletedTask;
-    };
+    Issuer = new Uri("https://idp.example/"),
+    ClientId = builder.Configuration["ExternalIdp:ClientId"]!,
+    ClientSecret = builder.Configuration["ExternalIdp:ClientSecret"],
+    ProviderName = "example-idp",
+    ProviderDisplayName = "Example IdP",
+    RedirectUri = new Uri("callback/login/example-idp", UriKind.Relative),
+    // Unlike a named ext.WebProviders integration, a generic registration has to list every scope it needs
+    // explicitly — including "openid" itself.
+    Scopes = { OpenIddictConstants.Scopes.OpenId, OpenIddictConstants.Scopes.Email },
 }));
 ```
 
-`AddGoogle`/`AddMicrosoftAccount`/`AddOpenIdConnect` already do the profile fetch and a sensible
-`OnRemoteFailure` for you.
+**Runnable example**: `samples/Huia.IdentityServer` is a second, independent Huia instance playing the role
+of a third-party identity provider — registered on `Huia.TodoApi` as `huia-idp` via `ext.Client.AddRegistration(...)`
+(see `Huia.TodoApi/Program.cs`). Because it's Huia on both ends, it's a real, controllable external IdP that an
+automated test can actually sign in to (unlike a real Google/Microsoft account) — see
+`tests/Huia.Tests.E2E/ExternalIdentityServerLoginE2ETests.cs`, which drives the whole challenge → external
+sign-in → callback → account-creation round trip against it in a real browser. The same sample is registered a
+second time as `huia-idp-partial`, requesting no `profile` scope, to demonstrate and test the other branch: a
+provider that doesn't supply every profile claim (a generic registration isn't guaranteed to) routes to
+`ExternalLoginConfirmation` with editable, blank name fields instead of auto-provisioning — the same test
+file's second `[Fact]` drives that path too.
+
+## Wiring it up
+
+OpenIddict's client stack completes the OAuth2/OIDC handshake itself but, unlike the ASP.NET Core remote-auth
+handlers Huia used to build this on, doesn't sign the result into any cookie on its own. Huia bridges that gap
+with its own endpoint — map it alongside `MapRazorPages()`:
+
+```csharp
+app.MapRazorPages();
+app.MapHuiaExternalLoginCallbackEndpoints();
+```
+
+This is what every provider's `RedirectUri`/`SetRedirectUri(...)` must point at (`callback/login/{provider}`).
+It reads OpenIddict's own authentication result and signs it into `IdentityConstants.ExternalScheme` — the
+same cookie a remote-authentication handler used to populate directly — so `SignInManager<HuiaUser>`'s
+external-login methods keep working exactly as before. There's nothing else to wire up: no `SignInScheme` to
+set, no `CallbackPath` to reserve.
 
 ## Sign-in
 
 Once at least one provider is registered, `/identity/account/login` automatically lists a button per
-provider — `LoginModel` reads them via `SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()`, so
-there's nothing extra to wire up on the UI side.
+provider — `LoginModel` reads them via `SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()`
+(each registration's provider name is automatically forwarded as its own authentication scheme), so there's
+nothing extra to wire up on the UI side.
 
-Clicking a provider button posts to `/identity/account/externallogin`, which challenges the provider and
-completes at its callback:
+Clicking a provider button posts to `/identity/account/externallogin`, which challenges the provider; the
+provider redirects back to Huia's callback bridge, which hands off into the same page's callback handler:
 
 - Already linked to a local account → signed in directly (2FA and lockout are honored exactly like a
   password sign-in — an account with 2FA enabled is routed through the existing `LoginWith2fa` page).
 - Not linked yet, and the provider's email doesn't match an existing account → if the provider reported
   `email_verified: true` and supplied both a given and family name, the account is created and signed in
-  immediately, no extra step — reliable for Google/Microsoft, not guaranteed for a generic `AddOAuth`
-  registration (see `ExternalClaimsMapper`). Anything less complete is redirected to
-  `ExternalLoginConfirmation` instead, pre-filled from whatever claims the provider did supply, for explicit
-  consent (and to collect what's missing) before the account is created; a field the provider already
-  supplied is shown read-only there rather than editable. If the provider's email wasn't verified, Huia sends
-  the normal confirmation email instead of signing in immediately.
+  immediately, no extra step — reliable for Google/Microsoft, not guaranteed for a generic registration (see
+  `ExternalClaimsMapper`). Anything less complete is redirected to `ExternalLoginConfirmation` instead,
+  pre-filled from whatever claims the provider did supply, for explicit consent (and to collect what's
+  missing) before the account is created; a field the provider already supplied is shown read-only there
+  rather than editable. If the provider's email wasn't verified, Huia sends the normal confirmation email
+  instead of signing in immediately.
 - Not linked yet, but the provider's email **does** match an existing (password) account → Huia does **not**
   auto-link it. By default, the user has to sign in with their password first, then link the provider from
   account settings (below); with `ext.EnablePasswordLinking()` (see below), they can instead link it right
@@ -143,7 +125,7 @@ builder.Services.AddHuia(issuer, huia =>
     {
         huia.Authentication.UseExternalAuthenticationFlow(ext =>
         {
-            ext.Providers.AddGoogle(google => { /* ... */ });
+            ext.WebProviders.AddGoogle(google => { /* ... */ });
             ext.EnablePasswordLinking();
         });
     })

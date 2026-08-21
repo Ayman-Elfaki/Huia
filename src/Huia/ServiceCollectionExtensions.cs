@@ -246,6 +246,40 @@ public static class ServiceCollectionExtensions
                 }
             });
 
+        // Only registered when a consumer actually called huia.Authentication.UseExternalAuthenticationFlow(...)
+        // — OpenIddict throws at startup if a client is configured with zero provider registrations, the same
+        // reason the passwordless-only services above are gated behind PasswordlessFlowEnabled.
+        if (options.Authentication.ExternalFlowEnabled)
+        {
+            services.AddOpenIddict()
+                .AddClient(client =>
+                {
+                    client.AllowAuthorizationCodeFlow();
+
+                    // Protects the client's own short-lived state tokens (created at challenge, consumed at
+                    // the callback moments later) — unlike the server's signing/encryption keys (see
+                    // huia.KeysManagement above), these never need to be published or survive a restart, so
+                    // an ephemeral key generated fresh on every process start is sufficient; an in-flight
+                    // external sign-in attempt across a restart just has to be retried.
+                    client.AddEphemeralEncryptionKey();
+                    client.AddEphemeralSigningKey();
+
+                    // The external-login callback bridge (Endpoints/ExternalLoginCallbackEndpoints.cs) reads
+                    // this result at OpenIddict's own redirection endpoint; EnableRedirectionEndpointPassthrough
+                    // hands the request to that endpoint instead of OpenIddict generating a response itself.
+                    client.UseAspNetCore()
+                        .EnableRedirectionEndpointPassthrough();
+
+                    client.UseSystemNetHttp();
+
+                    // Runs the consumer's huia.Authentication.UseExternalAuthenticationFlow(ext => {...})
+                    // callback now that this real OpenIddictClientBuilder exists — see
+                    // HuiaAuthenticationBuilder.ApplyExternalAuthenticationFlow's own doc comment for why this
+                    // can't happen any earlier.
+                    options.Authentication.ApplyExternalAuthenticationFlow(client);
+                });
+        }
+
         services.AddHostedService<ApplicationInitializer>();
         services.AddHostedService<ScopeInitializer>();
 

@@ -24,8 +24,8 @@ builder.Services.AddHuia(issuer, huia =>
 
         // The only client this identity provider knows about: Huia.TodoApi itself, acting as a confidential
         // server-side relying party (it holds a client secret and exchanges the authorization code for
-        // tokens from its own backend, via Microsoft.AspNetCore.Authentication.OpenIdConnect's default
-        // ResponseType="code" flow — never in the browser).
+        // tokens from its own backend, via OpenIddict.Client's authorization code flow — never in the
+        // browser).
         huia.Applications.AddServerSideWebApplication(app =>
         {
             app.SetClientId("todoapi");

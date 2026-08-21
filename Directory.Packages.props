@@ -25,6 +25,7 @@
     <PackageVersion Include="OpenIddict.Quartz" Version="7.6.0" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.6.0" />
     <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="7.6.0" />
+    <PackageVersion Include="OpenIddict.Client.WebIntegration" Version="7.6.0" />
   </ItemGroup>
   
   <ItemGroup Label="Quartz">
@@ -62,8 +63,6 @@
 
   <ItemGroup Label="Samples">
     <PackageVersion Include="MailKit" Version="4.17.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.16.16" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />

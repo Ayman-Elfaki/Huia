@@ -26,6 +26,16 @@ public sealed class HuiaAppFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        // accounts.google.com (and other real external providers ExternalLoginE2ETests exercises) publish both
+        // an AAAA and an A record; some sandboxed/CI environments have IPv6 silently black-holed rather than
+        // cleanly unreachable, which is the one failure mode .NET's SocketsHttpHandler Happy-Eyeballs fallback
+        // handles worst — the outbound call hangs until OpenIddict.Client's own resilience-handler timeout
+        // fires instead of falling back to IPv4 quickly. Scoped to this fixture (not AppHost.cs's general
+        // dev-mode use, and not the Huia library) since it only needs to affect test-orchestrated child
+        // processes, not every consumer's network. Must be set before CreateAsync spawns those processes,
+        // since they inherit the current process's environment at that point.
+        Environment.SetEnvironmentVariable("DOTNET_SYSTEM_NET_DISABLEIPV6", "1");
+
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Huia_AppHost>();
 
         appHost.Services.ConfigureHttpClientDefaults(clientBuilder => clientBuilder.AddStandardResilienceHandler());

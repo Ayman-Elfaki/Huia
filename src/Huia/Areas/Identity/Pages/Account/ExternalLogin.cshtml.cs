@@ -15,10 +15,15 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>
 /// Starts (<see cref="OnPostAsync"/>) and completes (<see cref="OnGetCallbackAsync"/>) an external
-/// (third-party) sign-in, registered via <c>huia.ExternalLogins</c>. Not meant to be navigated to directly;
-/// reached by posting from a provider button on <see cref="LoginModel"/>'s page. A first-time identity whose
-/// provider already verified its email and supplied both names is auto-provisioned here with no extra click;
-/// anything less complete falls through to <see cref="ExternalLoginConfirmationModel"/> instead.
+/// (third-party) sign-in, registered via <c>huia.Authentication.UseExternalAuthenticationFlow(...)</c>. Not
+/// meant to be navigated to directly; reached by posting from a provider button on <see cref="LoginModel"/>'s
+/// page. <see cref="OnGetCallbackAsync"/> itself is reached only after
+/// <c>Huia.Endpoints.ExternalLoginCallbackEndpoints</c> (OpenIddict's own client redirection endpoint) has
+/// already translated the provider's response into the same <see cref="IdentityConstants.ExternalScheme"/>
+/// cookie a plain ASP.NET Core remote-authentication handler used to populate directly — everything below
+/// reads that cookie exactly as it would have before. A first-time identity whose provider already verified
+/// its email and supplied both names is auto-provisioned here with no extra click; anything less complete
+/// falls through to <see cref="ExternalLoginConfirmationModel"/> instead.
 /// </summary>
 [AllowAnonymous]
 public class ExternalLoginModel(

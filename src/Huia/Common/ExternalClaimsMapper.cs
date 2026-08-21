@@ -6,9 +6,10 @@ namespace Huia.Common;
 /// <summary>
 /// Reads the profile claims an external sign-in provider (<see cref="ExternalLoginInfo.Principal"/>) supplied,
 /// for pre-filling/auto-provisioning a new <c>HuiaUser</c>. Falls back to the raw OIDC claim names alongside
-/// the standard <see cref="ClaimTypes"/> ones, since a generic <c>AddOAuth</c>-registered provider isn't
-/// guaranteed to have its claims mapped onto <see cref="ClaimTypes"/> the way <c>AddGoogle</c>/
-/// <c>AddMicrosoftAccount</c> are.
+/// the standard <see cref="ClaimTypes"/> ones — OpenIddict's client stack (the external-login mechanism
+/// itself, not just a specific provider) never maps claims onto <see cref="ClaimTypes"/> the way the old
+/// ASP.NET Core <c>AddGoogle</c>/<c>AddMicrosoftAccount</c> handlers used to, so every provider's claims are
+/// read by their raw OIDC names here.
 /// </summary>
 internal static class ExternalClaimsMapper
 {

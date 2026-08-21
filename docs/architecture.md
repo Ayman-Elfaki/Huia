@@ -88,14 +88,20 @@ automatically.
 
 ## External providers
 
-`ext.Providers` (inside `huia.Authentication.UseExternalAuthenticationFlow(ext => {...})`) is the same
-`AuthenticationBuilder` `AddHuia` itself uses for the Identity cookie schemes, exposed directly so any
-standard ASP.NET Core remote-authentication handler (`AddGoogle`, `AddOpenIdConnect`, `AddOAuth`, ...)
-registers against it unmodified. `LoginModel` lists registered schemes via
-`SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()`; `ExternalLoginModel`/
-`ExternalLoginConfirmationModel` (`Areas/Identity/Pages/Account`) drive the challenge/callback/account-
-creation flow, and `ManageExternalLoginsEndpoints` lets a signed-in user list/link/unlink providers on their
-own account. See [external-providers.md](external-providers.md).
+`huia.Authentication.UseExternalAuthenticationFlow(ext => {...})` registers third-party sign-in providers
+through OpenIddict's own client stack (`OpenIddict.Client`/`OpenIddict.Client.WebIntegration`), chained onto
+the same `AddOpenIddict()` builder `AddHuia` uses for its own authorization server —
+`ext.WebProviders.AddGoogle(...)` for a named, pre-configured integration, `ext.Client.AddRegistration(...)`
+for a generic/custom-issuer OIDC provider. OpenIddict's client completes the OAuth2/OIDC handshake itself but
+doesn't sign the result into any cookie; `Endpoints/ExternalLoginCallbackEndpoints.cs`, mapped at
+`callback/login/{provider}`, bridges that result into `IdentityConstants.ExternalScheme` — the same cookie a
+plain ASP.NET Core remote-authentication handler used to populate directly — so everything downstream is
+unchanged: `LoginModel` still lists registered providers via
+`SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()` (each provider's name is auto-forwarded as
+its own authentication scheme); `ExternalLoginModel`/`ExternalLoginConfirmationModel`
+(`Areas/Identity/Pages/Account`) still drive the challenge/callback/account-creation flow entirely through
+`SignInManager<HuiaUser>`; and `ManageExternalLoginsEndpoints` still lets a signed-in user list/link/unlink
+providers on their own account. See [external-providers.md](external-providers.md).
 
 ## Passwordless phone sign-in
 

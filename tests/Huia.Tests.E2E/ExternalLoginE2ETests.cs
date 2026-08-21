@@ -4,7 +4,7 @@ namespace Huia.Tests.E2E;
 
 /// <summary>
 /// Verifies the real "Sign in with Google" wiring on Huia's login page — <c>Huia.TodoApi/Program.cs</c>
-/// registers a real Google OAuth client via <c>huia.ExternalLogins.AddGoogle(...)</c> from
+/// registers a real Google OAuth client via <c>ext.WebProviders.AddGoogle(...)</c> from
 /// <c>Google:ClientId</c>/<c>Google:ClientSecret</c> in <c>appsettings.json</c> (or user-secrets/environment
 /// variables overriding it — never commit a real client secret to source control) whenever a client id is
 /// configured.

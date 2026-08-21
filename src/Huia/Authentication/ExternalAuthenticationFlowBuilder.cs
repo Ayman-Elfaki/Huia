@@ -1,29 +1,34 @@
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Authentication;
 
 /// <summary>
 /// Configures external (third-party) sign-in providers inside
-/// <c>huia.Authentication.UseExternalAuthenticationFlow(ext => {...})</c>.
+/// <c>huia.Authentication.UseExternalAuthenticationFlow(ext => {...})</c>. Backed by OpenIddict's own client
+/// stack (<c>OpenIddict.Client</c>/<c>OpenIddict.Client.WebIntegration</c>), not ASP.NET Core Identity's
+/// generic remote-authentication handlers.
 /// </summary>
-public sealed class ExternalAuthenticationFlowBuilder(AuthenticationBuilder providers)
+public sealed class ExternalAuthenticationFlowBuilder(OpenIddictClientBuilder client)
 {
     /// <summary>
-    /// Registers external (third-party) sign-in providers — e.g. <c>ext.Providers.AddGoogle(google =>
-    /// {...})</c>. This is the same <see cref="AuthenticationBuilder"/> <c>AddHuia</c> itself uses for the
-    /// <c>Identity.Application</c>/<c>Identity.External</c> cookie schemes, exposed directly rather than
-    /// wrapped, so any standard ASP.NET Core remote-authentication handler works unmodified — call whichever
-    /// of <c>AddGoogle</c>/<c>AddMicrosoftAccount</c>/<c>AddOpenIdConnect</c>/<c>AddOAuth</c> fits. Only
-    /// <c>AddOAuth</c> (a generic OAuth2 handler) ships in the ASP.NET Core shared framework; the others need
-    /// their own NuGet package (e.g. <c>dotnet add package Microsoft.AspNetCore.Authentication.Google</c>). A
-    /// provider registered here needs no explicit <c>SignInScheme</c> — <c>AddHuia</c> sets
-    /// <see cref="AuthenticationOptions.DefaultSignInScheme"/> to
-    /// <see cref="Microsoft.AspNetCore.Identity.IdentityConstants.ExternalScheme"/>, the scheme
-    /// <c>SignInManager&lt;HuiaUser&gt;.GetExternalLoginInfoAsync()</c> reads from, so every remote handler
-    /// lands there by default the same way it would under plain ASP.NET Core Identity. See
-    /// docs/external-providers.md.
+    /// Registers a named, pre-configured third-party provider — e.g. <c>ext.WebProviders.AddGoogle(google =>
+    /// google.SetClientId(...).SetClientSecret(...).SetRedirectUri("callback/login/google"))</c>. Covers
+    /// Google, Microsoft, GitHub, and 100+ other services OpenIddict ships settings for out of the box; each
+    /// provider needs its own <c>SetRedirectUri(...)</c> (OpenIddict's redirection endpoint for that
+    /// provider — see docs/external-providers.md) instead of the old <c>CallbackPath</c> convention. For a
+    /// provider without a named integration (a custom-issuer OIDC provider, e.g. a second Huia instance), use
+    /// <see cref="Client"/> instead.
     /// </summary>
-    public AuthenticationBuilder Providers { get; } = providers;
+    public OpenIddictClientWebIntegrationBuilder WebProviders { get; } = client.UseWebProviders();
+
+    /// <summary>
+    /// The raw OpenIddict client builder <c>AddHuia</c> registers the external flow onto — use
+    /// <c>ext.Client.AddRegistration(new OpenIddictClientRegistration { Issuer = ..., ClientId = ...,
+    /// ClientSecret = ..., ProviderName = "...", RedirectUri = ... })</c> to register a provider that isn't
+    /// one of <see cref="WebProviders"/>'s named integrations (any generic OAuth2/OIDC provider, identified by
+    /// its own issuer). See docs/external-providers.md.
+    /// </summary>
+    public OpenIddictClientBuilder Client { get; } = client;
 
     /// <summary>
     /// Whether an external sign-in whose provider-reported email matches an existing password account may

@@ -35,6 +35,14 @@ public static class EndpointRouteBuilderExtensions
         }
 
         /// <summary>
+        /// Maps the bridge OpenIddict's client redirection endpoint completes an external (third-party)
+        /// sign-in through — required whenever <c>huia.Authentication.UseExternalAuthenticationFlow(...)</c>
+        /// is enabled, alongside <c>MapRazorPages()</c>. See <see cref="ExternalLoginCallbackEndpoints"/>.
+        /// </summary>
+        public RouteGroupBuilder MapHuiaExternalLoginCallbackEndpoints() =>
+            endpoints.MapExternalLoginCallbackEndpoints();
+
+        /// <summary>
         /// Maps the account-management JSON endpoints a signed-in user calls to manage their own account:
         /// <c>/api/identity/manage/2fa</c>, <c>/api/identity/manage/info</c>,
         /// <c>/api/identity/manage/external-logins</c> — for an SPA/native/server-side OAuth client to build

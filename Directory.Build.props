@@ -35,7 +35,7 @@
         <NoWarn>$(NoWarn);CA1707;MA0004</NoWarn>
     </PropertyGroup>
 
-    <ItemGroup Label="Analyzers">
+    <ItemGroup Label="Analyzers" Condition="$(MSBuildProjectDirectory.Contains('/src/')) Or $(MSBuildProjectDirectory.Contains('\src\'))">
         <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all"/>
     </ItemGroup>
 

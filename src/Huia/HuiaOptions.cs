@@ -163,10 +163,9 @@ public sealed class HuiaOptions
         // by Huia's Razor Pages) target IdentityConstants.ApplicationScheme by convention, always passing it
         // explicitly rather than relying on this default. DefaultSignInScheme is instead
         // IdentityConstants.ExternalScheme — the same default plain ASP.NET Core Identity's own AddIdentity
-        // uses — so a remote-authentication handler registered via Authentication.UseExternalAuthenticationFlow
-        // below, without setting its own SignInScheme, lands in the external cookie
-        // SignInManager.GetExternalLoginInfoAsync() reads from, instead of signing directly into the main
-        // application cookie unvalidated.
+        // uses — so the external-login callback bridge (see Endpoints/ExternalLoginCallbackEndpoints.cs),
+        // which signs the OpenIddict client's result explicitly into that scheme, lands in the same external
+        // cookie SignInManager.GetExternalLoginInfoAsync() reads from.
         var providers = services.AddAuthentication(auth =>
         {
             auth.DefaultScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
@@ -193,6 +192,6 @@ public sealed class HuiaOptions
             cookie.SlidingExpiration = false;
         });
 
-        Authentication = new HuiaAuthenticationBuilder(providers);
+        Authentication = new HuiaAuthenticationBuilder();
     }
 }

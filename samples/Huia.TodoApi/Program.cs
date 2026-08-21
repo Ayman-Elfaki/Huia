@@ -12,6 +12,8 @@ using Huia.TodoApi.Events;
 using Huia.TodoApi.Sms;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Abstractions;
+using OpenIddict.Client;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,6 +54,8 @@ builder.Services.AddHuia(issuer, huia =>
         // Served from this app's own wwwroot (see app.UseStaticFiles() below) rather than reusing Huia's
         // favicon, so the sample demonstrates LogoUrl with a brand asset distinct from Huia's own.
         huia.Branding.LogoUrl = "/huia-icon.svg";
+
+        huia.AllowInsecureHttp();
 
         // The Next.js app: a server-rendered client (Auth.js runs on the Next.js server, never in the
         // browser), so it holds a secret rather than using the public SPA/PKCE client type.
@@ -167,29 +171,39 @@ builder.Services.AddHuia(issuer, huia =>
             {
                 if (!string.IsNullOrEmpty(googleClientId))
                 {
-                    ext.Providers.AddGoogle(google =>
-                    {
-                        google.ClientId = googleClientId;
-                        google.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
-                    });
+                    ext.WebProviders.AddGoogle(google => google
+                        .SetClientId(googleClientId)
+                        .SetClientSecret(builder.Configuration["Google:ClientSecret"]!)
+                        .SetRedirectUri("callback/login/google")
+                        .AddScopes(OpenIddictConstants.Scopes.Profile, OpenIddictConstants.Scopes.Email));
                 }
 
-                // Demonstrates a generic AddOpenIdConnect registration against samples/Huia.IdentityServer —
-                // a second, independent Huia instance the AppHost stands up as a real, controllable external
+                // Demonstrates a generic OpenIddictClientRegistration against samples/Huia.IdentityServer — a
+                // second, independent Huia instance the AppHost stands up as a real, controllable external
                 // identity provider (unlike Google above, which needs real credentials and can't be scripted
                 // through in a test). See docs/external-providers.md and
                 // tests/Huia.Tests.E2E/ExternalIdentityServerLoginE2ETests.cs, which drives the whole
                 // challenge -> IdentityServer sign-in -> callback -> account-creation round trip against it.
                 if (!string.IsNullOrEmpty(externalIdpIssuer))
                 {
-                    ext.Providers.AddOpenIdConnect("huia-idp", "Huia IdP", oidc =>
+                    ext.Client.AddRegistration(new OpenIddictClientRegistration
                     {
-                        oidc.Authority = externalIdpIssuer;
-                        oidc.ClientId = "todoapi";
-                        oidc.ClientSecret = builder.Configuration["Oidc:ExternalIdp:ClientSecret"];
-                        oidc.CallbackPath = "/signin-oidc-huia-idp";
-                        oidc.ResponseType = "code";
-                        oidc.Scope.Add("email");
+                        Issuer = new Uri(externalIdpIssuer, UriKind.Absolute),
+                        ClientId = "todoapi",
+                        ClientSecret = builder.Configuration["Oidc:ExternalIdp:ClientSecret"],
+                        ProviderName = "huia-idp",
+                        ProviderDisplayName = "Huia IdP",
+                        RedirectUri = new Uri("callback/login/huia-idp", UriKind.Relative),
+                        // Unlike Microsoft.AspNetCore.Authentication.OpenIdConnect's OpenIdConnectOptions
+                        // (which defaulted Scope to "openid profile" before this migration, so the old
+                        // registration only had to add "email" on top), OpenIddictClientRegistration.Scopes
+                        // starts empty — every scope this registration needs has to be listed explicitly.
+                        Scopes =
+                        {
+                            OpenIddictConstants.Scopes.OpenId,
+                            OpenIddictConstants.Scopes.Profile,
+                            OpenIddictConstants.Scopes.Email
+                        },
                     });
 
                     // A second registration against the same IdentityServer client, deliberately requesting
@@ -200,16 +214,19 @@ builder.Services.AddHuia(issuer, huia =>
                     // a provider that doesn't supply every profile claim routes to ExternalLoginConfirmation
                     // with editable (not disabled) name fields instead of auto-provisioning — see
                     // tests/Huia.Tests.E2E/ExternalIdentityServerLoginE2ETests.cs.
-                    ext.Providers.AddOpenIdConnect("huia-idp-partial", "Huia IdP (Partial Profile)", oidc =>
+                    ext.Client.AddRegistration(new OpenIddictClientRegistration
                     {
-                        oidc.Authority = externalIdpIssuer;
-                        oidc.ClientId = "todoapi";
-                        oidc.ClientSecret = builder.Configuration["Oidc:ExternalIdp:ClientSecret"];
-                        oidc.CallbackPath = "/signin-oidc-huia-idp-partial";
-                        oidc.ResponseType = "code";
-                        oidc.Scope.Clear();
-                        oidc.Scope.Add("openid");
-                        oidc.Scope.Add("email");
+                        Issuer = new Uri(externalIdpIssuer, UriKind.Absolute),
+                        ClientId = "todoapi",
+                        ClientSecret = builder.Configuration["Oidc:ExternalIdp:ClientSecret"],
+                        ProviderName = "huia-idp-partial",
+                        ProviderDisplayName = "Huia IdP (Partial Profile)",
+                        RedirectUri = new Uri("callback/login/huia-idp-partial", UriKind.Relative),
+                        Scopes =
+                        {
+                            OpenIddictConstants.Scopes.OpenId,
+                            OpenIddictConstants.Scopes.Email
+                        },
                     });
                 }
 
@@ -320,6 +337,7 @@ app.UseAntiforgery();
 
 app.MapHuiaConnectEndpoints();
 app.MapHuiaManageEndpoints();
+app.MapHuiaExternalLoginCallbackEndpoints();
 // Huia's built-in CRUD over applications/scopes/authorizations/users/roles — unauthenticated by default
 // (see its own doc comment), so every route in the group is gated here behind both the "Admin" role seeded
 // by SeedAdminAsync below and RequirePresenter: RequireRole alone isn't enough, since any client that

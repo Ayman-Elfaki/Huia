@@ -144,16 +144,19 @@ api.WithEnvironment("Oidc__WebRedirectUri",
     // here would double up into "https://localhost:5041//scalar" — a 404, since ASP.NET Core's router
     // doesn't collapse repeated slashes.
     .WithEnvironment("Oidc__Issuer", api.GetEndpoint("https"))
-    // OpenIdConnectHandler validates the identity token's iss claim against this with strict string
-    // equality, same trailing-slash reasoning as AUTH_HUIA_ISSUER above.
+    // OpenIddict.Client validates the identity token's iss claim against this with strict string equality,
+    // same trailing-slash reasoning as AUTH_HUIA_ISSUER above.
     .WithEnvironment("Oidc__ExternalIdp__Issuer", ReferenceExpression.Create($"{identityServer.GetEndpoint("https")}/"));
 
 // identityServer's own client registration for "todoapi" isn't known until api itself is declared above —
-// same chicken-and-egg reasoning as api.WithEnvironment("Oidc__WebRedirectUri", ...) further up.
+// same chicken-and-egg reasoning as api.WithEnvironment("Oidc__WebRedirectUri", ...) further up. Must match
+// the RedirectUri each OpenIddictClientRegistration in Huia.TodoApi/Program.cs sets ("huia-idp"/
+// "huia-idp-partial") — OpenIddict.Client's own redirection endpoint, not the old ASP.NET Core
+// "signin-oidc-*" CallbackPath convention.
 identityServer.WithEnvironment("Oidc__TodoApiRedirectUri",
-        ReferenceExpression.Create($"{api.GetEndpoint("https")}/signin-oidc-huia-idp"))
+        ReferenceExpression.Create($"{api.GetEndpoint("https")}/callback/login/huia-idp"))
     .WithEnvironment("Oidc__TodoApiPartialRedirectUri",
-        ReferenceExpression.Create($"{api.GetEndpoint("https")}/signin-oidc-huia-idp-partial"))
+        ReferenceExpression.Create($"{api.GetEndpoint("https")}/callback/login/huia-idp-partial"))
     .WithEnvironment("Oidc__TodoApiPostLogoutRedirectUri", api.GetEndpoint("https"))
     .WithEnvironment("Oidc__TodoApiHomeUri",
         ReferenceExpression.Create($"{api.GetEndpoint("https")}/identity/account/login"))

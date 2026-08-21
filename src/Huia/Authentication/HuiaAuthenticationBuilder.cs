@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Authentication;
 
@@ -12,13 +12,6 @@ namespace Huia.Authentication;
 /// </summary>
 public sealed class HuiaAuthenticationBuilder
 {
-    // The same AuthenticationBuilder AddHuia's constructor already creates to register the
-    // Identity.Application/Identity.External cookie schemes — handed in rather than created here so this
-    // type stays a pure configuration surface, not another place that registers services.
-    private readonly AuthenticationBuilder _providers;
-
-    internal HuiaAuthenticationBuilder(AuthenticationBuilder providers) => _providers = providers;
-
     /// <summary>
     /// Whether <see cref="UsePasswordlessFlow"/> has been called.
     /// </summary>
@@ -42,6 +35,17 @@ public sealed class HuiaAuthenticationBuilder
     internal PasswordlessFlowOptions Passwordless { get; } = new();
 
     internal bool ExternalLoginPasswordLinkingEnabled { get; private set; }
+
+    /// <summary>
+    /// The consumer's <see cref="UseExternalAuthenticationFlow"/> callback, stashed rather than invoked
+    /// immediately: it configures an <see cref="ExternalAuthenticationFlowBuilder"/>, which itself needs the
+    /// <see cref="OpenIddictClientBuilder"/> from <c>AddHuia</c>'s own <c>.AddOpenIddict().AddClient(...)</c>
+    /// call — that builder doesn't exist yet at the point this class is constructed (inside
+    /// <c>HuiaOptions</c>'s constructor, before <c>configure(options)</c> — the consumer's own callback —
+    /// even runs). <c>AddHuia</c> calls <see cref="ApplyExternalAuthenticationFlow"/> once the real client
+    /// builder is in scope instead.
+    /// </summary>
+    private Action<ExternalAuthenticationFlowBuilder>? _externalFlowConfiguration;
 
     /// <summary>
     /// Enables passwordless phone sign-in: a user enters a phone number, receives a one-time code by SMS,
@@ -81,18 +85,33 @@ public sealed class HuiaAuthenticationBuilder
 
     /// <summary>
     /// Enables sign-in via external (third-party) identity providers — Google, Microsoft, GitHub, or any
-    /// OAuth2/OIDC provider. Replaces the old, removed <c>HuiaOptions.ExternalLogins</c> property and
-    /// <c>EnableExternalLoginPasswordLinking()</c> method, bundled into a single call:
-    /// <c>huia.Authentication.UseExternalAuthenticationFlow(ext => { ext.Providers.AddGoogle(...);
-    /// ext.EnablePasswordLinking(); });</c>. See <see cref="ExternalAuthenticationFlowBuilder"/> and
-    /// docs/external-providers.md.
+    /// OAuth2/OIDC provider — backed by OpenIddict's own client stack. Replaces the old, removed
+    /// <c>HuiaOptions.ExternalLogins</c> property and <c>EnableExternalLoginPasswordLinking()</c> method,
+    /// bundled into a single call: <c>huia.Authentication.UseExternalAuthenticationFlow(ext => {
+    /// ext.WebProviders.AddGoogle(...); ext.EnablePasswordLinking(); });</c>. See
+    /// <see cref="ExternalAuthenticationFlowBuilder"/> and docs/external-providers.md.
     /// </summary>
     public HuiaAuthenticationBuilder UseExternalAuthenticationFlow(Action<ExternalAuthenticationFlowBuilder> configure)
     {
         ExternalFlowEnabled = true;
-        var flow = new ExternalAuthenticationFlowBuilder(_providers);
-        configure(flow);
-        ExternalLoginPasswordLinkingEnabled = flow.PasswordLinkingEnabled;
+        _externalFlowConfiguration = configure;
         return this;
+    }
+
+    /// <summary>
+    /// Invokes the <see cref="UseExternalAuthenticationFlow"/> callback (if any) against the real
+    /// <paramref name="client"/> builder — called by <c>AddHuia</c> once it exists, not by
+    /// <see cref="UseExternalAuthenticationFlow"/> itself. See <see cref="_externalFlowConfiguration"/>.
+    /// </summary>
+    internal void ApplyExternalAuthenticationFlow(OpenIddictClientBuilder client)
+    {
+        if (_externalFlowConfiguration is null)
+        {
+            return;
+        }
+
+        var flow = new ExternalAuthenticationFlowBuilder(client);
+        _externalFlowConfiguration(flow);
+        ExternalLoginPasswordLinkingEnabled = flow.PasswordLinkingEnabled;
     }
 }

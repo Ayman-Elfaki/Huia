@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OpenIddict.Client;
 
 namespace Huia.Tests.Unit.Core;
 
@@ -18,23 +19,63 @@ public class HuiaOptionsTests
     }
 
     [Fact]
-    public void UseExternalAuthenticationFlow_BundlesProvidersAndPasswordLinkingFlag()
+    public void UseExternalAuthenticationFlow_DefersConfigurationUntilApplied()
     {
         var options = CreateOptions();
         var registeredGoogle = false;
 
         options.Authentication.UseExternalAuthenticationFlow(ext =>
         {
-            // Providers is the same AuthenticationBuilder AddHuia wires up internally — proven here by
-            // registering an arbitrary scheme through it and confirming it lands in the same AuthenticationOptions.
-            ext.Providers.AddScheme<AuthenticationSchemeOptions, NoOpAuthenticationHandler>("test-scheme", null);
+            ext.WebProviders.AddGoogle(google => google
+                .SetClientId("client-id")
+                .SetClientSecret("client-secret")
+                .SetRedirectUri("callback/login/google"));
             registeredGoogle = true;
             ext.EnablePasswordLinking();
         });
 
+        // UseExternalAuthenticationFlow only stashes the callback — it can't run yet, since
+        // ExternalAuthenticationFlowBuilder needs a real OpenIddictClientBuilder, which doesn't exist until
+        // AddHuia calls ApplyExternalAuthenticationFlow below (see that method's own doc comment for why).
+        Assert.False(registeredGoogle);
+        Assert.True(options.Authentication.ExternalFlowEnabled);
+        Assert.False(options.Authentication.ExternalLoginPasswordLinkingEnabled);
+    }
+
+    [Fact]
+    public void ApplyExternalAuthenticationFlow_RunsConfigurationAgainstTheRealClientBuilder()
+    {
+        var options = CreateOptions();
+        var registeredGoogle = false;
+
+        options.Authentication.UseExternalAuthenticationFlow(ext =>
+        {
+            ext.WebProviders.AddGoogle(google => google
+                .SetClientId("client-id")
+                .SetClientSecret("client-secret")
+                .SetRedirectUri("callback/login/google"));
+            registeredGoogle = true;
+            ext.EnablePasswordLinking();
+        });
+
+        var services = new ServiceCollection();
+        var client = services.AddOpenIddict().AddClient();
+
+        // Mirrors ServiceCollectionExtensions.AddHuia's own baseline .AddClient(...) setup — not this test's
+        // concern, just what's needed for OpenIddictClientOptions to validate successfully below.
+        client.AllowAuthorizationCodeFlow();
+        client.AddEphemeralEncryptionKey();
+        client.AddEphemeralSigningKey();
+
+        options.Authentication.ApplyExternalAuthenticationFlow(client);
+
         Assert.True(registeredGoogle);
         Assert.True(options.Authentication.ExternalLoginPasswordLinkingEnabled);
-        Assert.True(options.Authentication.ExternalFlowEnabled);
+
+        using var provider = services.BuildServiceProvider();
+        var clientOptions = provider.GetRequiredService<IOptionsMonitor<OpenIddictClientOptions>>().CurrentValue;
+        Assert.Contains(clientOptions.Registrations, registration =>
+            string.Equals(registration.ProviderName, "Google", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -218,11 +259,10 @@ public class HuiaOptionsTests
     }
 
     /// <summary>
-    /// The regression this guards: a provider registered via
-    /// <c>huia.Authentication.UseExternalAuthenticationFlow(ext => ext.Providers.AddX(...))</c> without its
-    /// own <c>SignInScheme</c> must land in the external cookie
-    /// <c>SignInManager.GetExternalLoginInfoAsync()</c> reads from — see HuiaOptions's own constructor doc
-    /// comment for why this has to be <see cref="IdentityConstants.ExternalScheme"/> rather than
+    /// The regression this guards: <c>Endpoints/ExternalLoginCallbackEndpoints.cs</c> signs an external
+    /// sign-in's result explicitly into this scheme, and every downstream <c>SignInManager</c> external-login
+    /// method (<c>GetExternalLoginInfoAsync</c>, etc.) reads from it too — see HuiaOptions's own constructor
+    /// doc comment for why this has to be <see cref="IdentityConstants.ExternalScheme"/> rather than
     /// <see cref="IdentityConstants.ApplicationScheme"/>.
     /// </summary>
     [Fact]
@@ -235,15 +275,5 @@ public class HuiaOptionsTests
         var authOptions = provider.GetRequiredService<IOptions<AuthenticationOptions>>().Value;
 
         Assert.Equal(IdentityConstants.ExternalScheme, authOptions.DefaultSignInScheme);
-    }
-
-    private sealed class NoOpAuthenticationHandler(
-        Microsoft.Extensions.Options.IOptionsMonitor<AuthenticationSchemeOptions> options,
-        Microsoft.Extensions.Logging.ILoggerFactory logger,
-        System.Text.Encodings.Web.UrlEncoder encoder)
-        : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
-    {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
-            Task.FromResult(AuthenticateResult.NoResult());
     }
 }
