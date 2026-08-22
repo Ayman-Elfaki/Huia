@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Caching.Hybrid;
+
 namespace Huia.Passwordless;
 
 /// <summary>
@@ -5,17 +7,16 @@ namespace Huia.Passwordless;
 /// <c>PasswordlessFlowOptions.EnableIpRateLimiting</c> was called — partitions <see cref="SlidingWindowOtpRateLimiter"/>
 /// by client IP address, per <see cref="PhoneIpRateLimitOptions"/>'s three configured windows.
 /// </summary>
-internal sealed class PhoneIpRateLimiter : IPhoneIpRateLimiter, IDisposable
+internal sealed class PhoneIpRateLimiter : IPhoneIpRateLimiter
 {
     private readonly SlidingWindowOtpRateLimiter _inner;
 
-    public PhoneIpRateLimiter(PhoneIpRateLimitOptions options, TimeProvider? timeProvider = null) =>
-        _inner = new SlidingWindowOtpRateLimiter(options.RequestsPerMinute, options.RequestsPerHour,
-            options.RequestsPerDay, timeProvider);
+    public PhoneIpRateLimiter(HybridCache cache, PhoneIpRateLimitOptions options,
+        TimeProvider? timeProvider = null) =>
+        _inner = new SlidingWindowOtpRateLimiter(cache, "huia:phone-ip-rate:", options.RequestsPerMinute,
+            options.RequestsPerHour, options.RequestsPerDay, timeProvider);
 
     public ValueTask<PhoneOtpAcquireResult> TryAcquireAsync(string clientIpAddress,
         CancellationToken cancellationToken = default) =>
         _inner.TryAcquireAsync(clientIpAddress, cancellationToken);
-
-    public void Dispose() => _inner.Dispose();
 }

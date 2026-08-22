@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -89,12 +90,13 @@ public sealed class PhoneLoginBotProtectionTestFactory : WebApplicationFactory<P
             });
 
             // Relaxed for the same reason as the phone-number limit above — see this class's own doc comment.
-            services.AddSingleton<IPhoneIpRateLimiter>(new PhoneIpRateLimiter(new PhoneIpRateLimitOptions
-            {
-                RequestsPerMinute = 1000,
-                RequestsPerHour = 1000,
-                RequestsPerDay = 1000,
-            }));
+            services.AddSingleton<IPhoneIpRateLimiter>(sp => new PhoneIpRateLimiter(
+                sp.GetRequiredService<HybridCache>(), new PhoneIpRateLimitOptions
+                {
+                    RequestsPerMinute = 1000,
+                    RequestsPerHour = 1000,
+                    RequestsPerDay = 1000,
+                }));
 
             services.AddSingleton<ITurnstileVerifier>(TurnstileVerifier);
         });

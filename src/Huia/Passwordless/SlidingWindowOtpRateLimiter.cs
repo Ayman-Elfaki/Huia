@@ -1,115 +1,94 @@
-using System.Collections.Concurrent;
-using System.Threading.RateLimiting;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Huia.Passwordless;
 
 /// <summary>
-/// The chained-sliding-window-limiter-plus-retry-after-estimate core shared by <see cref="PhoneOtpRateLimiter"/>
-/// (partitioned by phone number) and <see cref="PhoneIpRateLimiter"/> (partitioned by client IP address) — the
-/// algorithm is identical for both, only the meaning of the partition key and which
-/// <c>Requests*</c> options feed the three window limits differ. See <see cref="PhoneOtpRateLimiter"/>'s own
-/// former doc comment (now here) for why grant timestamps are tracked independently of the underlying
-/// <see cref="System.Threading.RateLimiting"/> limiters.
+/// The sliding-window-over-a-cached-timestamp-list core shared by <see cref="PhoneOtpRateLimiter"/> (partitioned
+/// by phone number) and <see cref="PhoneIpRateLimiter"/> (partitioned by client IP address) — the algorithm is
+/// identical for both, only the meaning of the partition key, which <c>Requests*</c> options feed the three
+/// window limits, and <paramref name="keyPrefix"/> (via the constructor) differ.
 /// </summary>
 /// <remarks>
-/// Also tracks each partition key's own granted-permit timestamps, purely to estimate
-/// <see cref="PhoneOtpAcquireResult.RetryAfter"/> on a denial: <see cref="System.Threading.RateLimiting"/>'s
-/// sliding-window limiters don't reliably populate a rejected lease's retry-after metadata with
-/// <c>QueueLimit</c> 0 (a denial is immediate, with no queued request to compute a wait estimate from), so
-/// this reconstructs "the oldest permit still counted in whichever window is exhausted ages out" itself, from
-/// data already being recorded for exactly this purpose.
+/// Each partition key's own granted-permit timestamps are stored as a single <see cref="HybridCache"/> entry
+/// (oldest first, filtered to <see cref="DayWindow"/> — the largest configured window — on every read), used
+/// both to decide whether a new request fits under all three windows and, on a denial, to estimate
+/// <see cref="PhoneOtpAcquireResult.RetryAfter"/>. <see cref="HybridCache"/>'s L1 tier can hand back a shared
+/// reference to the same list instance to concurrent callers in this process, so the list read on each call is
+/// never mutated in place — a filtered copy is built instead, and only that copy (plus the new grant, if any) is
+/// ever written back via <see cref="HybridCache.SetAsync{T}"/>.
+///
+/// This read-check-write is not atomic across concurrent requests for the same key: two simultaneous requests
+/// can both read the same snapshot and both be granted, overrunning a limit by one permit. That's an accepted,
+/// deliberate tradeoff — <see cref="HybridCache"/> has no atomic counter primitive, and this is the cost of
+/// making the limiter shareable across a scaled-out deployment (via a distributed <c>IDistributedCache</c>
+/// registered as HybridCache's L2) without pulling in a distributed-lock dependency.
 /// </remarks>
-internal sealed class SlidingWindowOtpRateLimiter : IDisposable
+internal sealed class SlidingWindowOtpRateLimiter
 {
     private static readonly TimeSpan MinuteWindow = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan HourWindow = TimeSpan.FromHours(1);
     private static readonly TimeSpan DayWindow = TimeSpan.FromDays(1);
 
-    private readonly PartitionedRateLimiter<string> _chained;
+    private readonly HybridCache _cache;
+    private readonly string _keyPrefix;
     private readonly int _requestsPerMinute;
     private readonly int _requestsPerHour;
     private readonly int _requestsPerDay;
     private readonly TimeProvider _timeProvider;
+    private readonly HybridCacheEntryOptions _entryOptions;
 
-    // One entry per partition key that has ever been granted a permit; each list holds that key's own grant
-    // timestamps, oldest first, trimmed to DayWindow (the largest configured window — anything older can
-    // never count toward any of the three limits again). Self-bounding: a key that goes quiet has its list
-    // emptied out on its next lookup, though the now-empty entry itself is only reclaimed the next time this
-    // key is looked up while genuinely idle — acceptable since the underlying rate limiter partitions
-    // themselves are equally long-lived per distinct key ever seen.
-    private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _grants = new(StringComparer.Ordinal);
-
-    public SlidingWindowOtpRateLimiter(int requestsPerMinute, int requestsPerHour, int requestsPerDay,
-        TimeProvider? timeProvider = null)
+    public SlidingWindowOtpRateLimiter(HybridCache cache, string keyPrefix, int requestsPerMinute,
+        int requestsPerHour, int requestsPerDay, TimeProvider? timeProvider = null)
     {
+        _cache = cache;
+        _keyPrefix = keyPrefix;
         _requestsPerMinute = requestsPerMinute;
         _requestsPerHour = requestsPerHour;
         _requestsPerDay = requestsPerDay;
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _chained = PartitionedRateLimiter.CreateChained(
-            BuildLimiter(MinuteWindow, requestsPerMinute),
-            BuildLimiter(HourWindow, requestsPerHour),
-            BuildLimiter(DayWindow, requestsPerDay));
+
+        // Re-set on every write (see SetAsync below), so a key that goes quiet has its entry expire on its own
+        // rather than needing manual trimming — self-bounding the same way the old in-memory dictionary was.
+        _entryOptions = new HybridCacheEntryOptions { Expiration = DayWindow, LocalCacheExpiration = DayWindow };
     }
 
     public async ValueTask<PhoneOtpAcquireResult> TryAcquireAsync(string partitionKey,
         CancellationToken cancellationToken = default)
     {
-        using var lease = await _chained.AcquireAsync(partitionKey, permitCount: 1, cancellationToken)
+        var cacheKey = _keyPrefix + partitionKey;
+        var cached = await _cache.GetOrCreateAsync(cacheKey,
+                static _ => ValueTask.FromResult<List<DateTimeOffset>>([]),
+                _entryOptions, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         var now = _timeProvider.GetUtcNow();
-        if (lease.IsAcquired)
+
+        // Never mutate `cached` in place — HybridCache's L1 tier may have handed the same list instance to
+        // another concurrent caller. Everything below works off this fresh filtered copy instead.
+        var timestamps = cached.Where(t => now - t < DayWindow).ToList();
+
+        if (IsWithinLimit(timestamps, now, MinuteWindow, _requestsPerMinute) &&
+            IsWithinLimit(timestamps, now, HourWindow, _requestsPerHour) &&
+            IsWithinLimit(timestamps, now, DayWindow, _requestsPerDay))
         {
-            RecordGrant(partitionKey, now);
+            timestamps.Add(now);
+            await _cache.SetAsync(cacheKey, timestamps, _entryOptions, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
             return PhoneOtpAcquireResult.Acquired;
         }
 
-        return PhoneOtpAcquireResult.Denied(EstimateRetryAfter(partitionKey, now));
+        return PhoneOtpAcquireResult.Denied(EstimateRetryAfter(timestamps, now));
     }
 
-    // CreateChained's own Dispose/DisposeAsync disposes every limiter passed into it, so nothing else needs
-    // to be tracked or disposed separately here.
-    public void Dispose() => _chained.Dispose();
+    private static bool IsWithinLimit(List<DateTimeOffset> timestamps, DateTimeOffset now, TimeSpan window,
+        int limit) =>
+        timestamps.Count(t => now - t < window) < limit;
 
-    private static PartitionedRateLimiter<string> BuildLimiter(TimeSpan window, int permitLimit) =>
-        PartitionedRateLimiter.Create<string, string>(key => RateLimitPartition.GetSlidingWindowLimiter(key,
-            _ => new SlidingWindowRateLimiterOptions
-            {
-                Window = window,
-                SegmentsPerWindow = 4,
-                PermitLimit = permitLimit,
-                QueueLimit = 0,
-                AutoReplenishment = true,
-            }));
-
-    private void RecordGrant(string partitionKey, DateTimeOffset now)
+    private TimeSpan EstimateRetryAfter(List<DateTimeOffset> timestamps, DateTimeOffset now)
     {
-        var timestamps = _grants.GetOrAdd(partitionKey, static _ => []);
-        lock (timestamps)
-        {
-            timestamps.Add(now);
-            timestamps.RemoveAll(t => now - t > DayWindow);
-        }
-    }
-
-    private TimeSpan EstimateRetryAfter(string partitionKey, DateTimeOffset now)
-    {
-        // No grants recorded at all for a key that was just denied is only possible if this instance's own
-        // history doesn't cover whatever consumed its permits (e.g. a restart mid-window) — a minute is
-        // always a safe, honest floor to suggest.
-        if (!_grants.TryGetValue(partitionKey, out var timestamps))
-        {
-            return MinuteWindow;
-        }
-
-        TimeSpan minuteRetry, hourRetry, dayRetry;
-        lock (timestamps)
-        {
-            minuteRetry = RetryAfterForWindow(timestamps, now, MinuteWindow, _requestsPerMinute);
-            hourRetry = RetryAfterForWindow(timestamps, now, HourWindow, _requestsPerHour);
-            dayRetry = RetryAfterForWindow(timestamps, now, DayWindow, _requestsPerDay);
-        }
+        var minuteRetry = RetryAfterForWindow(timestamps, now, MinuteWindow, _requestsPerMinute);
+        var hourRetry = RetryAfterForWindow(timestamps, now, HourWindow, _requestsPerHour);
+        var dayRetry = RetryAfterForWindow(timestamps, now, DayWindow, _requestsPerDay);
 
         var retryAfter = Max(minuteRetry, hourRetry, dayRetry);
 

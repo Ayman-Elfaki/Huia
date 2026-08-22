@@ -1,22 +1,29 @@
 using Huia.Passwordless;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Tests.Unit.Passwordless;
 
 /// <summary>
 /// Covers permit-count enforcement, per-phone-number isolation, and the <c>RetryAfter</c> estimate a denial
-/// carries. Window *expiry* via real elapsed time isn't covered here — the underlying
-/// <see cref="System.Threading.RateLimiting.SlidingWindowRateLimiterOptions"/> has no injectable
-/// <c>TimeProvider</c> hook to fast-forward, and the real windows are fixed at 1 minute/hour/day (only the
-/// permit counts are configurable), so exercising actual enforcement expiry would mean a real 60+ second
-/// sleep. <c>FakeTimeProvider</c> only drives this class's own <c>RetryAfter</c> estimate (see
-/// <c>PhoneOtpRateLimiter</c>'s own doc comment on why that's tracked independently of the underlying
-/// limiters), which doesn't depend on the real limiters' clock at all.
+/// carries. Window *expiry* via real elapsed time isn't covered here — the real windows are fixed at 1
+/// minute/hour/day (only the permit counts are configurable), so exercising actual enforcement expiry would
+/// mean a real 60+ second sleep. <c>FakeTimeProvider</c> only drives this class's own <c>RetryAfter</c>
+/// estimate, which is computed from the same cached timestamps used for enforcement (see
+/// <c>SlidingWindowOtpRateLimiter</c>'s own doc comment).
 /// </summary>
 public class PhoneOtpRateLimiterTests
 {
+    private static HybridCache CreateCache()
+    {
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        return services.BuildServiceProvider().GetRequiredService<HybridCache>();
+    }
+
     private static PhoneOtpRateLimiter CreateLimiter(int perMinute = 1, int perHour = 3, int perDay = 10,
         FakeTimeProvider? timeProvider = null) =>
-        new(new PhoneOtpRateLimitOptions
+        new(CreateCache(), new PhoneOtpRateLimitOptions
         {
             RequestsPerMinute = perMinute,
             RequestsPerHour = perHour,
@@ -26,7 +33,7 @@ public class PhoneOtpRateLimiterTests
     [Fact]
     public async Task TryAcquireAsync_FirstRequestForANumber_Succeeds()
     {
-        using var limiter = CreateLimiter();
+        var limiter = CreateLimiter();
 
         var result = await limiter.TryAcquireAsync("+15551234567");
         Assert.True(result.IsAcquired);
@@ -36,7 +43,7 @@ public class PhoneOtpRateLimiterTests
     [Fact]
     public async Task TryAcquireAsync_ExceedingPerMinuteLimit_Fails()
     {
-        using var limiter = CreateLimiter(perMinute: 1);
+        var limiter = CreateLimiter(perMinute: 1);
 
         Assert.True((await limiter.TryAcquireAsync("+15551234567")).IsAcquired);
         var denied = await limiter.TryAcquireAsync("+15551234567");
@@ -47,7 +54,7 @@ public class PhoneOtpRateLimiterTests
     public async Task TryAcquireAsync_ExceedingPerMinuteLimit_RetryAfterIsAboutOneMinute()
     {
         var timeProvider = new FakeTimeProvider();
-        using var limiter = CreateLimiter(perMinute: 1, timeProvider: timeProvider);
+        var limiter = CreateLimiter(perMinute: 1, timeProvider: timeProvider);
 
         Assert.True((await limiter.TryAcquireAsync("+15551234567")).IsAcquired);
 
@@ -64,7 +71,7 @@ public class PhoneOtpRateLimiterTests
     {
         // A per-minute limit far above what this test issues means only the per-hour limit can be the one
         // rejecting the 4th request.
-        using var limiter = CreateLimiter(perMinute: 100, perHour: 3, perDay: 100);
+        var limiter = CreateLimiter(perMinute: 100, perHour: 3, perDay: 100);
         const string phoneNumber = "+15551234567";
 
         Assert.True((await limiter.TryAcquireAsync(phoneNumber)).IsAcquired);
@@ -78,7 +85,7 @@ public class PhoneOtpRateLimiterTests
     public async Task TryAcquireAsync_ExceedingPerHourLimit_RetryAfterReflectsTheHourWindowNotTheMinuteOne()
     {
         var timeProvider = new FakeTimeProvider();
-        using var limiter = CreateLimiter(perMinute: 100, perHour: 1, perDay: 100, timeProvider: timeProvider);
+        var limiter = CreateLimiter(perMinute: 100, perHour: 1, perDay: 100, timeProvider: timeProvider);
         const string phoneNumber = "+15551234567";
 
         Assert.True((await limiter.TryAcquireAsync(phoneNumber)).IsAcquired);
@@ -95,7 +102,7 @@ public class PhoneOtpRateLimiterTests
     [Fact]
     public async Task TryAcquireAsync_DifferentPhoneNumbers_DoNotShareABucket()
     {
-        using var limiter = CreateLimiter(perMinute: 1);
+        var limiter = CreateLimiter(perMinute: 1);
 
         Assert.True((await limiter.TryAcquireAsync("+15551234567")).IsAcquired);
         Assert.False((await limiter.TryAcquireAsync("+15551234567")).IsAcquired);
@@ -108,7 +115,7 @@ public class PhoneOtpRateLimiterTests
     public async Task TryAcquireAsync_RespectsTheLowestOfAllThreeConfiguredLimits()
     {
         // Per-minute is the tightest of the three here, so it's the one that ends up governing.
-        using var limiter = CreateLimiter(perMinute: 2, perHour: 3, perDay: 10);
+        var limiter = CreateLimiter(perMinute: 2, perHour: 3, perDay: 10);
         const string phoneNumber = "+15551234567";
 
         Assert.True((await limiter.TryAcquireAsync(phoneNumber)).IsAcquired);

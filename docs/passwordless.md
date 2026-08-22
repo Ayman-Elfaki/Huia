@@ -120,8 +120,10 @@ huia.Authentication.UsePasswordlessFlow(passwordless =>
 });
 ```
 
-The default `IPhoneOtpRateLimiter` is in-memory (per instance); register your own implementation (e.g.
-Redis-backed) before calling `AddHuia` if limits need to be shared across a scaled-out deployment.
+The default `IPhoneOtpRateLimiter` is backed by `HybridCache` — in-memory (L1) only unless the host app registers
+a distributed `IDistributedCache` (e.g. via `AddStackExchangeRedisCache`) before calling `AddHuia`, in which case
+HybridCache picks it up as an L2 automatically and limits are shared across a scaled-out deployment. Register
+your own `IPhoneOtpRateLimiter` implementation instead if that's not sufficient.
 
 ### Per client IP address
 
@@ -145,8 +147,9 @@ The defaults are deliberately looser than the per-phone-number ones — a shared
 mobile carrier CGNAT, VPN exit node) can plausibly represent many genuine users behind one address, so tune
 this to the app's own expected traffic shape. `HttpContext.Connection.RemoteIpAddress` is what's partitioned
 on; behind a reverse proxy, configure `UseForwardedHeaders()` yourself so this reflects the real client IP
-rather than the proxy's. Like the per-phone-number limiter, register your own `IPhoneIpRateLimiter` before
-`AddHuia` for a shared, scaled-out deployment.
+rather than the proxy's. Like the per-phone-number limiter, this one is `HybridCache`-backed too — shared across
+a scaled-out deployment automatically if a distributed `IDistributedCache` is registered before `AddHuia`, or
+register your own `IPhoneIpRateLimiter` instead if that's not sufficient.
 
 ## Bot protection (Cloudflare Turnstile)
 

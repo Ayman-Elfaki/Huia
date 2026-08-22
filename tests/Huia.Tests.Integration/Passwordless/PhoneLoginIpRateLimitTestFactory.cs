@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -73,12 +74,13 @@ public sealed class PhoneLoginIpRateLimitTestFactory : WebApplicationFactory<Pro
                 RequestsPerDay = 1000,
             });
 
-            services.AddSingleton<IPhoneIpRateLimiter>(new PhoneIpRateLimiter(new PhoneIpRateLimitOptions
-            {
-                RequestsPerMinute = 1,
-                RequestsPerHour = 1000,
-                RequestsPerDay = 1000,
-            }));
+            services.AddSingleton<IPhoneIpRateLimiter>(sp => new PhoneIpRateLimiter(
+                sp.GetRequiredService<HybridCache>(), new PhoneIpRateLimitOptions
+                {
+                    RequestsPerMinute = 1,
+                    RequestsPerHour = 1000,
+                    RequestsPerDay = 1000,
+                }));
 
             services.AddSingleton<ITurnstileVerifier>(new FakeTurnstileVerifier { ShouldVerify = true });
         });

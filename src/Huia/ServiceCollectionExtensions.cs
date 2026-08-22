@@ -124,6 +124,7 @@ public static class ServiceCollectionExtensions
 
         if (options.Authentication.PasswordlessFlowEnabled)
         {
+            services.AddHybridCache();
             services.AddSingleton(options.Authentication.Passwordless.RateLimit);
             services.TryAddSingleton<IPhoneOtpRateLimiter, PhoneOtpRateLimiter>();
             services.TryAddSingleton<ISmsSender<HuiaUser>, NoOpSmsSender>();
