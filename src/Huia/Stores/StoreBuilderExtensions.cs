@@ -1,6 +1,4 @@
-using Huia.Identity;
 using Huia.Keys;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 
@@ -40,8 +38,14 @@ public static class StoreBuilderExtensions
     {
         var services = builder.Services;
 
-        services.AddScoped<IUserStore<HuiaUser>, TStore>();
-        services.AddScoped<IRoleStore<HuiaRole>, TStore>();
+        services.AddScoped<IHuiaUserStore, TStore>();
+        services.AddScoped<IHuiaUserLoginStore, TStore>();
+        services.AddScoped<IHuiaUserRoleStore, TStore>();
+
+        // Needed directly by TotpHuiaTokenProvider (not just reachable via HuiaUserManager's own cast of its
+        // injected IHuiaUserStore), so it has to be independently resolvable from DI.
+        services.AddScoped<IHuiaUserTokenStore, TStore>();
+        services.AddScoped<IHuiaRoleStore, TStore>();
         services.AddScoped<ISigningKeyStore, TStore>();
 
         // A plain Add (not TryAdd) so it wins over the ThrowingPhoneNumberStore AddHuia registers by default

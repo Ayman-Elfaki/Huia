@@ -1,7 +1,9 @@
 using Huia.Common;
+using Huia.Emails;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
+using Huia.Localization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
@@ -12,7 +14,7 @@ namespace Huia.Tests.Unit.Common;
 /// <summary>
 /// Covers <see cref="ClaimsUtils.CreateUserIdentityAsync"/> — the claim-building half of <see cref="ClaimsUtils"/>
 /// (the destination-routing half is covered by <see cref="ClaimsUtilsTests"/>). Backed by
-/// <see cref="FakeUserStore"/> so a real <see cref="UserManager{HuiaUser}"/> can be exercised without a database.
+/// <see cref="FakeUserStore"/> so a real <see cref="HuiaUserManager"/> can be exercised without a database.
 /// </summary>
 public class ClaimsUtilsCreateUserIdentityAsyncTests
 {
@@ -100,14 +102,20 @@ public class ClaimsUtilsCreateUserIdentityAsyncTests
         Assert.Equal([Destinations.AccessToken], nameClaim.GetDestinations(), StringComparer.Ordinal);
     }
 
-    private static UserManager<HuiaUser> CreateUserManager(HuiaUser user, IReadOnlyList<string> roles) => new(
-        new FakeUserStore(user, roles),
-        Options.Create(new IdentityOptions()),
-        new PasswordHasher<HuiaUser>(),
-        [],
-        [],
-        new UpperInvariantLookupNormalizer(),
-        new IdentityErrorDescriber(),
-        new ServiceCollection().BuildServiceProvider(),
-        NullLogger<UserManager<HuiaUser>>.Instance);
+    private static HuiaUserManager CreateUserManager(HuiaUser user, IReadOnlyList<string> roles)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddLocalization();
+        var provider = services.BuildServiceProvider();
+        var errorDescriber = new LocalizedHuiaErrorDescriber(provider.GetRequiredService<IStringLocalizer<HuiaResources>>());
+
+        return new HuiaUserManager(
+            new FakeUserStore(user, roles),
+            [],
+            new Pbkdf2PasswordHasher(),
+            Options.Create(new HuiaIdentityOptions()),
+            errorDescriber,
+            NullLogger<HuiaUserManager>.Instance);
+    }
 }

@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using Huia.Emails;
 using Huia.Identity;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
@@ -11,7 +11,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>Requests a password reset email for a given address.</summary>
 [AllowAnonymous]
-public class ForgotPasswordModel(UserManager<HuiaUser> userManager, IEmailSender<HuiaUser> emailSender) : PageModel
+public class ForgotPasswordModel(HuiaUserManager userManager, IEmailSender<HuiaUser> emailSender) : PageModel
 {
     /// <summary>The submitted form data.</summary>
     [BindProperty]

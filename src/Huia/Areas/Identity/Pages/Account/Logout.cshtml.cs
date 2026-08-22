@@ -1,6 +1,5 @@
 using Huia.Common;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
@@ -10,7 +9,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>Signs the current user out.</summary>
 public class LogoutModel(
-    SignInManager<HuiaUser> signInManager,
+    HuiaSignInManager signInManager,
     IOpenIddictApplicationManager applicationManager,
     ILogger<LogoutModel> logger) : PageModel
 {

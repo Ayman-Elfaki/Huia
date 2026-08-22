@@ -3,7 +3,6 @@ using Huia.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
@@ -23,7 +22,7 @@ internal static class UserinfoEndpoints
         return endpoints;
     }
 
-    private static async Task<IResult> HandleAsync(ClaimsPrincipal principal, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> HandleAsync(ClaimsPrincipal principal, HuiaUserManager userManager)
     {
         var user = await userManager.FindByIdAsync(principal.GetClaim(OpenIddictConstants.Claims.Subject)!)
             .ConfigureAwait(false);

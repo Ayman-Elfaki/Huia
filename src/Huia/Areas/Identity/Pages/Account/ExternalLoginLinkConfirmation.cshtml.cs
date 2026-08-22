@@ -5,7 +5,6 @@ using Huia.Identity;
 using Huia.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Localization;
@@ -26,8 +25,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class ExternalLoginLinkConfirmationModel(
-    UserManager<HuiaUser> userManager,
-    SignInManager<HuiaUser> signInManager,
+    HuiaUserManager userManager,
+    HuiaSignInManager signInManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
     HuiaOptions options,
@@ -136,13 +135,13 @@ public class ExternalLoginLinkConfirmationModel(
 
         if (result.RequiresTwoFactor)
         {
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            await HttpContext.SignOutAsync(HuiaAuthenticationDefaults.ExternalScheme);
             return RedirectToPage("./LoginWith2fa", new { ReturnUrl, RememberMe = false });
         }
 
         // Already signed in by PasswordSignInAsync above.
         await events.PublishAsync(new UserSignedInEvent<string>(user.Id));
-        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        await HttpContext.SignOutAsync(HuiaAuthenticationDefaults.ExternalScheme);
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
     }
@@ -153,7 +152,7 @@ public class ExternalLoginLinkConfirmationModel(
     /// identity with a resolvable colliding email must still be live. Returns the info to proceed with, or a
     /// redirect away from this page.
     /// </summary>
-    private async Task<(ExternalLoginInfo? Info, IActionResult? Redirect)> LoadPendingLinkAsync(string returnUrl)
+    private async Task<(HuiaExternalLoginInfo? Info, IActionResult? Redirect)> LoadPendingLinkAsync(string returnUrl)
     {
         if (!options.Authentication.ExternalLoginPasswordLinkingEnabled)
         {

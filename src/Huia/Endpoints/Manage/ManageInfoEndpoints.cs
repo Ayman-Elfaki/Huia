@@ -1,13 +1,13 @@
 using System.Security.Claims;
 using System.Text;
 using Huia.Common;
+using Huia.Emails;
 using Huia.Identity;
 using Huia.Localization;
 using Huia.Passwordless;
 using Huia.Sms;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.WebUtilities;
@@ -37,7 +37,7 @@ internal static class ManageInfoEndpoints
         return group;
     }
 
-    private static async Task<IResult> GetInfoAsync(ClaimsPrincipal principal, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> GetInfoAsync(ClaimsPrincipal principal, HuiaUserManager userManager)
     {
         var user = await userManager.GetSignedInUserAsync(principal).ConfigureAwait(false);
         if (user is null)
@@ -55,7 +55,7 @@ internal static class ManageInfoEndpoints
     // wouldn't reduce its actual complexity, just spread it across an extra method.
 #pragma warning disable MA0051
     private static async Task<IResult> UpdateInfoAsync(UpdateInfoRequest request, ClaimsPrincipal principal,
-        UserManager<HuiaUser> userManager, IEmailSender<HuiaUser> emailSender, HttpContext httpContext)
+        HuiaUserManager userManager, IEmailSender<HuiaUser> emailSender, HttpContext httpContext)
     {
         var user = await userManager.GetSignedInUserAsync(principal).ConfigureAwait(false);
         if (user is null)
@@ -153,7 +153,7 @@ internal static class ManageInfoEndpoints
     /// resends the same number at verify time.
     /// </summary>
     private static async Task<IResult> RequestPhoneChangeAsync(RequestPhoneChangeRequest request,
-        ClaimsPrincipal principal, UserManager<HuiaUser> userManager, HuiaOptions options,
+        ClaimsPrincipal principal, HuiaUserManager userManager, HuiaOptions options,
         IStringLocalizer<HuiaResources> localizer, [FromServices] IPhoneOtpRateLimiter? rateLimiter,
         [FromServices] ISmsSender<HuiaUser>? smsSender, CancellationToken cancellationToken)
     {
@@ -200,7 +200,7 @@ internal static class ManageInfoEndpoints
     /// grant a new sign-in path (see that property's own doc comment).
     /// </summary>
     private static async Task<IResult> VerifyPhoneChangeAsync(VerifyPhoneChangeRequest request,
-        ClaimsPrincipal principal, UserManager<HuiaUser> userManager, HuiaOptions options,
+        ClaimsPrincipal principal, HuiaUserManager userManager, HuiaOptions options,
         IStringLocalizer<HuiaResources> localizer)
     {
         var user = await userManager.GetSignedInUserAsync(principal).ConfigureAwait(false);
@@ -252,7 +252,7 @@ internal static class ManageInfoEndpoints
     /// already applies to removing a login), but guarded the same way that method is: if phone-based sign-in
     /// is this account's only credential, removing it would strand the user entirely.
     /// </summary>
-    private static async Task<IResult> RemovePhoneAsync(ClaimsPrincipal principal, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> RemovePhoneAsync(ClaimsPrincipal principal, HuiaUserManager userManager)
     {
         var user = await userManager.GetSignedInUserAsync(principal).ConfigureAwait(false);
         if (user is null)
@@ -297,12 +297,12 @@ internal static class ManageInfoEndpoints
                 [fieldName] = ["Phone-based sign-in isn't enabled for this app."],
             };
 
-    private static async Task<InfoResponse> BuildInfoResponseAsync(HuiaUser user, UserManager<HuiaUser> userManager)
+    private static async Task<InfoResponse> BuildInfoResponseAsync(HuiaUser user, HuiaUserManager userManager)
         => new(user.Email, await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false), user.PhoneNumber,
             await userManager.IsPhoneNumberConfirmedAsync(user).ConfigureAwait(false), user.FirstName, user.LastName,
             user.Picture);
 
-    private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
+    private static Dictionary<string, string[]> ToErrorDictionary(HuiaIdentityResult result)
         => result.Errors
             .GroupBy(e => e.Code, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);

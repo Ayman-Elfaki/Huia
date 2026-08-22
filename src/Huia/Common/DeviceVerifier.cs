@@ -5,7 +5,6 @@ using Huia.Endpoints.Connect;
 using Huia.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using static OpenIddict.Server.AspNetCore.OpenIddictServerAspNetCoreConstants;
@@ -67,7 +66,7 @@ internal static class DeviceVerifier
     /// equally from a minimal API handler or a Razor Page).
     /// </summary>
     public static async Task<ClaimsIdentity> ApproveAsync(HuiaUser user, ImmutableArray<string> scopes,
-        UserManager<HuiaUser> userManager, IOpenIddictScopeManager scopeManager)
+        HuiaUserManager userManager, IOpenIddictScopeManager scopeManager)
     {
         var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes)
             .ConfigureAwait(false);

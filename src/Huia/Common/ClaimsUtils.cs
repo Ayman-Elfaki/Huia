@@ -1,13 +1,12 @@
 using System.Security.Claims;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using OpenIddict.Abstractions;
 
 namespace Huia.Common;
 
 internal static class ClaimsUtils
 {
-    public static async Task<ClaimsIdentity> CreateUserIdentityAsync(UserManager<HuiaUser> userManager, HuiaUser user,
+    public static async Task<ClaimsIdentity> CreateUserIdentityAsync(HuiaUserManager userManager, HuiaUser user,
         IEnumerable<string> scopes)
     {
         var identity = new ClaimsIdentity(authenticationType: "Huia", nameType: OpenIddictConstants.Claims.Name,
@@ -46,7 +45,7 @@ internal static class ClaimsUtils
                 yield return OpenIddictConstants.Destinations.AccessToken;
                 yield return OpenIddictConstants.Destinations.IdentityToken;
                 break;
-            case "AspNet.Identity.SecurityStamp": yield break;
+            case HuiaSignInManager.SecurityStampClaimType: yield break;
             default:
                 yield return OpenIddictConstants.Destinations.AccessToken;
                 break;

@@ -1,19 +1,35 @@
+using Huia.EntityFrameworkCore.Identity;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Huia.EntityFrameworkCore.Common;
 
 /// <summary>
-/// Base <see cref="DbContext"/> wiring up ASP.NET Core Identity, OpenIddict's EF Core stores, and Huia's
-/// own key-management table. Inherit from this (or the non-generic <see cref="HuiaDbContext"/>) instead of
-/// <see cref="IdentityDbContext"/> directly.
+/// Base <see cref="DbContext"/> wiring up Huia's own user/role storage, OpenIddict's EF Core stores, and
+/// Huia's own key-management table. Inherit from this (or the non-generic <see cref="HuiaDbContext"/>)
+/// instead of building your own <see cref="DbContext"/> from scratch.
 /// </summary>
 public abstract class HuiaDbContext<TUser, TRole>(DbContextOptions options)
-    : IdentityDbContext<TUser, TRole, string>(options)
+    : DbContext(options)
     where TUser : HuiaUser
     where TRole : HuiaRole
 {
+    /// <summary>Every user.</summary>
+    public DbSet<TUser> Users => Set<TUser>();
+
+    /// <summary>Every role.</summary>
+    public DbSet<TRole> Roles => Set<TRole>();
+
+    /// <summary>Role membership.</summary>
+    public DbSet<HuiaUserRole> UserRoles => Set<HuiaUserRole>();
+
+    /// <summary>External (third-party) logins.</summary>
+    public DbSet<HuiaUserLogin> UserLogins => Set<HuiaUserLogin>();
+
+    /// <summary>Per-user named tokens (reset/confirmation/OTP validation state, authenticator key, recovery
+    /// codes).</summary>
+    public DbSet<HuiaUserToken> UserTokens => Set<HuiaUserToken>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -21,7 +37,7 @@ public abstract class HuiaDbContext<TUser, TRole>(DbContextOptions options)
 
         builder.UseOpenIddict();
         builder.UseKeyManagement();
-        builder.UseHuiaIdentityTableNames<TUser, TRole, string>();
+        builder.UseHuiaIdentityModel<TUser, TRole>();
         builder.UseHuiaOpenIddictTableNames();
 
         builder.Entity<TUser>(user =>
@@ -30,12 +46,6 @@ public abstract class HuiaDbContext<TUser, TRole>(DbContextOptions options)
             user.Property(u => u.LastName).HasMaxLength(256);
             user.Property(u => u.Picture).HasMaxLength(2048);
             user.Property(u => u.NormalizedPhoneNumber).HasMaxLength(64);
-
-            // Non-unique, mirroring NormalizedEmail's own treatment (ASP.NET Core Identity itself only
-            // uniquely indexes NormalizedUserName) — uniqueness is enforced at the application layer in
-            // PhoneLoginModel, not the database, since two accounts may legitimately share a phone number
-            // (see IHuiaPhoneNumberStore and docs/passwordless.md's hybrid-auth security considerations).
-            user.HasIndex(u => u.NormalizedPhoneNumber);
         });
     }
 }

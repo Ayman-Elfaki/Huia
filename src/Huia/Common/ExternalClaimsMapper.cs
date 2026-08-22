@@ -1,10 +1,10 @@
 using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
+using Huia.Identity;
 
 namespace Huia.Common;
 
 /// <summary>
-/// Reads the profile claims an external sign-in provider (<see cref="ExternalLoginInfo.Principal"/>) supplied,
+/// Reads the profile claims an external sign-in provider (<see cref="HuiaExternalLoginInfo.Principal"/>) supplied,
 /// for pre-filling/auto-provisioning a new <c>HuiaUser</c>. Falls back to the raw OIDC claim names alongside
 /// the standard <see cref="ClaimTypes"/> ones — OpenIddict's client stack (the external-login mechanism
 /// itself, not just a specific provider) never maps claims onto <see cref="ClaimTypes"/> the way the old

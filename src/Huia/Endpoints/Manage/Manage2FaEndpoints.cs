@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Huia.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 
 namespace Huia.Endpoints.Manage;
@@ -26,7 +25,7 @@ internal static class Manage2FaEndpoints
     }
 
     private static async Task<IResult> TwoFactorAsync(TwoFactorRequest request, ClaimsPrincipal principal,
-        UserManager<HuiaUser> userManager)
+        HuiaUserManager userManager)
     {
         var user = await userManager.GetSignedInUserAsync(principal).ConfigureAwait(false);
         if (user is null)
@@ -80,7 +79,7 @@ internal static class Manage2FaEndpoints
             recoveryCodes?.Length ?? await userManager.CountRecoveryCodesAsync(user).ConfigureAwait(false)));
     }
 
-    private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
+    private static Dictionary<string, string[]> ToErrorDictionary(HuiaIdentityResult result)
         => result.Errors
             .GroupBy(e => e.Code, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);

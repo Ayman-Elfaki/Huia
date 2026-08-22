@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Tests.Integration.Passwordless;
@@ -116,7 +115,7 @@ public class ManagePhoneChangeTests(ManagePhoneChangeTestFactory factory) : ICla
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var user = await userManager.FindByIdAsync(subject) ?? throw new InvalidOperationException("User not found.");
         Assert.NotNull(user.PhoneNumber);
     }
@@ -172,7 +171,7 @@ public class ManagePhoneChangeTests(ManagePhoneChangeTestFactory factory) : ICla
 
         using (var scope = factory.Services.CreateScope())
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var user = await userManager.FindByNameAsync(phoneNumber)
                        ?? throw new InvalidOperationException("Passwordless user not found.");
 

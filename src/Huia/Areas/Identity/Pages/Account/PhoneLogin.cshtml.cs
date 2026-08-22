@@ -9,7 +9,6 @@ using Huia.Sms;
 using Huia.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Localization;
@@ -29,7 +28,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class PhoneLoginModel(
-    UserManager<HuiaUser> userManager,
+    HuiaUserManager userManager,
     IHuiaPhoneNumberStore phoneNumberStore,
     IPhoneOtpRateLimiter rateLimiter,
     IPhoneIpRateLimiter ipRateLimiter,
@@ -144,7 +143,7 @@ public class PhoneLoginModel(
                 user = newUser;
             }
             else if (createResult.Errors.Any(e => string.Equals(e.Code,
-                         nameof(Microsoft.AspNetCore.Identity.IdentityErrorDescriber.DuplicateUserName),
+                         nameof(Huia.Identity.HuiaErrorDescriber.DuplicateUserName),
                          StringComparison.Ordinal)))
             {
                 // Raced with a concurrent request for the same number — reuse the row it created.
@@ -167,7 +166,7 @@ public class PhoneLoginModel(
             return Page();
         }
 
-        var code = await userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultPhoneProvider);
+        var code = await userManager.GenerateTwoFactorTokenAsync(user, HuiaTokenProviders.Phone);
         await smsSender.SendOtpAsync(user, normalized, code);
 
         logger.LogInformation("OTP requested for {MaskedPhoneNumber}.", PhoneNumberMasker.Mask(normalized));

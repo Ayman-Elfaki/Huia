@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Tests.Integration;
@@ -159,13 +158,13 @@ public class DeviceFlowTests(TodoApiFactory factory) : IClassFixture<TodoApiFact
     private async Task PromoteToAdminAsync(string email)
     {
         using var scope = factory.Services.CreateScope();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<HuiaRole>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<HuiaRoleManager>();
         if (!await roleManager.RoleExistsAsync("Admin"))
         {
             await roleManager.CreateAsync(new HuiaRole { Name = "Admin" });
         }
 
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var user = await userManager.FindByEmailAsync(email)
             ?? throw new InvalidOperationException("Registered user not found.");
         await userManager.AddToRoleAsync(user, "Admin");

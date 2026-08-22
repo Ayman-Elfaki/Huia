@@ -2,7 +2,6 @@ using System.Net;
 using Huia.Identity;
 using Huia.Stores;
 using Huia.TodoApi.Data;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -115,7 +114,7 @@ public class PhoneLoginTests(PhoneLoginTestFactory factory) : IClassFixture<Phon
 
         using (var scope = factory.Services.CreateScope())
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var existing = await userManager.FindByEmailAsync(email);
             existing!.PhoneNumber = phoneNumber;
             existing.NormalizedPhoneNumber = phoneNumber;

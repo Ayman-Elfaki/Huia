@@ -1,7 +1,5 @@
-using Huia.Identity;
 using Huia.Keys;
 using Huia.Stores;
-using Microsoft.AspNetCore.Identity;
 
 namespace Huia.Tests.Unit.Stores;
 
@@ -10,7 +8,7 @@ public class IHuiaStoreTests
     /// <summary>
     /// The behavior the ISigningKeyStore/IHuiaStore merge actually changes: a type implementing
     /// IHuiaStore now implements ISigningKeyStore too, so WithStore&lt;TStore, ...&gt;() (see
-    /// StoreBuilderExtensions.cs) can register TStore as ISigningKeyStore alongside the Identity/OpenIddict
+    /// StoreBuilderExtensions.cs) can register TStore as ISigningKeyStore alongside the user/role/OpenIddict
     /// store registrations. A full fake IHuiaStore implementation would additionally need every OpenIddict
     /// application/authorization/scope/token store member — this asserts the composition directly instead.
     /// </summary>
@@ -23,17 +21,28 @@ public class IHuiaStoreTests
     }
 
     /// <summary>
-    /// A type implementing IHuiaStore also implements IUserLoginStore&lt;HuiaUser&gt; — the interface backing
+    /// A type implementing IHuiaStore also implements IHuiaUserLoginStore — the interface backing
     /// external (third-party) sign-in providers. WithStore&lt;TStore, ...&gt;() registers TStore as
-    /// IUserStore&lt;HuiaUser&gt; only; UserManager&lt;HuiaUser&gt; resolves IUserLoginStore&lt;HuiaUser&gt; by
-    /// casting that same injected instance, so no separate registration is needed as long as this
-    /// composition holds.
+    /// IHuiaUserStore only; HuiaUserManager resolves IHuiaUserLoginStore by casting that same injected
+    /// instance, so no separate registration is needed as long as this composition holds.
     /// </summary>
     [Fact]
-    public void IHuiaStore_ComposesIUserLoginStore()
+    public void IHuiaStore_ComposesIHuiaUserLoginStore()
     {
         var interfaces = typeof(IHuiaStore<,,,>).GetInterfaces();
 
-        Assert.Contains(typeof(IUserLoginStore<HuiaUser>), interfaces);
+        Assert.Contains(typeof(IHuiaUserLoginStore), interfaces);
+    }
+
+    /// <summary>A type implementing IHuiaStore also implements IHuiaUserRoleStore, IHuiaUserTokenStore, and
+    /// IHuiaRoleStore — the same optional-capability composition HuiaUserManager/HuiaRoleManager rely on.</summary>
+    [Fact]
+    public void IHuiaStore_ComposesUserRoleTokenAndRoleStores()
+    {
+        var interfaces = typeof(IHuiaStore<,,,>).GetInterfaces();
+
+        Assert.Contains(typeof(IHuiaUserRoleStore), interfaces);
+        Assert.Contains(typeof(IHuiaUserTokenStore), interfaces);
+        Assert.Contains(typeof(IHuiaRoleStore), interfaces);
     }
 }

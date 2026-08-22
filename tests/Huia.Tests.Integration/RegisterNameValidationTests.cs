@@ -1,6 +1,5 @@
 using System.Net;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -48,7 +47,7 @@ public class RegisterNameValidationTests(TodoApiFactory factory) : IClassFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         Assert.Null(await userManager.FindByEmailAsync(email));
     }
 }

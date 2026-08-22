@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Huia.Applications;
+using Huia.Emails;
 using Huia.Identity;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
@@ -16,7 +16,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class ResendEmailConfirmationModel(
-    UserManager<HuiaUser> userManager,
+    HuiaUserManager userManager,
     IEmailSender<HuiaUser> emailSender,
     IOpenIddictApplicationManager applicationManager) : PageModel
 {

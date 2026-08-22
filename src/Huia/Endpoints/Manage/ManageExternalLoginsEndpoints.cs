@@ -4,7 +4,6 @@ using Huia.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
 
@@ -32,7 +31,7 @@ internal static class ManageExternalLoginsEndpoints
     }
 
     private static async Task<IResult> GetExternalLoginsAsync(ClaimsPrincipal principal,
-        UserManager<HuiaUser> userManager)
+        HuiaUserManager userManager)
     {
         var user = await userManager.GetSignedInUserAsync(principal).ConfigureAwait(false);
         if (user is null)
@@ -48,7 +47,7 @@ internal static class ManageExternalLoginsEndpoints
     }
 
     private static async Task<IResult> RemoveExternalLoginAsync(string provider, string providerKey,
-        ClaimsPrincipal principal, UserManager<HuiaUser> userManager)
+        ClaimsPrincipal principal, HuiaUserManager userManager)
     {
         var user = await userManager.GetSignedInUserAsync(principal).ConfigureAwait(false);
         if (user is null)
@@ -82,7 +81,7 @@ internal static class ManageExternalLoginsEndpoints
     /// to the victim's account instead of their own.
     /// </summary>
     private static async Task<IResult> LinkAsync(string provider, string? returnUrl, ClaimsPrincipal principal,
-        HttpContext httpContext, UserManager<HuiaUser> userManager, SignInManager<HuiaUser> signInManager)
+        HttpContext httpContext, HuiaUserManager userManager, HuiaSignInManager signInManager)
     {
         var userId = await userManager.GetUserAsync(principal).ConfigureAwait(false) is { } user
             ? await userManager.GetUserIdAsync(user).ConfigureAwait(false)
@@ -93,7 +92,7 @@ internal static class ManageExternalLoginsEndpoints
         }
 
         // Clears any stale pending external-sign-in state left over from an unrelated, abandoned attempt.
-        await httpContext.SignOutAsync(IdentityConstants.ExternalScheme).ConfigureAwait(false);
+        await httpContext.SignOutAsync(HuiaAuthenticationDefaults.ExternalScheme).ConfigureAwait(false);
 
         var redirectUrl =
             $"/api/identity/manage/external-logins/{Uri.EscapeDataString(provider)}/link-callback?returnUrl={Uri.EscapeDataString(returnUrl ?? string.Empty)}";
@@ -103,7 +102,7 @@ internal static class ManageExternalLoginsEndpoints
     }
 
     private static async Task<IResult> LinkCallbackAsync(string provider, string? returnUrl,
-        ClaimsPrincipal principal, UserManager<HuiaUser> userManager, SignInManager<HuiaUser> signInManager,
+        ClaimsPrincipal principal, HuiaUserManager userManager, HuiaSignInManager signInManager,
         IOpenIddictApplicationManager applicationManager, HttpRequest request)
     {
         var user = await userManager.GetUserAsync(principal).ConfigureAwait(false);

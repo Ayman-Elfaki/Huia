@@ -1,5 +1,4 @@
 using Huia.Localization;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Localization;
 
 namespace Huia.Emails;
@@ -7,7 +6,7 @@ namespace Huia.Emails;
 /// <summary>
 /// Renders Basecoat-styled, branded HTML bodies for Huia's transactional emails (email confirmation,
 /// password reset), localized into the request's current UI culture (see <c>HuiaOptions.Localization</c>).
-/// Inject this into your own <see cref="Microsoft.AspNetCore.Identity.IEmailSender{TUser}"/> implementation
+/// Inject this into your own <see cref="IEmailSender{TUser}"/> implementation
 /// instead of hand-rolling HTML — the brand header and button color come from
 /// <see cref="HuiaOptions.Branding"/>, the same options Huia.UI's pages use. <see cref="NoOpEmailSender"/>
 /// doesn't use this (it only logs), but any real sender should.

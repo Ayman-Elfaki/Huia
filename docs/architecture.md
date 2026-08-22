@@ -16,7 +16,8 @@ whatever else it needs.
 │  └──────┬───────┘  └─────────┬──────────┘  └───────┬────────┘ │
 │         │                    │                      │         │
 │  ┌──────┴────────────────────┴──────────────────────┴──────┐  │
-│  │           ASP.NET Core Identity + OpenIddict server       │  │
+│  │      Huia user management (HuiaUserManager/HuiaSignIn-    │  │
+│  │      Manager/HuiaRoleManager) + OpenIddict server          │  │
 │  └──────┬─────────────────────────────────────┬─────────────┘  │
 │         │                                     │                │
 │  ┌──────┴──────────┐                 ┌────────┴──────────┐    │
@@ -32,15 +33,19 @@ whatever else it needs.
 
 `AddHuia(issuer, configure)` registers:
 
-- ASP.NET Core Identity (`AddIdentityCore<HuiaUser>().AddRoles<HuiaRole>().AddSignInManager()`), using the
-  standard `Identity.Application` cookie scheme — the same one `SignInManager<HuiaUser>`'s high-level methods
+- Huia's own user-management stack (`HuiaUserManager`/`HuiaSignInManager`/`HuiaRoleManager`/
+  `HuiaMembershipAdmin`, registered directly — no ASP.NET Core Identity underneath), using the
+  `HuiaAuthenticationDefaults.ApplicationScheme` cookie — the same one `HuiaSignInManager`'s high-level methods
   target, so Huia's own Razor Pages and any custom pages you add work identically. `DefaultSignInScheme` is
-  `IdentityConstants.ExternalScheme` (not `ApplicationScheme`) — every `SignInAsync`/`AuthenticateAsync` call
-  Huia itself makes passes its scheme explicitly, so this only affects a provider registered via
+  `HuiaAuthenticationDefaults.ExternalScheme` (not `ApplicationScheme`) — every `SignInAsync`/`AuthenticateAsync`
+  call Huia itself makes passes its scheme explicitly, so this only affects a provider registered via
   `huia.Authentication.UseExternalAuthenticationFlow(ext => ext.Providers...)` (see
   [external-providers.md](external-providers.md)) without its own `SignInScheme`: it lands in the external
-  cookie `SignInManager.GetExternalLoginInfoAsync()` reads from, the same default plain ASP.NET Core Identity
-  uses, instead of signing straight into the main application cookie unvalidated.
+  cookie `HuiaSignInManager.GetExternalLoginInfoAsync()` reads from, instead of signing straight into the main
+  application cookie unvalidated. A periodic `OnValidatePrincipal` handler on the application cookie re-checks
+  the cookie's embedded security-stamp claim against `HuiaUser.SecurityStamp`
+  (`HuiaIdentityOptions.SecurityStampValidationInterval`, default 30 minutes), invalidating/refreshing an
+  outstanding session after a password change or forced sign-out.
 - Sign-in methods are configured via `huia.Authentication` — `UseEmailAndPasswordFlow()` (Huia's original
   method), `UsePasswordlessFlow()` (phone number + SMS OTP, no password — see
   [passwordless.md](passwordless.md)), and `UseExternalAuthenticationFlow(...)`. At least one of the first two
@@ -67,11 +72,13 @@ whatever else it needs.
 
 ## Persistence
 
-- **`IHuiaStore<TApplication, TAuthorization, TScope, TToken>`** — Identity's user/role/external-login
-  stores, OpenIddict's application/authorization/scope/token stores, and signing/encryption key storage
-  (`ISigningKeyStore`), as one interface. `Huia.EntityFrameworkCore`'s `WithEntityFrameworkStores<TContext>()`
-  implements the Identity/OpenIddict part against EF Core (with its own separate `ISigningKeyStore` for
-  keys); implement `IHuiaStore` yourself for a fully custom backend (see [custom-store.md](custom-store.md)).
+- **`IHuiaStore<TApplication, TAuthorization, TScope, TToken>`** — Huia's own user/role/external-login/token
+  stores (`IHuiaUserStore`, `IHuiaUserLoginStore`, `IHuiaUserRoleStore`, `IHuiaUserTokenStore`,
+  `IHuiaRoleStore`, `IHuiaPhoneNumberStore`), OpenIddict's application/authorization/scope/token stores, and
+  signing/encryption key storage (`ISigningKeyStore`), as one interface. `Huia.EntityFrameworkCore`'s
+  `WithEntityFrameworkStores<TContext>()` implements the user-management/OpenIddict part against EF Core (with
+  its own separate `ISigningKeyStore` for keys); implement `IHuiaStore` yourself for a fully custom backend
+  (see [custom-store.md](custom-store.md)).
   Signing-key storage doesn't have to live wherever the rest of your data lives — register a custom
   `ISigningKeyStore` directly to point it at a dedicated backend (a cloud KMS, for instance) independent of
   everything else. Needed only if you enable key management (see [key-management.md](key-management.md)).
@@ -94,14 +101,15 @@ the same `AddOpenIddict()` builder `AddHuia` uses for its own authorization serv
 `ext.WebProviders.AddGoogle(...)` for a named, pre-configured integration, `ext.Client.AddRegistration(...)`
 for a generic/custom-issuer OIDC provider. OpenIddict's client completes the OAuth2/OIDC handshake itself but
 doesn't sign the result into any cookie; `Endpoints/ExternalLoginCallbackEndpoints.cs`, mapped at
-`callback/login/{provider}`, bridges that result into `IdentityConstants.ExternalScheme` — the same cookie a
-plain ASP.NET Core remote-authentication handler used to populate directly — so everything downstream is
-unchanged: `LoginModel` still lists registered providers via
-`SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()` (each provider's name is auto-forwarded as
+`callback/login/{provider}`, bridges that result into `HuiaAuthenticationDefaults.ExternalScheme` — the same
+cookie a plain remote-authentication handler used to populate directly — so everything downstream reads it
+uniformly: `LoginModel` lists registered providers via
+`HuiaSignInManager.GetExternalAuthenticationSchemesAsync()` (each provider's name is auto-forwarded as
 its own authentication scheme); `ExternalLoginModel`/`ExternalLoginConfirmationModel`
-(`Areas/Identity/Pages/Account`) still drive the challenge/callback/account-creation flow entirely through
-`SignInManager<HuiaUser>`; and `ManageExternalLoginsEndpoints` still lets a signed-in user list/link/unlink
-providers on their own account. See [external-providers.md](external-providers.md).
+(`Areas/Identity/Pages/Account`) drive the challenge/callback/account-creation flow entirely through
+`HuiaSignInManager` (returning `HuiaExternalLoginInfo`, which `HuiaUserManager.AddLoginAsync` converts to the
+store-level `HuiaUserLoginInfo` when linking); and `ManageExternalLoginsEndpoints` lets a signed-in user
+list/link/unlink providers on their own account. See [external-providers.md](external-providers.md).
 
 ## Passwordless phone sign-in
 
@@ -116,17 +124,17 @@ security considerations for when this and email+password are both enabled.
 
 ## Claims and tokens
 
-`ClaimsHelpers.CreateUserIdentityAsync` builds the `ClaimsIdentity` for a signed-in user: `sub`, `email`,
-`name`, `preferred_username`, `given_name`, `family_name`, and `role` claims, with destinations set so
-`profile`/`email`/`role` claims only reach the identity token when the corresponding scope was actually
+`ClaimsUtils.CreateUserIdentityAsync` builds the `ClaimsIdentity` for a signed-in user: `sub`, `email`,
+`name`, `preferred_username`, `given_name`, `family_name`, `picture`, and `role` claims, with destinations set
+so `profile`/`email`/`role` claims only reach the identity token when the corresponding scope was actually
 granted (everything always reaches the access token).
 
 ## Events
 
 `IHuiaEventPublisher`/`IHuiaEventHandler<TEvent>` is a lightweight pub/sub hook for things happening inside
 Huia's own pages — currently `UserRegisteredEvent<TKey>` and `UserSignedInEvent<TKey>` (generic over the
-identity user's key type; Huia's own pages always publish `<string>`, since `HuiaUser` uses `IdentityUser`'s
-default string key), published from the Register page and equally from the external-login
+identity user's key type; Huia's own pages always publish `<string>`, since `HuiaUser.Id` is a plain
+`string`), published from the Register page and equally from the external-login and passwordless
 sign-in/confirmation pages. Register your own `IHuiaEventHandler<T>` implementations to react to them (e.g.
 send a welcome email, publish to a message bus) without forking the pages themselves.
 

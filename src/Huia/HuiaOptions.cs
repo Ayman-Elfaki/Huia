@@ -1,15 +1,19 @@
+using System.Globalization;
+using System.Security.Claims;
 using Huia.Applications;
 using Huia.Authentication;
 using Huia.Branding;
+using Huia.Identity;
 using Huia.Keys;
 using Huia.Localization;
 using Huia.Passwordless;
 using Huia.Scheduling;
 using Huia.Scopes;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenIddict.Validation.AspNetCore;
 
 namespace Huia;
@@ -91,7 +95,7 @@ public sealed class HuiaOptions
     /// unreachable, and passwordless phone sign-in from a previously-unseen number is rejected instead of
     /// silently creating a new account. Existing accounts can still sign in through any enabled flow. Useful
     /// for invite-only or admin-provisioned deployments — create accounts directly via
-    /// <c>UserManager&lt;HuiaUser&gt;</c> instead (e.g. from an admin endpoint or a seeding script).
+    /// <c>HuiaUserManager</c> instead (e.g. from an admin endpoint or a seeding script).
     /// </summary>
     public void DisableRegistration() => RegistrationEnabled = false;
 
@@ -137,15 +141,13 @@ public sealed class HuiaOptions
     public HuiaAuthenticationBuilder Authentication { get; }
 
     /// <summary>
-    /// Customizes ASP.NET Core Identity's shared <see cref="IdentityOptions"/> (e.g. <c>identity.Lockout</c>,
+    /// Customizes Huia's shared <see cref="HuiaIdentityOptions"/> (e.g. <c>identity.Lockout</c>,
     /// <c>identity.Password</c>) — one callback, applying regardless of which sign-in flow(s) are enabled,
-    /// since <see cref="IdentityOptions"/> is inherently a single, shared configuration space (lockout policy,
-    /// say, isn't meaningfully "per-flow"). Runs directly against the same <see cref="IdentityOptions"/>
-    /// instance ASP.NET Core Identity itself builds, so changes here actually take effect — unlike an
-    /// even-older, removed <c>HuiaOptions.Identity</c> property that mutated a disconnected
-    /// <see cref="IdentityOptions"/> instance <c>AddIdentityCore</c> never read from.
+    /// since <see cref="HuiaIdentityOptions"/> is inherently a single, shared configuration space (lockout
+    /// policy, say, isn't meaningfully "per-flow"). Runs directly against the same <see cref="HuiaIdentityOptions"/>
+    /// instance <c>AddHuia</c> itself builds, so changes here actually take effect.
     /// </summary>
-    public Action<IdentityOptions>? Identity { get; set; }
+    public Action<HuiaIdentityOptions>? Identity { get; set; }
 
     /// <summary>
     /// Creates a new <see cref="HuiaOptions"/> with <see cref="Applications"/>
@@ -158,28 +160,84 @@ public sealed class HuiaOptions
         KeysManagement = new KeyManagementBuilder(services);
         Scheduler = new SchedulerBuilder(services);
 
-        // The standard Identity.Application cookie scheme, not a custom one: SignInManager<HuiaUser>'s
-        // high-level methods (PasswordSignInAsync, TwoFactorSignInAsync, lockout handling, etc. — all used
-        // by Huia's Razor Pages) target IdentityConstants.ApplicationScheme by convention, always passing it
-        // explicitly rather than relying on this default. DefaultSignInScheme is instead
-        // IdentityConstants.ExternalScheme — the same default plain ASP.NET Core Identity's own AddIdentity
-        // uses — so the external-login callback bridge (see Endpoints/ExternalLoginCallbackEndpoints.cs),
-        // which signs the OpenIddict client's result explicitly into that scheme, lands in the same external
-        // cookie SignInManager.GetExternalLoginInfoAsync() reads from.
+        // HuiaAuthenticationDefaults.ApplicationScheme, not a custom one: HuiaSignInManager's high-level
+        // methods (PasswordSignInAsync, TwoFactorAuthenticatorSignInAsync, lockout handling, etc. — all used
+        // by Huia's Razor Pages) target it by convention, always passing it explicitly rather than relying on
+        // this default. DefaultSignInScheme is instead HuiaAuthenticationDefaults.ExternalScheme — so the
+        // external-login callback bridge (see Endpoints/ExternalLoginCallbackEndpoints.cs), which signs the
+        // OpenIddict client's result explicitly into that scheme, lands in the same external cookie
+        // HuiaSignInManager.GetExternalLoginInfoAsync() reads from.
         var providers = services.AddAuthentication(auth =>
         {
             auth.DefaultScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-            auth.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+            auth.DefaultSignInScheme = HuiaAuthenticationDefaults.ExternalScheme;
         });
-        providers.AddIdentityCookies();
+
+        AddHuiaCookies(providers);
+
+        Authentication = new HuiaAuthenticationBuilder();
+    }
+
+    // Base cookie handler registrations, replicating the paths/expiration defaults ASP.NET Core Identity's
+    // own AddIdentityCookies() used to supply implicitly. LoginPath/AccessDeniedPath and the Events not set
+    // here (OnRedirectToAccessDenied/OnRedirectToLogin) are configured later, in
+    // ServiceCollectionExtensions.AddHuia — after configure(options) (the consumer's own callback) has run,
+    // so LoginPath there can reflect a huia.SetLoginPath(...) call. OnValidatePrincipal is set here instead
+    // since it doesn't depend on anything configure(options) might change.
+    // One line over MA0051's default 60-line limit; splitting this flat sequence of four independent
+    // AddCookie registrations wouldn't reduce its actual complexity, just spread it across an extra method.
+#pragma warning disable MA0051
+    private static void AddHuiaCookies(AuthenticationBuilder providers)
+    {
+        providers.AddCookie(HuiaAuthenticationDefaults.ApplicationScheme, cookie =>
+        {
+            cookie.Cookie.HttpOnly = true;
+            cookie.Cookie.SameSite = SameSiteMode.Lax;
+            cookie.AccessDeniedPath = "/identity/account/accessdenied";
+
+            // Huia's own equivalent of ASP.NET Core Identity's implicit security-stamp cookie revalidation
+            // (see the risk this guards against in HuiaSignInManager's own doc comments): without this, a
+            // password change or forced sign-out would never actually invalidate an already-issued session
+            // cookie, since nothing else re-checks HuiaUser.SecurityStamp against what's embedded in the
+            // cookie after it's issued.
+            cookie.Events.OnValidatePrincipal = ValidateSecurityStampAsync;
+        });
+
+        // This is the tamper-proof hand-off cookie for an in-progress external sign-in — Data-Protection
+        // encrypted+signed, unforgeable client-side — mirroring HuiaAuthenticationDefaults.TwoFactorUserIdScheme's
+        // role for the password-to-2FA hand-off.
+        providers.AddCookie(HuiaAuthenticationDefaults.ExternalScheme, cookie =>
+        {
+            cookie.Cookie.Name = HuiaAuthenticationDefaults.ExternalScheme;
+            cookie.Cookie.HttpOnly = true;
+            cookie.Cookie.SameSite = SameSiteMode.Lax;
+            cookie.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+            cookie.SlidingExpiration = false;
+        });
+
+        providers.AddCookie(HuiaAuthenticationDefaults.TwoFactorUserIdScheme, cookie =>
+        {
+            cookie.Cookie.Name = HuiaAuthenticationDefaults.TwoFactorUserIdScheme;
+            cookie.Cookie.HttpOnly = true;
+            cookie.Cookie.SameSite = SameSiteMode.Lax;
+            cookie.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+            cookie.SlidingExpiration = false;
+        });
+
+        providers.AddCookie(HuiaAuthenticationDefaults.TwoFactorRememberMeScheme, cookie =>
+        {
+            cookie.Cookie.Name = HuiaAuthenticationDefaults.TwoFactorRememberMeScheme;
+            cookie.Cookie.HttpOnly = true;
+            cookie.Cookie.SameSite = SameSiteMode.Lax;
+            cookie.ExpireTimeSpan = TimeSpan.FromDays(30);
+        });
 
         // Registered unconditionally (cheap — it's just a cookie handler registration) rather than only when
         // huia.Authentication.UsePasswordlessFlow() is called, since HuiaOptions's constructor runs before
         // configure(options) — the consumer's own callback — so whether that flow will be enabled isn't
         // known yet here. It's only ever actually issued by PhoneLoginModel. This is the tamper-proof
         // GET-to-POST phone-number hand-off (see docs/passwordless.md) — a Data-Protection-encrypted+signed
-        // cookie, unforgeable client-side, mirroring IdentityConstants.TwoFactorUserIdScheme's existing role
-        // for the password-to-2FA hand-off. TempData is deliberately not used for this: the only TempData key
+        // cookie, unforgeable client-side. TempData is deliberately not used for this: the only TempData key
         // Huia's own pages use (ExternalLoginError) carries just a display string, never security-sensitive
         // state, and this stays consistent with that.
         providers.AddCookie(PhoneVerificationScheme.Name, cookie =>
@@ -191,7 +249,47 @@ public sealed class HuiaOptions
             cookie.ExpireTimeSpan = TimeSpan.FromMinutes(5);
             cookie.SlidingExpiration = false;
         });
+    }
+#pragma warning restore MA0051
 
-        Authentication = new HuiaAuthenticationBuilder();
+    /// <summary>
+    /// Re-checks the application cookie's embedded security-stamp claim against the user's current
+    /// <see cref="HuiaUser.SecurityStamp"/> — but only once every <see cref="HuiaIdentityOptions.SecurityStampValidationInterval"/>
+    /// (tracked via a timestamp stashed in the cookie's own <see cref="AuthenticationProperties"/>), so this
+    /// doesn't hit the user store on every single request. A mismatch (security stamp changed — e.g. a
+    /// password change — or the user no longer exists) rejects the principal and signs the cookie out
+    /// immediately.
+    /// </summary>
+    private static async Task ValidateSecurityStampAsync(CookieValidatePrincipalContext context)
+    {
+        const string lastValidatedKey = ".Huia.SecurityStampLastValidated";
+
+        var services = context.HttpContext.RequestServices;
+        var identityOptions = services.GetRequiredService<IOptions<HuiaIdentityOptions>>().Value;
+
+        var now = DateTimeOffset.UtcNow;
+        if (context.Properties.Items.TryGetValue(lastValidatedKey, out var lastValidatedText) &&
+            DateTimeOffset.TryParseExact(lastValidatedText, "O", CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind, out var lastValidated) &&
+            now - lastValidated < identityOptions.SecurityStampValidationInterval)
+        {
+            return;
+        }
+
+        var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userManager = services.GetRequiredService<HuiaUserManager>();
+        var user = userId is null ? null : await userManager.FindByIdAsync(userId).ConfigureAwait(false);
+        var stampClaim = context.Principal?.FindFirstValue(HuiaSignInManager.SecurityStampClaimType);
+
+        if (user is null || !string.Equals(stampClaim, user.SecurityStamp, StringComparison.Ordinal))
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(HuiaAuthenticationDefaults.ApplicationScheme)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        context.Properties.Items[lastValidatedKey] = now.ToString("O", CultureInfo.InvariantCulture);
+        context.ShouldRenew = true;
     }
 }

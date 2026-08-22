@@ -2,7 +2,6 @@ using Huia.Emails;
 using Huia.Identity;
 using Huia.Localization;
 using MailKit.Net.Smtp;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using MimeKit;
 

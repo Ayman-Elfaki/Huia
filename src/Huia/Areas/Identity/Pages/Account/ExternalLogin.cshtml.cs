@@ -4,7 +4,6 @@ using Huia.Identity;
 using Huia.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Localization;
@@ -19,7 +18,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// meant to be navigated to directly; reached by posting from a provider button on <see cref="LoginModel"/>'s
 /// page. <see cref="OnGetCallbackAsync"/> itself is reached only after
 /// <c>Huia.Endpoints.ExternalLoginCallbackEndpoints</c> (OpenIddict's own client redirection endpoint) has
-/// already translated the provider's response into the same <see cref="IdentityConstants.ExternalScheme"/>
+/// already translated the provider's response into the same <see cref="HuiaAuthenticationDefaults.ExternalScheme"/>
 /// cookie a plain ASP.NET Core remote-authentication handler used to populate directly — everything below
 /// reads that cookie exactly as it would have before. A first-time identity whose provider already verified
 /// its email and supplied both names is auto-provisioned here with no extra click; anything less complete
@@ -27,8 +26,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class ExternalLoginModel(
-    SignInManager<HuiaUser> signInManager,
-    UserManager<HuiaUser> userManager,
+    HuiaSignInManager signInManager,
+    HuiaUserManager userManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
     HuiaOptions options,
@@ -83,7 +82,7 @@ public class ExternalLoginModel(
 
             // Consumed: clears the short-lived external cookie so the same provider round trip can't be
             // replayed.
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            await HttpContext.SignOutAsync(HuiaAuthenticationDefaults.ExternalScheme);
 
             return Redirect(await ReturnUrlValidator.ResolveAsync(Request, returnUrl, applicationManager));
         }
@@ -92,7 +91,7 @@ public class ExternalLoginModel(
         {
             // The linked user is already established; the rest of sign-in tracks via LoginWith2fa's own
             // TwoFactorUserIdScheme cookie from here, so the external cookie's job is done too.
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            await HttpContext.SignOutAsync(HuiaAuthenticationDefaults.ExternalScheme);
             return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = false });
         }
 
@@ -157,7 +156,7 @@ public class ExternalLoginModel(
     /// <see langword="null"/> on any creation failure so the caller can fall back to the confirmation page,
     /// which — unlike this page — has ModelState/a form to actually show the error on.
     /// </summary>
-    private async Task<IActionResult?> TryAutoProvisionAsync(ExternalLoginInfo info, string email, string firstName,
+    private async Task<IActionResult?> TryAutoProvisionAsync(HuiaExternalLoginInfo info, string email, string firstName,
         string lastName, string returnUrl)
     {
         var (user, errors) = await ExternalAccountFactory.CreateAsync(userManager, info, email, firstName, lastName,
@@ -179,7 +178,7 @@ public class ExternalLoginModel(
 
         // Consumed: clears the short-lived external cookie so the same provider round trip can't be replayed
         // to link/create a second account.
-        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        await HttpContext.SignOutAsync(HuiaAuthenticationDefaults.ExternalScheme);
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, returnUrl, applicationManager));
     }

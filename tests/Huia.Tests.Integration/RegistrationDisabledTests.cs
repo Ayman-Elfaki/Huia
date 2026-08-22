@@ -1,7 +1,6 @@
 using System.Net;
 using Huia.Identity;
 using Huia.TodoApi.Data;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +52,7 @@ public class RegistrationDisabledTests(RegistrationDisabledTestFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         Assert.Null(await userManager.FindByEmailAsync(email));
     }
 

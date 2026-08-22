@@ -5,7 +5,6 @@ using Huia.Identity;
 using Huia.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Localization;
@@ -23,8 +22,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class LoginModel(
-    SignInManager<HuiaUser> signInManager,
-    UserManager<HuiaUser> userManager,
+    HuiaSignInManager signInManager,
+    HuiaUserManager userManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
     HuiaOptions options,
@@ -102,7 +101,7 @@ public class LoginModel(
         // authentication scheme is the OpenIddict bearer validator (see ServiceCollectionExtensions), so
         // this authenticates against the Identity cookie scheme explicitly, the same way
         // AuthorizationEndpoints checks for an existing session.
-        var signedIn = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        var signedIn = await HttpContext.AuthenticateAsync(HuiaAuthenticationDefaults.ApplicationScheme);
 
         return signedIn.Succeeded
             ? Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager))

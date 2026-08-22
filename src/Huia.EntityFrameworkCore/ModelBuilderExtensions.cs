@@ -1,7 +1,7 @@
 using Huia.EntityFrameworkCore.Common;
+using Huia.EntityFrameworkCore.Identity;
 using Huia.EntityFrameworkCore.Keys;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.EntityFrameworkCore.Models;
 
@@ -15,10 +15,8 @@ public static class ModelBuilderExtensions
     /// <summary>
     /// Configures the <see cref="SigningKey"/> entity backing Huia's automatic key management. Call this
     /// from <c>OnModelCreating</c> on your own <see cref="DbContext"/> if it doesn't inherit
-    /// <see cref="HuiaDbContext"/> — e.g. because it already inherits
-    /// <see cref="Microsoft.AspNetCore.Identity.EntityFrameworkCore.IdentityDbContext"/>
-    /// directly or has its own base class. <see cref="HuiaDbContext{TUser,TRole}"/> calls this internally, so
-    /// consumers using that base class don't need to call it themselves.
+    /// <see cref="HuiaDbContext"/> — e.g. because it has its own base class. <see cref="HuiaDbContext{TUser,TRole}"/>
+    /// calls this internally, so consumers using that base class don't need to call it themselves.
     /// </summary>
     public static ModelBuilder UseKeyManagement(this ModelBuilder builder)
     {
@@ -35,27 +33,61 @@ public static class ModelBuilderExtensions
     }
 
     /// <summary>
-    /// Renames ASP.NET Core Identity's default <c>AspNet*</c> tables (e.g. <c>AspNetUsers</c>) to Huia's
-    /// <c>Huia*</c> equivalents (e.g. <c>HuiaUsers</c>). Call this from <c>OnModelCreating</c>, after Identity
-    /// has configured its own model, on your own <see cref="DbContext"/> if it doesn't inherit
-    /// <see cref="HuiaDbContext{TUser,TRole}"/>. <see cref="HuiaDbContext{TUser,TRole}"/> calls this internally, so
-    /// consumers using that base class don't need to call it themselves. <typeparamref name="TKey"/> is the
-    /// primary key type used by <typeparamref name="TUser"/>/<typeparamref name="TRole"/> — <see cref="string"/>
-    /// for <see cref="HuiaUser"/>/<see cref="HuiaRole"/>, but any <see cref="IdentityUser"/>/
-    /// <see cref="IdentityRole{TKey}"/> pair works.
+    /// Configures Huia's own user/role model — <typeparamref name="TUser"/>/<typeparamref name="TRole"/> plus
+    /// the <see cref="HuiaUserRole"/>/<see cref="HuiaUserLogin"/>/<see cref="HuiaUserToken"/> join entities —
+    /// under <c>Huia*</c>-prefixed tables (e.g. <c>HuiaUsers</c>). Call this from <c>OnModelCreating</c> on
+    /// your own <see cref="DbContext"/> if it doesn't inherit <see cref="HuiaDbContext{TUser,TRole}"/>.
+    /// <see cref="HuiaDbContext{TUser,TRole}"/> calls this internally, so consumers using that base class
+    /// don't need to call it themselves.
     /// </summary>
-    public static ModelBuilder UseHuiaIdentityTableNames<TUser, TRole, TKey>(this ModelBuilder builder)
-        where TUser : IdentityUser<TKey>
-        where TRole : IdentityRole<TKey>
-        where TKey : IEquatable<TKey>
+    public static ModelBuilder UseHuiaIdentityModel<TUser, TRole>(this ModelBuilder builder)
+        where TUser : HuiaUser
+        where TRole : HuiaRole
     {
-        builder.Entity<TUser>().ToTable("HuiaUsers");
-        builder.Entity<TRole>().ToTable("HuiaRoles");
-        builder.Entity<IdentityUserRole<TKey>>().ToTable("HuiaUserRoles");
-        builder.Entity<IdentityUserClaim<TKey>>().ToTable("HuiaUserClaims");
-        builder.Entity<IdentityUserLogin<TKey>>().ToTable("HuiaUserLogins");
-        builder.Entity<IdentityRoleClaim<TKey>>().ToTable("HuiaRoleClaims");
-        builder.Entity<IdentityUserToken<TKey>>().ToTable("HuiaUserTokens");
+        builder.Entity<TUser>(user =>
+        {
+            user.ToTable("HuiaUsers");
+            user.HasKey(u => u.Id);
+            user.Property(u => u.ConcurrencyStamp).IsConcurrencyToken();
+            user.HasIndex(u => u.NormalizedUserName).IsUnique();
+
+            // Non-unique — uniqueness is enforced at the application layer (Register/ExternalLoginConfirmation),
+            // not the database, since more than one account may legitimately share an email address today.
+            user.HasIndex(u => u.NormalizedEmail);
+
+            // Non-unique, mirroring NormalizedEmail's own treatment — uniqueness is enforced at the
+            // application layer in PhoneLoginModel, not the database, since two accounts may legitimately
+            // share a phone number (see IHuiaPhoneNumberStore and docs/passwordless.md's hybrid-auth security
+            // considerations).
+            user.HasIndex(u => u.NormalizedPhoneNumber);
+        });
+
+        builder.Entity<TRole>(role =>
+        {
+            role.ToTable("HuiaRoles");
+            role.HasKey(r => r.Id);
+            role.Property(r => r.ConcurrencyStamp).IsConcurrencyToken();
+            role.HasIndex(r => r.NormalizedName).IsUnique();
+        });
+
+        builder.Entity<HuiaUserRole>(userRole =>
+        {
+            userRole.ToTable("HuiaUserRoles");
+            userRole.HasKey(ur => new { ur.UserId, ur.RoleId });
+        });
+
+        builder.Entity<HuiaUserLogin>(userLogin =>
+        {
+            userLogin.ToTable("HuiaUserLogins");
+            userLogin.HasKey(ul => new { ul.LoginProvider, ul.ProviderKey });
+            userLogin.HasIndex(ul => ul.UserId);
+        });
+
+        builder.Entity<HuiaUserToken>(userToken =>
+        {
+            userToken.ToTable("HuiaUserTokens");
+            userToken.HasKey(ut => new { ut.UserId, ut.Provider, ut.Name });
+        });
 
         return builder;
     }

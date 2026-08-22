@@ -2,11 +2,9 @@ using Huia.EntityFrameworkCore.Common;
 using Huia.EntityFrameworkCore.Identity;
 using Huia.EntityFrameworkCore.Keys;
 using Huia.EntityFrameworkCore.Pagination;
-using Huia.Identity;
 using Huia.Keys;
 using Huia.Pagination;
 using Huia.Stores;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -62,9 +60,17 @@ public static class ServiceCollectionExtensions
     {
         var services = builder.Services;
 
-        new IdentityBuilder(typeof(HuiaUser), typeof(HuiaRole), services)
-            .AddEntityFrameworkStores<TContext>()
-            .AddDefaultTokenProviders();
+        services.AddScoped<IHuiaUserStore, EfCoreHuiaUserStore<TContext>>();
+        services.AddScoped<IHuiaRoleStore, EfCoreHuiaRoleStore<TContext>>();
+
+        // Redirected to the exact same EfCoreHuiaUserStore<TContext> instance IHuiaUserStore resolves to in
+        // this scope, since one store implementation backs every capability interface — see
+        // EfCoreHuiaUserStore's own doc comment. IHuiaUserTokenStore in particular is needed directly by
+        // TotpHuiaTokenProvider (not just cast from inside HuiaUserManager), so it has to be independently
+        // resolvable from DI, not only reachable via HuiaUserManager's own cast of its injected IHuiaUserStore.
+        services.AddScoped<IHuiaUserLoginStore>(sp => (IHuiaUserLoginStore)sp.GetRequiredService<IHuiaUserStore>());
+        services.AddScoped<IHuiaUserRoleStore>(sp => (IHuiaUserRoleStore)sp.GetRequiredService<IHuiaUserStore>());
+        services.AddScoped<IHuiaUserTokenStore>(sp => (IHuiaUserTokenStore)sp.GetRequiredService<IHuiaUserStore>());
 
         // EntityFrameworkCoreSigningKeyStore needs a HuiaKeyManagementOptions (e.g. for RsaKeySizeInBits)
         // regardless of which key management mode is enabled; TryAddSingleton leaves an already-configured
@@ -75,8 +81,11 @@ public static class ServiceCollectionExtensions
 
         // A plain Add (not TryAdd) so it wins over the ThrowingPhoneNumberStore AddHuia registers by default
         // when huia.Authentication.UsePasswordlessFlow() is enabled — the last registration for a service
-        // type is what DI resolves, and this method always runs after AddHuia returns.
-        services.AddScoped<IHuiaPhoneNumberStore, EfCoreHuiaPhoneNumberStore<TContext>>();
+        // type is what DI resolves, and this method always runs after AddHuia returns. Redirected to the
+        // exact same EfCoreHuiaUserStore<TContext> instance IHuiaUserStore resolves to in this scope (rather
+        // than a second, separately-instantiated registration) since phone-number lookup and the rest of user
+        // persistence are the same store now — see EfCoreHuiaUserStore's own doc comment.
+        services.AddScoped<IHuiaPhoneNumberStore>(sp => (IHuiaPhoneNumberStore)sp.GetRequiredService<IHuiaUserStore>());
 
         services.AddOpenIddict()
             .AddCore(options =>

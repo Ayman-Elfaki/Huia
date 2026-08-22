@@ -3,14 +3,13 @@ using Huia.Identity;
 using Huia.Pagination;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Huia.Endpoints.Admin;
 
 /// <summary>
-/// JSON CRUD endpoints over <see cref="HuiaUser"/>, backed by <see cref="UserManager{TUser}"/>.
+/// JSON CRUD endpoints over <see cref="HuiaUser"/>, backed by <see cref="HuiaUserManager"/>.
 /// </summary>
 internal static class UsersEndpoints
 {
@@ -31,7 +30,7 @@ internal static class UsersEndpoints
     }
 
     private static async Task<IResult> ListAsync(string? search, string? cursor, int? pageSize,
-        UserManager<HuiaUser> userManager, [FromServices] IAdminEfCorePaginator? paginator, CancellationToken ct)
+        HuiaUserManager userManager, [FromServices] IAdminEfCorePaginator? paginator, CancellationToken ct)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
 
@@ -48,7 +47,8 @@ internal static class UsersEndpoints
 
         var offset = OffsetCursor.Decode(cursor);
 
-        var query = userManager.Users;
+        // Non-null: SupportsQueryableUsers (checked above) is exactly "Users is not null".
+        var query = userManager.Users!;
         if (!string.IsNullOrWhiteSpace(search))
         {
             query = query.Where(u => u.Email!.Contains(search) || u.UserName!.Contains(search));
@@ -74,7 +74,7 @@ internal static class UsersEndpoints
             nextCursor));
     }
 
-    private static async Task<IResult> GetAsync(string id, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> GetAsync(string id, HuiaUserManager userManager)
     {
         var user = await userManager.FindByIdAsync(id).ConfigureAwait(false);
         return user is null
@@ -82,7 +82,7 @@ internal static class UsersEndpoints
             : Results.Ok(await ToResponseAsync(user, userManager).ConfigureAwait(false));
     }
 
-    private static async Task<IResult> CreateAsync(CreateUserRequest request, UserManager<HuiaUser> userManager,
+    private static async Task<IResult> CreateAsync(CreateUserRequest request, HuiaUserManager userManager,
         HuiaOptions options)
     {
         var nameErrors = ValidateNames(request.FirstName, request.LastName);
@@ -133,11 +133,11 @@ internal static class UsersEndpoints
     /// <summary>
     /// Creates a phone-only account, the admin-initiated equivalent of what <c>PhoneLoginModel</c> creates on
     /// a brand-new number's first OTP request — same shape (<see cref="HuiaUser.PasswordlessLoginEnabled"/>
-    /// set, no password), except <see cref="IdentityUser{TKey}.PhoneNumberConfirmed"/> is set immediately: the
+    /// set, no password), except <see cref="HuiaUser.PhoneNumberConfirmed"/> is set immediately: the
     /// admin is vouching for the number directly (typing it in), the same trust an admin already gets for
     /// email via <see cref="CreateUserRequest.EmailConfirmed"/>, rather than proving it via OTP.
     /// </summary>
-    private static async Task<IResult> CreatePhoneUserAsync(CreateUserRequest request, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> CreatePhoneUserAsync(CreateUserRequest request, HuiaUserManager userManager)
     {
         var normalized = PhoneNumberValidator.TryNormalizeE164(request.PhoneNumber);
         if (normalized is null)
@@ -170,7 +170,7 @@ internal static class UsersEndpoints
     }
 
     private static async Task<IResult> UpdateAsync(string id, UpdateUserRequest request,
-        UserManager<HuiaUser> userManager)
+        HuiaUserManager userManager)
     {
         var user = await userManager.FindByIdAsync(id).ConfigureAwait(false);
         if (user is null)
@@ -206,7 +206,7 @@ internal static class UsersEndpoints
         return Results.Ok(await ToResponseAsync(user, userManager).ConfigureAwait(false));
     }
 
-    private static async Task<IResult> DeleteAsync(string id, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> DeleteAsync(string id, HuiaUserManager userManager)
     {
         var user = await userManager.FindByIdAsync(id).ConfigureAwait(false);
         if (user is null)
@@ -219,7 +219,7 @@ internal static class UsersEndpoints
     }
 
     private static async Task<IResult> UpdateRolesAsync(string id, UpdateUserRoleRequest request,
-        UserManager<HuiaUser> userManager)
+        HuiaUserManager userManager, HuiaMembershipAdmin membershipAdmin)
     {
         var user = await userManager.FindByIdAsync(id).ConfigureAwait(false);
         if (user is null)
@@ -228,8 +228,8 @@ internal static class UsersEndpoints
         }
 
         var result = request.Add
-            ? await userManager.AddToRoleAsync(user, request.Role).ConfigureAwait(false)
-            : await userManager.RemoveFromRoleAsync(user, request.Role).ConfigureAwait(false);
+            ? await membershipAdmin.AddUserToRoleAsync(user, request.Role).ConfigureAwait(false)
+            : await membershipAdmin.RemoveUserFromRoleAsync(user, request.Role).ConfigureAwait(false);
 
         return result.Succeeded
             ? Results.Ok(await ToResponseAsync(user, userManager).ConfigureAwait(false))
@@ -237,7 +237,7 @@ internal static class UsersEndpoints
     }
 
     private static async Task<IResult> SetLockoutAsync(string id, SetLockoutRequest request,
-        UserManager<HuiaUser> userManager)
+        HuiaUserManager userManager, HuiaMembershipAdmin membershipAdmin)
     {
         var user = await userManager.FindByIdAsync(id).ConfigureAwait(false);
         if (user is null)
@@ -245,9 +245,7 @@ internal static class UsersEndpoints
             return Results.NotFound();
         }
 
-        await userManager.SetLockoutEnabledAsync(user, true).ConfigureAwait(false);
-        var result = await userManager.SetLockoutEndDateAsync(user, request.Locked ? DateTimeOffset.MaxValue : null)
-            .ConfigureAwait(false);
+        var result = await membershipAdmin.SetLockedAsync(user, request.Locked).ConfigureAwait(false);
 
         return result.Succeeded
             ? Results.Ok(await ToResponseAsync(user, userManager).ConfigureAwait(false))
@@ -255,7 +253,7 @@ internal static class UsersEndpoints
     }
 
     private static async Task<IResult> ResetPasswordAsync(string id, ResetPasswordRequest request,
-        UserManager<HuiaUser> userManager)
+        HuiaUserManager userManager)
     {
         var user = await userManager.FindByIdAsync(id).ConfigureAwait(false);
         if (user is null)
@@ -269,7 +267,7 @@ internal static class UsersEndpoints
         return result.Succeeded ? Results.NoContent() : Results.ValidationProblem(ToErrorDictionary(result));
     }
 
-    internal static async Task<UserResponse> ToResponseAsync(HuiaUser user, UserManager<HuiaUser> userManager)
+    internal static async Task<UserResponse> ToResponseAsync(HuiaUser user, HuiaUserManager userManager)
     {
         var roles = await userManager.GetRolesAsync(user).ConfigureAwait(false);
         var logins = await userManager.GetLoginsAsync(user).ConfigureAwait(false);
@@ -307,7 +305,7 @@ internal static class UsersEndpoints
             [.. logins.Select(l => new ExternalLoginResponse(l.LoginProvider, l.ProviderDisplayName))]);
     }
 
-    private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
+    private static Dictionary<string, string[]> ToErrorDictionary(HuiaIdentityResult result)
         => result.Errors
             .GroupBy(e => e.Code, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+using Huia.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -54,9 +54,9 @@ public class ServiceCollectionExtensionsTests
 
     /// <summary>
     /// The regression this guards: an even-older, removed <c>HuiaOptions.Identity</c> property mutated a
-    /// disconnected <see cref="IdentityOptions"/> instance that <c>AddIdentityCore</c> never actually read
-    /// from — changes silently never took effect. <c>huia.Identity</c>'s callback has to run against the
-    /// exact same instance <c>AddIdentityCore</c> builds, provable only by resolving the real
+    /// disconnected options instance that was never actually read from — changes silently never took effect.
+    /// <c>huia.Identity</c>'s callback has to run against the exact same <see cref="HuiaIdentityOptions"/>
+    /// instance <c>AddHuia</c> configures, provable only by resolving the real
     /// <see cref="IOptions{TOptions}"/> DI itself constructs, not by reading anything back off
     /// <see cref="HuiaOptions"/>.
     /// </summary>
@@ -71,7 +71,7 @@ public class ServiceCollectionExtensionsTests
         });
 
         using var provider = services.BuildServiceProvider();
-        var identityOptions = provider.GetRequiredService<IOptions<IdentityOptions>>().Value;
+        var identityOptions = provider.GetRequiredService<IOptions<HuiaIdentityOptions>>().Value;
 
         Assert.Equal(7, identityOptions.Lockout.MaxFailedAccessAttempts);
     }

@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Huia.Common;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
+using Huia.Stores;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Tests.Integration;
@@ -396,11 +396,11 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 
         using (var scope = factory.Services.CreateScope())
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var huiaUser = await userManager.FindByIdAsync(user.Id) ?? throw new InvalidOperationException("User not found.");
             huiaUser.Picture = "https://example.com/avatar.png";
             await userManager.UpdateAsync(huiaUser);
-            await userManager.AddLoginAsync(huiaUser, new UserLoginInfo("google", "fake-provider-key", "Google"));
+            await userManager.AddLoginAsync(huiaUser, new HuiaUserLoginInfo("google", "fake-provider-key", "Google"));
         }
 
         var fetched = await client.GetFromJsonAsync<UserResponse>($"{BasePath}/users/{user.Id}");

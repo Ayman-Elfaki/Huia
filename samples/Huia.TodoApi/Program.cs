@@ -1,4 +1,5 @@
 using Huia;
+using Huia.Emails;
 using Huia.Endpoints;
 using Huia.EntityFrameworkCore;
 using Huia.Eventing;
@@ -10,7 +11,6 @@ using Huia.TodoApi.Email;
 using Huia.TodoApi.Endpoints;
 using Huia.TodoApi.Events;
 using Huia.TodoApi.Sms;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Client;

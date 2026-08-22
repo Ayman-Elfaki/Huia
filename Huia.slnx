@@ -15,6 +15,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj" />
+    <Project Path="src/Huia.Identity/Huia.Identity.csproj" />
     <Project Path="src/Huia/Huia.csproj" />
   </Folder>
   <Folder Name="/tests/">

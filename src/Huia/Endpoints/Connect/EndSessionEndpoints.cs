@@ -1,7 +1,7 @@
+using Huia.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Server.AspNetCore;
 
@@ -17,7 +17,7 @@ internal static class EndSessionEndpoints
 
     private static async Task<IResult> HandleAsync(HttpContext httpContext)
     {
-        await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+        await httpContext.SignOutAsync(HuiaAuthenticationDefaults.ApplicationScheme).ConfigureAwait(false);
 
         // The identity cookie is already gone, so this is safe to let OpenIddict finish immediately — it
         // performs its own (already-validated) post_logout_redirect_uri/state redirect back to the client

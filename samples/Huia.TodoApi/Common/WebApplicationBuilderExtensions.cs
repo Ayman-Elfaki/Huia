@@ -1,6 +1,5 @@
 using Huia.Eventing;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 
 namespace Huia.TodoApi.Common;
 
@@ -31,13 +30,13 @@ public static class WebApplicationBuilderExtensions
     // file — never seed a fixed password like this outside local development.
     public static async Task SeedAdminAsync(this IServiceProvider services)
     {
-        var roleManager = services.GetRequiredService<RoleManager<HuiaRole>>();
+        var roleManager = services.GetRequiredService<HuiaRoleManager>();
         if (!await roleManager.RoleExistsAsync("Admin"))
         {
             await roleManager.CreateAsync(new HuiaRole { Name = "Admin" });
         }
 
-        var userManager = services.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = services.GetRequiredService<HuiaUserManager>();
         var admin = await userManager.FindByEmailAsync("admin@example.com");
         if (admin is null)
         {

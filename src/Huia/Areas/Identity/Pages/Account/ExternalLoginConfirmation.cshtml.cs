@@ -1,12 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Huia.Common;
+using Huia.Emails;
 using Huia.Eventing;
 using Huia.Identity;
 using Huia.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
@@ -27,8 +27,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class ExternalLoginConfirmationModel(
-    UserManager<HuiaUser> userManager,
-    SignInManager<HuiaUser> signInManager,
+    HuiaUserManager userManager,
+    HuiaSignInManager signInManager,
     IEmailSender<HuiaUser> emailSender,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
@@ -156,7 +156,7 @@ public class ExternalLoginConfirmationModel(
 
         // Consumed: clears the short-lived external cookie so the same provider round trip can't be replayed
         // to link/create a second account.
-        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        await HttpContext.SignOutAsync(HuiaAuthenticationDefaults.ExternalScheme);
 
         return Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager));
     }
@@ -172,7 +172,7 @@ public class ExternalLoginConfirmationModel(
     /// would otherwise render disabled, an invalid provider-supplied value would be a dead end the user
     /// couldn't fix, so it's treated the same as "not supplied" instead, leaving an empty, editable input.
     /// </summary>
-    private void ApplyProviderSuppliedFields(ExternalLoginInfo info)
+    private void ApplyProviderSuppliedFields(HuiaExternalLoginInfo info)
     {
         var email = ExternalClaimsMapper.GetEmail(info.Principal);
         EmailFromProvider = !string.IsNullOrEmpty(email);

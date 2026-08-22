@@ -1,7 +1,6 @@
 using System.Text;
 using Huia.Identity;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
@@ -10,7 +9,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>Confirms a user's email address from the link sent during registration.</summary>
 [AllowAnonymous]
-public class ConfirmEmailModel(UserManager<HuiaUser> userManager) : PageModel
+public class ConfirmEmailModel(HuiaUserManager userManager) : PageModel
 {
     /// <summary>Whether the confirmation succeeded.</summary>
     public bool Succeeded { get; private set; }

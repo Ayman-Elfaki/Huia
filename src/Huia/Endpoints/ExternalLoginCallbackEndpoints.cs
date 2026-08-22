@@ -1,8 +1,8 @@
 using System.Security.Claims;
+using Huia.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -18,9 +18,9 @@ namespace Huia.Endpoints;
 /// signs the result into any cookie —
 /// <c>httpContext.AuthenticateAsync(OpenIddictClientAspNetCoreDefaults.AuthenticationScheme)</c> is how the
 /// app retrieves it. This endpoint does exactly that, then signs the resulting identity into
-/// <see cref="IdentityConstants.ExternalScheme"/> — the same cookie a remote-authentication handler used to
+/// <see cref="HuiaAuthenticationDefaults.ExternalScheme"/> — the same cookie a remote-authentication handler used to
 /// populate directly — so <c>ExternalLoginModel</c> and <c>ManageExternalLoginsEndpoints</c>'s existing
-/// <c>SignInManager&lt;HuiaUser&gt;</c>-based logic (sign-in, 2FA/lockout routing, auto-provisioning,
+/// <see cref="HuiaSignInManager"/>-based logic (sign-in, 2FA/lockout routing, auto-provisioning,
 /// email-collision handling, account linking — shared by both the sign-in flow and the "link a provider to my
 /// signed-in account" flow, distinguished only by which one set <c>AuthenticationProperties.RedirectUri</c> at
 /// challenge time) keeps working completely unmodified.
@@ -64,7 +64,7 @@ internal static class ExternalLoginCallbackEndpoints
                 result.Failure?.Message ?? "unknown_error"));
         }
 
-        // SignInManager<HuiaUser>.GetExternalLoginInfoAsync() (called downstream by ExternalLoginModel /
+        // HuiaSignInManager.GetExternalLoginInfoAsync() (called downstream by ExternalLoginModel /
         // ManageExternalLoginsEndpoints) hardcodes ClaimTypes.NameIdentifier as the external identity's
         // provider key — OpenIddict's merged principal carries the subject under the raw OIDC "sub" claim
         // instead, since it never maps onto ClaimTypes the way AddGoogle/AddMicrosoftAccount used to.
@@ -75,7 +75,7 @@ internal static class ExternalLoginCallbackEndpoints
             identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, subject));
         }
 
-        await httpContext.SignInAsync(IdentityConstants.ExternalScheme, new ClaimsPrincipal(identity),
+        await httpContext.SignInAsync(HuiaAuthenticationDefaults.ExternalScheme, new ClaimsPrincipal(identity),
             result.Properties).ConfigureAwait(false);
 
         // result.Properties.RedirectUri is whichever caller started the challenge — ExternalLoginModel's own

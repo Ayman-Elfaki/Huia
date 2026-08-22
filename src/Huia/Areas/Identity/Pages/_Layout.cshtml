@@ -1,7 +1,7 @@
 @using System.Globalization
 @using Huia.Branding
+@using Huia.Identity
 @using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
 @inject BrandingOptions Branding
 @{
     var pageTitle = ViewData["Title"] as string ?? "Account";
@@ -18,7 +18,7 @@
     // scheme is the OpenIddict bearer validator (see ServiceCollectionExtensions), which never authenticates
     // a browser request with no Authorization header. Authenticating against the Identity cookie scheme
     // explicitly is what huia-session-sync.js's cross-tab reload relies on to know the real sign-in state.
-    var isAuthenticated = (await Context.AuthenticateAsync(IdentityConstants.ApplicationScheme)).Succeeded;
+    var isAuthenticated = (await Context.AuthenticateAsync(HuiaAuthenticationDefaults.ApplicationScheme)).Succeeded;
 }
 <!DOCTYPE html>
 <html lang="@uiCulture.TwoLetterISOLanguageName" dir="@(uiCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr")">

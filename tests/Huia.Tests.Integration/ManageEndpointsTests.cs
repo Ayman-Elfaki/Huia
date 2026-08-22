@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 namespace Huia.Tests.Integration;
 
 /// <summary>
-/// Covers <c>MapHuiaManageEndpoints</c>'s auth policy: it accepts either the <c>Identity.Application</c>
+/// Covers <c>MapHuiaManageEndpoints</c>'s auth policy: it accepts either the <c>Huia.Application</c>
 /// cookie or a bearer access token (see <see cref="EndpointRouteBuilderExtensions"/>). This exercises the
 /// bearer path specifically, since that's what a cross-origin OAuth client (the Todo App, the Admin UI) uses
 /// — via the same <see cref="AdminTestHelpers"/> token-minting helper <see cref="AdminEndpointsTests"/> uses

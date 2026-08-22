@@ -1,8 +1,9 @@
 # Passwordless phone sign-in
 
 Huia can let a user sign in with just a phone number and a one-time code (OTP) sent by SMS — no password.
-This builds on ASP.NET Core Identity's own two-factor machinery (`UserManager<HuiaUser>.GenerateTwoFactorTokenAsync`/
-`VerifyTwoFactorTokenAsync` with the built-in `"Phone"` token provider), not a bespoke code generator.
+This builds on Huia's own two-factor machinery (`HuiaUserManager.GenerateTwoFactorTokenAsync`/
+`VerifyTwoFactorTokenAsync` with the built-in `HuiaTokenProviders.Phone` token provider,
+`PhoneOtpHuiaTokenProvider`), not a bespoke code generator.
 
 ## Enabling it
 
@@ -38,9 +39,10 @@ directly (see [custom-store.md](custom-store.md)).
    cookie — not TempData, and not a value the client can see or tamper with. The user is redirected to
    `PhoneLoginVerify`.
 3. **`PhoneLoginVerify`** reads the pending phone number and account from the cookie (never from a posted or
-   route value), and verifies the submitted code via `UserManager.VerifyTwoFactorTokenAsync(user, "Phone",
-   code)`. A wrong code counts against the account's normal lockout (`UserManager.AccessFailedAsync`); too
-   many wrong attempts routes to the same `Lockout` page a failed password sign-in does.
+   route value), and verifies the submitted code via `HuiaUserManager.VerifyTwoFactorTokenAsync(user,
+   HuiaTokenProviders.Phone, code)`. A wrong code counts against the account's normal lockout
+   (`HuiaUserManager.AccessFailedAsync`); too many wrong attempts routes to the same `Lockout` page a failed
+   password sign-in does.
 4. A **brand-new** account (this is its first-ever successful verification) is routed to
    **`PhoneLoginConfirmation`** to collect a first/last name before completing sign-in — mirroring
    `ExternalLoginConfirmation`'s explicit-consent step for a first-time external sign-in. A **returning**
@@ -53,9 +55,9 @@ A signed-in user can change their own phone number through the Manage JSON API
 flow's SMS-sending and rate-limiting infrastructure (`IPhoneOtpRateLimiter`/`ISmsSender<HuiaUser>` are only
 registered in DI when the flow is on; both endpoints reject with a validation problem otherwise).
 
-Unlike the sign-in flow above, this uses `UserManager<HuiaUser>.GenerateChangePhoneNumberTokenAsync`/
-`ChangePhoneNumberAsync` — still the same `"Phone"` token provider under the hood, so SMS delivery works
-identically, but the token's purpose string is bound to the specific new number (`"ChangePhoneNumber:" +
+Unlike the sign-in flow above, this uses `HuiaUserManager.GenerateChangePhoneNumberTokenAsync`/
+`ChangePhoneNumberAsync` — still the same `HuiaTokenProviders.Phone` provider under the hood, so SMS delivery
+works identically, but the token's purpose string is bound to the specific new number (`"ChangePhoneNumber:" +
 phoneNumber`), not just to the user. That means no pending-state cookie is needed the way `PhoneLoginVerify`
 needs one for an anonymous caller: every Manage endpoint is already authenticated, so the client just resends
 the same number it's verifying alongside the code.
@@ -91,9 +93,9 @@ huia.Authentication.UsePasswordlessFlow(passwordless =>
 });
 ```
 
-ASP.NET Core Identity's own shared `IdentityOptions` (lockout, password policy, etc.) isn't configured
-per-flow — it's inherently one shared configuration space regardless of which sign-in method(s) are enabled,
-so it lives directly on `HuiaOptions` instead:
+Huia's own shared `HuiaIdentityOptions` (lockout, password policy, etc.) isn't configured per-flow — it's
+inherently one shared configuration space regardless of which sign-in method(s) are enabled, so it lives
+directly on `HuiaOptions` instead:
 
 ```csharp
 huia.Identity = identity =>
@@ -102,7 +104,7 @@ huia.Identity = identity =>
 };
 ```
 
-Runs directly against the same `IdentityOptions` instance ASP.NET Core Identity itself builds.
+Runs directly against the same `HuiaIdentityOptions` instance every other manager reads from.
 
 ## Rate limiting
 
@@ -219,12 +221,14 @@ being explicit about:
    the same number ends up with two accounts), not a security gap.
 3. **Layered brute-force / SIM-swap mitigation**: per-phone-number rate limiting on *requesting* codes (works
    even before an account exists) + per-account lockout on *verifying* codes (via the same
-   `UserManager.AccessFailedAsync`/`IsLockedOutAsync` counters a password sign-in uses) + a short OTP validity
-   window (the `"Phone"` token provider's ~3-minute default step) + single-use consumption (the
-   `Huia.PhoneVerification` cookie is signed out once a sign-in completes). Note: the OTP validity window
-   isn't independently configurable without registering a custom `IUserTwoFactorTokenProvider<HuiaUser>` in
-   this version.
-4. **No new session-fixation risk.** `SignInManager.SignInAsync` rotates the authentication cookie for a
+   `HuiaUserManager.AccessFailedAsync`/`IsLockedOutAsync` counters a password sign-in uses) + a short OTP
+   validity window (`PhoneOtpHuiaTokenProvider`'s step length, `HuiaIdentityOptions.Tokens.PhoneOtpLifetime`
+   — 5 minutes by default) + single-use consumption (the `Huia.PhoneVerification` cookie is signed out once a
+   sign-in completes). Unlike ASP.NET Core Identity's built-in phone token provider (hardcoded to a 3-minute
+   step), `PhoneOtpLifetime` is independently configurable — set it via `huia.Identity = identity =>
+   identity.Tokens.PhoneOtpLifetime = TimeSpan.FromMinutes(2);` inside `AddHuia` — without needing a custom
+   `IHuiaTokenProvider`.
+4. **No new session-fixation risk.** `HuiaSignInManager.SignInAsync` rotates the authentication cookie for a
    passwordless sign-in exactly the same way it does for password/2FA/external sign-in.
 5. **Cross-method enumeration resistance.** `PhoneLoginModel.OnPostAsync` returns the same redirect regardless
    of whether the number was a new registration, a returning passwordless user, or a collision with a

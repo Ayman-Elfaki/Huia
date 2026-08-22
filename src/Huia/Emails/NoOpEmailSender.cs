@@ -1,5 +1,4 @@
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
 namespace Huia.Emails;

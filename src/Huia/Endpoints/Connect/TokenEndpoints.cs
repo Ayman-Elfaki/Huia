@@ -5,7 +5,6 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
@@ -24,8 +23,8 @@ internal static class TokenEndpoints
 
     private static async Task<IResult> HandleAsync(
         HttpContext httpContext,
-        UserManager<HuiaUser> userManager,
-        SignInManager<HuiaUser> signInManager,
+        HuiaUserManager userManager,
+        HuiaSignInManager signInManager,
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictScopeManager scopeManager)
     {
@@ -76,7 +75,7 @@ internal static class TokenEndpoints
     /// the user can still sign in, and re-issue.
     /// </summary>
     private static async Task<IResult> HandleReAuthenticateAsync(HttpContext httpContext,
-        UserManager<HuiaUser> userManager, SignInManager<HuiaUser> signInManager)
+        HuiaUserManager userManager, HuiaSignInManager signInManager)
     {
         var result = await httpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)
             .ConfigureAwait(false);

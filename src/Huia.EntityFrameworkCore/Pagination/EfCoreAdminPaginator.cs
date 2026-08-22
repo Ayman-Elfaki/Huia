@@ -2,7 +2,6 @@ using Huia.Endpoints.Admin;
 using Huia.Identity;
 using Huia.Pagination;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MR.AspNetCore.Pagination;
 using OpenIddict.Abstractions;
@@ -24,7 +23,7 @@ internal sealed class EfCoreAdminPaginator<TContext>(
     IOpenIddictApplicationManager applicationManager,
     IOpenIddictScopeManager scopeManager,
     IOpenIddictAuthorizationManager authorizationManager,
-    UserManager<HuiaUser> userManager) : IAdminEfCorePaginator
+    HuiaUserManager userManager) : IAdminEfCorePaginator
     where TContext : DbContext
 {
     public async Task<IResult> ListApplicationsAsync(int? pageSize, CancellationToken cancellationToken)

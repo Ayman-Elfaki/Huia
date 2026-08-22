@@ -1,5 +1,5 @@
+using Huia.Identity;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenIddict.Client;
@@ -251,7 +251,7 @@ public class HuiaOptionsTests
             identity.Lockout.MaxFailedAccessAttempts = 7;
         };
 
-        var identityOptions = new IdentityOptions();
+        var identityOptions = new HuiaIdentityOptions();
         options.Identity!.Invoke(identityOptions);
 
         Assert.True(invoked);
@@ -260,10 +260,10 @@ public class HuiaOptionsTests
 
     /// <summary>
     /// The regression this guards: <c>Endpoints/ExternalLoginCallbackEndpoints.cs</c> signs an external
-    /// sign-in's result explicitly into this scheme, and every downstream <c>SignInManager</c> external-login
-    /// method (<c>GetExternalLoginInfoAsync</c>, etc.) reads from it too — see HuiaOptions's own constructor
-    /// doc comment for why this has to be <see cref="IdentityConstants.ExternalScheme"/> rather than
-    /// <see cref="IdentityConstants.ApplicationScheme"/>.
+    /// sign-in's result explicitly into this scheme, and every downstream <c>HuiaSignInManager</c>
+    /// external-login method (<c>GetExternalLoginInfoAsync</c>, etc.) reads from it too — see HuiaOptions's
+    /// own constructor doc comment for why this has to be <see cref="HuiaAuthenticationDefaults.ExternalScheme"/>
+    /// rather than <see cref="HuiaAuthenticationDefaults.ApplicationScheme"/>.
     /// </summary>
     [Fact]
     public void Authentication_DefaultSignInSchemeIsExternalScheme()
@@ -274,6 +274,6 @@ public class HuiaOptionsTests
         using var provider = services.BuildServiceProvider();
         var authOptions = provider.GetRequiredService<IOptions<AuthenticationOptions>>().Value;
 
-        Assert.Equal(IdentityConstants.ExternalScheme, authOptions.DefaultSignInScheme);
+        Assert.Equal(HuiaAuthenticationDefaults.ExternalScheme, authOptions.DefaultSignInScheme);
     }
 }

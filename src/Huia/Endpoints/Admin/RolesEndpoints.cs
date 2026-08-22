@@ -1,14 +1,13 @@
 using Huia.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 
 namespace Huia.Endpoints.Admin;
 
 
 /// <summary>
-/// JSON CRUD endpoints over <see cref="HuiaRole"/>, backed by <see cref="RoleManager{TRole}"/>.
+/// JSON CRUD endpoints over <see cref="HuiaRole"/>, backed by <see cref="HuiaRoleManager"/>.
 /// </summary>
 internal static class RolesEndpoints
 {
@@ -26,7 +25,7 @@ internal static class RolesEndpoints
         return api;
     }
 
-    private static IResult ListAsync(RoleManager<HuiaRole> roleManager)
+    private static IResult ListAsync(HuiaRoleManager roleManager)
     {
         if (!roleManager.SupportsQueryableRoles)
         {
@@ -34,7 +33,7 @@ internal static class RolesEndpoints
                 statusCode: StatusCodes.Status501NotImplemented);
         }
 
-        var items = roleManager.Roles
+        var items = roleManager.Roles!
             .OrderBy(r => r.Name)
             .Select(r => new RoleResponse(r.Id, r.Name!))
             .ToList();
@@ -48,13 +47,13 @@ internal static class RolesEndpoints
             HasNext: false));
     }
 
-    private static async Task<IResult> GetAsync(string id, RoleManager<HuiaRole> roleManager)
+    private static async Task<IResult> GetAsync(string id, HuiaRoleManager roleManager)
     {
         var role = await roleManager.FindByIdAsync(id).ConfigureAwait(false);
         return role is null ? Results.NotFound() : Results.Ok(new RoleResponse(role.Id, role.Name!));
     }
 
-    private static async Task<IResult> CreateAsync(CreateRoleRequest request, RoleManager<HuiaRole> roleManager)
+    private static async Task<IResult> CreateAsync(CreateRoleRequest request, HuiaRoleManager roleManager)
     {
         var role = new HuiaRole { Name = request.Name };
         var result = await roleManager.CreateAsync(role).ConfigureAwait(false);
@@ -65,7 +64,7 @@ internal static class RolesEndpoints
     }
 
     private static async Task<IResult> RenameAsync(string id, UpdateRoleRequest request,
-        RoleManager<HuiaRole> roleManager)
+        HuiaRoleManager roleManager)
     {
         var role = await roleManager.FindByIdAsync(id).ConfigureAwait(false);
         if (role is null)
@@ -81,7 +80,7 @@ internal static class RolesEndpoints
             : Results.ValidationProblem(ToErrorDictionary(result));
     }
 
-    private static async Task<IResult> DeleteAsync(string id, RoleManager<HuiaRole> roleManager)
+    private static async Task<IResult> DeleteAsync(string id, HuiaRoleManager roleManager)
     {
         var role = await roleManager.FindByIdAsync(id).ConfigureAwait(false);
         if (role is null)
@@ -93,8 +92,8 @@ internal static class RolesEndpoints
         return result.Succeeded ? Results.NoContent() : Results.ValidationProblem(ToErrorDictionary(result));
     }
 
-    private static async Task<IResult> GetMembersAsync(string id, RoleManager<HuiaRole> roleManager,
-        UserManager<HuiaUser> userManager)
+    private static async Task<IResult> GetMembersAsync(string id, HuiaRoleManager roleManager,
+        HuiaMembershipAdmin membershipAdmin)
     {
         var role = await roleManager.FindByIdAsync(id).ConfigureAwait(false);
         if (role is null)
@@ -102,11 +101,11 @@ internal static class RolesEndpoints
             return Results.NotFound();
         }
 
-        var members = await userManager.GetUsersInRoleAsync(role.Name!).ConfigureAwait(false);
+        var members = await membershipAdmin.GetRoleMembersAsync(role.Name!).ConfigureAwait(false);
         return Results.Ok(members.Select(u => new RoleMemberResponse(u.Id, u.Email!)).ToList());
     }
 
-    private static Dictionary<string, string[]> ToErrorDictionary(IdentityResult result)
+    private static Dictionary<string, string[]> ToErrorDictionary(HuiaIdentityResult result)
         => result.Errors
             .GroupBy(e => e.Code, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
@@ -114,7 +113,7 @@ internal static class RolesEndpoints
     private sealed record RoleResponse(string Id, string Name);
 
     /// <summary>Mirrors MR.AspNetCore.Pagination's <c>KeysetPaginationResult&lt;T&gt;</c> field-for-field - see
-    /// the doc comment on <see cref="ListAsync(RoleManager{HuiaRole})"/>.</summary>
+    /// the doc comment on <see cref="ListAsync(HuiaRoleManager)"/>.</summary>
     private sealed record RolesPage<T>(IReadOnlyList<T> Data, int TotalCount, int PageSize, bool HasPrevious,
         bool HasNext);
 

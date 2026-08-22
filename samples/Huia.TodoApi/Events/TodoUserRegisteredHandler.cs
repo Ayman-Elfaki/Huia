@@ -2,7 +2,6 @@ using Huia.Eventing;
 using Huia.Identity;
 using Huia.TodoApi.Data;
 using Huia.TodoApi.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Huia.TodoApi.Events;
@@ -14,7 +13,7 @@ namespace Huia.TodoApi.Events;
 /// <c>WebApplicationBuilderExtensions.SeedAdminAsync</c>, which publishes the same event for the seeded demo
 /// admin so it goes through this one code path too.
 /// </summary>
-public sealed class TodoUserRegisteredHandler(TodoDbContext db, UserManager<HuiaUser> userManager)
+public sealed class TodoUserRegisteredHandler(TodoDbContext db, HuiaUserManager userManager)
     : IEventHandler<UserRegisteredEvent<string>>
 {
     public async Task HandleAsync(UserRegisteredEvent<string> @event, CancellationToken cancellationToken = default)

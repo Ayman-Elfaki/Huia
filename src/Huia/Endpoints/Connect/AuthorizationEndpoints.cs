@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
@@ -24,7 +23,7 @@ internal static class AuthorizationEndpoints
 
     private static async Task<IResult> HandleAsync(
         HttpContext httpContext,
-        UserManager<HuiaUser> userManager,
+        HuiaUserManager userManager,
         IOpenIddictScopeManager scopeManager,
         IOpenIddictApplicationManager applicationManager,
         HuiaOptions huiaOptions)
@@ -34,7 +33,7 @@ internal static class AuthorizationEndpoints
 
         ApplyUiLocales(httpContext, request, huiaOptions);
 
-        var result = await httpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+        var result = await httpContext.AuthenticateAsync(HuiaAuthenticationDefaults.ApplicationScheme).ConfigureAwait(false);
         var user = result is { Succeeded: true } ? await userManager.GetUserAsync(result.Principal).ConfigureAwait(false) : null;
 
         if (user is null)
@@ -43,7 +42,7 @@ internal static class AuthorizationEndpoints
             // from a wiped/reseeded database) — either way, treat it as "not signed in" rather than 500ing.
             if (result is { Succeeded: true })
             {
-                await httpContext.SignOutAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+                await httpContext.SignOutAsync(HuiaAuthenticationDefaults.ApplicationScheme).ConfigureAwait(false);
             }
 
             var returnUrl = Uri.EscapeDataString(httpContext.Request.GetEncodedUrl());

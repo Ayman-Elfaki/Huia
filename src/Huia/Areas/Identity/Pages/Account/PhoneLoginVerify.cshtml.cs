@@ -8,7 +8,6 @@ using Huia.Passwordless;
 using Huia.Sms;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Localization;
@@ -26,8 +25,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class PhoneLoginVerifyModel(
-    UserManager<HuiaUser> userManager,
-    SignInManager<HuiaUser> signInManager,
+    HuiaUserManager userManager,
+    HuiaSignInManager signInManager,
     IPhoneOtpRateLimiter rateLimiter,
     ISmsSender<HuiaUser> smsSender,
     IEventPublisher events,
@@ -113,7 +112,7 @@ public class PhoneLoginVerifyModel(
             return RedirectToPage("./PhoneLogin");
         }
 
-        var code = await userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultPhoneProvider);
+        var code = await userManager.GenerateTwoFactorTokenAsync(user, HuiaTokenProviders.Phone);
         await smsSender.SendOtpAsync(user, pending.Value.PhoneNumber, code);
 
         logger.LogInformation("OTP resent for {MaskedPhoneNumber}.", MaskedPhoneNumber);
@@ -159,7 +158,7 @@ public class PhoneLoginVerifyModel(
         }
 
         var code = Input.Code.Replace(" ", string.Empty).Replace("-", string.Empty);
-        var valid = await userManager.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultPhoneProvider, code);
+        var valid = await userManager.VerifyTwoFactorTokenAsync(user, HuiaTokenProviders.Phone, code);
 
         if (!valid)
         {

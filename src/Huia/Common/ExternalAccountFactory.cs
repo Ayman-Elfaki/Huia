@@ -1,5 +1,4 @@
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 
 namespace Huia.Common;
 
@@ -7,11 +6,11 @@ namespace Huia.Common;
 /// Creates a new <see cref="HuiaUser"/> for a first-time external sign-in and links the external identity to
 /// it — the two steps <c>ExternalLoginModel</c>'s conditional auto-provisioning and
 /// <c>ExternalLoginConfirmationModel</c>'s own <c>OnPostAsync</c> both need, factored out so a bug in either
-/// (e.g. forgetting to check <see cref="UserManager{TUser}.AddLoginAsync"/>'s result) only has one place to
-/// happen. Deliberately stops at "account exists and the login is linked" — signing in, publishing events, and
-/// the deferred-email-confirmation branch differ enough between the two callers (only the confirmation page
-/// ever takes the latter, since auto-provisioning only runs when the provider already verified the email) that
-/// folding them in here wouldn't actually remove complexity, just relocate it.
+/// (e.g. forgetting to check <see cref="HuiaUserManager.AddLoginAsync(HuiaUser,HuiaExternalLoginInfo)"/>'s result)
+/// only has one place to happen. Deliberately stops at "account exists and the login is linked" — signing in,
+/// publishing events, and the deferred-email-confirmation branch differ enough between the two callers (only
+/// the confirmation page ever takes the latter, since auto-provisioning only runs when the provider already
+/// verified the email) that folding them in here wouldn't actually remove complexity, just relocate it.
 /// </summary>
 internal static class ExternalAccountFactory
 {
@@ -20,7 +19,7 @@ internal static class ExternalAccountFactory
     /// langword="null"/> with <paramref name="errors"/> populated if either step failed.
     /// </summary>
     public static async Task<(HuiaUser? User, IReadOnlyList<string> Errors)> CreateAsync(
-        UserManager<HuiaUser> userManager, ExternalLoginInfo info, string email, string firstName, string lastName,
+        HuiaUserManager userManager, HuiaExternalLoginInfo info, string email, string firstName, string lastName,
         bool emailConfirmed)
     {
         var user = new HuiaUser

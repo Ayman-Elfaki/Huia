@@ -1,6 +1,5 @@
 using System.Net;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.Tests.Integration.ExternalLogin;
@@ -41,7 +40,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         Assert.Equal(picture, user.Picture);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var logins = await userManager.GetLoginsAsync(user);
         Assert.Single(logins);
         Assert.Equal(ExternalLoginTestFactory.ProviderScheme, logins[0].LoginProvider);
@@ -77,7 +76,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         Assert.Equal(picture, user.Picture);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var logins = await userManager.GetLoginsAsync(user);
         Assert.Single(logins);
         Assert.Equal(ExternalLoginTestFactory.ProviderScheme, logins[0].LoginProvider);
@@ -190,7 +189,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
             StringComparison.OrdinalIgnoreCase);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var user = await userManager.FindByLoginAsync(ExternalLoginTestFactory.ProviderScheme, subject);
         Assert.NotNull(user);
     }
@@ -239,7 +238,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
             callbackResult.Headers.Location!.ToString(), StringComparison.OrdinalIgnoreCase);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var user = await userManager.FindByEmailAsync(email);
         Assert.NotNull(user);
         Assert.Empty(await userManager.GetLoginsAsync(user));
@@ -266,7 +265,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         Assert.Contains("Incorrect password", await wrongAttempt.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var user = await userManager.FindByEmailAsync(email) ?? throw new InvalidOperationException("User not found.");
         Assert.Empty(await userManager.GetLoginsAsync(user));
 
@@ -295,7 +294,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         Assert.Equal(HttpStatusCode.Found, linkResponse.StatusCode);
 
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var user = await userManager.FindByEmailAsync(email) ?? throw new InvalidOperationException("User not found.");
         var logins = await userManager.GetLoginsAsync(user);
         Assert.Single(logins);
@@ -315,7 +314,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
 
         using (var scope = factory.Services.CreateScope())
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var user = await userManager.FindByEmailAsync(email) ?? throw new InvalidOperationException("User not found.");
             // TwoFactorEnabled alone isn't enough — SignInManager only treats 2FA as actually required once
             // GetValidTwoFactorProvidersAsync is non-empty too, which needs a real authenticator key set.
@@ -338,7 +337,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
         // Linking already happened — proving the password was enough — even though the session itself still
         // needs the second factor to complete.
         using var scope2 = factory.Services.CreateScope();
-        var userManager2 = scope2.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager2 = scope2.ServiceProvider.GetRequiredService<HuiaUserManager>();
         var user2 = await userManager2.FindByEmailAsync(email) ?? throw new InvalidOperationException("User not found.");
         Assert.Single(await userManager2.GetLoginsAsync(user2));
     }
@@ -363,7 +362,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
 
         using (var scope = factory.Services.CreateScope())
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var user = await userManager.FindByLoginAsync(ExternalLoginTestFactory.ProviderScheme, subject)
                 ?? throw new InvalidOperationException("User not found.");
             await userManager.SetTwoFactorEnabledAsync(user, true);
@@ -400,7 +399,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
 
         using (var scope = factory.Services.CreateScope())
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var user = await userManager.FindByLoginAsync(ExternalLoginTestFactory.ProviderScheme, subject)
                 ?? throw new InvalidOperationException("User not found.");
             await userManager.AddPasswordAsync(user, Password);
@@ -488,7 +487,7 @@ public class ExternalLoginTests(ExternalLoginTestFactory factory) : IClassFixtur
     private async Task<HuiaUser?> FindUserAsync(string email)
     {
         using var scope = factory.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
         return await userManager.FindByEmailAsync(email);
     }
 }

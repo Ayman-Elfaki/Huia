@@ -3,10 +3,10 @@
 Huia can let a user sign in through a third-party identity provider (Google, Microsoft, GitHub, or any
 OAuth2/OIDC provider) instead of — or alongside — a Huia password. This is built on OpenIddict's own client
 stack (`OpenIddict.Client`/`OpenIddict.Client.WebIntegration`, the same package family Huia's own
-authorization server is built on) rather than ASP.NET Core Identity's generic remote-authentication handlers —
-but the resulting sign-in still flows through `SignInManager<HuiaUser>` exactly the way it always has, so
-everything downstream of "a provider redirected back" (account linking, auto-provisioning, 2FA/lockout
-routing, email-collision handling) is unaffected by which mechanism completed the handshake.
+authorization server is built on) rather than a generic remote-authentication handler — but the resulting
+sign-in still flows through `HuiaSignInManager` exactly the way it always has, so everything downstream of "a
+provider redirected back" (account linking, auto-provisioning, 2FA/lockout routing, email-collision handling)
+is unaffected by which mechanism completed the handshake.
 
 ## Registering a provider
 
@@ -75,15 +75,15 @@ app.MapHuiaExternalLoginCallbackEndpoints();
 ```
 
 This is what every provider's `RedirectUri`/`SetRedirectUri(...)` must point at (`callback/login/{provider}`).
-It reads OpenIddict's own authentication result and signs it into `IdentityConstants.ExternalScheme` — the
-same cookie a remote-authentication handler used to populate directly — so `SignInManager<HuiaUser>`'s
+It reads OpenIddict's own authentication result and signs it into `HuiaAuthenticationDefaults.ExternalScheme`
+— the same cookie a remote-authentication handler used to populate directly — so `HuiaSignInManager`'s
 external-login methods keep working exactly as before. There's nothing else to wire up: no `SignInScheme` to
 set, no `CallbackPath` to reserve.
 
 ## Sign-in
 
 Once at least one provider is registered, `/identity/account/login` automatically lists a button per
-provider — `LoginModel` reads them via `SignInManager<HuiaUser>.GetExternalAuthenticationSchemesAsync()`
+provider — `LoginModel` reads them via `HuiaSignInManager.GetExternalAuthenticationSchemesAsync()`
 (each registration's provider name is automatically forwarded as its own authentication scheme), so there's
 nothing extra to wire up on the UI side.
 
@@ -169,6 +169,6 @@ else's account.
 
 ## Custom stores
 
-`IHuiaStore<TApplication, TAuthorization, TScope, TToken>` composes `IUserLoginStore<HuiaUser>` — a fully
+`IHuiaStore<TApplication, TAuthorization, TScope, TToken>` composes `IHuiaUserLoginStore` — a fully
 custom (non-EF-Core) store needs to implement it to support external providers. See
 [custom-store.md](custom-store.md).

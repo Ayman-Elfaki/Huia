@@ -4,7 +4,6 @@ using Huia.Common;
 using Huia.Identity;
 using Huia.Localization;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Localization;
@@ -16,7 +15,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// <summary>Completes sign-in for a user whose password check succeeded but who has 2FA enabled.</summary>
 [AllowAnonymous]
 public class LoginWith2faModel(
-    SignInManager<HuiaUser> signInManager,
+    HuiaSignInManager signInManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
     IStringLocalizer<HuiaResources> localizer,

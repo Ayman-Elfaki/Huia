@@ -26,4 +26,8 @@
         <InternalsVisibleTo Include="Huia.Tests.Integration"/>
         <InternalsVisibleTo Include="Huia.EntityFrameworkCore"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Huia.Identity\Huia.Identity.csproj"/>
+    </ItemGroup>
 </Project>

@@ -225,7 +225,7 @@ public class IdentityUiSecurityTests(TodoApiFactory factory) : IClassFixture<Tod
         using var response = await IdentityUiTestHelpers.RegisterAsync(client, NewEmail(), Password);
 
         var identityCookie = response.Headers.TryGetValues("Set-Cookie", out var cookies)
-            ? cookies.FirstOrDefault(c => c.Contains("Identity.Application", StringComparison.Ordinal))
+            ? cookies.FirstOrDefault(c => c.Contains("Huia.Application", StringComparison.Ordinal))
             : null;
 
         Assert.NotNull(identityCookie);

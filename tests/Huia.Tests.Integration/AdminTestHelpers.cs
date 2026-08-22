@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Huia.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -121,8 +120,8 @@ internal static class AdminTestHelpers
         string subject;
         using (var scope = factory.Services.CreateScope())
         {
-            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<HuiaRole>>();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<HuiaRoleManager>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var user = await userManager.FindByEmailAsync(email)
                        ?? throw new InvalidOperationException("Registered user not found.");
             subject = user.Id;

@@ -2,7 +2,7 @@ using Huia.Common;
 using Huia.Identity;
 using Huia.TodoApi.Data;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
+using Huia.Emails;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

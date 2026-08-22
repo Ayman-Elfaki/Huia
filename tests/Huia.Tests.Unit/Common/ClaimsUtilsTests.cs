@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Huia.Common;
+using Huia.Identity;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -57,7 +58,7 @@ public class ClaimsUtilsTests
         var identity = CreateIdentity(OpenIddictConstants.Scopes.Profile, OpenIddictConstants.Scopes.Email,
             OpenIddictConstants.Scopes.Roles);
 
-        var destinations = ClaimsUtils.GetDestinations(new Claim("AspNet.Identity.SecurityStamp", "stamp"), identity);
+        var destinations = ClaimsUtils.GetDestinations(new Claim(HuiaSignInManager.SecurityStampClaimType, "stamp"), identity);
 
         Assert.Empty(destinations);
     }

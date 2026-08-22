@@ -51,12 +51,21 @@ with the same literal `ErrorMessage` string convention every other entry in `Hui
 
 ## Identity's validation messages
 
-ASP.NET Core Identity's own validation messages (`IdentityErrorDescriber` — e.g. "Passwords must have at
-least one digit") are localized too, via `HuiaIdentityErrorDescriber`, which `AddHuia(...)` registers by
-default (resolving `IdentityError{MethodName}` keys, e.g. `IdentityErrorPasswordTooShort`, from the same
-`HuiaResources.resx`/`HuiaResources.ar.resx`). Register your own `IdentityErrorDescriber` after `AddHuia` if
-you want different wording instead:
+`HuiaUserManager`/`HuiaRoleManager`'s own validation messages (e.g. "Passwords must have at least one
+digit") come from `HuiaErrorDescriber` (in the dependency-free `Huia.Identity` package), whose virtual
+methods return hardcoded English defaults — the same split ASP.NET Core Identity itself uses between
+`IdentityErrorDescriber` and its localization layer. The main `Huia` package registers
+`Huia.Emails.LocalizedHuiaErrorDescriber`, a `HuiaErrorDescriber` subclass, as the default implementation
+via `AddHuia(...)`; it resolves `IdentityError{MethodName}` keys (e.g. `IdentityErrorPasswordTooShort`)
+from the same `HuiaResources.resx`/`HuiaResources.ar.resx` used elsewhere, so English/Arabic messages work
+out of the box with no extra setup.
+
+Register your own `HuiaErrorDescriber` after `AddHuia` if you want different wording:
 
 ```csharp
-builder.Services.AddScoped<IdentityErrorDescriber, MyLocalizedErrorDescriber>();
+builder.Services.AddSingleton<HuiaErrorDescriber, MyLocalizedErrorDescriber>();
 ```
+
+Subclass `LocalizedHuiaErrorDescriber` if you want to keep using `HuiaResources`-style localization (just
+resolving different/additional resource keys), or subclass `HuiaErrorDescriber` directly if you want to
+skip localization entirely and return your own hardcoded strings.

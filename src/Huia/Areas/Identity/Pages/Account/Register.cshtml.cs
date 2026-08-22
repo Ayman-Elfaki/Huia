@@ -1,12 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Huia.Applications;
+using Huia.Emails;
 using Huia.Eventing;
 using Huia.Common;
 using Huia.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
@@ -21,8 +21,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class RegisterModel(
-    UserManager<HuiaUser> userManager,
-    SignInManager<HuiaUser> signInManager,
+    HuiaUserManager userManager,
+    HuiaSignInManager signInManager,
     IEmailSender<HuiaUser> emailSender,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
@@ -54,7 +54,7 @@ public class RegisterModel(
         // authentication scheme is the OpenIddict bearer validator (see ServiceCollectionExtensions), so
         // this authenticates against the Identity cookie scheme explicitly, the same way
         // AuthorizationEndpoints checks for an existing session.
-        var signedIn = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        var signedIn = await HttpContext.AuthenticateAsync(HuiaAuthenticationDefaults.ApplicationScheme);
 
         return signedIn.Succeeded
             ? Redirect(await ReturnUrlValidator.ResolveAsync(Request, ReturnUrl, applicationManager))

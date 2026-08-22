@@ -6,7 +6,6 @@ using Huia.Identity;
 using Huia.Passwordless;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
@@ -24,8 +23,8 @@ namespace Huia.Areas.Identity.Pages.Account;
 /// </summary>
 [AllowAnonymous]
 public class PhoneLoginConfirmationModel(
-    UserManager<HuiaUser> userManager,
-    SignInManager<HuiaUser> signInManager,
+    HuiaUserManager userManager,
+    HuiaSignInManager signInManager,
     IEventPublisher events,
     IOpenIddictApplicationManager applicationManager,
     ILogger<PhoneLoginConfirmationModel> logger) : PageModel

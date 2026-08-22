@@ -3,18 +3,18 @@ using Huia.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 
-namespace Huia.Tests.Unit.Identity;
+namespace Huia.Tests.Unit.Emails;
 
-public class IdentityErrorDescriberTests
+public class LocalizedHuiaErrorDescriberTests
 {
-    private static IdentityErrorDescriber CreateDescriber()
+    private static LocalizedHuiaErrorDescriber CreateDescriber()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddLocalization();
         var provider = services.BuildServiceProvider();
 
-        return new IdentityErrorDescriber(provider.GetRequiredService<IStringLocalizer<HuiaResources>>());
+        return new LocalizedHuiaErrorDescriber(provider.GetRequiredService<IStringLocalizer<HuiaResources>>());
     }
 
     [Fact]

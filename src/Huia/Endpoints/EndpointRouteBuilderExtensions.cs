@@ -1,8 +1,8 @@
 using Huia.Endpoints.Admin;
 using Huia.Endpoints.Connect;
 using Huia.Endpoints.Manage;
+using Huia.Identity;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Validation.AspNetCore;
 
@@ -56,7 +56,7 @@ public static class EndpointRouteBuilderExtensions
         public RouteGroupBuilder MapHuiaManageEndpoints()
         {
             var group = endpoints.MapGroup("/api/identity/manage").RequireAuthorization(policy => policy
-                .AddAuthenticationSchemes(IdentityConstants.ApplicationScheme,
+                .AddAuthenticationSchemes(HuiaAuthenticationDefaults.ApplicationScheme,
                     OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
                 .RequireAuthenticatedUser());
 

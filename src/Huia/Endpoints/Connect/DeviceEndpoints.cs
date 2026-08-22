@@ -4,7 +4,6 @@ using Huia.Identity;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OpenIddict.Abstractions;
@@ -36,7 +35,7 @@ internal static class DeviceEndpoints
     {
         var group = endpoints.MapGroup("verify")
             .RequireAuthorization(policy => policy
-                .AddAuthenticationSchemes(IdentityConstants.ApplicationScheme)
+                .AddAuthenticationSchemes(HuiaAuthenticationDefaults.ApplicationScheme)
                 .RequireAuthenticatedUser());
 
         group.MapGet("", HandleGetAsync);
@@ -70,7 +69,7 @@ internal static class DeviceEndpoints
     }
 
     private static async Task<IResult> HandlePostAsync([FromForm] DeviceVerificationDecision decision,
-        HttpContext httpContext, UserManager<HuiaUser> userManager, IOpenIddictScopeManager scopeManager,
+        HttpContext httpContext, HuiaUserManager userManager, IOpenIddictScopeManager scopeManager,
         IOpenIddictApplicationManager applicationManager)
     {
         var result = await DeviceVerifier.AuthenticateAsync(httpContext).ConfigureAwait(false);

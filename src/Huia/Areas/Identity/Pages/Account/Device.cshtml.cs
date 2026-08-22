@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenIddict.Abstractions;
@@ -37,7 +36,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 [AllowAnonymous]
 [IgnoreAntiforgeryToken]
 public class DeviceModel(
-    UserManager<HuiaUser> userManager,
+    HuiaUserManager userManager,
     IOpenIddictApplicationManager applicationManager,
     IOpenIddictScopeManager scopeManager,
     IAntiforgery antiforgery) : PageModel
@@ -148,14 +147,14 @@ public class DeviceModel(
 
     private async Task<IActionResult?> RedirectToSignInIfNeededAsync()
     {
-        var signedIn = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme).ConfigureAwait(false);
+        var signedIn = await HttpContext.AuthenticateAsync(HuiaAuthenticationDefaults.ApplicationScheme).ConfigureAwait(false);
         if (!signedIn.Succeeded)
         {
             return RedirectToPage("./Login", new { returnUrl = Url.Page("./Device", new { user_code = UserCode }) });
         }
 
         // This page is [AllowAnonymous] (see class remarks), so — unlike DeviceEndpoints' route-level
-        // RequireAuthorization(...AddAuthenticationSchemes(IdentityConstants.ApplicationScheme)...), whose
+        // RequireAuthorization(...AddAuthenticationSchemes(HuiaAuthenticationDefaults.ApplicationScheme)...), whose
         // authorization middleware sets HttpContext.User to its result as a side effect — a plain manual
         // AuthenticateAsync call here doesn't touch HttpContext.User at all; it stays whatever the app's
         // *default* scheme (OpenIddict's bearer validator, never satisfied by a browser request with no

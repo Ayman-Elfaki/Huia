@@ -12,12 +12,10 @@ using Huia.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Abstractions;
-using IdentityErrorDescriber = Microsoft.AspNetCore.Identity.IdentityErrorDescriber;
 
 namespace Huia;
 
@@ -61,13 +59,13 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<HuiaEmailTemplate>();
         services.TryAddScoped<IEventPublisher, EventPublisher>();
 
-        // ASP.NET Core Identity (via AddIdentityCore below) registers Data Protection with its defaults if
-        // nothing else has configured it, which isolates key rings using IHostEnvironment.ContentRootPath as
-        // the discriminator unless overridden. That ties every signing key EFCoreSigningKeyStore encrypts
-        // (see Huia.EntityFrameworkCore) to the app's physical path — moving or renaming the project directory
-        // silently invalidates every previously-stored key, which HuiaKeyManager.RotateAsync surfaces as an
-        // unhandled CryptographicException at startup. Pinning a stable, path-independent application name
-        // avoids that entirely.
+        // Data Protection isolates key rings using IHostEnvironment.ContentRootPath as the discriminator
+        // unless overridden. That ties every signing key EFCoreSigningKeyStore encrypts (see
+        // Huia.EntityFrameworkCore) — and every DataProtectorHuiaTokenProvider token (password reset, email
+        // confirmation, change-phone-number) — to the app's physical path — moving or renaming the project
+        // directory silently invalidates every previously-stored key/outstanding token, which
+        // HuiaKeyManager.RotateAsync surfaces as an unhandled CryptographicException at startup. Pinning a
+        // stable, path-independent application name avoids that entirely.
         services.AddDataProtection().SetApplicationName("Huia");
 
         // Huia pages (Areas/Identity/Pages) and error page are Razor Pages; consumers still need to
@@ -112,15 +110,27 @@ public static class ServiceCollectionExtensions
         // out lowercase instead, matching the connect/manage endpoints' own hardcoded lowercase paths.
         services.Configure<RouteOptions>(route => route.LowercaseUrls = true);
 
-        services.AddIdentityCore<HuiaUser>(identity =>
-            {
-                identity.SignIn.RequireConfirmedAccount = false;
-                options.Identity?.Invoke(identity);
-            })
-            .AddRoles<HuiaRole>()
-            .AddSignInManager()
-            .AddDefaultTokenProviders()
-            .AddErrorDescriber<IdentityErrorDescriber>();
+        services.Configure<HuiaIdentityOptions>(identity =>
+        {
+            identity.SignIn.RequireConfirmedAccount = false;
+            options.Identity?.Invoke(identity);
+        });
+
+        services.AddScoped<HuiaUserManager>();
+        services.AddScoped<HuiaSignInManager>();
+        services.AddScoped<HuiaRoleManager>();
+        services.AddScoped<HuiaMembershipAdmin>();
+        services.TryAddSingleton<IHuiaPasswordHasher, Pbkdf2PasswordHasher>();
+        services.TryAddSingleton<HuiaErrorDescriber, LocalizedHuiaErrorDescriber>();
+
+        // DataProtectorHuiaTokenProvider/PhoneOtpHuiaTokenProvider depend only on singleton services, so they
+        // register as singletons too; TotpHuiaTokenProvider depends on the scoped IHuiaUserTokenStore
+        // (resolved per-request from whichever store WithEntityFrameworkStores<TContext>()/WithStore<...>()
+        // registered), so it has to be scoped. HuiaUserManager injects IEnumerable<IHuiaTokenProvider> —
+        // DI resolves a mixed-lifetime collection like this without issue.
+        services.AddSingleton<IHuiaTokenProvider, DataProtectorHuiaTokenProvider>();
+        services.AddSingleton<IHuiaTokenProvider, PhoneOtpHuiaTokenProvider>();
+        services.AddScoped<IHuiaTokenProvider, TotpHuiaTokenProvider>();
 
         if (options.Authentication.PasswordlessFlowEnabled)
         {
@@ -157,11 +167,14 @@ public static class ServiceCollectionExtensions
             }
         }
 
-        // Authentication (default schemes, Identity cookies, the phone-verification cookie) is already
+        // Authentication (default schemes, Huia's cookies, the phone-verification cookie) is already
         // registered by HuiaOptions's constructor above — before this method runs — so
         // options.Authentication.UseExternalAuthenticationFlow(...) is available inside the configure(options)
-        // callback itself.
-        services.ConfigureApplicationCookie(cookie =>
+        // callback itself. Configuring the application cookie here (rather than in that constructor) is what
+        // lets LoginPath below reflect whatever huia.SetLoginPath(...) set inside configure(options), which
+        // hasn't run yet when the constructor executes.
+        services.Configure<Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationOptions>(
+            HuiaAuthenticationDefaults.ApplicationScheme, cookie =>
         {
             cookie.ExpireTimeSpan = TimeSpan.FromMinutes(10);
             cookie.SlidingExpiration = false;

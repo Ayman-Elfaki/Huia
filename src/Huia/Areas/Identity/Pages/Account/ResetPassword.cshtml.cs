@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Huia.Identity;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
@@ -11,7 +10,7 @@ namespace Huia.Areas.Identity.Pages.Account;
 
 /// <summary>Resets a user's password from the token sent by the forgot-password flow.</summary>
 [AllowAnonymous]
-public class ResetPasswordModel(UserManager<HuiaUser> userManager) : PageModel
+public class ResetPasswordModel(HuiaUserManager userManager) : PageModel
 {
     /// <summary>The submitted form data.</summary>
     [BindProperty]
