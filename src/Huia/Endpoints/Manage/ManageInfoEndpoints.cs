@@ -195,9 +195,10 @@ internal static class ManageInfoEndpoints
     /// <summary>
     /// Verifies the OTP <see cref="RequestPhoneChangeAsync"/> sent and, on success, applies the phone number
     /// change - <see cref="UserManager{TUser}.ChangePhoneNumberAsync"/> sets <c>PhoneNumber</c>,
-    /// <c>PhoneNumberConfirmed = true</c>, and persists in one call. Deliberately does not touch
-    /// <see cref="HuiaUser.PasswordlessLoginEnabled"/> - confirming a phone number here must never implicitly
-    /// grant a new sign-in path (see that property's own doc comment).
+    /// <c>PhoneNumberConfirmed = true</c>, and persists in one call. This never turns a
+    /// <see cref="Huia.Identity.StandardUser"/> into a phone-authenticated account - confirming a phone number
+    /// here must never implicitly grant a new sign-in path; only <see cref="Huia.Identity.PhoneUser"/>'s own
+    /// type carries that meaning.
     /// </summary>
     private static async Task<IResult> VerifyPhoneChangeAsync(VerifyPhoneChangeRequest request,
         ClaimsPrincipal principal, UserManager<HuiaUser> userManager, HuiaOptions options,
@@ -260,15 +261,13 @@ internal static class ManageInfoEndpoints
             return Results.Unauthorized();
         }
 
-        if (user.PasswordlessLoginEnabled)
+        if (user is PhoneUser)
         {
-            var hasPassword = await userManager.HasPasswordAsync(user).ConfigureAwait(false);
-            var logins = await userManager.GetLoginsAsync(user).ConfigureAwait(false);
-            if (!hasPassword && logins.Count == 0)
-            {
-                return Results.Problem("Cannot remove your only sign-in method.",
-                    statusCode: StatusCodes.Status400BadRequest);
-            }
+            // A PhoneUser never has a password or an external login by construction (see that type's own doc
+            // comment) - phone-based sign-in is unconditionally its only credential, so removing it would
+            // always strand the account.
+            return Results.Problem("Cannot remove your only sign-in method.",
+                statusCode: StatusCodes.Status400BadRequest);
         }
 
         if (user.PhoneNumber is not null)

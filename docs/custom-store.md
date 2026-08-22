@@ -38,6 +38,16 @@ public class MyStore : IHuiaStore<MyApplication, MyAuthorization, MyScope, MyTok
 > [passwordless.md](passwordless.md). An existing custom `IHuiaStore` implementation needs this member added
 > even if you don't use passwordless sign-in, for the same reason as above.
 
+> **Breaking change note**: `HuiaUser` is now abstract — every account is either a `PhoneUser` (phone-only,
+> passwordless) or a `StandardUser` (email/password and/or external-login); `.WithEntityFrameworkStores<TContext>()`
+> maps them to separate tables via EF Core's table-per-concrete-type (TPC) strategy. A custom, non-EF `IHuiaStore`
+> implementation still programs against `HuiaUser` (`IUserStore<HuiaUser>` etc.) as the common reference type, but
+> must decide for itself, from whatever storage it uses, which concrete leaf type to materialize for a given
+> account — e.g. `CreateAsync(HuiaUser user, ...)` receives whichever concrete instance the caller constructed
+> (`new PhoneUser {...}` or `new StandardUser {...}`), and `FindByIdAsync`/`FindByNormalizedPhoneNumberAsync`/etc.
+> must return an instance of the correct leaf type for the account being looked up, not a bare `HuiaUser`
+> (which can no longer be instantiated directly).
+
 `WithStore<TStore, TApplication, TAuthorization, TScope, TToken>()` wires `MyStore` in as the Identity
 user/role store, the OpenIddict application/authorization/scope/token store, and (since `IHuiaStore`
 includes it) the `ISigningKeyStore` key management uses — and starts Quartz's hosted service (needed for

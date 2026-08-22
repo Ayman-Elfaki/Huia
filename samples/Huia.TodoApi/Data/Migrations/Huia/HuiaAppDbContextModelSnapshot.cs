@@ -125,9 +125,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
-                    b.Property<bool>("PasswordlessLoginEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("text");
 
@@ -150,16 +147,11 @@ namespace Huia.TodoApi.Data.Migrations.Huia
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
-
                     b.HasIndex("NormalizedPhoneNumber");
 
-                    b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
+                    b.ToTable((string)null);
 
-                    b.ToTable("HuiaUsers", "huia");
+                    b.UseTpcMappingStrategy();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -207,8 +199,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("HuiaUserClaims", "huia");
                 });
 
@@ -228,8 +218,6 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                         .HasColumnType("text");
 
                     b.HasKey("LoginProvider", "ProviderKey");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("HuiaUserLogins", "huia");
                 });
@@ -476,6 +464,34 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                     b.ToTable("HuiaTokens", "huia");
                 });
 
+            modelBuilder.Entity("Huia.Identity.PhoneUser", b =>
+                {
+                    b.HasBaseType("Huia.Identity.HuiaUser");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("PhoneUser_EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("PhoneUser_UserNameIndex");
+
+                    b.ToTable("HuiaPhoneUsers", "huia");
+                });
+
+            modelBuilder.Entity("Huia.Identity.StandardUser", b =>
+                {
+                    b.HasBaseType("Huia.Identity.HuiaUser");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("StandardUser_EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("StandardUser_UserNameIndex");
+
+                    b.ToTable("HuiaUsers", "huia");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Huia.Identity.HuiaRole", null)
@@ -485,44 +501,11 @@ namespace Huia.TodoApi.Data.Migrations.Huia
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
-                {
-                    b.HasOne("Huia.Identity.HuiaUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
-                {
-                    b.HasOne("Huia.Identity.HuiaUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.HasOne("Huia.Identity.HuiaRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Huia.Identity.HuiaUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
-                {
-                    b.HasOne("Huia.Identity.HuiaUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -66,6 +66,13 @@ public static class ServiceCollectionExtensions
             .AddEntityFrameworkStores<TContext>()
             .AddDefaultTokenProviders();
 
+        // Overrides the plain UserStore<HuiaUser,HuiaRole,TContext> AddEntityFrameworkStores<TContext>() just
+        // registered for IUserStore<HuiaUser> (last registration wins) with EfCoreHuiaUserStore<TContext>,
+        // whose DeleteAsync replaces the ON DELETE CASCADE the TPC user hierarchy can't have — see
+        // ModelBuilderExtensions.UseHuiaTpcUserHierarchy. Every other IUserStore<HuiaUser>-family capability
+        // (password, claims, login, phone number, lockout, etc.) is inherited unchanged from UserStore.
+        services.AddScoped<IUserStore<HuiaUser>, EfCoreHuiaUserStore<TContext>>();
+
         // EntityFrameworkCoreSigningKeyStore needs a HuiaKeyManagementOptions (e.g. for RsaKeySizeInBits)
         // regardless of which key management mode is enabled; TryAddSingleton leaves an already-configured
         // instance from huia.KeysManagement.UseAutomaticKeyManagement(...)/UseManualKeyManagement(...)

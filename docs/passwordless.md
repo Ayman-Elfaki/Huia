@@ -70,14 +70,16 @@ the same number it's verifying alongside the code.
    like a wrong sign-in OTP does.
 3. **`DELETE /api/identity/manage/info/phone`** clears the number — no OTP needed, since removing data is
    lower-risk than adding/changing it (the same reasoning already applied to unlinking an external login). If
-   `PasswordlessLoginEnabled` is set and the account has no password and no external logins, this is rejected
-   instead: clearing the account's only credential would strand it.
+   the account is a `PhoneUser`, this is rejected instead: phone-based sign-in is unconditionally its only
+   credential (a `PhoneUser` never has a password or an external login by construction), so clearing it would
+   always strand the account.
 
-**This flow deliberately never touches `PasswordlessLoginEnabled`.** Recording or confirming a phone number
-through self-service account management must not silently grant a new sign-in path to an account that didn't
-opt into passwordless sign-in through the dedicated registration flow — the same account-linking boundary
-described under [Hybrid-auth security considerations](#hybrid-auth-security-considerations) above applies
-here too.
+**This flow can never turn a `StandardUser` into a phone-authenticated account.** Recording or confirming a
+phone number through self-service account management must not silently grant a new sign-in path to an account
+that didn't opt into passwordless sign-in through the dedicated registration flow — the same account-linking
+boundary described under [Hybrid-auth security considerations](#hybrid-auth-security-considerations) above
+applies here too. Only `PhoneUser`'s own type carries that meaning; a `StandardUser`'s phone number is purely
+account-management data.
 
 ## Configuring the flow
 
@@ -192,10 +194,11 @@ either way. With only one of the two enabled, its form renders directly with no 
 Running both email+password and passwordless phone sign-in on the same app introduces a few decisions worth
 being explicit about:
 
-1. **`HuiaUser.PasswordlessLoginEnabled` is the account-linking boundary.** A `PhoneNumber` present on an
-   account for any other reason (a future SMS-2FA feature, an admin-entered contact number) never implicitly
-   becomes a standalone sign-in path — only an account *created through* the passwordless flow (or later
-   explicitly opted in, not built in this version) is reachable via phone+OTP alone. This is deliberate:
+1. **Being a `PhoneUser` (rather than a `StandardUser`) is the account-linking boundary.** A `PhoneNumber`
+   present on a `StandardUser` for any other reason (a future SMS-2FA feature, an admin-entered contact
+   number) never implicitly becomes a standalone sign-in path — only a `PhoneUser`, created through the
+   passwordless flow (accounts don't change type after creation in this version), is reachable via phone+OTP
+   alone. This is deliberate:
    password knowledge and OTP-over-SMS possession are not equivalent-strength proofs. SMS is interceptable via
    SIM-swap, SS7 exploits, or a compromised carrier account — none of which require compromising the account
    holder's actual credentials. Treating "has this phone number on file" as sufficient proof to sign into an
@@ -205,8 +208,8 @@ being explicit about:
    ownership genuinely *is* an equivalent-strength proof, which is why that auto-link is safe and this one
    isn't.
 2. **A phone-number collision creates a second, distinct account, never a silent merge.** If a submitted
-   number matches an existing account that isn't `PasswordlessLoginEnabled`, `PhoneLoginModel` creates a new
-   `HuiaUser` row for the passwordless identity — the same phone number then exists on two separate rows.
+   number matches an existing account that isn't a `PhoneUser`, `PhoneLoginModel` creates a new `PhoneUser`
+   row for the passwordless identity — the same phone number then exists on two separate rows.
    The alternative (silently reusing the existing account) would grant OTP-only access to whatever that
    account is actually protected by; the other alternative (an explicit "an account already exists" error)
    would leak account existence to anyone who submits the phone-entry form, with no proof of ownership

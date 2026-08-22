@@ -79,7 +79,7 @@ public class RegisterModel(
             return Page();
         }
 
-        var user = new HuiaUser
+        var user = new StandardUser
             { UserName = Input.Email, Email = Input.Email, FirstName = Input.FirstName, LastName = Input.LastName };
         var result = await userManager.CreateAsync(user, Input.Password);
 

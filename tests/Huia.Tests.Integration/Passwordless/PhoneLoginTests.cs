@@ -42,7 +42,7 @@ public class PhoneLoginTests(PhoneLoginTestFactory factory) : IClassFixture<Phon
 
         var user = await FindUserByPhoneAsync(phoneNumber);
         Assert.NotNull(user);
-        Assert.True(user.PasswordlessLoginEnabled);
+        Assert.IsType<PhoneUser>(user);
         Assert.True(user.PhoneNumberConfirmed);
         Assert.Equal("Test", user.FirstName);
         Assert.Equal("User", user.LastName);

@@ -112,7 +112,7 @@ internal static class UsersEndpoints
             });
         }
 
-        var user = new HuiaUser
+        var user = new StandardUser
         {
             UserName = request.Email,
             Email = request.Email,
@@ -132,8 +132,8 @@ internal static class UsersEndpoints
 
     /// <summary>
     /// Creates a phone-only account, the admin-initiated equivalent of what <c>PhoneLoginModel</c> creates on
-    /// a brand-new number's first OTP request — same shape (<see cref="HuiaUser.PasswordlessLoginEnabled"/>
-    /// set, no password), except <see cref="IdentityUser{TKey}.PhoneNumberConfirmed"/> is set immediately: the
+    /// a brand-new number's first OTP request — same shape (a <see cref="Huia.Identity.PhoneUser"/>, no
+    /// password), except <see cref="IdentityUser{TKey}.PhoneNumberConfirmed"/> is set immediately: the
     /// admin is vouching for the number directly (typing it in), the same trust an admin already gets for
     /// email via <see cref="CreateUserRequest.EmailConfirmed"/>, rather than proving it via OTP.
     /// </summary>
@@ -149,13 +149,12 @@ internal static class UsersEndpoints
             });
         }
 
-        var user = new HuiaUser
+        var user = new PhoneUser
         {
             UserName = normalized,
             PhoneNumber = normalized,
             NormalizedPhoneNumber = normalized,
             PhoneNumberConfirmed = true,
-            PasswordlessLoginEnabled = true,
             FirstName = request.FirstName,
             LastName = request.LastName,
         };
@@ -187,9 +186,11 @@ internal static class UsersEndpoints
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
 
-        // Blank/absent for a phone-only user reaching this endpoint through the same shared edit form -
-        // leave Email/UserName alone rather than nulling them out and breaking that account's sign-in.
-        if (!string.IsNullOrWhiteSpace(request.Email) &&
+        // A PhoneUser has no email identifier to set - UserName is its normalized phone number, not an email,
+        // and giving it one here would desync UserName from NormalizedPhoneNumber without actually changing
+        // how it signs in. Blank/absent Email is also the expected shape for that account reaching this
+        // endpoint through the same shared edit form, so leave Email/UserName alone in both cases.
+        if (user is StandardUser && !string.IsNullOrWhiteSpace(request.Email) &&
             !string.Equals(request.Email, user.Email, StringComparison.OrdinalIgnoreCase))
         {
             user.Email = request.Email;
@@ -283,7 +284,7 @@ internal static class UsersEndpoints
             authenticationMethods.Add("email");
         }
 
-        if (user.PasswordlessLoginEnabled)
+        if (user is PhoneUser)
         {
             authenticationMethods.Add("phone");
         }

@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Huia.IdentityServer.Data.Migrations.Huia
+namespace Huia.TodoApi.Data.Migrations.Huia
 {
     /// <inheritdoc />
     public partial class Initial : Migration
@@ -12,8 +12,12 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "huia");
+
             migrationBuilder.CreateTable(
                 name: "HuiaApplications",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
@@ -39,7 +43,38 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                 });
 
             migrationBuilder.CreateTable(
+                name: "HuiaPhoneUsers",
+                schema: "huia",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    FirstName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    LastName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Picture = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    NormalizedPhoneNumber = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "text", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HuiaPhoneUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "HuiaRoles",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
@@ -54,6 +89,7 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
 
             migrationBuilder.CreateTable(
                 name: "HuiaScopes",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
@@ -73,6 +109,7 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
 
             migrationBuilder.CreateTable(
                 name: "HuiaSigningKeys",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
@@ -88,7 +125,39 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                 });
 
             migrationBuilder.CreateTable(
+                name: "HuiaUserClaims",
+                schema: "huia",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HuiaUserClaims", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "HuiaUserLogins",
+                schema: "huia",
+                columns: table => new
+                {
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    ProviderKey = table.Column<string>(type: "text", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
+                    UserId = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HuiaUserLogins", x => new { x.LoginProvider, x.ProviderKey });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "HuiaUsers",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
@@ -96,7 +165,6 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                     LastName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Picture = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
                     NormalizedPhoneNumber = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    PasswordlessLoginEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -118,7 +186,23 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                 });
 
             migrationBuilder.CreateTable(
+                name: "HuiaUserTokens",
+                schema: "huia",
+                columns: table => new
+                {
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HuiaUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "HuiaAuthorizations",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
@@ -137,12 +221,14 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                     table.ForeignKey(
                         name: "FK_HuiaAuthorizations_HuiaApplications_ApplicationId",
                         column: x => x.ApplicationId,
+                        principalSchema: "huia",
                         principalTable: "HuiaApplications",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "HuiaRoleClaims",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -157,54 +243,15 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                     table.ForeignKey(
                         name: "FK_HuiaRoleClaims_HuiaRoles_RoleId",
                         column: x => x.RoleId,
+                        principalSchema: "huia",
                         principalTable: "HuiaRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "HuiaUserClaims",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_HuiaUserClaims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_HuiaUserClaims_HuiaUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "HuiaUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "HuiaUserLogins",
-                columns: table => new
-                {
-                    LoginProvider = table.Column<string>(type: "text", nullable: false),
-                    ProviderKey = table.Column<string>(type: "text", nullable: false),
-                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
-                    UserId = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_HuiaUserLogins", x => new { x.LoginProvider, x.ProviderKey });
-                    table.ForeignKey(
-                        name: "FK_HuiaUserLogins_HuiaUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "HuiaUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "HuiaUserRoles",
+                schema: "huia",
                 columns: table => new
                 {
                     UserId = table.Column<string>(type: "text", nullable: false),
@@ -216,39 +263,15 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                     table.ForeignKey(
                         name: "FK_HuiaUserRoles_HuiaRoles_RoleId",
                         column: x => x.RoleId,
+                        principalSchema: "huia",
                         principalTable: "HuiaRoles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_HuiaUserRoles_HuiaUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "HuiaUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "HuiaUserTokens",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    LoginProvider = table.Column<string>(type: "text", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Value = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_HuiaUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
-                    table.ForeignKey(
-                        name: "FK_HuiaUserTokens_HuiaUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "HuiaUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
                 name: "HuiaTokens",
+                schema: "huia",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
@@ -271,91 +294,115 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
                     table.ForeignKey(
                         name: "FK_HuiaTokens_HuiaApplications_ApplicationId",
                         column: x => x.ApplicationId,
+                        principalSchema: "huia",
                         principalTable: "HuiaApplications",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_HuiaTokens_HuiaAuthorizations_AuthorizationId",
                         column: x => x.AuthorizationId,
+                        principalSchema: "huia",
                         principalTable: "HuiaAuthorizations",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
                 name: "IX_HuiaApplications_ClientId",
+                schema: "huia",
                 table: "HuiaApplications",
                 column: "ClientId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_HuiaAuthorizations_ApplicationId_Status_Subject_Type",
+                schema: "huia",
                 table: "HuiaAuthorizations",
                 columns: new[] { "ApplicationId", "Status", "Subject", "Type" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_HuiaPhoneUsers_NormalizedPhoneNumber",
+                schema: "huia",
+                table: "HuiaPhoneUsers",
+                column: "NormalizedPhoneNumber");
+
+            migrationBuilder.CreateIndex(
+                name: "PhoneUser_EmailIndex",
+                schema: "huia",
+                table: "HuiaPhoneUsers",
+                column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "PhoneUser_UserNameIndex",
+                schema: "huia",
+                table: "HuiaPhoneUsers",
+                column: "NormalizedUserName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_HuiaRoleClaims_RoleId",
+                schema: "huia",
                 table: "HuiaRoleClaims",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "RoleNameIndex",
+                schema: "huia",
                 table: "HuiaRoles",
                 column: "NormalizedName",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_HuiaScopes_Name",
+                schema: "huia",
                 table: "HuiaScopes",
                 column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_HuiaSigningKeys_Usage_ExpiresAt",
+                schema: "huia",
                 table: "HuiaSigningKeys",
                 columns: new[] { "Usage", "ExpiresAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_HuiaTokens_ApplicationId_Status_Subject_Type",
+                schema: "huia",
                 table: "HuiaTokens",
                 columns: new[] { "ApplicationId", "Status", "Subject", "Type" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_HuiaTokens_AuthorizationId",
+                schema: "huia",
                 table: "HuiaTokens",
                 column: "AuthorizationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_HuiaTokens_ReferenceId",
+                schema: "huia",
                 table: "HuiaTokens",
                 column: "ReferenceId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_HuiaUserClaims_UserId",
-                table: "HuiaUserClaims",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_HuiaUserLogins_UserId",
-                table: "HuiaUserLogins",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_HuiaUserRoles_RoleId",
+                schema: "huia",
                 table: "HuiaUserRoles",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
-                name: "EmailIndex",
-                table: "HuiaUsers",
-                column: "NormalizedEmail");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_HuiaUsers_NormalizedPhoneNumber",
+                schema: "huia",
                 table: "HuiaUsers",
                 column: "NormalizedPhoneNumber");
 
             migrationBuilder.CreateIndex(
-                name: "UserNameIndex",
+                name: "StandardUser_EmailIndex",
+                schema: "huia",
+                table: "HuiaUsers",
+                column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "StandardUser_UserNameIndex",
+                schema: "huia",
                 table: "HuiaUsers",
                 column: "NormalizedUserName",
                 unique: true);
@@ -365,40 +412,56 @@ namespace Huia.IdentityServer.Data.Migrations.Huia
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "HuiaRoleClaims");
+                name: "HuiaPhoneUsers",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaScopes");
+                name: "HuiaRoleClaims",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaSigningKeys");
+                name: "HuiaScopes",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaTokens");
+                name: "HuiaSigningKeys",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaUserClaims");
+                name: "HuiaTokens",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaUserLogins");
+                name: "HuiaUserClaims",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaUserRoles");
+                name: "HuiaUserLogins",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaUserTokens");
+                name: "HuiaUserRoles",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaAuthorizations");
+                name: "HuiaUsers",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaRoles");
+                name: "HuiaUserTokens",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaUsers");
+                name: "HuiaAuthorizations",
+                schema: "huia");
 
             migrationBuilder.DropTable(
-                name: "HuiaApplications");
+                name: "HuiaRoles",
+                schema: "huia");
+
+            migrationBuilder.DropTable(
+                name: "HuiaApplications",
+                schema: "huia");
         }
     }
 }

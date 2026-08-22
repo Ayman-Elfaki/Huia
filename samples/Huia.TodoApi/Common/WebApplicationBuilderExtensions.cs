@@ -41,7 +41,7 @@ public static class WebApplicationBuilderExtensions
         var admin = await userManager.FindByEmailAsync("admin@example.com");
         if (admin is null)
         {
-            admin = new HuiaUser
+            admin = new StandardUser
             {
                 UserName = "admin@example.com",
                 Email = "admin@example.com",

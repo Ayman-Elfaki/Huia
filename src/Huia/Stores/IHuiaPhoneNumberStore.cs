@@ -14,8 +14,9 @@ public interface IHuiaPhoneNumberStore
     /// Returns the user whose <see cref="HuiaUser.NormalizedPhoneNumber"/> equals
     /// <paramref name="normalizedPhoneNumber"/>, or <see langword="null"/> if none exists. More than one
     /// user may share a phone number (see docs/passwordless.md) — implementations return the first match;
-    /// callers must additionally check <see cref="HuiaUser.PasswordlessLoginEnabled"/> before treating the
-    /// result as a passwordless-reachable account.
+    /// callers must additionally check whether the result <see langword="is"/> <see cref="Huia.Identity.PhoneUser"/>
+    /// before treating it as a passwordless-reachable account (a <see cref="Huia.Identity.StandardUser"/> may
+    /// have a phone number recorded for account-management purposes without being one).
     /// </summary>
     Task<HuiaUser?> FindByNormalizedPhoneNumberAsync(string normalizedPhoneNumber, CancellationToken cancellationToken);
 }

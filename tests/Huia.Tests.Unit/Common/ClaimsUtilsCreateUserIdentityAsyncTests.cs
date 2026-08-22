@@ -19,7 +19,7 @@ public class ClaimsUtilsCreateUserIdentityAsyncTests
     [Fact]
     public async Task CreateUserIdentityAsync_IncludesCoreProfileClaims()
     {
-        var user = new HuiaUser
+        var user = new StandardUser
         {
             Id = "user-1",
             UserName = "alice",
@@ -45,7 +45,7 @@ public class ClaimsUtilsCreateUserIdentityAsyncTests
     [Fact]
     public async Task CreateUserIdentityAsync_NoRoles_AddsNoRoleClaim()
     {
-        var user = new HuiaUser { Id = "user-1", UserName = "alice" };
+        var user = new StandardUser { Id = "user-1", UserName = "alice" };
         var userManager = CreateUserManager(user, roles: []);
 
         var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes: []);
@@ -56,7 +56,7 @@ public class ClaimsUtilsCreateUserIdentityAsyncTests
     [Fact]
     public async Task CreateUserIdentityAsync_MultipleRoles_AddsOneClaimPerRole()
     {
-        var user = new HuiaUser { Id = "user-1", UserName = "alice" };
+        var user = new StandardUser { Id = "user-1", UserName = "alice" };
         var userManager = CreateUserManager(user, roles: ["admin", "editor"]);
 
         var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes: []);
@@ -67,7 +67,7 @@ public class ClaimsUtilsCreateUserIdentityAsyncTests
     [Fact]
     public async Task CreateUserIdentityAsync_SetsRequestedScopes()
     {
-        var user = new HuiaUser { Id = "user-1", UserName = "alice" };
+        var user = new StandardUser { Id = "user-1", UserName = "alice" };
         var userManager = CreateUserManager(user, roles: []);
 
         var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes: ["openid", "profile"]);
@@ -78,7 +78,7 @@ public class ClaimsUtilsCreateUserIdentityAsyncTests
     [Fact]
     public async Task CreateUserIdentityAsync_NameClaim_GoesToBothTokens_WhenProfileScopeGranted()
     {
-        var user = new HuiaUser { Id = "user-1", UserName = "alice" };
+        var user = new StandardUser { Id = "user-1", UserName = "alice" };
         var userManager = CreateUserManager(user, roles: []);
 
         var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes: [OpenIddictConstants.Scopes.Profile]);
@@ -91,7 +91,7 @@ public class ClaimsUtilsCreateUserIdentityAsyncTests
     [Fact]
     public async Task CreateUserIdentityAsync_NameClaim_AccessTokenOnly_WhenProfileScopeNotGranted()
     {
-        var user = new HuiaUser { Id = "user-1", UserName = "alice" };
+        var user = new StandardUser { Id = "user-1", UserName = "alice" };
         var userManager = CreateUserManager(user, roles: []);
 
         var identity = await ClaimsUtils.CreateUserIdentityAsync(userManager, user, scopes: []);

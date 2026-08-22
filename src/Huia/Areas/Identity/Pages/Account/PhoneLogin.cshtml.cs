@@ -115,7 +115,7 @@ public class PhoneLoginModel(
         }
 
         var user = await phoneNumberStore.FindByNormalizedPhoneNumberAsync(normalized, HttpContext.RequestAborted);
-        if ((user is null || !user.PasswordlessLoginEnabled) && !options.RegistrationEnabled)
+        if (user is not PhoneUser && !options.RegistrationEnabled)
         {
             // huia.DisableRegistration() forbids creating new accounts this way — whether this number was
             // never seen before or belongs to an existing non-passwordless account, the branch below would
@@ -124,18 +124,17 @@ public class PhoneLoginModel(
             return RedirectToPage("./Login", new { returnUrl });
         }
 
-        if (user is null || !user.PasswordlessLoginEnabled)
+        if (user is not PhoneUser)
         {
             // Either a brand-new number, or one that already belongs to a non-passwordless account (e.g.
             // recorded for a future SMS-2FA feature) — either way, a new, distinct account is created here
             // rather than reusing an existing one: OTP possession is a weaker proof than whatever originally
             // protects that other account. See docs/passwordless.md's hybrid-auth security considerations.
-            var newUser = new HuiaUser
+            var newUser = new PhoneUser
             {
                 UserName = normalized,
                 PhoneNumber = normalized,
                 NormalizedPhoneNumber = normalized,
-                PasswordlessLoginEnabled = true,
             };
 
             var createResult = await userManager.CreateAsync(newUser);

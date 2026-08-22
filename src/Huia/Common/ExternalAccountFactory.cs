@@ -23,7 +23,7 @@ internal static class ExternalAccountFactory
         UserManager<HuiaUser> userManager, ExternalLoginInfo info, string email, string firstName, string lastName,
         bool emailConfirmed)
     {
-        var user = new HuiaUser
+        var user = new StandardUser
         {
             UserName = email,
             Email = email,
