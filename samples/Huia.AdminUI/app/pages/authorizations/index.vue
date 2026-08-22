@@ -10,15 +10,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const subject = ref('')
-const clientId = ref('')
+const applicationId = ref('')
 const filters = computed(() => ({
   subject: subject.value || undefined,
-  clientId: clientId.value || undefined
+  applicationId: applicationId.value || undefined
 }))
 const { items, hasPrevious, hasNext, loading, error, refresh, goNext, goPrevious, reset }
   = useAdminList<AuthorizationResponse>('authorizations', filters)
 await refresh()
-watch([subject, clientId], reset)
+watch([subject, applicationId], reset)
 
 const revoking = ref<string | null>(null)
 
@@ -68,8 +68,8 @@ function formatDate(value: string | null) {
           <Search />
         </InputGroupAddon>
         <InputGroupInput
-          v-model="clientId"
-          placeholder="Filter by client id…"
+          v-model="applicationId"
+          placeholder="Filter by application id…"
         />
       </InputGroup>
     </div>
@@ -86,7 +86,7 @@ function formatDate(value: string | null) {
         <TableHeader>
           <TableRow>
             <TableHead>Subject</TableHead>
-            <TableHead>Client ID</TableHead>
+            <TableHead>Application ID</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Scopes</TableHead>
             <TableHead>Created</TableHead>
@@ -117,7 +117,7 @@ function formatDate(value: string | null) {
                   <RefreshCw />
                 </EmptyMedia>
                 <EmptyTitle>No authorizations found</EmptyTitle>
-                <EmptyDescription>Try a different subject or client id filter.</EmptyDescription>
+                <EmptyDescription>Try a different subject or application id filter.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           </TableEmpty>
@@ -128,7 +128,7 @@ function formatDate(value: string | null) {
             <TableCell class="font-medium">
               {{ authorization.subject }}
             </TableCell>
-            <TableCell>{{ authorization.applicationClientId }}</TableCell>
+            <TableCell>{{ authorization.applicationId || '—' }}</TableCell>
             <TableCell>
               <Badge :variant="authorization.status === 'valid' ? 'default' : 'secondary'">
                 {{ authorization.status || '—' }}

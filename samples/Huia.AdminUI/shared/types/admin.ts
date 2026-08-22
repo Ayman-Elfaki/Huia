@@ -61,28 +61,41 @@ export interface ScopeRequest {
   resources?: string[]
 }
 
+export interface AdminExternalLoginResponse {
+  loginProvider: string
+  providerDisplayName: string | null
+}
+
 export interface UserResponse {
   id: string
-  email: string
+  email: string | null
+  userName: string | null
   firstName: string | null
   lastName: string | null
+  picture: string | null
   emailConfirmed: boolean
   phoneNumber: string | null
   isLockedOut: boolean
   twoFactorEnabled: boolean
+  hasPassword: boolean
   roles: string[]
+  authenticationMethods: string[]
+  externalLogins: AdminExternalLoginResponse[]
 }
 
+/** Either `email`+`password` (a password-based account) or `phoneNumber` (a passwordless phone account, in
+ * international format e.g. `+15551234567`) must be supplied, never both. */
 export interface CreateUserRequest {
-  email: string
-  password: string
+  email?: string | null
+  password?: string | null
+  phoneNumber?: string | null
   firstName?: string | null
   lastName?: string | null
   emailConfirmed: boolean
 }
 
 export interface UpdateUserRequest {
-  email: string
+  email?: string | null
   firstName?: string | null
   lastName?: string | null
   emailConfirmed: boolean
@@ -98,9 +111,14 @@ export interface RoleMemberResponse {
   email: string
 }
 
+export interface AuthenticationFlowsResponse {
+  emailAndPasswordFlowEnabled: boolean
+  passwordlessFlowEnabled: boolean
+}
+
 export interface AuthorizationResponse {
   id: string
-  applicationClientId: string | null
+  applicationId: string | null
   subject: string | null
   status: string | null
   type: string | null

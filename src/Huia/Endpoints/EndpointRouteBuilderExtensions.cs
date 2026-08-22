@@ -87,6 +87,7 @@ public static class EndpointRouteBuilderExtensions
             group.MapScopesEndpoints();
             group.MapUsersEndpoints();
             group.MapRolesEndpoints();
+            group.MapAuthenticationFlowsEndpoints();
 
             return group;
         }

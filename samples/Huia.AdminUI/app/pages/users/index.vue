@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Key, Lock, LockOpen, Pencil, Plus, RefreshCw, Search, Shield, Trash2 } from '@lucide/vue'
-import type { CreateUserRequest, KeysetPage, RoleResponse, UpdateUserRequest, UserResponse } from '~~/shared/types/admin'
+import type { AuthenticationFlowsResponse, CreateUserRequest, KeysetPage, RoleResponse, UpdateUserRequest, UserResponse } from '~~/shared/types/admin'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,17 +21,25 @@ const { items, hasPrevious, hasNext, loading, error, refresh, goNext, goPrevious
 await refresh()
 watch(search, reset)
 
+// Which identifiers a new account can be created with - only offer what the app can actually sign a user
+// back in with (see huia.Authentication.Use...Flow() server-side; UsersEndpoints.CreateAsync enforces the
+// same rule regardless of what this dialog offers).
+const authFlows = await $huiaAdmin<AuthenticationFlowsResponse>('authentication-flows')
+
 // --- Create/edit ---
 const isEditModalOpen = ref(false)
 const editing = ref<UserResponse | null>(null)
 const saving = ref(false)
 const formError = ref<string | null>(null)
-const form = reactive({ email: '', password: '', firstName: '', lastName: '', emailConfirmed: true })
+const createMode = ref<'email' | 'phone'>(authFlows.emailAndPasswordFlowEnabled ? 'email' : 'phone')
+const form = reactive({ email: '', password: '', phoneNumber: '', firstName: '', lastName: '', emailConfirmed: true })
 
 function openCreate() {
   editing.value = null
+  createMode.value = authFlows.emailAndPasswordFlowEnabled ? 'email' : 'phone'
   form.email = ''
   form.password = ''
+  form.phoneNumber = ''
   form.firstName = ''
   form.lastName = ''
   form.emailConfirmed = true
@@ -41,7 +49,7 @@ function openCreate() {
 
 function openEdit(user: UserResponse) {
   editing.value = user
-  form.email = user.email
+  form.email = user.email ?? ''
   form.firstName = user.firstName ?? ''
   form.lastName = user.lastName ?? ''
   form.emailConfirmed = user.emailConfirmed
@@ -61,6 +69,14 @@ async function submit() {
         emailConfirmed: form.emailConfirmed
       }
       await $huiaAdmin(`users/${editing.value.id}`, { method: 'PUT', body })
+    } else if (createMode.value === 'phone') {
+      const body: CreateUserRequest = {
+        phoneNumber: form.phoneNumber,
+        firstName: form.firstName || null,
+        lastName: form.lastName || null,
+        emailConfirmed: false
+      }
+      await $huiaAdmin('users', { method: 'POST', body })
     } else {
       const body: CreateUserRequest = {
         email: form.email,
@@ -208,7 +224,8 @@ async function submitReset() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Email</TableHead>
+              <TableHead>Username</TableHead>
+              <TableHead>Auth methods</TableHead>
               <TableHead>First name</TableHead>
               <TableHead>Last name</TableHead>
               <TableHead>Roles</TableHead>
@@ -223,7 +240,7 @@ async function submitReset() {
                 :key="n"
               >
                 <TableCell
-                  v-for="col in 6"
+                  v-for="col in 7"
                   :key="col"
                 >
                   <Skeleton class="h-5 w-full" />
@@ -232,7 +249,7 @@ async function submitReset() {
             </template>
             <TableEmpty
               v-else-if="!items.length"
-              :colspan="6"
+              :colspan="7"
             >
               <Empty>
                 <EmptyHeader>
@@ -249,7 +266,22 @@ async function submitReset() {
               :key="user.id"
             >
               <TableCell class="font-medium">
-                {{ user.email }}
+                {{ user.userName || '—' }}
+              </TableCell>
+              <TableCell>
+                <div class="flex flex-wrap gap-1">
+                  <Badge
+                    v-for="method in user.authenticationMethods"
+                    :key="method"
+                    variant="outline"
+                  >
+                    {{ method }}
+                  </Badge>
+                  <span
+                    v-if="!user.authenticationMethods.length"
+                    class="text-sm text-muted-foreground"
+                  >—</span>
+                </div>
               </TableCell>
               <TableCell>{{ user.firstName || '—' }}</TableCell>
               <TableCell>{{ user.lastName || '—' }}</TableCell>
@@ -350,19 +382,49 @@ async function submitReset() {
           class="flex flex-col gap-4"
           @submit.prevent="submit"
         >
+          <div
+            v-if="!editing && authFlows.emailAndPasswordFlowEnabled && authFlows.passwordlessFlowEnabled"
+            class="flex gap-2"
+          >
+            <Button
+              type="button"
+              size="sm"
+              :variant="createMode === 'email' ? 'default' : 'outline'"
+              @click="createMode = 'email'"
+            >
+              Email
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              :variant="createMode === 'phone' ? 'default' : 'outline'"
+              @click="createMode = 'phone'"
+            >
+              Phone
+            </Button>
+          </div>
+
           <FieldGroup>
-            <Field>
+            <Field v-if="editing || createMode === 'email'">
               <FieldLabel>Email</FieldLabel>
               <Input
                 v-model="form.email"
                 type="email"
               />
             </Field>
-            <Field v-if="!editing">
+            <Field v-if="!editing && createMode === 'email'">
               <FieldLabel>Password</FieldLabel>
               <Input
                 v-model="form.password"
                 type="password"
+              />
+            </Field>
+            <Field v-if="!editing && createMode === 'phone'">
+              <FieldLabel>Phone number</FieldLabel>
+              <Input
+                v-model="form.phoneNumber"
+                type="tel"
+                placeholder="+15551234567"
               />
             </Field>
             <Field>
@@ -373,7 +435,10 @@ async function submitReset() {
               <FieldLabel>Last name</FieldLabel>
               <Input v-model="form.lastName" />
             </Field>
-            <label class="flex items-center gap-2 text-sm">
+            <label
+              v-if="editing || createMode === 'email'"
+              class="flex items-center gap-2 text-sm"
+            >
               <Checkbox v-model="form.emailConfirmed" />
               Email confirmed
             </label>
@@ -408,7 +473,7 @@ async function submitReset() {
     <Dialog v-model:open="isRolesModalOpen">
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Roles — {{ rolesTarget?.email ?? '' }}</DialogTitle>
+          <DialogTitle>Roles — {{ rolesTarget?.userName ?? rolesTarget?.email ?? '' }}</DialogTitle>
         </DialogHeader>
 
         <div class="flex flex-col gap-2">
@@ -437,7 +502,7 @@ async function submitReset() {
     <Dialog v-model:open="isResetModalOpen">
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reset password — {{ resetTarget?.email ?? '' }}</DialogTitle>
+          <DialogTitle>Reset password — {{ resetTarget?.userName ?? resetTarget?.email ?? '' }}</DialogTitle>
         </DialogHeader>
 
         <div class="flex flex-col gap-4">

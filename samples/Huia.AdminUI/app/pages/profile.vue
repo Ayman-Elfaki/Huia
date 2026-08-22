@@ -2,9 +2,12 @@
 import type {
   ExternalLoginsResponse,
   ManageInfoResponse,
+  RequestPhoneChangeRequest,
+  RequestPhoneChangeResponse,
   TwoFactorRequest,
   TwoFactorResponse,
-  UpdateInfoRequest
+  UpdateInfoRequest,
+  VerifyPhoneChangeRequest
 } from '~~/shared/types/manage'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -56,6 +59,64 @@ async function saveInfo() {
     infoError.value = adminErrorMessage(err)
   } finally {
     infoSaving.value = false
+  }
+}
+
+// --- Phone number (OTP-verified) ---
+const phoneStep = ref<'idle' | 'code-sent'>('idle')
+const phoneNumberInput = ref('')
+const phoneCode = ref('')
+const maskedPhoneNumber = ref('')
+const phoneError = ref<string | null>(null)
+const phoneBusy = ref(false)
+
+function startPhoneChange() {
+  phoneStep.value = 'idle'
+  phoneNumberInput.value = ''
+  phoneCode.value = ''
+  phoneError.value = null
+}
+
+async function requestPhoneChange() {
+  phoneBusy.value = true
+  phoneError.value = null
+  try {
+    const body: RequestPhoneChangeRequest = { newPhoneNumber: phoneNumberInput.value }
+    const result = await $huiaManage<RequestPhoneChangeResponse>('info/phone', { method: 'POST', body })
+    maskedPhoneNumber.value = result.maskedPhoneNumber
+    phoneStep.value = 'code-sent'
+  } catch (err) {
+    phoneError.value = adminErrorMessage(err)
+  } finally {
+    phoneBusy.value = false
+  }
+}
+
+async function verifyPhoneChange() {
+  phoneBusy.value = true
+  phoneError.value = null
+  try {
+    const body: VerifyPhoneChangeRequest = { newPhoneNumber: phoneNumberInput.value, code: phoneCode.value }
+    info.value = await $huiaManage<ManageInfoResponse>('info/phone/verify', { method: 'POST', body })
+    startPhoneChange()
+  } catch (err) {
+    phoneError.value = adminErrorMessage(err)
+  } finally {
+    phoneBusy.value = false
+  }
+}
+
+const phoneRemoving = ref(false)
+
+async function removePhoneNumber() {
+  phoneRemoving.value = true
+  phoneError.value = null
+  try {
+    info.value = await $huiaManage<ManageInfoResponse>('info/phone', { method: 'DELETE' })
+  } catch (err) {
+    phoneError.value = adminErrorMessage(err)
+  } finally {
+    phoneRemoving.value = false
   }
 }
 
@@ -153,7 +214,7 @@ if (hasPassword.value) {
             <Field>
               <FieldLabel>Email</FieldLabel>
               <Input
-                :model-value="info?.email"
+                :model-value="info?.email ?? ''"
                 disabled
               />
             </Field>
@@ -186,6 +247,102 @@ if (hasPassword.value) {
             Save
           </Button>
         </form>
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Phone number</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-col gap-4">
+          <div
+            v-if="info?.phoneNumber && phoneStep === 'idle'"
+            class="flex items-center gap-2"
+          >
+            <span class="text-sm">{{ info.phoneNumber }}</span>
+            <Badge :variant="info.isPhoneNumberConfirmed ? 'default' : 'secondary'">
+              {{ info.isPhoneNumberConfirmed ? 'Confirmed' : 'Unconfirmed' }}
+            </Badge>
+          </div>
+
+          <form
+            v-if="phoneStep === 'idle'"
+            class="flex flex-col gap-4"
+            @submit.prevent="requestPhoneChange"
+          >
+            <FieldGroup>
+              <Field>
+                <FieldLabel>{{ info?.phoneNumber ? 'New phone number' : 'Phone number' }}</FieldLabel>
+                <Input
+                  v-model="phoneNumberInput"
+                  type="tel"
+                  placeholder="+15551234567"
+                />
+              </Field>
+            </FieldGroup>
+            <div class="flex gap-2">
+              <Button
+                type="submit"
+                :disabled="phoneBusy || !phoneNumberInput"
+                class="self-start"
+              >
+                Send code
+              </Button>
+              <Button
+                v-if="info?.phoneNumber"
+                type="button"
+                variant="secondary"
+                :disabled="phoneRemoving"
+                class="self-start"
+                @click="removePhoneNumber"
+              >
+                Remove
+              </Button>
+            </div>
+          </form>
+
+          <form
+            v-else
+            class="flex flex-col gap-4"
+            @submit.prevent="verifyPhoneChange"
+          >
+            <p class="text-sm text-muted-foreground">
+              We sent a code to {{ maskedPhoneNumber }}.
+            </p>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>6-digit code</FieldLabel>
+                <Input v-model="phoneCode" />
+              </Field>
+            </FieldGroup>
+            <div class="flex gap-2">
+              <Button
+                type="submit"
+                :disabled="phoneBusy || !phoneCode"
+                class="self-start"
+              >
+                Verify
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                :disabled="phoneBusy"
+                class="self-start"
+                @click="startPhoneChange"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+
+          <Alert
+            v-if="phoneError"
+            variant="destructive"
+          >
+            <AlertDescription>{{ phoneError }}</AlertDescription>
+          </Alert>
+        </div>
       </CardContent>
     </Card>
 

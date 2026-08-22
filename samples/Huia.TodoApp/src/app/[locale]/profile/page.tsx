@@ -35,7 +35,7 @@ export default async function ProfilePage({params}: { params: Promise<{ locale: 
                         <CardTitle>{t("infoTitle")}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ProfileInfoForm email={info.email} firstName={info.firstName} lastName={info.lastName} />
+                        <ProfileInfoForm email={info.email ?? ""} firstName={info.firstName} lastName={info.lastName} />
                     </CardContent>
                 </Card>
 
@@ -56,7 +56,7 @@ export default async function ProfilePage({params}: { params: Promise<{ locale: 
                             <CardTitle>{t("twoFactorTitle")}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <TwoFactorPanel email={info.email} initial={{status: "idle", ...twoFactor}} />
+                            <TwoFactorPanel email={info.email ?? ""} initial={{status: "idle", ...twoFactor}} />
                         </CardContent>
                     </Card>
                 ) : null}

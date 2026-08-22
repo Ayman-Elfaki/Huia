@@ -40,8 +40,7 @@ internal static class ScopesEndpoints
 
         var offset = OffsetCursor.Decode(cursor);
 
-        // Fetches one extra row to know whether a next page exists, rather than a separate CountAsync
-        // round-trip - see OffsetCursor's own doc comment for why this stays offset-based internally.
+        // Fetches one extra row to know whether a next page exists, rather than inferring it from TotalCount.
         var scopes = new List<object>();
         await foreach (var scope in manager.ListAsync(size + 1, offset, cancellationToken).ConfigureAwait(false))
         {
@@ -55,7 +54,9 @@ internal static class ScopesEndpoints
             items.Add(await ToResponseAsync(scope, manager, cancellationToken).ConfigureAwait(false));
         }
 
-        return Results.Ok(new PagedResult<ScopeResponse>(items, nextCursor));
+        var totalCount = (int)await manager.CountAsync(cancellationToken).ConfigureAwait(false);
+        return Results.Ok(new PagedResult<ScopeResponse>(items, totalCount, size, offset > 0, nextCursor is not null,
+            nextCursor));
     }
 
     private static async Task<IResult> GetAsync(string id, IOpenIddictScopeManager manager,

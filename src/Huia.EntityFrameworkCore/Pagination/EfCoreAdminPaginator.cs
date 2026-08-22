@@ -92,12 +92,11 @@ internal sealed class EfCoreAdminPaginator<TContext>(
             q => q,
             pageSize).ConfigureAwait(false);
 
-        var clientIdCache = new Dictionary<string, string?>(StringComparer.Ordinal);
         var items = new List<AuthorizationsEndpoints.AuthorizationResponse>(page.Data.Count);
         foreach (var authorization in page.Data)
         {
             items.Add(await AuthorizationsEndpoints.ToResponseAsync(authorization, authorizationManager,
-                applicationManager, clientIdCache, cancellationToken).ConfigureAwait(false));
+                cancellationToken).ConfigureAwait(false));
         }
 
         return Results.Ok(new KeysetPaginationResult<AuthorizationsEndpoints.AuthorizationResponse>(

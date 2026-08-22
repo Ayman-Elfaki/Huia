@@ -34,6 +34,8 @@ public class ManageEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoAp
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var info = await response.Content.ReadFromJsonAsync<InfoResponse>();
         Assert.Equal(email, info!.Email);
+        Assert.Null(info.PhoneNumber);
+        Assert.False(info.IsPhoneNumberConfirmed);
     }
 
     [Fact]
@@ -107,5 +109,6 @@ public class ManageEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoAp
         Assert.Equal(email, info!.Email);
     }
 
-    private sealed record InfoResponse(string Email, bool IsEmailConfirmed, string? FirstName, string? LastName);
+    private sealed record InfoResponse(string? Email, bool IsEmailConfirmed, string? PhoneNumber,
+        bool IsPhoneNumberConfirmed, string? FirstName, string? LastName);
 }

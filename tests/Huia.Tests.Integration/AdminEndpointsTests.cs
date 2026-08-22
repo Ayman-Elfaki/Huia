@@ -26,6 +26,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [InlineData("users")]
     [InlineData("roles")]
     [InlineData("authorizations")]
+    [InlineData("authentication-flows")]
     public async Task List_WithoutToken_ReturnsUnauthorized(string resource)
     {
         var client = factory.CreateClient();
@@ -41,6 +42,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [InlineData("users")]
     [InlineData("roles")]
     [InlineData("authorizations")]
+    [InlineData("authentication-flows")]
     public async Task List_WithoutAdminRole_ReturnsForbidden(string resource)
     {
         var client = await AdminTestHelpers.CreateNonAdminAuthorizedClientAsync(factory);
@@ -63,6 +65,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
     [InlineData("users")]
     [InlineData("roles")]
     [InlineData("authorizations")]
+    [InlineData("authentication-flows")]
     public async Task List_WithAdminRoleFromAnotherClient_ReturnsForbidden(string resource)
     {
         var client = await AdminTestHelpers.CreateAdminAuthorizedClientAsync(factory);
@@ -70,6 +73,20 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         using var response = await client.GetAsync($"{BasePath}/{resource}");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>The sample enables both flows unconditionally in <c>Program.cs</c> - see
+    /// <c>HybridLoginTabsTests</c>'s own doc comment.</summary>
+    [Fact]
+    public async Task AuthenticationFlows_ReturnsBothFlowsEnabled()
+    {
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
+
+        var flows = await client.GetFromJsonAsync<AuthenticationFlowsResponse>($"{BasePath}/authentication-flows");
+
+        Assert.NotNull(flows);
+        Assert.True(flows!.EmailAndPasswordFlowEnabled);
+        Assert.True(flows.PasswordlessFlowEnabled);
     }
 
     [Fact]
@@ -375,6 +392,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         Assert.NotNull(user);
         Assert.True(user!.HasPassword);
         Assert.Empty(user.ExternalLogins);
+        Assert.Contains("email", user.AuthenticationMethods, StringComparer.Ordinal);
 
         using (var scope = factory.Services.CreateScope())
         {
@@ -390,6 +408,80 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         var login = Assert.Single(fetched.ExternalLogins);
         Assert.Equal("google", login.LoginProvider);
         Assert.Equal("Google", login.ProviderDisplayName);
+        Assert.Contains("google", fetched.AuthenticationMethods, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task Users_Create_WithPhoneNumber_CreatesPasswordlessAccount()
+    {
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
+        var phoneNumber = $"+1415555{Random.Shared.Next(1000, 9999)}";
+
+        var created = await client.PostAsJsonAsync($"{BasePath}/users", new
+        {
+            PhoneNumber = phoneNumber,
+            FirstName = "Phone",
+            LastName = "Target",
+            EmailConfirmed = false,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var user = await created.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.NotNull(user);
+        Assert.Equal(phoneNumber, user!.UserName);
+        Assert.Equal(phoneNumber, user.PhoneNumber);
+        Assert.Null(user.Email);
+        Assert.False(user.HasPassword);
+        Assert.Contains("phone", user.AuthenticationMethods, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task Users_Create_WithNeitherEmailNorPhone_ReturnsValidationProblem()
+    {
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync($"{BasePath}/users", new
+        {
+            FirstName = "No",
+            LastName = "Identifier",
+            EmailConfirmed = true,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Users_Create_WithBothEmailAndPhone_ReturnsValidationProblem()
+    {
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync($"{BasePath}/users", new
+        {
+            Email = $"admin-both-{Guid.NewGuid():N}@example.com",
+            Password = "P@ssw0rd123!",
+            PhoneNumber = "+15551234567",
+            FirstName = "Both",
+            LastName = "Identifiers",
+            EmailConfirmed = true,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Users_Create_WithInvalidPhoneNumber_ReturnsValidationProblem()
+    {
+        var client = await AdminTestHelpers.CreateAdminUiAuthorizedClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync($"{BasePath}/users", new
+        {
+            PhoneNumber = "not-a-phone-number",
+            FirstName = "Invalid",
+            LastName = "Phone",
+            EmailConfirmed = false,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -441,6 +533,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
             $"{BasePath}/authorizations?subject={Uri.EscapeDataString(subject)}");
         Assert.NotEmpty(list!.Data);
         var authorization = list.Data[0];
+        Assert.Equal(subject, authorization.Subject);
 
         var fetched = await client.GetFromJsonAsync<AuthorizationResponse>(
             $"{BasePath}/authorizations/{authorization.Id}");
@@ -490,7 +583,8 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 
     private sealed record UserResponse(
         string Id,
-        string Email,
+        string? Email,
+        string? UserName,
         string? FirstName,
         string? LastName,
         string? Picture,
@@ -500,6 +594,7 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
         bool TwoFactorEnabled,
         bool HasPassword,
         string[] Roles,
+        string[] AuthenticationMethods,
         ExternalLoginResponse[] ExternalLogins);
 
     private sealed record ExternalLoginResponse(string LoginProvider, string? ProviderDisplayName);
@@ -508,9 +603,11 @@ public class AdminEndpointsTests(TodoApiFactory factory) : IClassFixture<TodoApi
 
     private sealed record RoleMemberResponse(string Id, string Email);
 
+    private sealed record AuthenticationFlowsResponse(bool EmailAndPasswordFlowEnabled, bool PasswordlessFlowEnabled);
+
     private sealed record AuthorizationResponse(
         string Id,
-        string? ApplicationClientId,
+        string? ApplicationId,
         string? Subject,
         string? Status,
         string? Type,

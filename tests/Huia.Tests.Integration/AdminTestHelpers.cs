@@ -29,23 +29,23 @@ internal static class AdminTestHelpers
 
     private const string Password = "P@ssw0rd123!";
 
-    public static Task<HttpClient> CreateAdminAuthorizedClientAsync(TodoApiFactory factory) =>
+    public static Task<HttpClient> CreateAdminAuthorizedClientAsync(WebApplicationFactory<Program> factory) =>
         CreateAuthorizedClientAsync(factory, roles: ["Admin"]);
 
-    public static Task<HttpClient> CreateNonAdminAuthorizedClientAsync(TodoApiFactory factory) =>
+    public static Task<HttpClient> CreateNonAdminAuthorizedClientAsync(WebApplicationFactory<Program> factory) =>
         CreateAuthorizedClientAsync(factory, roles: []);
 
     /// <summary>Same as <see cref="CreateAdminAuthorizedClientAsync"/>, also returning the token's <c>sub</c>
     /// claim — the id AuthorizationsEndpoints filters by.</summary>
     public static async Task<(HttpClient Client, string Subject)> CreateAdminAuthorizedClientWithSubjectAsync(
-        TodoApiFactory factory)
+        WebApplicationFactory<Program> factory)
     {
         var (client, _, subject) = await CreateAuthorizedClientCoreAsync(factory, roles: ["Admin"],
             ClientId, ClientSecret, RedirectUri, oauthScope: "openid profile email todos roles reports");
         return (client, subject);
     }
 
-    public static async Task<HttpClient> CreateAuthorizedClientAsync(TodoApiFactory factory, string[] roles)
+    public static async Task<HttpClient> CreateAuthorizedClientAsync(WebApplicationFactory<Program> factory, string[] roles)
     {
         var (client, _, _) = await CreateAuthorizedClientCoreAsync(factory, roles,
             ClientId, ClientSecret, RedirectUri, oauthScope: "openid profile email todos roles reports");
@@ -58,10 +58,10 @@ internal static class AdminTestHelpers
     /// (not <see cref="CreateAdminAuthorizedClientAsync"/>) for any test expecting a call to
     /// <c>/api/identity/admin/...</c> to succeed.
     /// </summary>
-    public static Task<HttpClient> CreateAdminUiAuthorizedClientAsync(TodoApiFactory factory) =>
+    public static Task<HttpClient> CreateAdminUiAuthorizedClientAsync(WebApplicationFactory<Program> factory) =>
         CreateAdminUiAuthorizedClientAsync(factory, roles: ["Admin"]);
 
-    public static async Task<HttpClient> CreateAdminUiAuthorizedClientAsync(TodoApiFactory factory, string[] roles)
+    public static async Task<HttpClient> CreateAdminUiAuthorizedClientAsync(WebApplicationFactory<Program> factory, string[] roles)
     {
         // "reports" is omitted (unlike the todo-web helpers above): admin-ui's own AllowScopes (Program.cs)
         // doesn't include it, so requesting it here would make /connect/authorize reject the request outright.
@@ -73,7 +73,7 @@ internal static class AdminTestHelpers
     /// <summary>Same as <see cref="CreateAdminUiAuthorizedClientAsync(TodoApiFactory)"/>, also returning the
     /// token's <c>sub</c> claim.</summary>
     public static async Task<(HttpClient Client, string Subject)> CreateAdminUiAuthorizedClientWithSubjectAsync(
-        TodoApiFactory factory)
+        WebApplicationFactory<Program> factory)
     {
         var (client, _, subject) = await CreateAuthorizedClientCoreAsync(factory, roles: ["Admin"],
             AdminUiClientId, AdminUiClientSecret, AdminUiRedirectUri, oauthScope: "openid profile email todos roles");
@@ -85,15 +85,28 @@ internal static class AdminTestHelpers
     /// identity rather than just checking status codes. Mints against the "todo-web" client, same as every
     /// other caller in this file that doesn't need the "admin-ui" one specifically.</summary>
     internal static Task<(HttpClient Client, string Email, string Subject)> CreateAuthorizedClientCoreAsync(
-        TodoApiFactory factory, string[] roles) =>
+        WebApplicationFactory<Program> factory, string[] roles) =>
         CreateAuthorizedClientCoreAsync(factory, roles,
             ClientId, ClientSecret, RedirectUri, oauthScope: "openid profile email todos roles reports");
+
+    /// <summary>
+    /// Mints a "todo-web" bearer token for a <paramref name="signedInUiClient"/> that's already
+    /// cookie-authenticated some other way than this class's own email/password registration - e.g. a real
+    /// passwordless phone sign-in driven directly over HTTP the way <c>PhoneLoginTests</c> does. Reuses
+    /// <see cref="ExchangeForBearerClientAsync"/>, the same OAuth code-exchange tail
+    /// <see cref="CreateAuthorizedClientCoreAsync(WebApplicationFactory{Program}, string[])"/> uses for its
+    /// own registered accounts.
+    /// </summary>
+    public static Task<HttpClient> ExchangeSignedInClientForBearerAsync(WebApplicationFactory<Program> factory,
+        HttpClient signedInUiClient) =>
+        ExchangeForBearerClientAsync(factory, signedInUiClient, ClientId, ClientSecret, RedirectUri,
+            oauthScope: "openid profile email todos roles reports");
 
     // Long because it's a single linear register-confirm-authorize-redeem sequence; splitting it would just
     // relocate, not reduce, that sequence.
 #pragma warning disable MA0051
     private static async Task<(HttpClient Client, string Email, string Subject)> CreateAuthorizedClientCoreAsync(
-        TodoApiFactory factory, string[] roles,
+        WebApplicationFactory<Program> factory, string[] roles,
         string clientId, string clientSecret, string redirectUri, string oauthScope)
     {
         var uiClient = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -125,6 +138,15 @@ internal static class AdminTestHelpers
             }
         }
 
+        var apiClient = await ExchangeForBearerClientAsync(factory, uiClient, clientId, clientSecret, redirectUri,
+            oauthScope).ConfigureAwait(false);
+        return (apiClient, email, subject);
+    }
+#pragma warning restore MA0051
+
+    private static async Task<HttpClient> ExchangeForBearerClientAsync(WebApplicationFactory<Program> factory,
+        HttpClient signedInUiClient, string clientId, string clientSecret, string redirectUri, string oauthScope)
+    {
         var query = string.Join('&', new[]
         {
             "response_type=code",
@@ -139,7 +161,7 @@ internal static class AdminTestHelpers
             $"scope={Uri.EscapeDataString(oauthScope)}",
             $"state={Guid.NewGuid():N}",
         });
-        using var authorizeResponse = await uiClient.GetAsync($"/connect/authorize?{query}");
+        using var authorizeResponse = await signedInUiClient.GetAsync($"/connect/authorize?{query}");
         if (authorizeResponse.StatusCode != HttpStatusCode.Found)
         {
             throw new InvalidOperationException(
@@ -148,7 +170,7 @@ internal static class AdminTestHelpers
 
         var code = ExtractQueryParameter(authorizeResponse.Headers.Location!, "code");
 
-        using var tokenResponse = await uiClient.PostAsync("/connect/token", new FormUrlEncodedContent(
+        using var tokenResponse = await signedInUiClient.PostAsync("/connect/token", new FormUrlEncodedContent(
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["grant_type"] = "authorization_code",
@@ -164,9 +186,8 @@ internal static class AdminTestHelpers
 
         var apiClient = factory.CreateClient();
         apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        return (apiClient, email, subject);
+        return apiClient;
     }
-#pragma warning restore MA0051
 
     private static string ExtractQueryParameter(Uri uri, string name)
     {

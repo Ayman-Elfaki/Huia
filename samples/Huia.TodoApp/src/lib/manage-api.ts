@@ -4,8 +4,10 @@
 const API_URL = process.env.TODO_API_URL ?? "http://localhost:5040";
 
 export type ManageInfo = {
-    email: string;
+    email: string | null;
     isEmailConfirmed: boolean;
+    phoneNumber: string | null;
+    isPhoneNumberConfirmed: boolean;
     firstName: string | null;
     lastName: string | null;
 };
@@ -71,12 +73,45 @@ export function getExternalLogins(accessToken: string): Promise<ExternalLogins> 
 
 export function updateInfo(
     accessToken: string,
-    body: { firstName?: string; lastName?: string; newEmail?: string; newPassword?: string; oldPassword?: string },
+    body: {
+        firstName?: string;
+        lastName?: string;
+        newEmail?: string;
+        newPassword?: string;
+        oldPassword?: string;
+    },
 ): Promise<ManageInfo> {
     return manageFetch("/api/identity/manage/info", accessToken, {
         method: "POST",
         body: JSON.stringify(body),
     });
+}
+
+/** Step 1 of the OTP-verified phone number change - sends a code to `newPhoneNumber` (must already be fully
+ * E.164-qualified, e.g. "+15551234567"). Only works when the app has passwordless phone sign-in enabled. */
+export function requestPhoneChange(
+    accessToken: string,
+    newPhoneNumber: string,
+): Promise<{ maskedPhoneNumber: string }> {
+    return manageFetch("/api/identity/manage/info/phone", accessToken, {
+        method: "POST",
+        body: JSON.stringify({ newPhoneNumber }),
+    });
+}
+
+/** Step 2 - resends the same number alongside the code the user received, since the verification token is
+ * bound to that specific number rather than tracked via server-side pending state. */
+export function verifyPhoneChange(accessToken: string, newPhoneNumber: string, code: string): Promise<ManageInfo> {
+    return manageFetch("/api/identity/manage/info/phone/verify", accessToken, {
+        method: "POST",
+        body: JSON.stringify({ newPhoneNumber, code }),
+    });
+}
+
+/** Clears the signed-in user's phone number - no OTP needed, since removing data is lower-risk than
+ * adding/changing it. Rejected if it's the account's only sign-in method. */
+export function removePhoneNumber(accessToken: string): Promise<ManageInfo> {
+    return manageFetch("/api/identity/manage/info/phone", accessToken, { method: "DELETE" });
 }
 
 /**

@@ -37,4 +37,29 @@ internal static class PhoneNumberValidator
             return null;
         }
     }
+
+    /// <summary>
+    /// Returns <paramref name="rawInput"/> normalized to E.164, or <see langword="null"/> if it isn't a
+    /// parseable, valid number. Unlike <see cref="TryNormalize"/>, this doesn't take (or validate against) an
+    /// explicit region — it's for a caller that's expected to already supply a fully-qualified international
+    /// number (leading <c>+</c> and country calling code), such as an admin typing a phone number directly
+    /// rather than a country-selector-driven sign-in form.
+    /// </summary>
+    public static string? TryNormalizeE164(string? rawInput)
+    {
+        if (string.IsNullOrWhiteSpace(rawInput))
+        {
+            return null;
+        }
+
+        try
+        {
+            var parsed = Util.Parse(rawInput, null);
+            return Util.IsValidNumber(parsed) ? Util.Format(parsed, PhoneNumberFormat.E164) : null;
+        }
+        catch (NumberParseException)
+        {
+            return null;
+        }
+    }
 }

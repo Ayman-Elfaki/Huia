@@ -46,6 +46,39 @@ directly (see [custom-store.md](custom-store.md)).
    `ExternalLoginConfirmation`'s explicit-consent step for a first-time external sign-in. A **returning**
    passwordless user signs in immediately.
 
+## Changing your phone number
+
+A signed-in user can change their own phone number through the Manage JSON API
+(`/api/identity/manage/info/phone`) — gated behind `UsePasswordlessFlow()` being enabled, since it reuses that
+flow's SMS-sending and rate-limiting infrastructure (`IPhoneOtpRateLimiter`/`ISmsSender<HuiaUser>` are only
+registered in DI when the flow is on; both endpoints reject with a validation problem otherwise).
+
+Unlike the sign-in flow above, this uses `UserManager<HuiaUser>.GenerateChangePhoneNumberTokenAsync`/
+`ChangePhoneNumberAsync` — still the same `"Phone"` token provider under the hood, so SMS delivery works
+identically, but the token's purpose string is bound to the specific new number (`"ChangePhoneNumber:" +
+phoneNumber`), not just to the user. That means no pending-state cookie is needed the way `PhoneLoginVerify`
+needs one for an anonymous caller: every Manage endpoint is already authenticated, so the client just resends
+the same number it's verifying alongside the code.
+
+1. **`POST /api/identity/manage/info/phone`** `{ newPhoneNumber }` — normalizes the number (must already be
+   fully E.164-qualified, e.g. `+15551234567`; there's no separate country-picker field the way the sign-in
+   form has one), rate-limits it via the same `IPhoneOtpRateLimiter`, generates and sends a code, and returns
+   the number masked (`{ maskedPhoneNumber }`) for the client to display.
+2. **`POST /api/identity/manage/info/phone/verify`** `{ newPhoneNumber, code }` — verifies via
+   `ChangePhoneNumberAsync`, which sets `PhoneNumber`/`PhoneNumberConfirmed = true` in one call on success. A
+   wrong code counts against the account's normal lockout (`AccessFailedAsync`/`IsLockedOutAsync`), exactly
+   like a wrong sign-in OTP does.
+3. **`DELETE /api/identity/manage/info/phone`** clears the number — no OTP needed, since removing data is
+   lower-risk than adding/changing it (the same reasoning already applied to unlinking an external login). If
+   `PasswordlessLoginEnabled` is set and the account has no password and no external logins, this is rejected
+   instead: clearing the account's only credential would strand it.
+
+**This flow deliberately never touches `PasswordlessLoginEnabled`.** Recording or confirming a phone number
+through self-service account management must not silently grant a new sign-in path to an account that didn't
+opt into passwordless sign-in through the dedicated registration flow — the same account-linking boundary
+described under [Hybrid-auth security considerations](#hybrid-auth-security-considerations) above applies
+here too.
+
 ## Configuring the flow
 
 Passwordless-specific settings — rate limits, the country picker's default, IP rate limiting, Turnstile —

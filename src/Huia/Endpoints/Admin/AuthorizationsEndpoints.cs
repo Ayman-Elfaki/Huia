@@ -1,4 +1,3 @@
-using Huia.Applications;
 using Huia.Common;
 using Huia.Pagination;
 using Microsoft.AspNetCore.Builder;
@@ -29,27 +28,11 @@ internal static class AuthorizationsEndpoints
     }
 
     private static async Task<IResult> ListAsync(
-        string? cursor, int? pageSize, string? subject, string? clientId,
-        IOpenIddictAuthorizationManager manager, IOpenIddictApplicationManager applicationManager,
-        [FromServices] IAdminEfCorePaginator? paginator, CancellationToken cancellationToken)
+        string? cursor, int? pageSize, string? subject, string? applicationId,
+        IOpenIddictAuthorizationManager manager, [FromServices] IAdminEfCorePaginator? paginator,
+        CancellationToken cancellationToken)
     {
         var size = pageSize is null or <= 0 or > 100 ? 25 : pageSize.Value;
-
-        // The admin surface only ever knows an application by its public client_id (see ApplicationsEndpoints),
-        // so a client_id filter is resolved down to OpenIddict's internal application id before querying.
-        // Shared by both the EF-Core and fallback paths below.
-        string? applicationId = null;
-        if (!string.IsNullOrWhiteSpace(clientId))
-        {
-            var application = await applicationManager.FindByClientIdAsync(clientId, cancellationToken)
-                .ConfigureAwait(false);
-            if (application is null)
-            {
-                return Results.Ok(new PagedResult<AuthorizationResponse>([], null));
-            }
-
-            applicationId = await applicationManager.GetIdAsync(application, cancellationToken).ConfigureAwait(false);
-        }
 
         if (paginator is not null)
         {
@@ -58,33 +41,44 @@ internal static class AuthorizationsEndpoints
         }
 
         var offset = OffsetCursor.Decode(cursor);
+        var isFiltered = !string.IsNullOrWhiteSpace(subject) || applicationId is not null;
 
-        // Fetches one extra candidate (rather than a separate count) to know whether a next page exists -
-        // see OffsetCursor's own doc comment for why this stays offset-based rather than a real keyset query.
-        var candidates = !string.IsNullOrWhiteSpace(subject) || applicationId is not null
-            ? await FindFilteredAsync(manager, subject, applicationId, offset, size, cancellationToken)
-                .ConfigureAwait(false)
-            : await ListUnfilteredAsync(manager, offset, size, cancellationToken).ConfigureAwait(false);
+        // Fetches one extra candidate (rather than inferring it from TotalCount) to know whether a next page
+        // exists - see OffsetCursor's own doc comment for why this stays offset-based rather than a real
+        // keyset query.
+        int totalCount;
+        List<object> candidates;
+        if (isFiltered)
+        {
+            (candidates, totalCount) = await FindFilteredAsync(manager, subject, applicationId, offset, size,
+                cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            candidates = await ListUnfilteredAsync(manager, offset, size, cancellationToken).ConfigureAwait(false);
+            totalCount = (int)await manager.CountAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         var nextCursor = candidates.Count > size ? OffsetCursor.Encode(offset + size) : null;
-        var clientIdCache = new Dictionary<string, string?>(StringComparer.Ordinal);
         var items = new List<AuthorizationResponse>(size);
         foreach (var authorization in candidates.Take(size))
         {
-            items.Add(await ToResponseAsync(authorization, manager, applicationManager, clientIdCache,
-                cancellationToken).ConfigureAwait(false));
+            items.Add(await ToResponseAsync(authorization, manager, cancellationToken).ConfigureAwait(false));
         }
 
-        return Results.Ok(new PagedResult<AuthorizationResponse>(items, nextCursor));
+        return Results.Ok(new PagedResult<AuthorizationResponse>(items, totalCount, size, offset > 0,
+            nextCursor is not null, nextCursor));
     }
 
     /// <summary>
     /// The filtered lookups (FindBySubjectAsync/FindByApplicationIdAsync) don't support server-side paging —
     /// fine for an admin-only surface where a given user/application has at most a handful of live
-    /// authorizations.
+    /// authorizations. Materializes every match to get a real <c>TotalCount</c> before slicing the requested
+    /// page out of it.
     /// </summary>
-    private static async Task<List<object>> FindFilteredAsync(IOpenIddictAuthorizationManager manager,
-        string? subject, string? applicationId, int offset, int size, CancellationToken cancellationToken)
+    private static async Task<(List<object> Page, int TotalCount)> FindFilteredAsync(
+        IOpenIddictAuthorizationManager manager, string? subject, string? applicationId, int offset, int size,
+        CancellationToken cancellationToken)
     {
         var filtered = new List<object>();
         await foreach (var authorization in Find(manager, subject, applicationId, cancellationToken)
@@ -93,7 +87,7 @@ internal static class AuthorizationsEndpoints
             filtered.Add(authorization);
         }
 
-        return filtered.Skip(offset).Take(size + 1).ToList();
+        return (filtered.Skip(offset).Take(size + 1).ToList(), filtered.Count);
     }
 
     private static async Task<List<object>> ListUnfilteredAsync(IOpenIddictAuthorizationManager manager, int offset,
@@ -121,13 +115,12 @@ internal static class AuthorizationsEndpoints
     }
 
     private static async Task<IResult> GetAsync(string id, IOpenIddictAuthorizationManager manager,
-        IOpenIddictApplicationManager applicationManager, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var authorization = await manager.FindByIdAsync(id, cancellationToken).ConfigureAwait(false);
         return authorization is null
             ? Results.NotFound()
-            : Results.Ok(await ToResponseAsync(authorization, manager, applicationManager,
-                new Dictionary<string, string?>(StringComparer.Ordinal), cancellationToken).ConfigureAwait(false));
+            : Results.Ok(await ToResponseAsync(authorization, manager, cancellationToken).ConfigureAwait(false));
     }
 
     private static async Task<IResult> RevokeAsync(string id, IOpenIddictAuthorizationManager manager,
@@ -144,22 +137,24 @@ internal static class AuthorizationsEndpoints
     }
 
     internal static async Task<AuthorizationResponse> ToResponseAsync(object authorization,
-        IOpenIddictAuthorizationManager manager, IOpenIddictApplicationManager applicationManager,
-        Dictionary<string, string?> clientIdCache, CancellationToken cancellationToken)
+        IOpenIddictAuthorizationManager manager, CancellationToken cancellationToken)
         => new(
             (await manager.GetIdAsync(authorization, cancellationToken).ConfigureAwait(false))!,
-            await ApplicationClientIdResolver.ResolveAsync(
-                await manager.GetApplicationIdAsync(authorization, cancellationToken).ConfigureAwait(false),
-                applicationManager, clientIdCache, cancellationToken).ConfigureAwait(false),
+            await manager.GetApplicationIdAsync(authorization, cancellationToken).ConfigureAwait(false),
             await manager.GetSubjectAsync(authorization, cancellationToken).ConfigureAwait(false),
             await manager.GetStatusAsync(authorization, cancellationToken).ConfigureAwait(false),
             await manager.GetTypeAsync(authorization, cancellationToken).ConfigureAwait(false),
             await manager.GetCreationDateAsync(authorization, cancellationToken).ConfigureAwait(false),
             [.. await manager.GetScopesAsync(authorization, cancellationToken).ConfigureAwait(false)]);
 
+    /// <summary>Every field here is fetchable straight off <see cref="IOpenIddictAuthorizationManager"/> —
+    /// <see cref="Subject"/> is the raw user id, not a resolved username (see <c>UsersEndpoints</c>), and
+    /// <see cref="ApplicationId"/> is OpenIddict's own internal application id, not the application's public
+    /// <c>client_id</c> (see <c>ApplicationsEndpoints</c>) — resolving either would need an extra manager
+    /// beyond <see cref="IOpenIddictAuthorizationManager"/>.</summary>
     internal sealed record AuthorizationResponse(
         string Id,
-        string? ApplicationClientId,
+        string? ApplicationId,
         string? Subject,
         string? Status,
         string? Type,

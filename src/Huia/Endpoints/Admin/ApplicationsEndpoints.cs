@@ -45,8 +45,7 @@ internal static class ApplicationsEndpoints
 
         var offset = OffsetCursor.Decode(cursor);
 
-        // Fetches one extra row to know whether a next page exists, rather than a separate CountAsync
-        // round-trip - see OffsetCursor's own doc comment for why this stays offset-based internally.
+        // Fetches one extra row to know whether a next page exists, rather than inferring it from TotalCount.
         var apps = new List<object>();
         await foreach (var app in manager.ListAsync(size + 1, offset, ct).ConfigureAwait(false))
         {
@@ -60,7 +59,9 @@ internal static class ApplicationsEndpoints
             items.Add(await ToResponseAsync(app, manager, ct).ConfigureAwait(false));
         }
 
-        return Results.Ok(new PagedResult<ApplicationResponse>(items, nextCursor));
+        var totalCount = (int)await manager.CountAsync(ct).ConfigureAwait(false);
+        return Results.Ok(new PagedResult<ApplicationResponse>(items, totalCount, size, offset > 0,
+            nextCursor is not null, nextCursor));
     }
 
     private static async Task<IResult> GetAsync(string id, IOpenIddictApplicationManager manager,
