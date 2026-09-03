@@ -10,6 +10,13 @@ function sealOpts(cfg: ResolvedAuthConfig) {
   return { ...ironDefaults, ttl: cfg.session.maxAge * 1000 }
 }
 
+/** Split an ASCII string into `<= limit`-length chunks (pure; exported for tests). */
+export function splitIntoChunks(value: string, limit: number): string[] {
+  const parts: string[] = []
+  for (let i = 0; i < value.length; i += limit) parts.push(value.slice(i, i + limit))
+  return parts
+}
+
 export function sealValue(cfg: ResolvedAuthConfig, value: unknown): Promise<string> {
   return seal(ironCrypto, value, cfg.session.password, sealOpts(cfg))
 }
@@ -71,8 +78,7 @@ export async function writeSessionCookie(event: H3Event, cfg: ResolvedAuthConfig
     return
   }
 
-  const parts: string[] = []
-  for (let i = 0; i < sealed.length; i += limit) parts.push(sealed.slice(i, i + limit))
+  const parts = splitIntoChunks(sealed, limit)
 
   if (parts.length > cfg.cookie.maxChunks) {
     throw createError({

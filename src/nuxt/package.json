@@ -42,6 +42,7 @@
     "@nuxt/schema": "^4.0.0",
     "@nuxt/test-utils": "^4.2.0",
     "@types/node": "^22.10.0",
+    "jose": "^5.10.0",
     "nuxt": "^4.0.0",
     "typescript": "~5.9.3",
     "unstorage": "^1.12.0",
