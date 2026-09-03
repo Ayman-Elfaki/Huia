@@ -19,13 +19,13 @@ public sealed class ExternalLoginOptions : IHuiaOptionsSection
     /// address (<c>email_verified</c> is not <c>false</c>); otherwise the sign-in is refused with an
     /// "email already registered" message and no account is created.
     /// </summary>
-    public bool LinkToExistingConfirmedEmail { get; set; }
+    public bool AccountLinkingEnabled { get; set; }
 
-    /// <summary>Enables <see cref="LinkToExistingConfirmedEmail"/>.</summary>
+    /// <summary>Enables <see cref="AccountLinkingEnabled"/>.</summary>
     /// <returns>This instance, for chaining.</returns>
-    public ExternalLoginOptions LinkExistingAccountsByEmail()
+    public ExternalLoginOptions EnableAccountsLinking()
     {
-        LinkToExistingConfirmedEmail = true;
+        AccountLinkingEnabled = true;
         return this;
     }
 

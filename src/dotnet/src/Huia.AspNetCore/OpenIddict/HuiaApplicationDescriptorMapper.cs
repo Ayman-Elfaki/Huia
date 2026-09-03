@@ -46,7 +46,7 @@ internal static class HuiaApplicationDescriptorMapper
             descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
         }
 
-        if (client.RequirePushedAuthorizationRequests)
+        if (client.RequiresPushedAuthorizationRequests)
         {
             descriptor.Requirements.Add(Requirements.Features.PushedAuthorizationRequests);
         }

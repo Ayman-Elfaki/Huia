@@ -129,7 +129,7 @@ public sealed class LoginModel(
             return Page();
         }
 
-        var defaultCountry = Input.Country ?? Tenant?.Authentication.Passwordless.DefaultCountry;
+        var defaultCountry = Input.Country ?? Tenant?.Authentication.Passwordless.PhoneLogin?.DefaultCountry;
 
         if (!phoneNumbers.TryNormalize(Input.PhoneNumber, defaultCountry, out var e164))
         {

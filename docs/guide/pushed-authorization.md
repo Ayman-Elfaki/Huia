@@ -26,12 +26,12 @@ The endpoint is advertised in each tenant's discovery document as
 ## Per-application
 
 Every interactive client **may** use PAR — no configuration needed. To **require** it (a plain
-`GET /connect/authorize` without a `request_uri` is then rejected), set the flag on the client:
+`GET /connect/authorize` without a `request_uri` is then rejected), call the method on the client:
 
 ```csharp
 tenant.AddServerSideWebApplication("acme-web", "secret", client =>
 {
-    client.RequirePushedAuthorizationRequests = true;
+    client.RequirePushedAuthorizationRequests();
     client.RedirectUris.Add(new Uri("https://acme.example/cb"));
 });
 ```

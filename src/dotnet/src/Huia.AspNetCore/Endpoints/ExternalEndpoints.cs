@@ -216,7 +216,7 @@ internal static class ExternalEndpoints
                     ? tenant.Authentication.Passwordless.ExternalLogin
                     : null;
 
-                if (external?.LinkToExistingConfirmedEmail == true && byEmail.EmailConfirmed && providerVouches
+                if (external?.AccountLinkingEnabled == true && byEmail.EmailConfirmed && providerVouches
                     && (await userManager.AddLoginAsync(byEmail, new UserLoginInfo(info.LoginProvider, info.ProviderKey, providerName))).Succeeded)
                 {
                     user = byEmail;

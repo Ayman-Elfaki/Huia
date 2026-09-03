@@ -65,8 +65,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         tenant.Branding.TermsUrl = new Uri($"{issuer}/legal/terms.html");
         tenant.Branding.PrivacyUrl = new Uri($"{issuer}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
-        tenant.Authentication.UsePasswordFlow();
-        tenant.Authentication.Password.RequireConfirmedEmail = false;
+        tenant.Authentication.UsePasswordFlow(password => password.RequireConfirmedEmail = false);
         tenant.DisableRegistration();
 
         // Administrators fat-finger their password more than they get brute-forced; be lenient.
@@ -79,6 +78,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             client.RedirectUris.Add(new Uri($"{adminAppUrl}/auth/oidc/callback"));
             client.PostLogoutRedirectUris.Add(new Uri($"{adminAppUrl}/"));
             client.HomeUris.Add(new Uri($"{adminAppUrl}/"));
+            client.RequirePushedAuthorizationRequests();
         });
 
         // The Huia.Cli admin tool signs in here with the device-authorization grant.
@@ -105,8 +105,8 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         {
             password.MinimumLength = 12;
             password.RequireNonAlphanumeric = true;
+            password.RequireConfirmedEmail = false;
         });
-        tenant.Authentication.Password.RequireConfirmedEmail = false;
         tenant.Lockout.MaxFailedAccessAttempts = 3;
         tenant.Lockout.LockoutDuration = TimeSpan.FromMinutes(30);
 
@@ -123,6 +123,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         {
             pwl.UsePhoneLogin(phone =>
             {
+                phone.DefaultCountry = "SA";
                 phone.AllowAutoProvisioning = true;
 
                 // Throttle *successful* phone sign-ins per number: at most once every two minutes and
@@ -131,7 +132,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
                 phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
                 phone.SuccessfulLoginsPerDay = 5;
             });
-            
+
             pwl.UseExternalLogin(ext =>
             {
                 ext.AddOpenIdConnect(
@@ -144,7 +145,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
 
                 // An external sign-in whose (verified) email matches an existing confirmed local
                 // account is linked to it instead of starting a new sign-up.
-                ext.LinkExistingAccountsByEmail();
+                ext.EnableAccountsLinking();
             });
         });
 
@@ -156,7 +157,6 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             client.RedirectUris.Add(new Uri($"{todoAppUrl}/auth/oidc/callback"));
             client.PostLogoutRedirectUris.Add(new Uri($"{todoAppUrl}/"));
             client.HomeUris.Add(new Uri($"{todoAppUrl}/"));
-            // client.Scopes.Add("todo-api");
         });
         
     });
@@ -165,12 +165,11 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
     {
         huia.AddTenant("e2e", tenant =>
         {
-            tenant.Authentication.UsePasswordFlow();
-            tenant.Authentication.Password.RequireConfirmedEmail = false;
+            tenant.Authentication.UsePasswordFlow(password => password.RequireConfirmedEmail = false);
             tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(p =>
             {
                 p.AllowAutoProvisioning = true;
-
+    
                 // The E2E stack reuses a handful of numbers across specs on one long-lived host, so keep
                 // the successful-sign-in throttle out of the way; the limiter has its own unit coverage.
                 p.SuccessfulLoginsPerWindow = 100;
@@ -197,8 +196,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         // confirm-email E2E spec.
         huia.AddTenant("e2e-signup", tenant =>
         {
-            tenant.Authentication.UsePasswordFlow();
-            tenant.Authentication.Password.RequireConfirmedEmail = true;
+            tenant.Authentication.UsePasswordFlow(password => password.RequireConfirmedEmail = true);
         });
     }
 });

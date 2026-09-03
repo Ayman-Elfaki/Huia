@@ -25,6 +25,23 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Changed
 
+- **`Huia`** — **Breaking.** `HuiaTenantAuthenticationOptions.Password` / `.Passwordless` are no
+  longer public. Configure them exclusively through `tenant.Authentication.UsePasswordFlow(p => …)`
+  and `tenant.Authentication.UsePasswordlessFlow(pwl => …)`; the tenant exposes derived
+  `IsPasswordEnabled` / `IsPhoneLoginEnabled` / `IsExternalLoginEnabled` bools for reads. Migration:
+  `tenant.Authentication.Password.RequireConfirmedEmail = false` →
+  `tenant.Authentication.UsePasswordFlow(p => p.RequireConfirmedEmail = false)`.
+- **`Huia`** — **Breaking.** `DefaultCountry` moved from `PasswordlessFlowOptions` to
+  `PhoneLoginOptions` (it is a phone-only concern). Migration:
+  `pwl.DefaultCountry = "SA"` → `pwl.UsePhoneLogin(phone => phone.DefaultCountry = "SA")`.
+- **`Huia`** — **Breaking.** `ExternalLoginOptions.LinkExistingAccountsByEmail()` →
+  `EnableAccountsLinking()`; the backing flag `LinkToExistingConfirmedEmail` → `AccountLinkingEnabled`.
+- **`Huia`** — **Breaking.** `HuiaClientDescriptor.RequirePushedAuthorizationRequests` is now a fluent
+  method, not a settable `bool` property (matching `DisableRegistration()` /
+  `EnableAccountsLinking()`). Migration: `client.RequirePushedAuthorizationRequests = true` →
+  `client.RequirePushedAuthorizationRequests()`. The backing property is
+  `RequiresPushedAuthorizationRequests`; the admin API's `ClientWriteRequest` JSON field is
+  unchanged.
 - **`Huia` / `Huia.AspNetCore`** — password-complexity and lockout policy are now per tenant.
   `PasswordFlowOptions` gains `RequireDigit` / `RequireLowercase` / `RequireUppercase` /
   `RequireNonAlphanumeric` / `RequiredUniqueChars`, and a new `TenantOptions.Lockout`

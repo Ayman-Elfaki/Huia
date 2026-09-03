@@ -19,13 +19,6 @@ public sealed class PasswordlessFlowOptions : IHuiaOptionsSection
     /// <summary>Whether at least one external provider is registered.</summary>
     public bool IsExternalLoginEnabled => ExternalLogin is { Providers.Count: > 0 };
 
-    /// <summary>
-    /// Default region (ISO 3166-1 alpha-2, for example <c>US</c>) used to interpret phone numbers entered
-    /// without a country code. Format-checked here only; an unknown-but-well-formed code degrades
-    /// gracefully at runtime.
-    /// </summary>
-    public string? DefaultCountry { get; set; }
-
     /// <summary>Enables the passwordless phone (SMS one-time code) sign-in for this tenant.</summary>
     /// <param name="configure">Optional configuration for the sub-flow.</param>
     /// <returns>This instance, for chaining.</returns>
@@ -49,13 +42,6 @@ public sealed class PasswordlessFlowOptions : IHuiaOptionsSection
 
     void IHuiaOptionsSection.Validate(string path, List<string> errors)
     {
-        if (!string.IsNullOrWhiteSpace(DefaultCountry))
-        {
-            errors.Require(DefaultCountry.Length == 2 && DefaultCountry.All(static c => c is >= 'A' and <= 'Z'),
-                HuiaOptionsValidation.Combine(path, nameof(DefaultCountry)),
-                "must be a two-letter upper-case ISO 3166-1 alpha-2 code.");
-        }
-
         if (PhoneLogin is not null)
         {
             ((IHuiaOptionsSection)PhoneLogin).Validate(HuiaOptionsValidation.Combine(path, nameof(PhoneLogin)), errors);

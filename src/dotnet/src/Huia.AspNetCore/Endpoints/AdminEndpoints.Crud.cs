@@ -332,7 +332,7 @@ internal static partial class AdminEndpoints
         descriptor.Kind = kind;
         descriptor.RequirePkce = body.RequirePkce ?? false;
         descriptor.RequireConsent = body.RequireConsent ?? false;
-        descriptor.RequirePushedAuthorizationRequests = body.RequirePushedAuthorizationRequests ?? false;
+        descriptor.RequiresPushedAuthorizationRequests = body.RequirePushedAuthorizationRequests ?? false;
 
         try
         {

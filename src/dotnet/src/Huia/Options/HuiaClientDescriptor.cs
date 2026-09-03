@@ -49,9 +49,21 @@ public sealed class HuiaClientDescriptor : IHuiaOptionsSection
     /// <summary>
     /// Whether this client must start authorization with a Pushed Authorization Request
     /// (<c>POST /connect/par</c>): a plain <c>GET /connect/authorize</c> without a <c>request_uri</c> is
-    /// then rejected. Off by default; any interactive client <em>may</em> use PAR regardless.
+    /// then rejected. Off by default; any interactive client <em>may</em> use PAR regardless. Set via
+    /// <see cref="RequirePushedAuthorizationRequests()"/>.
     /// </summary>
-    public bool RequirePushedAuthorizationRequests { get; set; }
+    public bool RequiresPushedAuthorizationRequests { get; set; }
+
+    /// <summary>
+    /// Requires this client to start authorization with a Pushed Authorization Request
+    /// (<c>POST /connect/par</c>). Off by default.
+    /// </summary>
+    /// <returns>This instance, for chaining.</returns>
+    public HuiaClientDescriptor RequirePushedAuthorizationRequests()
+    {
+        RequiresPushedAuthorizationRequests = true;
+        return this;
+    }
 
     /// <summary>Per-client token lifetime overrides.</summary>
     public TokenLifetimeOptions Token { get; set; } = new();

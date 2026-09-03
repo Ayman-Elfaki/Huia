@@ -13,6 +13,13 @@ public sealed class PhoneLoginOptions : IHuiaOptionsSection
     /// </summary>
     public bool AllowAutoProvisioning { get; set; }
 
+    /// <summary>
+    /// Default region (ISO 3166-1 alpha-2, for example <c>US</c>) used to interpret phone numbers entered
+    /// without a country code. Format-checked here only; an unknown-but-well-formed code degrades
+    /// gracefully at runtime.
+    /// </summary>
+    public string? DefaultCountry { get; set; }
+
     /// <summary>Number of digits in the one-time code.</summary>
     public int CodeLength { get; set; } = 6;
 
@@ -45,6 +52,13 @@ public sealed class PhoneLoginOptions : IHuiaOptionsSection
 
     void IHuiaOptionsSection.Validate(string path, List<string> errors)
     {
+        if (!string.IsNullOrWhiteSpace(DefaultCountry))
+        {
+            errors.Require(DefaultCountry.Length == 2 && DefaultCountry.All(static c => c is >= 'A' and <= 'Z'),
+                HuiaOptionsValidation.Combine(path, nameof(DefaultCountry)),
+                "must be a two-letter upper-case ISO 3166-1 alpha-2 code.");
+        }
+
         errors.Require(CodeLength is >= 4 and <= 10, HuiaOptionsValidation.Combine(path, nameof(CodeLength)),
             "must be between 4 and 10.");
         errors.Require(CodeLifetime > TimeSpan.Zero, HuiaOptionsValidation.Combine(path, nameof(CodeLifetime)),

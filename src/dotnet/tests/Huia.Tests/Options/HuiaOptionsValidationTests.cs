@@ -141,7 +141,8 @@ public class HuiaOptionsValidationTests
     public void An_invalid_default_country_is_rejected()
     {
         var options = ValidOptions();
-        options.Tenants["acme"].Authentication.Passwordless.DefaultCountry = "usa";
+        options.Tenants["acme"].Authentication.UsePasswordlessFlow(pwl =>
+            pwl.UsePhoneLogin(phone => phone.DefaultCountry = "usa"));
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("DefaultCountry", StringComparison.Ordinal));

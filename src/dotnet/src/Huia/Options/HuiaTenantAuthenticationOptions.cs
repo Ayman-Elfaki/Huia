@@ -1,13 +1,26 @@
 namespace Huia.Options;
 
-/// <summary>The sign-in methods available for a tenant: interactive password and passwordless.</summary>
+/// <summary>
+/// The sign-in methods available for a tenant: interactive password and passwordless. Configure them
+/// through <see cref="UsePasswordFlow"/> / <see cref="UsePasswordlessFlow"/> — the underlying option
+/// objects are not part of the public surface.
+/// </summary>
 public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
 {
-    /// <summary>The interactive username/password flow options.</summary>
-    public PasswordFlowOptions Password { get; } = new();
+    /// <summary>The interactive username/password flow options. Configured via <see cref="UsePasswordFlow"/>.</summary>
+    internal PasswordFlowOptions Password { get; } = new();
 
-    /// <summary>The passwordless umbrella (phone one-time code and external providers).</summary>
-    public PasswordlessFlowOptions Passwordless { get; } = new();
+    /// <summary>The passwordless umbrella (phone one-time code and external providers). Configured via <see cref="UsePasswordlessFlow"/>.</summary>
+    internal PasswordlessFlowOptions Passwordless { get; } = new();
+
+    /// <summary>Whether the interactive password flow is enabled for this tenant.</summary>
+    public bool IsPasswordEnabled => Password.Enabled;
+
+    /// <summary>Whether the passwordless phone (SMS one-time code) sign-in is enabled.</summary>
+    public bool IsPhoneLoginEnabled => Passwordless.IsPhoneLoginEnabled;
+
+    /// <summary>Whether at least one external identity provider is configured.</summary>
+    public bool IsExternalLoginEnabled => Passwordless.IsExternalLoginEnabled;
 
     /// <summary>
     /// Enables and configures the interactive password flow. Sugar over <see cref="Password"/> that
