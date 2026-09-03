@@ -47,7 +47,7 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> GetExternalLoginsAsync(
-        HttpContext context, UserManager<HuiaUser> userManager, IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions)
+        HttpContext context, HuiaUserManager userManager, IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -65,11 +65,11 @@ internal static class ManageEndpoints
         return Results.Ok(new ExternalLoginsDto(
             [.. logins.Select(l => new ExternalLoginDto(l.LoginProvider, l.ProviderKey, ShortProviderName(l.LoginProvider), l.ProviderDisplayName))],
             [.. configured.Where(p => !linkedIds.Contains($"{tenantId}:{p.Name}")).Select(p => p.Name)],
-            await Areas.Identity.Pages.Account.ExternalLoginsModel.CanRemoveLoginAsync(userManager, user)));
+            await userManager.CanRemoveExternalLoginAsync(user)));
     }
 
     private static async Task<IResult> RemoveExternalLoginAsync(
-        HttpContext context, UserManager<HuiaUser> userManager, string provider, string providerKey)
+        HttpContext context, HuiaUserManager userManager, string provider, string providerKey)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -77,7 +77,7 @@ internal static class ManageEndpoints
             return Results.Unauthorized();
         }
 
-        if (!await Areas.Identity.Pages.Account.ExternalLoginsModel.CanRemoveLoginAsync(userManager, user))
+        if (!await userManager.CanRemoveExternalLoginAsync(user))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -94,7 +94,7 @@ internal static class ManageEndpoints
             ? loginProvider[(loginProvider.LastIndexOf(':') + 1)..]
             : loginProvider;
 
-    private static async Task<IResult> GetProfileAsync(HttpContext context, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> GetProfileAsync(HttpContext context, HuiaUserManager userManager)
     {
         var user = await ResolveUserAsync(context, userManager);
         return user is null
@@ -102,7 +102,7 @@ internal static class ManageEndpoints
             : Results.Ok(new ProfileDto(user.FirstName, user.LastName, user.Email, user.PhoneNumber, user.PhoneNumberConfirmed));
     }
 
-    private static async Task<IResult> UpdateProfileAsync(HttpContext context, UserManager<HuiaUser> userManager, UpdateProfileRequest body)
+    private static async Task<IResult> UpdateProfileAsync(HttpContext context, HuiaUserManager userManager, UpdateProfileRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -124,14 +124,14 @@ internal static class ManageEndpoints
         return result.Succeeded ? Results.NoContent() : Problem(result);
     }
 
-    private static async Task<IResult> GetEmailAsync(HttpContext context, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> GetEmailAsync(HttpContext context, HuiaUserManager userManager)
     {
         var user = await ResolveUserAsync(context, userManager);
         return user is null ? Results.Unauthorized() : Results.Ok(new EmailDto(user.Email, user.EmailConfirmed));
     }
 
     private static async Task<IResult> ChangeEmailAsync(
-        HttpContext context, UserManager<HuiaUser> userManager, IHuiaEmailSender emailSender, ChangeEmailRequest body)
+        HttpContext context, HuiaUserManager userManager, IHuiaEmailSender emailSender, ChangeEmailRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -144,7 +144,7 @@ internal static class ManageEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["newEmail"] = ["An email address is required."] });
         }
 
-        if (await userManager.ResolveTypeAsync(user) == HuiaUserType.Phone)
+        if (await userManager.GetUserTypeAsync(user) == HuiaUserType.Phone)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -170,7 +170,7 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> ChangePasswordAsync(
-        HttpContext context, UserManager<HuiaUser> userManager, IMultiTenantContextAccessor tenantAccessor,
+        HttpContext context, HuiaUserManager userManager, IMultiTenantContextAccessor tenantAccessor,
         IHuiaEventPublisher events, TimeProvider timeProvider, ChangePasswordRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
@@ -190,14 +190,14 @@ internal static class ManageEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> GetPhoneAsync(HttpContext context, UserManager<HuiaUser> userManager)
+    private static async Task<IResult> GetPhoneAsync(HttpContext context, HuiaUserManager userManager)
     {
         var user = await ResolveUserAsync(context, userManager);
         return user is null ? Results.Unauthorized() : Results.Ok(new PhoneDto(user.PhoneNumber, user.PhoneNumberConfirmed));
     }
 
     private static async Task<IResult> StartPhoneChangeAsync(
-        HttpContext context, UserManager<HuiaUser> userManager, IOtpService otpService, ISmsSender smsSender,
+        HttpContext context, HuiaUserManager userManager, IOtpService otpService, ISmsSender smsSender,
         IPhoneNumberService phoneNumbers, IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions,
         IHuiaEventPublisher events, TimeProvider timeProvider, ChangePhoneRequest body)
     {
@@ -207,7 +207,7 @@ internal static class ManageEndpoints
             return Results.Unauthorized();
         }
 
-        if (await userManager.ResolveTypeAsync(user) is HuiaUserType.Password or HuiaUserType.External)
+        if (await userManager.GetUserTypeAsync(user) is HuiaUserType.Password or HuiaUserType.External)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -232,7 +232,7 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> ConfirmPhoneChangeAsync(
-        HttpContext context, UserManager<HuiaUser> userManager, IOtpService otpService, IPhoneNumberService phoneNumbers,
+        HttpContext context, HuiaUserManager userManager, IOtpService otpService, IPhoneNumberService phoneNumbers,
         IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions, IHuiaEventPublisher events, TimeProvider timeProvider,
         ConfirmPhoneRequest body)
     {
@@ -242,7 +242,7 @@ internal static class ManageEndpoints
             return Results.Unauthorized();
         }
 
-        var userType = await userManager.ResolveTypeAsync(user);
+        var userType = await userManager.GetUserTypeAsync(user);
         if (userType is HuiaUserType.Password or HuiaUserType.External)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
@@ -291,7 +291,7 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> RemovePhoneAsync(
-        HttpContext context, UserManager<HuiaUser> userManager, IMultiTenantContextAccessor tenantAccessor,
+        HttpContext context, HuiaUserManager userManager, IMultiTenantContextAccessor tenantAccessor,
         IHuiaEventPublisher events, TimeProvider timeProvider)
     {
         var user = await ResolveUserAsync(context, userManager);
@@ -300,7 +300,7 @@ internal static class ManageEndpoints
             return Results.Unauthorized();
         }
 
-        if (await userManager.ResolveTypeAsync(user) == HuiaUserType.Phone)
+        if (await userManager.GetUserTypeAsync(user) == HuiaUserType.Phone)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -321,7 +321,7 @@ internal static class ManageEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<HuiaUser?> ResolveUserAsync(HttpContext context, UserManager<HuiaUser> userManager)
+    private static async Task<HuiaUser?> ResolveUserAsync(HttpContext context, HuiaUserManager userManager)
     {
         var principal = context.User;
         var subject = principal.FindFirstValue(OpenIddictConstants.Claims.Subject)

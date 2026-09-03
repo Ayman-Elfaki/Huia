@@ -7,6 +7,7 @@ using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
+using Huia.AspNetCore.Identity;
 using Huia.EntityFrameworkCore.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore.Identity;
@@ -23,7 +24,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 /// </summary>
 public sealed class LoginModel(
     SignInManager<HuiaUser> signInManager,
-    UserManager<HuiaUser> userManager,
+    HuiaUserManager userManager,
     IReturnUrlProtector returnUrlProtector,
     IMultiTenantContextAccessor tenantAccessor,
     IHuiaEventPublisher events,
@@ -156,7 +157,7 @@ public sealed class LoginModel(
             return Page();
         }
 
-        var user = await userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == e164, HttpContext.RequestAborted);
+        var user = await userManager.FindByPhoneNumberAsync(e164);
 
         var state = new AuthFlowState { ReturnUrl = ReturnUrl, PhoneNumber = e164 };
         var maskedForEvent = phoneNumbers.Mask(e164);

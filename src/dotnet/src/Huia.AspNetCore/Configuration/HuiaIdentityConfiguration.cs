@@ -53,7 +53,8 @@ internal static class HuiaIdentityConfiguration
                 identity.SignIn.RequireConfirmedPhoneNumber = false;
             })
             .AddEntityFrameworkStores<HuiaDbContext>()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddUserManager<HuiaUserManager>();
 
         services.Replace(ServiceDescriptor.Scoped<IUserConfirmation<HuiaUser>, HuiaUserConfirmation>());
 

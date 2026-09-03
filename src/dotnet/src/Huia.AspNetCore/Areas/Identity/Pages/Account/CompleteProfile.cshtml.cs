@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using Huia.AspNetCore.Flows;
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.Services;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
@@ -19,8 +19,8 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 /// existing blank-name user, or an external sign-up. The <see cref="HuiaUser"/> is created (or updated)
 /// here — never with blank names at request time.
 /// </summary>
-public sealed partial class CompleteProfileModel(
-    UserManager<HuiaUser> userManager,
+public sealed class CompleteProfileModel(
+    HuiaUserManager userManager,
     SignInManager<HuiaUser> signInManager,
     IPendingPhoneSignup pendingSignups,
     IMultiTenantContextAccessor tenantAccessor,
@@ -121,18 +121,7 @@ public sealed partial class CompleteProfileModel(
             return null;
         }
 
-        var user = new HuiaUser
-        {
-            TenantId = tenantId,
-            UserName = phoneNumber,
-            PhoneNumber = phoneNumber,
-            PhoneNumberConfirmed = true,
-            EmailConfirmed = true, // vacuous: no email; nothing to confirm.
-            FirstName = Input.FirstName,
-            LastName = Input.LastName,
-        };
-
-        var result = await userManager.CreateAsync(user);
+        var (result, user) = await userManager.CreatePhoneUserAsync(tenantId, phoneNumber, Input.FirstName, Input.LastName);
         if (!result.Succeeded)
         {
             ErrorMessage = string.Join(" ", result.Errors.Select(e => e.Description));
@@ -170,30 +159,16 @@ public sealed partial class CompleteProfileModel(
             return null;
         }
 
-        var userName = !string.IsNullOrWhiteSpace(email)
-            ? email!
-            : SanitizeUserName($"{Slug(state.ExternalDisplayName)}-{state.ExternalProviderKey}");
+        var provider = state.ExternalProvider!;
+        var key = state.ExternalProviderKey ?? string.Empty;
+        var displayName = state.ExternalDisplayName ?? provider;
 
-        var user = new HuiaUser
-        {
-            TenantId = tenantId,
-            UserName = userName,
-            Email = email,
-            EmailConfirmed = true, // the external provider is the confirmed factor.
-            FirstName = Input.FirstName,
-            LastName = Input.LastName,
-        };
-
-        var create = await userManager.CreateAsync(user);
+        var (create, user) = await userManager.CreateExternalUserAsync(
+            tenantId, email, Input.FirstName, Input.LastName, provider, key, displayName);
         if (!create.Succeeded)
         {
             ErrorMessage = string.Join(" ", create.Errors.Select(e => e.Description));
             return null;
-        }
-
-        if (state.ExternalProvider is { } provider && state.ExternalProviderKey is { } key)
-        {
-            await userManager.AddLoginAsync(user, new UserLoginInfo(provider, key, state.ExternalDisplayName ?? provider));
         }
 
         await events.PublishAsync(new UserRegisteredEvent(
@@ -201,26 +176,11 @@ public sealed partial class CompleteProfileModel(
         return user;
     }
 
-    private static string Slug(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? "user" : NonSlugChars().Replace(value.ToLowerInvariant(), "-").Trim('-');
-
-    private static string SanitizeUserName(string value)
-    {
-        var cleaned = InvalidUserNameChars().Replace(value, string.Empty);
-        return string.IsNullOrWhiteSpace(cleaned) ? "user-" + Guid.NewGuid().ToString("N")[..8] : cleaned;
-    }
-
     private void SetHeadings()
     {
         ViewData["Title"] = localizer["CompleteProfile.Title"].Value;
         ViewData["Heading"] = localizer["CompleteProfile.Heading"].Value;
     }
-
-    [GeneratedRegex("[^a-z0-9]+")]
-    private static partial Regex NonSlugChars();
-
-    [GeneratedRegex("[^a-zA-Z0-9._@+-]")]
-    private static partial Regex InvalidUserNameChars();
 
     /// <summary>The profile-completion form fields.</summary>
     public sealed class InputModel

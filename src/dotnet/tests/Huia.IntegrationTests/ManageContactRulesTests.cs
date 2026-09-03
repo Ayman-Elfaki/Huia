@@ -52,11 +52,11 @@ public sealed class ManageContactRulesTests : IAsyncLifetime
         await _host.AddExternalLoginAsync("phone", externalUserId, "Partner", "partner-key-1");
 
         var password = await _host.WithUserManagerAsync("phone", async um =>
-            await um.ResolveTypeAsync((await um.FindByIdAsync(passwordUserId))!));
+            await um.GetUserTypeAsync((await um.FindByIdAsync(passwordUserId))!));
         var external = await _host.WithUserManagerAsync("phone", async um =>
-            await um.ResolveTypeAsync((await um.FindByIdAsync(externalUserId))!));
+            await um.GetUserTypeAsync((await um.FindByIdAsync(externalUserId))!));
         var phone = await _host.WithUserManagerAsync("phone", async um =>
-            await um.ResolveTypeAsync((await um.FindByIdAsync(_phoneUserId))!));
+            await um.GetUserTypeAsync((await um.FindByIdAsync(_phoneUserId))!));
 
         password.ShouldBe(HuiaUserType.Password);
         external.ShouldBe(HuiaUserType.External);

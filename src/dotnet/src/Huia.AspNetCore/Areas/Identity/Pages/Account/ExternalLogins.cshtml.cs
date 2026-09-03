@@ -1,3 +1,4 @@
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -12,7 +13,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 /// and links the returned login to this account.
 /// </summary>
 public sealed class ExternalLoginsModel(
-    UserManager<HuiaUser> userManager,
+    HuiaUserManager userManager,
     SignInManager<HuiaUser> signInManager,
     IStringLocalizer<SharedResource> localizer) : HuiaAccountPageModel
 {
@@ -70,7 +71,7 @@ public sealed class ExternalLoginsModel(
             return RedirectToPage("./Login");
         }
 
-        if (!await CanRemoveLoginAsync(userManager, user))
+        if (!await userManager.CanRemoveExternalLoginAsync(user))
         {
             ErrorMessage = localizer["ExternalLogins.CannotRemoveLast"].Value;
             await LoadAsync(user);
@@ -91,22 +92,6 @@ public sealed class ExternalLoginsModel(
         return Page();
     }
 
-    /// <summary>
-    /// True when removing one external login would still leave a way to sign in (a password, another
-    /// external login, or a phone number).
-    /// </summary>
-    /// <param name="userManager">The user manager.</param>
-    /// <param name="user">The account.</param>
-    /// <returns>Whether a removal is allowed.</returns>
-    internal static async Task<bool> CanRemoveLoginAsync(UserManager<HuiaUser> userManager, HuiaUser user)
-    {
-        if (await userManager.HasPasswordAsync(user) || !string.IsNullOrEmpty(user.PhoneNumber))
-        {
-            return true;
-        }
-
-        return (await userManager.GetLoginsAsync(user)).Count > 1;
-    }
 
     private async Task LoadAsync(HuiaUser user)
     {
@@ -120,7 +105,7 @@ public sealed class ExternalLoginsModel(
             .Where(p => !linkedIds.Contains($"{TenantId}:{p.Name}"))
             .ToList();
 
-        CanRemove = await CanRemoveLoginAsync(userManager, user);
+        CanRemove = await userManager.CanRemoveExternalLoginAsync(user);
     }
 
     private void SetHeadings()

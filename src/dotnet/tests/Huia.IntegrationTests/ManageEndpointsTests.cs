@@ -84,8 +84,7 @@ public sealed class ManageEndpointsTests : IAsyncLifetime
         await _host.AddExternalLoginAsync("acme", loner, "acme:Partner", "loner-subject");
 
         var canRemove = await _host.WithUserManagerAsync("acme", async um =>
-            await Huia.AspNetCore.Areas.Identity.Pages.Account.ExternalLoginsModel.CanRemoveLoginAsync(
-                um, (await um.FindByIdAsync(loner))!));
+            await um.CanRemoveExternalLoginAsync((await um.FindByIdAsync(loner))!));
 
         canRemove.ShouldBeFalse();
     }

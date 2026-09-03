@@ -1,5 +1,6 @@
 using System.Net;
 using Finbuckle.MultiTenant.Abstractions;
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.Multitenancy;
 using Huia.EntityFrameworkCore;
 using Huia.EntityFrameworkCore.Entities;
@@ -277,7 +278,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
         await using var scope = _host.Services.CreateAsyncScope();
         using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var user = new HuiaUser
             {
                 TenantId = tenantId,
@@ -316,7 +317,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
         await using var scope = _host.Services.CreateAsyncScope();
         using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var user = new HuiaUser
             {
                 TenantId = tenantId,
@@ -348,12 +349,12 @@ public sealed class HuiaTestHost : IAsyncDisposable
     /// <param name="tenantId">The tenant to enter.</param>
     /// <param name="work">The callback.</param>
     /// <returns>The callback's result.</returns>
-    public async Task<T> WithUserManagerAsync<T>(string tenantId, Func<UserManager<HuiaUser>, Task<T>> work)
+    public async Task<T> WithUserManagerAsync<T>(string tenantId, Func<HuiaUserManager, Task<T>> work)
     {
         await using var scope = _host.Services.CreateAsyncScope();
         using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             return await work(userManager);
         }
     }
@@ -389,7 +390,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
         using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
         {
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<HuiaRole>>();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
 
             if (!await roleManager.RoleExistsAsync(role))
             {

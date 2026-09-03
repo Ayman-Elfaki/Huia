@@ -1,3 +1,4 @@
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.Keys;
 using Huia.AspNetCore.Multitenancy;
 using Huia.AspNetCore.OpenIddict;
@@ -57,7 +58,7 @@ internal static partial class AdminEndpoints
 
         return await WithTenantScopeAsync(context, body.Tenant, async services =>
         {
-            var userManager = services.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = services.GetRequiredService<HuiaUserManager>();
             var userName = (hasEmail ? body.Email! : body.PhoneNumber!).Trim();
 
             if (await userManager.FindByNameAsync(userName) is not null)
@@ -114,7 +115,7 @@ internal static partial class AdminEndpoints
 
         return await WithTenantScopeAsync(context, tenantId, async services =>
         {
-            var userManager = services.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = services.GetRequiredService<HuiaUserManager>();
             var user = await userManager.FindByIdAsync(id);
             if (user is null)
             {
@@ -167,7 +168,7 @@ internal static partial class AdminEndpoints
 
         return await WithTenantScopeAsync(context, tenantId, async services =>
         {
-            var userManager = services.GetRequiredService<UserManager<HuiaUser>>();
+            var userManager = services.GetRequiredService<HuiaUserManager>();
             var user = await userManager.FindByIdAsync(id);
             if (user is null)
             {

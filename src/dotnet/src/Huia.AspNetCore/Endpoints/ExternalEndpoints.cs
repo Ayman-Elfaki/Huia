@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Huia.AspNetCore.Flows;
+using Huia.AspNetCore.Identity;
 using Huia.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
@@ -151,7 +152,7 @@ internal static class ExternalEndpoints
     /// </summary>
     private static async Task<IResult> ExternalLoginCallbackAsync(
         HttpContext context,
-        UserManager<HuiaUser> userManager,
+        HuiaUserManager userManager,
         SignInManager<HuiaUser> signInManager,
         IMultiTenantContextAccessor tenantAccessor,
         IReturnUrlProtector returnUrlProtector,
@@ -197,7 +198,7 @@ internal static class ExternalEndpoints
                 return Results.Redirect($"{pathBase}/{ExternalLoginsPage}?linked=" + (owner.Id == current.Id ? "ok" : "dupe"));
             }
 
-            var linked = await userManager.AddLoginAsync(current, new UserLoginInfo(info.LoginProvider, info.ProviderKey, providerName));
+            var linked = await userManager.AddExternalLoginAsync(current, info.LoginProvider, info.ProviderKey, providerName);
             return Results.Redirect($"{pathBase}/{ExternalLoginsPage}?linked=" + (linked.Succeeded ? "ok" : "error"));
         }
 
@@ -208,24 +209,21 @@ internal static class ExternalEndpoints
 
         if (user is null && !string.IsNullOrWhiteSpace(email))
         {
-            var byEmail = await userManager.FindByEmailAsync(email);
-            if (byEmail is not null)
-            {
-                var providerVouches = !string.Equals(emailVerified, "false", StringComparison.OrdinalIgnoreCase);
-                var external = options.Tenants.TryGetValue(tenantId, out var tenant)
-                    ? tenant.Authentication.Passwordless.ExternalLogin
-                    : null;
+            var providerVouches = !string.Equals(emailVerified, "false", StringComparison.OrdinalIgnoreCase);
+            var accountLinkingEnabled = options.Tenants.TryGetValue(tenantId, out var tenant)
+                && tenant.Authentication.Passwordless.ExternalLogin?.AccountLinkingEnabled == true;
 
-                if (external?.AccountLinkingEnabled == true && byEmail.EmailConfirmed && providerVouches
-                    && (await userManager.AddLoginAsync(byEmail, new UserLoginInfo(info.LoginProvider, info.ProviderKey, providerName))).Succeeded)
-                {
-                    user = byEmail;
-                }
-                else
-                {
+            var (outcome, linked) = await userManager.TryLinkExternalByEmailAsync(
+                email, providerVouches, accountLinkingEnabled, info.LoginProvider, info.ProviderKey, providerName);
+
+            switch (outcome)
+            {
+                case ExternalEmailLinkOutcome.Linked:
+                    user = linked;
+                    break;
+                case ExternalEmailLinkOutcome.Blocked:
                     // An account already owns this email; linking is disabled or ineligible. Never create a duplicate.
                     return Results.Redirect($"{pathBase}/{LoginPage}?linkError=1");
-                }
             }
         }
 
