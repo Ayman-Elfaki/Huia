@@ -1,0 +1,10 @@
+{
+  "name": "huia-auth-nuxt-playground",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxi dev",
+    "build": "nuxi build",
+    "preview": "nuxi preview"
+  }
+}

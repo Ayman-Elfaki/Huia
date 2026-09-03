@@ -111,7 +111,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: src/nuxt/package-lock.json
-      - run: npm ci
+      # --legacy-peer-deps: @nuxt/module-builder's toolchain (mkdist/unbuild) has an optional
+      # peer-dep graph that trips npm's arborist otherwise.
+      - run: npm ci --legacy-peer-deps
       - run: npm run dev:prepare
       - run: npm run test:types
       - run: npm test
