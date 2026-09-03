@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/solution items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path=".editorconfig" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+    <File Path="CHANGELOG.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Huia/Huia.csproj" />
+    <Project Path="src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj" />
+    <Project Path="src/Huia.AspNetCore/Huia.AspNetCore.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Huia.AppHost/Huia.AppHost.csproj" />
+    <Project Path="samples/Huia.IdentityServer/Huia.IdentityServer.csproj" />
+    <Project Path="samples/Huia.External/Huia.External.csproj" />
+    <Project Path="samples/Huia.Cli/Huia.Cli.csproj" />
+    <Project Path="samples/Todo.Api/Todo.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Huia.Tests/Huia.Tests.csproj" />
+    <Project Path="tests/Huia.IntegrationTests/Huia.IntegrationTests.csproj" />
+    <Project Path="tests/Huia.E2ETests/Huia.E2ETests.csproj" />
+    <Project Path="tests/Huia.Tests.PenTest/Huia.Tests.PenTest.csproj" />
+  </Folder>
+</Solution>

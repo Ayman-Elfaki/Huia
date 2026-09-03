@@ -1,0 +1,80 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <OpenIddictVersion>7.6.1</OpenIddictVersion>
+    <FinbuckleVersion>10.1.3</FinbuckleVersion>
+    <EfCoreVersion>10.0.11</EfCoreVersion>
+    <AspNetCoreVersion>10.0.11</AspNetCoreVersion>
+    <QuartzVersion>3.20.0</QuartzVersion>
+    <AspireVersion>13.5.3</AspireVersion>
+  </PropertyGroup>
+
+  <ItemGroup Label="OpenIddict">
+    <PackageVersion Include="OpenIddict.AspNetCore" Version="$(OpenIddictVersion)" />
+    <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="$(OpenIddictVersion)" />
+    <PackageVersion Include="OpenIddict.Client.AspNetCore" Version="$(OpenIddictVersion)" />
+    <PackageVersion Include="OpenIddict.Client.SystemNetHttp" Version="$(OpenIddictVersion)" />
+    <PackageVersion Include="OpenIddict.Client.DataProtection" Version="$(OpenIddictVersion)" />
+    <PackageVersion Include="OpenIddict.Client.WebIntegration" Version="$(OpenIddictVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Label="Multi-tenancy">
+    <PackageVersion Include="Finbuckle.MultiTenant" Version="$(FinbuckleVersion)" />
+    <PackageVersion Include="Finbuckle.MultiTenant.AspNetCore" Version="$(FinbuckleVersion)" />
+    <PackageVersion Include="Finbuckle.MultiTenant.EntityFrameworkCore" Version="$(FinbuckleVersion)" />
+    <PackageVersion Include="Finbuckle.MultiTenant.Identity.EntityFrameworkCore" Version="$(FinbuckleVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Label="EF Core / Identity">
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(EfCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="$(EfCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EfCoreVersion)" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(EfCoreVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Label="Caching / scheduling / mail / misc">
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Quartz" Version="$(QuartzVersion)" />
+    <PackageVersion Include="Quartz.Extensions.Hosting" Version="$(QuartzVersion)" />
+    <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="$(QuartzVersion)" />
+    <PackageVersion Include="MR.AspNetCore.Pagination" Version="3.1.0" />
+    <PackageVersion Include="MailKit" Version="4.17.0" />
+    <PackageVersion Include="MimeKit" Version="4.17.0" />
+    <PackageVersion Include="libphonenumber-csharp" Version="9.0.38" />
+    <PackageVersion Include="AngleSharp" Version="1.7.2" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta5.25306.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Aspire (samples)">
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Javascript" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.MailPit" Version="13.5.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Build / SourceLink">
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="MinVer" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.0" />
+    <PackageVersion Include="Shouldly" Version="4.2.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.49.0" />
+    <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
+  </ItemGroup>
+
+</Project>

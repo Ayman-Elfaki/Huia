@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Culture.Name" xml:space="preserve">
+    <value>العربية</value>
+  </data>
+  <data name="Common.SignIn" xml:space="preserve">
+    <value>تسجيل الدخول</value>
+  </data>
+  <data name="Common.SignOut" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="Common.Email" xml:space="preserve">
+    <value>البريد الإلكتروني</value>
+  </data>
+  <data name="Common.Password" xml:space="preserve">
+    <value>كلمة المرور</value>
+  </data>
+  <data name="Common.Continue" xml:space="preserve">
+    <value>متابعة</value>
+  </data>
+  <data name="Common.Back" xml:space="preserve">
+    <value>رجوع</value>
+  </data>
+  <data name="Common.Duration.Seconds" xml:space="preserve">
+    <value>{0} ثانية</value>
+  </data>
+  <data name="Common.Duration.Minutes" xml:space="preserve">
+    <value>{0} دقيقة</value>
+  </data>
+  <data name="Common.Terms" xml:space="preserve">
+    <value>الشروط</value>
+  </data>
+  <data name="Common.Privacy" xml:space="preserve">
+    <value>الخصوصية</value>
+  </data>
+  <data name="Common.Support" xml:space="preserve">
+    <value>الدعم</value>
+  </data>
+  <data name="Diagnostics.Greeting" xml:space="preserve">
+    <value>مرحبا</value>
+  </data>
+  <data name="Login.Title" xml:space="preserve">
+    <value>تسجيل الدخول</value>
+  </data>
+  <data name="Login.Heading" xml:space="preserve">
+    <value>تسجيل الدخول</value>
+  </data>
+  <data name="Login.Failed" xml:space="preserve">
+    <value>البريد الإلكتروني أو كلمة المرور غير صحيحة.</value>
+  </data>
+  <data name="Login.LockedOut" xml:space="preserve">
+    <value>تم قفل هذا الحساب مؤقتًا. حاول لاحقًا.</value>
+  </data>
+  <data name="Login.RememberMe" xml:space="preserve">
+    <value>إبقائي مسجلاً للدخول</value>
+  </data>
+  <data name="Login.ForgotPassword" xml:space="preserve">
+    <value>هل نسيت كلمة المرور؟</value>
+  </data>
+  <data name="Login.Register" xml:space="preserve">
+    <value>إنشاء حساب</value>
+  </data>
+  <data name="Login.EmailTab" xml:space="preserve">
+    <value>البريد الإلكتروني</value>
+  </data>
+  <data name="Login.PhoneTab" xml:space="preserve">
+    <value>الهاتف</value>
+  </data>
+  <data name="Login.OrContinueWith" xml:space="preserve">
+    <value>أو تابع باستخدام</value>
+  </data>
+  <data name="Login.EmailDescription" xml:space="preserve">
+    <value>سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.</value>
+  </data>
+  <data name="Login.PhoneDescription" xml:space="preserve">
+    <value>سنرسل رمزًا لمرة واحدة إلى رقم هاتفك.</value>
+  </data>
+  <data name="Login.ExternalEmailTaken" xml:space="preserve">
+    <value>يوجد حساب بهذا البريد الإلكتروني بالفعل. سجّل الدخول بطريقتك الحالية ثم اربط المزوّد من إعدادات حسابك.</value>
+  </data>
+  <data name="ExternalLogins.Title" xml:space="preserve">
+    <value>الحسابات المرتبطة</value>
+  </data>
+  <data name="ExternalLogins.Heading" xml:space="preserve">
+    <value>الحسابات المرتبطة</value>
+  </data>
+  <data name="ExternalLogins.Intro" xml:space="preserve">
+    <value>مزوّدو تسجيل الدخول المرتبطون بحسابك.</value>
+  </data>
+  <data name="ExternalLogins.None" xml:space="preserve">
+    <value>لا يوجد مزوّدون مرتبطون بعد.</value>
+  </data>
+  <data name="ExternalLogins.Add" xml:space="preserve">
+    <value>إضافة</value>
+  </data>
+  <data name="ExternalLogins.Remove" xml:space="preserve">
+    <value>إزالة</value>
+  </data>
+  <data name="ExternalLogins.AddHeading" xml:space="preserve">
+    <value>إضافة مزوّد</value>
+  </data>
+  <data name="ExternalLogins.LinkedOk" xml:space="preserve">
+    <value>تم ربط المزوّد.</value>
+  </data>
+  <data name="ExternalLogins.LinkedDuplicate" xml:space="preserve">
+    <value>حساب هذا المزوّد مرتبط بالفعل بمستخدم آخر.</value>
+  </data>
+  <data name="ExternalLogins.LinkedError" xml:space="preserve">
+    <value>تعذّر ربط المزوّد. حاول مرة أخرى.</value>
+  </data>
+  <data name="ExternalLogins.CannotRemoveLast" xml:space="preserve">
+    <value>لا يمكنك إزالة طريقة تسجيل الدخول الوحيدة لديك.</value>
+  </data>
+  <data name="Register.Title" xml:space="preserve">
+    <value>أنشئ حسابك</value>
+  </data>
+  <data name="Register.Heading" xml:space="preserve">
+    <value>أنشئ حسابك</value>
+  </data>
+  <data name="Register.FirstName" xml:space="preserve">
+    <value>الاسم الأول</value>
+  </data>
+  <data name="Register.LastName" xml:space="preserve">
+    <value>اسم العائلة</value>
+  </data>
+  <data name="Register.ConfirmPassword" xml:space="preserve">
+    <value>تأكيد كلمة المرور</value>
+  </data>
+  <data name="Register.Submit" xml:space="preserve">
+    <value>إنشاء الحساب</value>
+  </data>
+  <data name="Register.HaveAccount" xml:space="preserve">
+    <value>لديك حساب بالفعل؟ سجّل الدخول</value>
+  </data>
+  <data name="ForgotPassword.Title" xml:space="preserve">
+    <value>إعادة تعيين كلمة المرور</value>
+  </data>
+  <data name="ForgotPassword.Heading" xml:space="preserve">
+    <value>إعادة تعيين كلمة المرور</value>
+  </data>
+  <data name="ForgotPassword.Intro" xml:space="preserve">
+    <value>أدخل بريدك وسنرسل لك رابط إعادة التعيين.</value>
+  </data>
+  <data name="ForgotPassword.Submit" xml:space="preserve">
+    <value>إرسال الرابط</value>
+  </data>
+  <data name="ForgotPassword.Sent" xml:space="preserve">
+    <value>إذا كان هناك حساب لهذا العنوان، فسيصلك رابط التعيين.</value>
+  </data>
+  <data name="RegisterConfirmation.Title" xml:space="preserve">
+    <value>أكّد بريدك</value>
+  </data>
+  <data name="RegisterConfirmation.Heading" xml:space="preserve">
+    <value>أكّد بريدك</value>
+  </data>
+  <data name="RegisterConfirmation.Body" xml:space="preserve">
+    <value>تحقق من بريدك لتأكيد عنوانك قبل تسجيل الدخول.</value>
+  </data>
+  <data name="AccessDenied.Title" xml:space="preserve">
+    <value>تم رفض الوصول</value>
+  </data>
+  <data name="AccessDenied.Heading" xml:space="preserve">
+    <value>تم رفض الوصول</value>
+  </data>
+  <data name="AccessDenied.Body" xml:space="preserve">
+    <value>ليس لديك إذن لعرض هذا المورد.</value>
+  </data>
+  <data name="SignedIn.Title" xml:space="preserve">
+    <value>تم تسجيل الدخول</value>
+  </data>
+  <data name="SignedIn.Heading" xml:space="preserve">
+    <value>تم تسجيل دخولك</value>
+  </data>
+  <data name="SignedIn.Body" xml:space="preserve">
+    <value>تم تسجيل دخولك. يمكنك إغلاق هذه العلامة، أو العودة إلى التطبيق الذي بدأت منه.</value>
+  </data>
+  <data name="SignedIn.BodyNamed" xml:space="preserve">
+    <value>تم تسجيل دخولك باسم {0}. يمكنك إغلاق هذه العلامة، أو العودة إلى التطبيق الذي بدأت منه.</value>
+  </data>
+  <data name="SignedIn.SignOut" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="SignedIn.Continue" xml:space="preserve">
+    <value>المتابعة إلى {0}</value>
+  </data>
+  <data name="Logout.Title" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="Logout.Heading" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="Logout.Confirm" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="Error.Title" xml:space="preserve">
+    <value>حدث خطأ ما</value>
+  </data>
+  <data name="Error.Message" xml:space="preserve">
+    <value>واجهنا مشكلة غير متوقعة أثناء معالجة طلبك.</value>
+  </data>
+  <data name="Error.RequestId" xml:space="preserve">
+    <value>المرجع</value>
+  </data>
+  <data name="Error.BackToSignIn" xml:space="preserve">
+    <value>العودة إلى تسجيل الدخول</value>
+  </data>
+  <data name="Status.400.Title" xml:space="preserve">
+    <value>طلب غير صالح</value>
+  </data>
+  <data name="Status.400.Body" xml:space="preserve">
+    <value>تعذّرت معالجة هذا الطلب. تحقّق من العنوان وحاول مرة أخرى.</value>
+  </data>
+  <data name="Status.401.Title" xml:space="preserve">
+    <value>تسجيل الدخول مطلوب</value>
+  </data>
+  <data name="Status.401.Body" xml:space="preserve">
+    <value>يلزم تسجيل الدخول لعرض هذه الصفحة.</value>
+  </data>
+  <data name="Status.403.Title" xml:space="preserve">
+    <value>الوصول مرفوض</value>
+  </data>
+  <data name="Status.403.Body" xml:space="preserve">
+    <value>ليس لديك إذن لعرض هذا المورد.</value>
+  </data>
+  <data name="Status.404.Title" xml:space="preserve">
+    <value>الصفحة غير موجودة</value>
+  </data>
+  <data name="Status.404.Body" xml:space="preserve">
+    <value>تعذّر العثور على الصفحة التي تبحث عنها.</value>
+  </data>
+  <data name="Status.500.Title" xml:space="preserve">
+    <value>حدث خطأ ما</value>
+  </data>
+  <data name="Status.500.Body" xml:space="preserve">
+    <value>واجهنا مشكلة غير متوقعة أثناء معالجة طلبك.</value>
+  </data>
+  <data name="Status.Generic.Title" xml:space="preserve">
+    <value>حدث خطأ ما</value>
+  </data>
+  <data name="Status.Generic.Body" xml:space="preserve">
+    <value>تعذّر إكمال الطلب.</value>
+  </data>
+  <data name="PhoneLogin.Title" xml:space="preserve">
+    <value>سجّل الدخول برقم هاتفك</value>
+  </data>
+  <data name="PhoneLogin.Heading" xml:space="preserve">
+    <value>سجّل الدخول برقم هاتفك</value>
+  </data>
+  <data name="PhoneLogin.Number" xml:space="preserve">
+    <value>رقم الهاتف</value>
+  </data>
+  <data name="PhoneLogin.Country" xml:space="preserve">
+    <value>الدولة</value>
+  </data>
+  <data name="PhoneLogin.CountryPlaceholder" xml:space="preserve">
+    <value>اختر دولة</value>
+  </data>
+  <data name="PhoneLogin.SearchCountry" xml:space="preserve">
+    <value>ابحث عن دولة…</value>
+  </data>
+  <data name="PhoneLogin.NoCountry" xml:space="preserve">
+    <value>لا توجد دولة مطابقة</value>
+  </data>
+  <data name="PhoneLogin.Send" xml:space="preserve">
+    <value>إرسال الرمز</value>
+  </data>
+  <data name="PhoneLogin.Invalid" xml:space="preserve">
+    <value>أدخل رقم هاتف صحيحًا.</value>
+  </data>
+  <data name="PhoneLogin.RateLimited" xml:space="preserve">
+    <value>طلبات كثيرة جدًا. انتظر قليلاً قبل المحاولة مرة أخرى.</value>
+  </data>
+  <data name="PhoneLogin.CaptchaRequired" xml:space="preserve">
+    <value>يرجى إكمال التحقق.</value>
+  </data>
+  <data name="VerifyOtp.Title" xml:space="preserve">
+    <value>أدخل الرمز</value>
+  </data>
+  <data name="VerifyOtp.Heading" xml:space="preserve">
+    <value>أدخل الرمز</value>
+  </data>
+  <data name="VerifyOtp.Intro" xml:space="preserve">
+    <value>أدخل الرمز الذي أرسلناه إلى {0}.</value>
+  </data>
+  <data name="VerifyOtp.NoCode" xml:space="preserve">
+    <value>لم يصلك رمز؟</value>
+  </data>
+  <data name="VerifyOtp.Code" xml:space="preserve">
+    <value>رمز التحقق</value>
+  </data>
+  <data name="VerifyOtp.Submit" xml:space="preserve">
+    <value>تحقّق</value>
+  </data>
+  <data name="VerifyOtp.Resend" xml:space="preserve">
+    <value>إرسال رمز جديد</value>
+  </data>
+  <data name="VerifyOtp.Invalid" xml:space="preserve">
+    <value>الرمز غير صحيح أو منتهي الصلاحية.</value>
+  </data>
+  <data name="VerifyOtp.DigitLabel" xml:space="preserve">
+    <value>الرقم {0}</value>
+  </data>
+  <data name="VerifyOtp.Sent" xml:space="preserve">
+    <value>أرسلنا رمزًا إلى هاتفك.</value>
+  </data>
+  <data name="VerifyOtp.ResendIn" xml:space="preserve">
+    <value>إرسال رمز جديد خلال {0} ثانية</value>
+  </data>
+  <data name="VerifyOtp.RateLimited" xml:space="preserve">
+    <value>لقد سجّلت الدخول من هذا الرقم قبل قليل. حاول مرة أخرى خلال {0}.</value>
+  </data>
+  <data name="VerifyOtp.RateLimitedDaily" xml:space="preserve">
+    <value>وصل هذا الرقم إلى الحد اليومي لتسجيل الدخول. حاول مرة أخرى غدًا.</value>
+  </data>
+  <data name="CompleteProfile.Title" xml:space="preserve">
+    <value>أكمل ملفك الشخصي</value>
+  </data>
+  <data name="CompleteProfile.Heading" xml:space="preserve">
+    <value>أكمل ملفك الشخصي</value>
+  </data>
+  <data name="CompleteProfile.Intro" xml:space="preserve">
+    <value>أخبرنا باسمك لإنهاء إعداد حسابك.</value>
+  </data>
+  <data name="CompleteProfile.Submit" xml:space="preserve">
+    <value>إنهاء</value>
+  </data>
+  <data name="Email.Confirm.Subject" xml:space="preserve">
+    <value>أكّد بريدك الإلكتروني</value>
+  </data>
+  <data name="Email.Confirm.Heading" xml:space="preserve">
+    <value>أكّد بريدك الإلكتروني</value>
+  </data>
+  <data name="Email.Confirm.Body" xml:space="preserve">
+    <value>مرحبًا {0}، يرجى تأكيد عنوان بريدك الإلكتروني لتفعيل حسابك.</value>
+  </data>
+  <data name="Email.Confirm.Button" xml:space="preserve">
+    <value>تأكيد البريد</value>
+  </data>
+  <data name="Email.Reset.Subject" xml:space="preserve">
+    <value>إعادة تعيين كلمة المرور</value>
+  </data>
+  <data name="Email.Reset.Heading" xml:space="preserve">
+    <value>إعادة تعيين كلمة المرور</value>
+  </data>
+  <data name="Email.Reset.Body" xml:space="preserve">
+    <value>مرحبًا {0}، استخدم الرابط أدناه لاختيار كلمة مرور جديدة.</value>
+  </data>
+  <data name="Email.Reset.Button" xml:space="preserve">
+    <value>إعادة التعيين</value>
+  </data>
+  <data name="Email.LinkFallback" xml:space="preserve">
+    <value>إذا لم يعمل الزر، انسخ هذا الرابط والصقه في متصفحك:</value>
+  </data>
+  <data name="DeviceVerification.Title" xml:space="preserve">
+    <value>تسجيل دخول جهاز</value>
+  </data>
+  <data name="DeviceVerification.Heading" xml:space="preserve">
+    <value>تأكيد هذا الجهاز</value>
+  </data>
+  <data name="DeviceVerification.Intro" xml:space="preserve">
+    <value>أدخل الرمز الظاهر على جهازك لإكمال تسجيل الدخول.</value>
+  </data>
+  <data name="DeviceVerification.CodeLabel" xml:space="preserve">
+    <value>رمز الجهاز</value>
+  </data>
+  <data name="DeviceVerification.Approve" xml:space="preserve">
+    <value>السماح</value>
+  </data>
+  <data name="DeviceVerification.Deny" xml:space="preserve">
+    <value>رفض</value>
+  </data>
+  <data name="DeviceVerification.Invalid" xml:space="preserve">
+    <value>هذا الرمز غير صالح أو انتهت صلاحيته. تحقق من جهازك وحاول مرة أخرى.</value>
+  </data>
+</root>

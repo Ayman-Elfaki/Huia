@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Huia.E2ETests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Testing" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="Xunit.SkippableFact" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\samples\Huia.AppHost\Huia.AppHost.csproj" />
+    <ProjectReference Include="..\..\samples\Huia.IdentityServer\Huia.IdentityServer.csproj" />
+  </ItemGroup>
+
+</Project>

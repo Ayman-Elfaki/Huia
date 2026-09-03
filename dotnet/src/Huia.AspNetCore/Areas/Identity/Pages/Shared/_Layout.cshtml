@@ -1,0 +1,105 @@
+@{
+    var culture = CultureInfo.CurrentUICulture;
+    var isRtl = culture.TextInfo.IsRightToLeft;
+    var dir = isRtl ? "rtl" : "ltr";
+    var heading = ViewData["Heading"] as string ?? ViewData["Title"] as string ?? "Huia";
+    var pathBase = Context.Request.PathBase.HasValue ? Context.Request.PathBase.Value : string.Empty;
+    var nonce = CspNonce.Value;
+    var accent = ViewData["Accent"] as string;
+    var logoUrl = ViewData["LogoUrl"] as string;
+    var faviconUrl = ViewData["FaviconUrl"] as string;
+    var subtitle = ViewData["Subtitle"] as string;
+    var termsUrl = ViewData["TermsUrl"] as string;
+    var privacyUrl = ViewData["PrivacyUrl"] as string;
+    var supportUrl = ViewData["SupportUrl"] as string;
+    var hasFooter = !string.IsNullOrEmpty(termsUrl) || !string.IsNullOrEmpty(privacyUrl) || !string.IsNullOrEmpty(supportUrl);
+}
+<!DOCTYPE html>
+<html lang="@culture.TwoLetterISOLanguageName" dir="@dir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @if (!string.IsNullOrEmpty(nonce))
+    {
+        <script nonce="@nonce">document.documentElement.dataset.js = "1";</script>
+    }
+    else
+    {
+        <script>document.documentElement.dataset.js = "1";</script>
+    }
+    <title>@ViewData["Title"] · @heading</title>
+    <link rel="stylesheet" href="@(pathBase)/_content/Huia.AspNetCore/css/huia.css" />
+    <link rel="stylesheet" href="@(pathBase)/_content/Huia.AspNetCore/css/flag-icons.css" />
+    @if (!string.IsNullOrEmpty(faviconUrl))
+    {
+        <link rel="icon" href="@faviconUrl" />
+    }
+    @if (!string.IsNullOrEmpty(accent))
+    {
+        if (!string.IsNullOrEmpty(nonce))
+        {
+            <style nonce="@nonce">:root { --primary: @accent; --ring: @accent; }</style>
+        }
+        else
+        {
+            <style>:root { --primary: @accent; --ring: @accent; }</style>
+        }
+    }
+</head>
+<body class="bg-background text-foreground">
+    <main class="huia-shell" dir="@dir">
+        <div class="huia-stack">
+            @if (IsSectionDefined("AboveCard"))
+            {
+                @await RenderSectionAsync("AboveCard", required: false)
+            }
+            <div class="card huia-card">
+                <header>
+                    @if (!string.IsNullOrEmpty(logoUrl))
+                    {
+                        <img class="huia-logo" src="@logoUrl" alt="@(ViewData["Brand"] as string ?? heading)" />
+                    }
+                    else
+                    {
+                        <p class="huia-brand">@(ViewData["Brand"] as string ?? heading)</p>
+                    }
+                    <h1 class="text-xl font-semibold leading-tight">@heading</h1>
+                    @if (!string.IsNullOrEmpty(subtitle))
+                    {
+                        <p class="huia-subtitle">@subtitle</p>
+                    }
+                </header>
+                <section>
+                    @RenderBody()
+                </section>
+            </div>
+            @if (IsSectionDefined("BelowCard"))
+            {
+                @await RenderSectionAsync("BelowCard", required: false)
+            }
+            @if (hasFooter)
+            {
+                <footer class="huia-footer">
+                    @if (!string.IsNullOrEmpty(termsUrl))
+                    {
+                        <a href="@termsUrl">@Localizer["Common.Terms"]</a>
+                    }
+                    @if (!string.IsNullOrEmpty(privacyUrl))
+                    {
+                        <a href="@privacyUrl">@Localizer["Common.Privacy"]</a>
+                    }
+                    @if (!string.IsNullOrEmpty(supportUrl))
+                    {
+                        <a href="@supportUrl">@Localizer["Common.Support"]</a>
+                    }
+                </footer>
+            }
+        </div>
+    </main>
+    <script src="@(pathBase)/_content/Huia.AspNetCore/js/basecoat.js" defer></script>
+    @if (IsSectionDefined("Scripts"))
+    {
+        @await RenderSectionAsync("Scripts", required: false)
+    }
+</body>
+</html>

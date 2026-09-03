@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Huia persistence: HuiaDbContext (Identity + OpenIddict), Huia*-renamed entities and tenant-scoped Identity / OpenIddict stores that filter every query by an explicit TenantId. Provider-agnostic; ships no migrations.</Description>
+    <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;entity-framework-core;openiddict</PackageTags>
+    <RootNamespace>Huia.EntityFrameworkCore</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia\Huia.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore" />
+    <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" />
+    <PackageReference Include="Finbuckle.MultiTenant.Identity.EntityFrameworkCore" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>huia-apphost</UserSecretsId>
+    <AspireUseCliBundle>false</AspireUseCliBundle>
+    <!-- ASPIRETERMINAL001: WithTerminal() is still marked [Experimental] in Aspire 13.5. -->
+    <NoWarn>$(NoWarn);ASPIRE010;ASPIRETERMINAL001</NoWarn>
+    <MSBuildWarningsAsMessages>ASPIRE010</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.Javascript" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.MailPit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia.IdentityServer\Huia.IdentityServer.csproj" />
+    <ProjectReference Include="..\Huia.External\Huia.External.csproj" />
+    <ProjectReference Include="..\Huia.Cli\Huia.Cli.csproj" />
+    <ProjectReference Include="..\Todo.Api\Todo.Api.csproj" />
+  </ItemGroup>
+
+</Project>

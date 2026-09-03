@@ -1,0 +1,15 @@
+@page
+@model Huia.AspNetCore.Areas.Identity.Pages.Account.ConfirmEmailModel
+
+@if (Model.Confirmed)
+{
+    <p data-testid="email-confirmed">@Localizer["RegisterConfirmation.Body"]</p>
+}
+else
+{
+    <div class="alert alert-destructive" role="alert">@Localizer["Error.Message"]</div>
+}
+
+<div class="huia-links">
+    <a asp-page="./Login">@Localizer["Common.SignIn"]</a>
+</div>

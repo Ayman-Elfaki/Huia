@@ -1,0 +1,30 @@
+@page
+@model Huia.AspNetCore.Areas.Identity.Pages.Account.CompleteProfileModel
+
+<p class="huia-muted">@Localizer["CompleteProfile.Intro"]</p>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-destructive" role="alert">@Model.ErrorMessage</div>
+}
+
+<form class="form" method="post" data-validate data-testid="complete-profile-form">
+    <input type="hidden" asp-for="Flow" />
+    <div class="huia-name-row">
+        <div class="field">
+            <label class="label" asp-for="Input.FirstName">@Localizer["Register.FirstName"]</label>
+            <input class="input" asp-for="Input.FirstName" autocomplete="given-name" autofocus required />
+            <span class="huia-muted" asp-validation-for="Input.FirstName" data-val-for="Input.FirstName"></span>
+        </div>
+        <div class="field">
+            <label class="label" asp-for="Input.LastName">@Localizer["Register.LastName"]</label>
+            <input class="input" asp-for="Input.LastName" autocomplete="family-name" required />
+            <span class="huia-muted" asp-validation-for="Input.LastName" data-val-for="Input.LastName"></span>
+        </div>
+    </div>
+    <button class="btn w-full" type="submit" data-testid="complete-profile-submit">@Localizer["CompleteProfile.Submit"]</button>
+</form>
+
+@section Scripts {
+    <script src="@(Model.PathBase)/_content/Huia.AspNetCore/js/form-validate.js" nonce="@CspNonce.Value" defer></script>
+}

@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "brand": "Huia Todo",
+    "tasks": "Tasks",
+    "profile": "Profile",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "toggleTheme": "Toggle theme",
+    "language": "Language"
+  },
+  "landing": {
+    "title": "A tiny todo list, secured by Huia",
+    "intro": "This sample signs in against the todo tenant of the Huia identity provider and stores tasks in a separate resource API using the issued access token.",
+    "getStarted": "Get started",
+    "hint": "Sign in with a seeded account (alice{'@'}todo.test / Password1!) or register a new one, or use passwordless phone sign-in.",
+    "signIn": "Sign in with Huia",
+    "goToTasks": "Go to your tasks"
+  },
+  "tasks": {
+    "title": "Your tasks",
+    "placeholder": "What needs doing?",
+    "add": "Add",
+    "loading": "Loading…",
+    "empty": "Nothing yet. Add your first task above.",
+    "delete": "Delete"
+  },
+  "profile": {
+    "title": "Profile",
+    "detailsTitle": "Your details",
+    "detailsSubtitle": "These are stored on the Huia identity provider.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email: {email}",
+    "save": "Save",
+    "saved": "Saved",
+    "saveError": "Could not save your profile.",
+    "phoneTitle": "Phone number",
+    "phoneSubtitle": "Used for passwordless SMS sign-in.",
+    "phoneCurrent": "Current:",
+    "phoneNone": "none",
+    "verified": "verified",
+    "unverified": "unverified",
+    "sendCode": "Send code",
+    "remove": "Remove",
+    "formatHint": "Not a valid international number yet.",
+    "codePlaceholder": "6-digit code",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "phoneInvalid": "Enter a valid phone number in international format, e.g. +1 555 010 0123.",
+    "codeSent": "We sent a code to {number}.",
+    "sendCodeError": "Could not send a code (check the number, or wait before retrying).",
+    "noPending": "No pending change — send a code first.",
+    "codeWrong": "That code is not correct or has expired.",
+    "phoneVerified": "Phone number verified.",
+    "phoneRemoved": "Phone number removed.",
+    "linkedTitle": "Linked accounts",
+    "linkedSubtitle": "External sign-in providers connected to your account.",
+    "linkedNone": "No providers linked yet.",
+    "unlink": "Unlink",
+    "unlinkError": "Could not unlink that provider.",
+    "manageProviders": "Add or manage providers"
+  }
+}

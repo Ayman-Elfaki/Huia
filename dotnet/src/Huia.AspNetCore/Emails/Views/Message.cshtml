@@ -1,0 +1,48 @@
+@model Huia.AspNetCore.Emails.EmailModel
+<!DOCTYPE html>
+<html lang="@Model.Language" dir="@Model.Direction">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>@Model.Subject</title>
+    <style>
+        /*
+         * Basecoat's shadcn-derived neutral palette (oklch) has no email-client support, so this
+         * mirrors it in hex: background/border/muted map to the zinc scale Basecoat's light theme
+         * resolves to; radius and spacing follow the same `--radius: 0.625rem` scale used everywhere
+         * else in the account UI.
+         */
+        body { margin: 0; padding: 0; background: #f4f4f5; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #18181b; }
+        .wrap { max-width: 480px; margin: 0 auto; padding: 40px 16px; }
+        .card { background: #ffffff; border: 1px solid #e4e4e7; border-radius: 14px; padding: 32px; }
+        .brand { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a; margin: 0 0 12px; font-weight: 600; }
+        h1 { font-size: 21px; line-height: 1.3; margin: 0 0 16px; font-weight: 600; }
+        p { font-size: 15px; line-height: 1.6; margin: 0 0 20px; color: #27272a; }
+        .btn {
+            display: inline-block;
+            padding: 11px 22px;
+            border-radius: 8px;
+            background: @Model.AccentColor;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .fallback { font-size: 13px; color: #71717a; word-break: break-all; margin-bottom: 0; }
+        hr { border: 0; border-top: 1px solid #e4e4e7; margin: 28px 0 20px; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <p class="brand">@Model.BrandName</p>
+            <h1>@Model.Heading</h1>
+            <p>@Model.Body</p>
+            <p style="margin-bottom: 0;"><a class="btn" href="@Model.ButtonUrl">@Model.ButtonText</a></p>
+            <hr />
+            <p class="fallback">@Model.LinkFallback<br />@Model.ButtonUrl</p>
+        </div>
+    </div>
+</body>
+</html>

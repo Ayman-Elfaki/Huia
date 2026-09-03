@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Culture.Name" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Common.SignIn" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Common.SignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Common.Email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="Common.Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Common.Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Common.Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Common.Duration.Seconds" xml:space="preserve">
+    <value>{0} seconds</value>
+  </data>
+  <data name="Common.Duration.Minutes" xml:space="preserve">
+    <value>{0} minutes</value>
+  </data>
+  <data name="Common.Terms" xml:space="preserve">
+    <value>Terms</value>
+  </data>
+  <data name="Common.Privacy" xml:space="preserve">
+    <value>Privacy</value>
+  </data>
+  <data name="Common.Support" xml:space="preserve">
+    <value>Support</value>
+  </data>
+  <data name="Diagnostics.Greeting" xml:space="preserve">
+    <value>Hello</value>
+  </data>
+  <data name="Login.Title" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login.Heading" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login.Failed" xml:space="preserve">
+    <value>That email or password is not correct.</value>
+  </data>
+  <data name="Login.LockedOut" xml:space="preserve">
+    <value>This account is temporarily locked. Try again later.</value>
+  </data>
+  <data name="Login.RememberMe" xml:space="preserve">
+    <value>Keep me signed in</value>
+  </data>
+  <data name="Login.ForgotPassword" xml:space="preserve">
+    <value>Forgot your password?</value>
+  </data>
+  <data name="Login.Register" xml:space="preserve">
+    <value>Create an account</value>
+  </data>
+  <data name="Login.EmailTab" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="Login.PhoneTab" xml:space="preserve">
+    <value>Phone</value>
+  </data>
+  <data name="Login.OrContinueWith" xml:space="preserve">
+    <value>or continue with</value>
+  </data>
+  <data name="Login.EmailDescription" xml:space="preserve">
+    <value>Sign in with your email address and password.</value>
+  </data>
+  <data name="Login.PhoneDescription" xml:space="preserve">
+    <value>We'll text a one-time code to your phone number.</value>
+  </data>
+  <data name="Login.ExternalEmailTaken" xml:space="preserve">
+    <value>An account with this email address already exists. Sign in with your existing method, then link the provider from your account settings.</value>
+  </data>
+  <data name="ExternalLogins.Title" xml:space="preserve">
+    <value>Linked accounts</value>
+  </data>
+  <data name="ExternalLogins.Heading" xml:space="preserve">
+    <value>Linked accounts</value>
+  </data>
+  <data name="ExternalLogins.Intro" xml:space="preserve">
+    <value>Sign-in providers connected to your account.</value>
+  </data>
+  <data name="ExternalLogins.None" xml:space="preserve">
+    <value>No providers are linked yet.</value>
+  </data>
+  <data name="ExternalLogins.Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="ExternalLogins.Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="ExternalLogins.AddHeading" xml:space="preserve">
+    <value>Add a provider</value>
+  </data>
+  <data name="ExternalLogins.LinkedOk" xml:space="preserve">
+    <value>Provider linked.</value>
+  </data>
+  <data name="ExternalLogins.LinkedDuplicate" xml:space="preserve">
+    <value>That provider account is already linked to a different user.</value>
+  </data>
+  <data name="ExternalLogins.LinkedError" xml:space="preserve">
+    <value>The provider could not be linked. Please try again.</value>
+  </data>
+  <data name="ExternalLogins.CannotRemoveLast" xml:space="preserve">
+    <value>You cannot remove your only sign-in method.</value>
+  </data>
+  <data name="Register.Title" xml:space="preserve">
+    <value>Create your account</value>
+  </data>
+  <data name="Register.Heading" xml:space="preserve">
+    <value>Create your account</value>
+  </data>
+  <data name="Register.FirstName" xml:space="preserve">
+    <value>First name</value>
+  </data>
+  <data name="Register.LastName" xml:space="preserve">
+    <value>Last name</value>
+  </data>
+  <data name="Register.ConfirmPassword" xml:space="preserve">
+    <value>Confirm password</value>
+  </data>
+  <data name="Register.Submit" xml:space="preserve">
+    <value>Create account</value>
+  </data>
+  <data name="Register.HaveAccount" xml:space="preserve">
+    <value>Already have an account? Sign in</value>
+  </data>
+  <data name="ForgotPassword.Title" xml:space="preserve">
+    <value>Reset your password</value>
+  </data>
+  <data name="ForgotPassword.Heading" xml:space="preserve">
+    <value>Reset your password</value>
+  </data>
+  <data name="ForgotPassword.Intro" xml:space="preserve">
+    <value>Enter your email and we will send you a reset link.</value>
+  </data>
+  <data name="ForgotPassword.Submit" xml:space="preserve">
+    <value>Send reset link</value>
+  </data>
+  <data name="ForgotPassword.Sent" xml:space="preserve">
+    <value>If an account exists for that address, a reset link is on its way.</value>
+  </data>
+  <data name="RegisterConfirmation.Title" xml:space="preserve">
+    <value>Confirm your email</value>
+  </data>
+  <data name="RegisterConfirmation.Heading" xml:space="preserve">
+    <value>Confirm your email</value>
+  </data>
+  <data name="RegisterConfirmation.Body" xml:space="preserve">
+    <value>Check your inbox for a message to confirm your address before signing in.</value>
+  </data>
+  <data name="AccessDenied.Title" xml:space="preserve">
+    <value>Access denied</value>
+  </data>
+  <data name="AccessDenied.Heading" xml:space="preserve">
+    <value>Access denied</value>
+  </data>
+  <data name="AccessDenied.Body" xml:space="preserve">
+    <value>You do not have permission to view this resource.</value>
+  </data>
+  <data name="SignedIn.Title" xml:space="preserve">
+    <value>Signed in</value>
+  </data>
+  <data name="SignedIn.Heading" xml:space="preserve">
+    <value>You're signed in</value>
+  </data>
+  <data name="SignedIn.Body" xml:space="preserve">
+    <value>You're signed in. You can close this tab, or return to the app you started from.</value>
+  </data>
+  <data name="SignedIn.BodyNamed" xml:space="preserve">
+    <value>You're signed in as {0}. You can close this tab, or return to the app you started from.</value>
+  </data>
+  <data name="SignedIn.SignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="SignedIn.Continue" xml:space="preserve">
+    <value>Continue to {0}</value>
+  </data>
+  <data name="Logout.Title" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Logout.Heading" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Logout.Confirm" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Error.Title" xml:space="preserve">
+    <value>Something went wrong</value>
+  </data>
+  <data name="Error.Message" xml:space="preserve">
+    <value>We hit an unexpected problem handling your request.</value>
+  </data>
+  <data name="Error.RequestId" xml:space="preserve">
+    <value>Reference</value>
+  </data>
+  <data name="Error.BackToSignIn" xml:space="preserve">
+    <value>Back to sign in</value>
+  </data>
+  <data name="Status.400.Title" xml:space="preserve">
+    <value>Bad request</value>
+  </data>
+  <data name="Status.400.Body" xml:space="preserve">
+    <value>We couldn't process that request. Check the address and try again.</value>
+  </data>
+  <data name="Status.401.Title" xml:space="preserve">
+    <value>Sign in required</value>
+  </data>
+  <data name="Status.401.Body" xml:space="preserve">
+    <value>You need to sign in to view this page.</value>
+  </data>
+  <data name="Status.403.Title" xml:space="preserve">
+    <value>Access denied</value>
+  </data>
+  <data name="Status.403.Body" xml:space="preserve">
+    <value>You do not have permission to view this resource.</value>
+  </data>
+  <data name="Status.404.Title" xml:space="preserve">
+    <value>Page not found</value>
+  </data>
+  <data name="Status.404.Body" xml:space="preserve">
+    <value>We couldn't find the page you were looking for.</value>
+  </data>
+  <data name="Status.500.Title" xml:space="preserve">
+    <value>Something went wrong</value>
+  </data>
+  <data name="Status.500.Body" xml:space="preserve">
+    <value>We hit an unexpected problem handling your request.</value>
+  </data>
+  <data name="Status.Generic.Title" xml:space="preserve">
+    <value>Something went wrong</value>
+  </data>
+  <data name="Status.Generic.Body" xml:space="preserve">
+    <value>The request could not be completed.</value>
+  </data>
+  <data name="PhoneLogin.Title" xml:space="preserve">
+    <value>Sign in with your phone</value>
+  </data>
+  <data name="PhoneLogin.Heading" xml:space="preserve">
+    <value>Sign in with your phone</value>
+  </data>
+  <data name="PhoneLogin.Number" xml:space="preserve">
+    <value>Phone number</value>
+  </data>
+  <data name="PhoneLogin.Country" xml:space="preserve">
+    <value>Country</value>
+  </data>
+  <data name="PhoneLogin.CountryPlaceholder" xml:space="preserve">
+    <value>Select a country</value>
+  </data>
+  <data name="PhoneLogin.SearchCountry" xml:space="preserve">
+    <value>Search countries…</value>
+  </data>
+  <data name="PhoneLogin.NoCountry" xml:space="preserve">
+    <value>No country found</value>
+  </data>
+  <data name="PhoneLogin.Send" xml:space="preserve">
+    <value>Send code</value>
+  </data>
+  <data name="PhoneLogin.Invalid" xml:space="preserve">
+    <value>Enter a valid phone number.</value>
+  </data>
+  <data name="PhoneLogin.RateLimited" xml:space="preserve">
+    <value>Too many requests. Wait a little before trying again.</value>
+  </data>
+  <data name="PhoneLogin.CaptchaRequired" xml:space="preserve">
+    <value>Please complete the challenge.</value>
+  </data>
+  <data name="VerifyOtp.Title" xml:space="preserve">
+    <value>Enter your code</value>
+  </data>
+  <data name="VerifyOtp.Heading" xml:space="preserve">
+    <value>Enter your code</value>
+  </data>
+  <data name="VerifyOtp.Intro" xml:space="preserve">
+    <value>Enter the code we sent to {0}.</value>
+  </data>
+  <data name="VerifyOtp.NoCode" xml:space="preserve">
+    <value>Didn't get a code?</value>
+  </data>
+  <data name="VerifyOtp.Code" xml:space="preserve">
+    <value>Verification code</value>
+  </data>
+  <data name="VerifyOtp.Submit" xml:space="preserve">
+    <value>Verify</value>
+  </data>
+  <data name="VerifyOtp.Resend" xml:space="preserve">
+    <value>Send a new code</value>
+  </data>
+  <data name="VerifyOtp.Invalid" xml:space="preserve">
+    <value>That code is not correct or has expired.</value>
+  </data>
+  <data name="VerifyOtp.DigitLabel" xml:space="preserve">
+    <value>Digit {0}</value>
+  </data>
+  <data name="VerifyOtp.Sent" xml:space="preserve">
+    <value>We sent a code to your phone.</value>
+  </data>
+  <data name="VerifyOtp.ResendIn" xml:space="preserve">
+    <value>Send a new code in {0}s</value>
+  </data>
+  <data name="VerifyOtp.RateLimited" xml:space="preserve">
+    <value>You've signed in from this number very recently. Please try again in {0}.</value>
+  </data>
+  <data name="VerifyOtp.RateLimitedDaily" xml:space="preserve">
+    <value>This number has reached its daily sign-in limit. Please try again tomorrow.</value>
+  </data>
+  <data name="CompleteProfile.Title" xml:space="preserve">
+    <value>Complete your profile</value>
+  </data>
+  <data name="CompleteProfile.Heading" xml:space="preserve">
+    <value>Complete your profile</value>
+  </data>
+  <data name="CompleteProfile.Intro" xml:space="preserve">
+    <value>Tell us your name to finish setting up your account.</value>
+  </data>
+  <data name="CompleteProfile.Submit" xml:space="preserve">
+    <value>Finish</value>
+  </data>
+  <data name="Email.Confirm.Subject" xml:space="preserve">
+    <value>Confirm your email</value>
+  </data>
+  <data name="Email.Confirm.Heading" xml:space="preserve">
+    <value>Confirm your email</value>
+  </data>
+  <data name="Email.Confirm.Body" xml:space="preserve">
+    <value>Hi {0}, please confirm your email address to activate your account.</value>
+  </data>
+  <data name="Email.Confirm.Button" xml:space="preserve">
+    <value>Confirm email</value>
+  </data>
+  <data name="Email.Reset.Subject" xml:space="preserve">
+    <value>Reset your password</value>
+  </data>
+  <data name="Email.Reset.Heading" xml:space="preserve">
+    <value>Reset your password</value>
+  </data>
+  <data name="Email.Reset.Body" xml:space="preserve">
+    <value>Hi {0}, use the link below to choose a new password. If you did not ask for this, ignore this message.</value>
+  </data>
+  <data name="Email.Reset.Button" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="Email.LinkFallback" xml:space="preserve">
+    <value>If the button does not work, copy and paste this link into your browser:</value>
+  </data>
+  <data name="DeviceVerification.Title" xml:space="preserve">
+    <value>Device sign-in</value>
+  </data>
+  <data name="DeviceVerification.Heading" xml:space="preserve">
+    <value>Confirm this device</value>
+  </data>
+  <data name="DeviceVerification.Intro" xml:space="preserve">
+    <value>Enter the code shown on your device to finish signing in.</value>
+  </data>
+  <data name="DeviceVerification.CodeLabel" xml:space="preserve">
+    <value>Device code</value>
+  </data>
+  <data name="DeviceVerification.Approve" xml:space="preserve">
+    <value>Allow</value>
+  </data>
+  <data name="DeviceVerification.Deny" xml:space="preserve">
+    <value>Deny</value>
+  </data>
+  <data name="DeviceVerification.Invalid" xml:space="preserve">
+    <value>That code is not valid or has expired. Check your device and try again.</value>
+  </data>
+</root>

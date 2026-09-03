@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to stamp (e.g. 1.2.3). Leave blank on a tag build to let MinVer derive it.'
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  CI: 'true'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: nuget
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # MinVer needs the full history and tags to derive the version
+          fetch-tags: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Pack
+        run: |
+          version_arg=""
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            version_arg="-p:Version=${{ github.event.inputs.version }}"
+          fi
+          for proj in \
+            src/Huia/Huia.csproj \
+            src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj \
+            src/Huia.AspNetCore/Huia.AspNetCore.csproj
+          do
+            dotnet pack "$proj" -c Release -o artifacts $version_arg
+          done
+          ls -l artifacts
+
+      - name: Push to NuGet.org
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key "${{ secrets.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: gh release create "${{ github.ref_name }}" artifacts/*.nupkg --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

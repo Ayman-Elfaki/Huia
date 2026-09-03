@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Huia core: multi-tenant OpenID Connect / OAuth 2.0 Identity Provider domain model, options tree, eventing abstractions and constants. Free of ASP.NET Core and Entity Framework Core dependencies.</Description>
+    <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;oidc</PackageTags>
+    <RootNamespace>Huia</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Guard: the core package must stay free of ASP.NET Core and EF Core dependencies. -->
+  <Target Name="_HuiaCoreDependencyGuard" BeforeTargets="CollectPackageReferences">
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('Microsoft.EntityFrameworkCore'))"
+           Text="Huia core must not reference Entity Framework Core (%(PackageReference.Identity))." />
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('Microsoft.AspNetCore'))"
+           Text="Huia core must not reference ASP.NET Core (%(PackageReference.Identity))." />
+  </Target>
+
+</Project>

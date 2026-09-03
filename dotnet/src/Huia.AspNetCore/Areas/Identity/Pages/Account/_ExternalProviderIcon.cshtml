@@ -1,0 +1,11 @@
+@model (Huia.Options.ExternalProviderKind Kind, string PathBase)
+@{
+    var slug = Model.Kind switch
+    {
+        Options.ExternalProviderKind.Google => "google",
+        Options.ExternalProviderKind.GitHub => "github",
+        Options.ExternalProviderKind.MicrosoftAccount => "microsoft",
+        _ => "openid",
+    };
+}
+<span class="huia-provider-icon huia-provider-@slug" aria-hidden="true"></span>

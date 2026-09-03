@@ -1,0 +1,80 @@
+@page
+@model Huia.AspNetCore.Areas.Identity.Pages.Account.LoginModel
+
+@{
+    var showTabs = Model.IsPasswordEnabled && Model.IsPhoneLoginEnabled;
+}
+
+@section AboveCard {
+    @if (showTabs)
+    {
+        <div class="tabs huia-tabbar" data-testid="login-tabs">
+            <nav role="tablist" aria-orientation="horizontal">
+                <button type="button" role="tab" id="tab-email" aria-controls="panel-email" aria-selected="true">@Localizer["Login.EmailTab"]</button>
+                <button type="button" role="tab" id="tab-phone" aria-controls="panel-phone" aria-selected="false" tabindex="-1">@Localizer["Login.PhoneTab"]</button>
+            </nav>
+        </div>
+    }
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-destructive" role="alert" data-testid="login-error">@Model.ErrorMessage</div>
+}
+
+@if (showTabs)
+{
+    <div role="tabpanel" id="panel-email" aria-labelledby="tab-email">
+        <partial name="_PasswordLoginForm" />
+    </div>
+    <div role="tabpanel" id="panel-phone" aria-labelledby="tab-phone" hidden>
+        <partial name="_PhoneLoginForm" />
+    </div>
+}
+else if (Model.IsPasswordEnabled)
+{
+    <partial name="_PasswordLoginForm" />
+}
+else
+{
+    <partial name="_PhoneLoginForm" />
+}
+
+@if (Model.ExternalProviders.Count > 0)
+{
+    <div class="huia-divider">@Localizer["Login.OrContinueWith"]</div>
+    <div class="huia-external" data-testid="external-providers">
+        @foreach (var provider in Model.ExternalProviders)
+        {
+            <form action="@(Model.PathBase)/identity/account/external/@provider.Name" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <button type="submit" class="btn-outline w-full">
+                    <partial name="_ExternalProviderIcon" model="(provider.Kind, Model.PathBase)" />
+                    <span>@(provider.DisplayName ?? provider.Name)</span>
+                </button>
+            </form>
+        }
+    </div>
+}
+
+@section BelowCard {
+    @if (Model.IsPasswordEnabled)
+    {
+        <div class="huia-links">
+            <a asp-page="./ForgotPassword" asp-route-returnUrl="@Model.ReturnUrl">@Localizer["Login.ForgotPassword"]</a>
+            @if (Model.IsSelfServiceRegistrationEnabled)
+            {
+                <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">@Localizer["Login.Register"]</a>
+            }
+        </div>
+    }
+}
+
+@section Scripts {
+    @if (Model.IsPhoneLoginEnabled)
+    {
+        <script src="@(Model.PathBase)/_content/Huia.AspNetCore/js/libphonenumber.js" nonce="@CspNonce.Value" defer></script>
+        <script src="@(Model.PathBase)/_content/Huia.AspNetCore/js/phone-validate.js" nonce="@CspNonce.Value" defer></script>
+    }
+}

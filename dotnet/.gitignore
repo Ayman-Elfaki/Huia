@@ -1,0 +1,50 @@
+## .NET
+bin/
+obj/
+[Bb]uild/
+artifacts/
+*.user
+*.suo
+.vs/
+.vscode/
+*.received.*
+
+## Test / coverage
+TestResults/
+coverage*.json
+coverage*.xml
+*.trx
+
+## Node
+node_modules/
+.nuxt/
+.output/
+.nitro/
+dist/
+.cache/
+*.log
+
+## Docs
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Local secrets
+appsettings.*.local.json
+*.pfx
+
+# stray SQLite files if a sample is run from the repo root
+/todo.db
+/todo.db-shm
+/todo.db-wal
+
+# SQLite write-ahead-log sidecars next to a committed sample database
+*.db-shm
+*.db-wal
+
+# JetBrains Rider / IntelliJ
+.idea/
+.vs/

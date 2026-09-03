@@ -1,0 +1,13 @@
+@page
+@model Huia.AspNetCore.Areas.Identity.Pages.Account.ErrorModel
+
+<p>@Localizer["Error.Message"]</p>
+
+@if (!string.IsNullOrEmpty(Model.RequestId))
+{
+    <p class="huia-muted" data-testid="error-request-id">@Localizer["Error.RequestId"]: <code>@Model.RequestId</code></p>
+}
+
+<div class="huia-links">
+    <a asp-page="./Login">@Localizer["Error.BackToSignIn"]</a>
+</div>

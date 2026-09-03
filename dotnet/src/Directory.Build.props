@@ -1,0 +1,39 @@
+<Project>
+
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <!-- SourceLink and MinVer run in CI only: the local working tree has no commit/remote and the git
+       tasks fail the build (and with no tags MinVer would stamp every local pack 0.0.0-alpha.0). -->
+  <PropertyGroup Condition="'$(CI)' == 'true'">
+    <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
+    <DeterministicSourcePaths>true</DeterministicSourcePaths>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(CI)' == 'true'">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <PackageReference Include="MinVer" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Huia.Tests" />
+    <InternalsVisibleTo Include="Huia.IntegrationTests" />
+    <InternalsVisibleTo Include="Huia.E2ETests" />
+    <InternalsVisibleTo Include="Huia.Tests.PenTest" />
+  </ItemGroup>
+
+</Project>

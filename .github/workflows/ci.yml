@@ -1,0 +1,87 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  CI: 'true'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build Huia.slnx -c Release
+      - run: dotnet test Huia.slnx -c Release --no-build --filter "Category!=Container&Category!=E2E&Category!=PenTest"
+
+  pen-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet test tests/Huia.Tests.PenTest/Huia.Tests.PenTest.csproj -c Release --filter "Category=PenTest"
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet test tests/Huia.IntegrationTests/Huia.IntegrationTests.csproj -c Release --filter "Category=Container"
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Release build of every sample the front-end E2E fixture launches out-of-process.
+      - run: dotnet build Huia.slnx -c Release
+      # `npm run build` both Nuxt front-ends so `.output/server/index.mjs` exists for the fixture.
+      - working-directory: samples/Todo.App
+        run: npm ci --legacy-peer-deps && npm run build
+      - working-directory: samples/Huia.AdminUI
+        run: npm ci --legacy-peer-deps && npm run build
+      - run: pwsh tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      # Warm the images the AppHost-backed mail E2E fixture needs (Docker is preinstalled on the runner).
+      - run: docker pull axllent/mailpit:v1.21 || true
+      - run: dotnet test tests/Huia.E2ETests/Huia.E2ETests.csproj -c Release --no-build --filter "Category=E2E"
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - working-directory: docs
+        run: npm install && npm run docs:build
+
+  web-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The BuildAccountUiAssets MSBuild target regenerates wwwroot/; -p:ForceAccountUiAssets=true
+      # bypasses its incremental check so the drift guard always compares a fresh build.
+      - run: dotnet build src/Huia.AspNetCore/Huia.AspNetCore.csproj -c Release -p:ForceAccountUiAssets=true
+      - run: git diff --exit-code src/Huia.AspNetCore/wwwroot

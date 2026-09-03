@@ -1,0 +1,37 @@
+@page
+@model Huia.AspNetCore.Areas.Identity.Pages.Account.RegisterModel
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-destructive" role="alert">@Model.ErrorMessage</div>
+}
+
+<form class="form" method="post" asp-route-returnUrl="@Model.ReturnUrl" data-testid="register-form">
+    <div class="huia-name-row">
+        <div class="field">
+            <label class="label" asp-for="Input.FirstName">@Localizer["Register.FirstName"]</label>
+            <input class="input" asp-for="Input.FirstName" autocomplete="given-name" />
+        </div>
+        <div class="field">
+            <label class="label" asp-for="Input.LastName">@Localizer["Register.LastName"]</label>
+            <input class="input" asp-for="Input.LastName" autocomplete="family-name" />
+        </div>
+    </div>
+    <div class="field">
+        <label class="label" asp-for="Input.Email">@Localizer["Common.Email"]</label>
+        <input class="input" asp-for="Input.Email" type="email" autocomplete="email" />
+    </div>
+    <div class="field">
+        <label class="label" asp-for="Input.Password">@Localizer["Common.Password"]</label>
+        <input class="input" asp-for="Input.Password" type="password" autocomplete="new-password" />
+    </div>
+    <div class="field">
+        <label class="label" asp-for="Input.ConfirmPassword">@Localizer["Register.ConfirmPassword"]</label>
+        <input class="input" asp-for="Input.ConfirmPassword" type="password" autocomplete="new-password" />
+    </div>
+    <button class="btn w-full" type="submit" data-testid="register-submit">@Localizer["Register.Submit"]</button>
+</form>
+
+<div class="huia-links">
+    <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">@Localizer["Register.HaveAccount"]</a>
+</div>

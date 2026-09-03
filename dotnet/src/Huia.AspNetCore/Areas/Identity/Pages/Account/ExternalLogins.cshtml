@@ -1,0 +1,58 @@
+@page
+@model Huia.AspNetCore.Areas.Identity.Pages.Account.ExternalLoginsModel
+
+<p class="huia-muted">@Localizer["ExternalLogins.Intro"]</p>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-destructive" role="alert" data-testid="external-logins-error">@Model.ErrorMessage</div>
+}
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert" role="status" data-testid="external-logins-status">@Model.StatusMessage</div>
+}
+
+@if (Model.CurrentLogins.Count == 0)
+{
+    <p class="huia-muted" data-testid="external-logins-empty">@Localizer["ExternalLogins.None"]</p>
+}
+else
+{
+    <ul class="huia-linked-list" data-testid="external-logins-list">
+        @foreach (var login in Model.CurrentLogins)
+        {
+            <li data-testid="linked-@login.ShortName">
+                <span>@(login.DisplayName ?? login.ShortName)</span>
+                <form method="post" asp-page-handler="Remove">
+                    <input type="hidden" name="loginProvider" value="@login.LoginProvider" />
+                    <input type="hidden" name="providerKey" value="@login.ProviderKey" />
+                    <button type="submit" class="btn-outline" data-testid="unlink-@login.ShortName" disabled="@(!Model.CanRemove)">
+                        @Localizer["ExternalLogins.Remove"]
+                    </button>
+                </form>
+            </li>
+        }
+    </ul>
+}
+
+@if (Model.AvailableProviders.Count > 0)
+{
+    <div class="huia-divider">@Localizer["ExternalLogins.AddHeading"]</div>
+    <div class="huia-external" data-testid="external-logins-add">
+        @foreach (var provider in Model.AvailableProviders)
+        {
+            <form action="@(Model.PathBase)/identity/account/external/@provider.Name" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@Model.SelfPath" />
+                <button type="submit" class="btn-outline w-full" data-testid="link-@provider.Name">
+                    <partial name="_ExternalProviderIcon" model="(provider.Kind, Model.PathBase)" />
+                    <span>@(provider.DisplayName ?? provider.Name)</span>
+                </button>
+            </form>
+        }
+    </div>
+}
+
+<div class="huia-links">
+    <a asp-page="./SignedIn">@Localizer["Common.Back"]</a>
+</div>

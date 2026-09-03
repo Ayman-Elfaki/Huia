@@ -1,0 +1,56 @@
+@page
+@model Huia.AspNetCore.Areas.Identity.Pages.Account.VerifyOtpModel
+
+<div class="huia-verify">
+    @if (!string.IsNullOrEmpty(Model.MaskedPhoneNumber))
+    {
+        <p class="huia-verify-intro">
+            @string.Format(Localizer["VerifyOtp.Intro"].Value, Model.MaskedPhoneNumber)
+        </p>
+    }
+
+    @if (Model.Resent)
+    {
+        <div class="alert" role="status" data-testid="otp-resent">@Localizer["VerifyOtp.Sent"]</div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-destructive" role="alert" data-testid="otp-error">@Model.ErrorMessage</div>
+    }
+
+    <form class="huia-verify-form" method="post" data-testid="verify-otp-form">
+        <input type="hidden" asp-for="Flow" />
+
+        <label class="label huia-verify-label huia-nojs" asp-for="Input.Code">@Localizer["VerifyOtp.Code"]</label>
+        <input class="input huia-nojs" asp-for="Input.Code" inputmode="numeric" autocomplete="one-time-code"
+               maxlength="@Model.CodeLength" autofocus />
+
+        <div class="huia-otp huia-js-only" role="group" aria-label="@Localizer["VerifyOtp.Code"]"
+             data-huia-otp data-huia-otp-for="Input_Code" dir="ltr">
+            @for (var i = 0; i < Model.CodeLength; i++)
+            {
+                <input class="input" type="text" inputmode="numeric" maxlength="1" autocomplete="off"
+                       aria-label="@string.Format(Localizer["VerifyOtp.DigitLabel"].Value, i + 1)"
+                       data-testid="otp-digit-@i" />
+            }
+        </div>
+
+        <button class="btn w-full" type="submit" data-testid="verify-otp-submit">@Localizer["VerifyOtp.Submit"]</button>
+    </form>
+
+    <div class="huia-verify-resend">
+        <span class="huia-muted">@Localizer["VerifyOtp.NoCode"]</span>
+        <form method="post" asp-page-handler="Resend" data-testid="verify-otp-resend-form">
+            <input type="hidden" asp-for="Flow" />
+            <button type="submit" class="huia-linkbtn" data-testid="verify-otp-resend"
+                    data-cooldown="@Model.ResendCooldownSeconds"
+                    data-label="@Localizer["VerifyOtp.Resend"].Value"
+                    data-countdown-label="@Localizer["VerifyOtp.ResendIn"].Value">@Localizer["VerifyOtp.Resend"]</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="@(Model.PathBase)/_content/Huia.AspNetCore/js/otp.js" nonce="@CspNonce.Value" defer></script>
+}
