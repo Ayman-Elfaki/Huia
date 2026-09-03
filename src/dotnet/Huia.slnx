@@ -5,6 +5,7 @@
     <File Path=".editorconfig" />
     <File Path="global.json" />
     <File Path="README.md" />
+    <File Path="SPEC.md" />
     <File Path="CHANGELOG.md" />
   </Folder>
   <Folder Name="/src/">
