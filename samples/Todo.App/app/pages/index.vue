@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const { loggedIn, login } = useOidcAuth()
+const { loggedIn, login } = useAuth()
 const { t, locale } = useI18n()
 
 function signIn() {
-  return login('oidc', { ui_locales: locale.value })
+  return login({ locale: locale.value })
 }
 </script>
 

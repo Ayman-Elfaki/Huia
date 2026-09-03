@@ -90,24 +90,20 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
         });
 
         // The built `.output` bakes the config-time URLs, so point every base URL at the E2E issuer
-        // through the runtime-config env overrides (nuxt-oidc-auth + nuxt-api-party both read these).
+        // through the runtime-config env overrides (huia-auth-nuxt + nuxt-api-party both read these).
+        // StartNode already exports NODE_TLS_REJECT_UNAUTHORIZED=0, which also lets huia-auth-nuxt
+        // discover the plain-http E2E issuer.
         var commonNuxt = new Dictionary<string, string>
         {
-            ["NUXT_OIDC_SESSION_SECRET"] = "e2e-only-session-secret-change-me-0123456789abcdef",
-            // NUXT_OIDC_TOKEN_KEY must be a base64-encoded 32-byte AES key.
-            ["NUXT_OIDC_TOKEN_KEY"] = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
-            ["NUXT_OIDC_AUTH_SESSION_SECRET"] = "e2e-only-auth-session-secret-0123456789abcdefghij",
+            ["NUXT_HUIA_AUTH_SESSION_PASSWORD"] = "e2e-only-huia-auth-session-password-0123456789abcdef",
         };
 
         StartNode(todoAppOutput, new(commonNuxt)
         {
             ["PORT"] = new Uri(TodoAppUrl).Port.ToString(),
-            ["NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET"] = "todo-app-secret",
-            ["NUXT_OIDC_PROVIDERS_OIDC_REDIRECT_URI"] = $"{TodoAppUrl}/auth/oidc/callback",
-            ["NUXT_OIDC_PROVIDERS_OIDC_AUTHORIZATION_URL"] = $"{Issuer}/todo/connect/authorize",
-            ["NUXT_OIDC_PROVIDERS_OIDC_TOKEN_URL"] = $"{Issuer}/todo/connect/token",
-            ["NUXT_OIDC_PROVIDERS_OIDC_USER_INFO_URL"] = $"{Issuer}/todo/connect/userinfo",
-            ["NUXT_OIDC_PROVIDERS_OIDC_LOGOUT_URL"] = $"{Issuer}/todo/connect/logout",
+            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "todo-app-secret",
+            ["NUXT_HUIA_AUTH_HUIA_BASE_URL"] = Issuer,
+            ["NUXT_HUIA_AUTH_HUIA_TENANT"] = "todo",
             ["NUXT_API_PARTY_ENDPOINTS_HUIA_URL"] = $"{Issuer}/todo",
             ["NUXT_API_PARTY_ENDPOINTS_TODO_API_URL"] = TodoApiUrl,
         });
@@ -115,12 +111,9 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
         StartNode(adminAppOutput, new(commonNuxt)
         {
             ["PORT"] = new Uri(AdminAppUrl).Port.ToString(),
-            ["NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET"] = "huia-admin-ui-secret",
-            ["NUXT_OIDC_PROVIDERS_OIDC_REDIRECT_URI"] = $"{AdminAppUrl}/auth/oidc/callback",
-            ["NUXT_OIDC_PROVIDERS_OIDC_AUTHORIZATION_URL"] = $"{Issuer}/master/connect/authorize",
-            ["NUXT_OIDC_PROVIDERS_OIDC_TOKEN_URL"] = $"{Issuer}/master/connect/token",
-            ["NUXT_OIDC_PROVIDERS_OIDC_USER_INFO_URL"] = $"{Issuer}/master/connect/userinfo",
-            ["NUXT_OIDC_PROVIDERS_OIDC_LOGOUT_URL"] = $"{Issuer}/master/connect/logout",
+            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "huia-admin-ui-secret",
+            ["NUXT_HUIA_AUTH_HUIA_BASE_URL"] = Issuer,
+            ["NUXT_HUIA_AUTH_HUIA_TENANT"] = "master",
             ["NUXT_API_PARTY_ENDPOINTS_HUIA_URL"] = $"{Issuer}/master",
         });
 

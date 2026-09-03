@@ -39,11 +39,14 @@ async function discover(issuer: string): Promise<oidc.Configuration> {
   }
 
   const server = new URL(`${issuer}/.well-known/openid-configuration`)
-  const insecure = isDev() && (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' || raw.allowInsecureTls)
 
+  // `allowInsecureTls` is a dev-only convenience and hard-fails in production. An operator who has
+  // already set NODE_TLS_REJECT_UNAUTHORIZED=0 process-wide has opted into insecure transport
+  // globally, so discovery honours that in any environment (e.g. the E2E harness on plain http).
   if (raw.allowInsecureTls && !isDev()) {
     throw new Error('[huia-auth] allowInsecureTls is only honoured outside production')
   }
+  const insecure = process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' || (isDev() && raw.allowInsecureTls)
 
   const config = await oidc.discovery(
     server,

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Moon, Sun } from 'lucide-vue-next'
 
-const { loggedIn, user, logout } = useOidcAuth()
+const { loggedIn, user } = useUserSession()
+const { logout } = useAuth()
 const colorMode = useColorMode()
 
 const displayName = computed(() =>
-  user.value?.userInfo?.name
-  ?? user.value?.userInfo?.preferred_username
-  ?? user.value?.userInfo?.email
+  user.value?.name
+  ?? user.value?.preferred_username
+  ?? user.value?.email
   ?? 'account')
 
 function toggleTheme() {
@@ -23,7 +24,7 @@ function toggleTheme() {
         <div class="flex items-center gap-3 text-sm">
           <template v-if="loggedIn">
             <span class="text-muted-foreground" data-testid="user-name">{{ displayName }}</span>
-            <Button variant="outline" size="sm" data-testid="sign-out" @click="logout('oidc')">Sign out</Button>
+            <Button variant="outline" size="sm" data-testid="sign-out" @click="logout()">Sign out</Button>
           </template>
           <Button
             variant="ghost"

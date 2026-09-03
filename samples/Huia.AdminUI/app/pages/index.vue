@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TenantRow } from '~/composables/useTenantOptions'
 
-const { loggedIn, login } = useOidcAuth()
+const { loggedIn, login } = useAuth()
 
 // The admin API 401s when signed out; the landing branch below doesn't render this data anyway.
 const { data: tenants } = useHuiaData<TenantRow[]>('admin/tenants', { default: () => [] })
@@ -33,7 +33,7 @@ const sections = [
         <p class="text-sm text-muted-foreground">
           Use the seeded administrator (<code>admin@huia.local</code> / <code>Admin1!Pass</code>).
         </p>
-        <Button data-testid="landing-sign-in" class="self-start" @click="login('oidc')">
+        <Button data-testid="landing-sign-in" class="self-start" @click="login()">
           Sign in with Huia
         </Button>
       </CardContent>

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { Languages, Moon, Sun } from 'lucide-vue-next'
 
-const { loggedIn, user, login, logout } = useOidcAuth()
+const { loggedIn, user } = useUserSession()
+const { login, logout } = useAuth()
 const route = useRoute()
 const colorMode = useColorMode()
 const { locale, locales, setLocale, t } = useI18n()
 
 const displayName = computed(() =>
-  user.value?.userInfo?.name
-  ?? user.value?.userInfo?.preferred_username
-  ?? user.value?.userInfo?.email
+  user.value?.name
+  ?? user.value?.preferred_username
+  ?? user.value?.email
   ?? 'account')
 
 const currentDir = computed(() =>
@@ -26,7 +27,7 @@ function toggleTheme() {
 
 // Carry the chosen locale into the Huia sign-in UI via the OIDC ui_locales hint.
 function signIn() {
-  return login('oidc', { ui_locales: locale.value })
+  return login({ locale: locale.value })
 }
 </script>
 
@@ -40,7 +41,7 @@ function signIn() {
             <NuxtLink to="/tasks" :class="route.path === '/tasks' ? 'text-primary' : 'text-muted-foreground'">{{ t('nav.tasks') }}</NuxtLink>
             <NuxtLink to="/profile" :class="route.path === '/profile' ? 'text-primary' : 'text-muted-foreground'">{{ t('nav.profile') }}</NuxtLink>
             <span class="text-muted-foreground" data-testid="user-name">{{ displayName }}</span>
-            <Button variant="outline" size="sm" data-testid="sign-out" @click="logout('oidc')">{{ t('nav.signOut') }}</Button>
+            <Button variant="outline" size="sm" data-testid="sign-out" @click="logout()">{{ t('nav.signOut') }}</Button>
           </template>
           <Button v-else size="sm" data-testid="sign-in" @click="signIn">{{ t('nav.signIn') }}</Button>
 

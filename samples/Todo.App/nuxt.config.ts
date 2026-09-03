@@ -1,11 +1,18 @@
 const huiaBaseUrl = process.env.NUXT_PUBLIC_HUIA_BASE_URL ?? 'https://localhost:5310'
 const todoApiUrl = process.env.NUXT_PUBLIC_TODO_API_URL ?? 'http://localhost:5330'
-const selfUrl = process.env.NUXT_OIDC_PROVIDERS_OIDC_REDIRECT_URI?.replace('/auth/oidc/callback', '') ?? 'http://localhost:3000'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: false },
-  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', '@nuxtjs/i18n', 'shadcn-nuxt', 'nuxt-api-party', 'nuxt-oidc-auth'],
+  modules: [
+    '@nuxtjs/tailwindcss',
+    '@nuxtjs/color-mode',
+    '@nuxtjs/i18n',
+    'shadcn-nuxt',
+    'nuxt-api-party',
+    // first-party auth module — referenced from source in the monorepo
+    '../../src/nuxt/src/module',
+  ],
   css: ['~/assets/css/main.css'],
 
   i18n: {
@@ -58,40 +65,18 @@ export default defineNuxtConfig({
     },
   },
 
-  oidc: {
-    defaultProvider: 'oidc',
-    middleware: {
-      globalMiddlewareEnabled: false,
-    },
+  huiaAuth: {
+    huia: { baseUrl: huiaBaseUrl, tenant: 'todo' },
+    clientId: process.env.NUXT_HUIA_AUTH_CLIENT_ID ?? 'todo-app',
+    clientSecret: process.env.NUXT_HUIA_AUTH_CLIENT_SECRET ?? 'todo-app-secret',
+    scopes: ['openid', 'profile', 'email', 'offline_access'],
+    // forward ?ui_locales=<locale> to /connect/authorize so the Huia account UI matches the app locale
+    allowedAuthParams: ['ui_locales'],
+    par: { enabled: true },
     session: {
-      expirationCheck: true,
-      automaticRefresh: true,
-    },
-    providers: {
-      oidc: {
-        clientId: process.env.NUXT_OIDC_PROVIDERS_OIDC_CLIENT_ID ?? 'todo-app',
-        clientSecret: process.env.NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET ?? 'todo-app-secret',
-        authorizationUrl: `${huiaBaseUrl}/todo/connect/authorize`,
-        tokenUrl: `${huiaBaseUrl}/todo/connect/token`,
-        userInfoUrl: `${huiaBaseUrl}/todo/connect/userinfo`,
-        redirectUri: `${selfUrl}/auth/oidc/callback`,
-        scope: ['openid', 'profile', 'email', 'offline_access'],
-        exposeAccessToken: true,
-        // Let the app forward ?ui_locales=<locale> to /connect/authorize so the Huia account UI
-        // renders in the same language the user picked here.
-        allowedClientAuthParameters: ['ui_locales'],
-        // OpenIddict's token endpoint only accepts application/x-www-form-urlencoded; nuxt-oidc-auth
-        // otherwise sends multipart/form-data.
-        tokenRequestType: 'form-urlencoded',
-        // The resource API validates the access token; the SPA session trusts the code exchange.
-        tokenValidationMode: 'legacy',
-        validateAccessToken: false,
-        validateIdToken: false,
-        logoutUrl: `${huiaBaseUrl}/todo/connect/logout`,
-        logoutRedirectParameterName: 'post_logout_redirect_uri',
-        additionalLogoutParameters: { idTokenHint: '' },
-        optionalClaims: ['given_name', 'family_name'],
-      },
+      password: process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD
+        ?? 'dev-only-todo-session-password-change-me-01234567890',
+      userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name'],
     },
   },
 })

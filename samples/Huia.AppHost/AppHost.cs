@@ -86,12 +86,11 @@ builder.AddViteApp("todo-app", "../Todo.App")
     .WaitFor(todoApi)
     .WithEnvironment("NUXT_PUBLIC_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
     .WithEnvironment("NUXT_PUBLIC_TODO_API_URL", todoApi.GetEndpoint("http"))
-    .WithEnvironment("NUXT_OIDC_TOKEN_KEY", GenerateRandomKeyBase64())
-    .WithEnvironment("NUXT_OIDC_SESSION_SECRET", GenerateRandomUrlSafeString())
-    .WithEnvironment("NUXT_OIDC_AUTH_SESSION_SECRET", GenerateRandomUrlSafeString())
-
-    .WithEnvironment("NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET", "todo-app-secret")
-    .WithEnvironment("NUXT_OIDC_PROVIDERS_OIDC_REDIRECT_URI", $"{todoAppUrl}/auth/oidc/callback")
+    .WithEnvironment("NUXT_HUIA_AUTH_SESSION_PASSWORD", GenerateRandomUrlSafeString())
+    .WithEnvironment("NUXT_HUIA_AUTH_CLIENT_SECRET", "todo-app-secret")
+    .WithEnvironment("NUXT_HUIA_AUTH_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
+    .WithEnvironment("NUXT_HUIA_AUTH_HUIA_TENANT", "todo")
+    // Node's undici rejects the ASP.NET Core dev cert; this also lets huia-auth-nuxt discover it.
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()
@@ -103,11 +102,10 @@ builder.AddViteApp("admin-app", "../Huia.AdminUI")
     .WithHttpEndpoint(port: 3001, targetPort: 3001, env: "PORT", isProxied: false)
     .WaitFor(identityServer)
     .WithEnvironment("NUXT_PUBLIC_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
-    .WithEnvironment("NUXT_OIDC_TOKEN_KEY", GenerateRandomKeyBase64())
-    .WithEnvironment("NUXT_OIDC_SESSION_SECRET", GenerateRandomUrlSafeString())
-    .WithEnvironment("NUXT_OIDC_AUTH_SESSION_SECRET", GenerateRandomUrlSafeString())
-    .WithEnvironment("NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET", "huia-admin-ui-secret")
-    .WithEnvironment("NUXT_OIDC_PROVIDERS_OIDC_REDIRECT_URI", $"{adminAppUrl}/auth/oidc/callback")
+    .WithEnvironment("NUXT_HUIA_AUTH_SESSION_PASSWORD", GenerateRandomUrlSafeString())
+    .WithEnvironment("NUXT_HUIA_AUTH_CLIENT_SECRET", "huia-admin-ui-secret")
+    .WithEnvironment("NUXT_HUIA_AUTH_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
+    .WithEnvironment("NUXT_HUIA_AUTH_HUIA_TENANT", "master")
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()
@@ -124,16 +122,4 @@ static string GenerateRandomUrlSafeString(int length = 48)
         .Replace('+', '-')
         .Replace('/', '_')
         .TrimEnd('=');
-}
-
-static string GenerateRandomKeyBase64()
-{
-    // 1. Allocate 32 bytes (256 bits) for the AES key
-    var rawKey = new byte[32];
-
-    // 2. Fill it with cryptographically secure random numbers
-    RandomNumberGenerator.Fill(rawKey);
-
-    // 3. Convert directly to standard Base64 string
-    return Convert.ToBase64String(rawKey);
 }
