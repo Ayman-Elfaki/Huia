@@ -62,10 +62,11 @@ jobs:
       - working-directory: src/dotnet
         run: dotnet build Huia.slnx -c Release
       # `npm run build` both Nuxt front-ends so `.output/server/index.mjs` exists for the fixture.
+      # (each app's .npmrc pins legacy-peer-deps — an npm 10 arborist crash on the nuxt peer graph)
       - working-directory: samples/Todo.App
-        run: npm ci --legacy-peer-deps && npm run build
+        run: npm ci && npm run build
       - working-directory: samples/Huia.AdminUI
-        run: npm ci --legacy-peer-deps && npm run build
+        run: npm ci && npm run build
       - run: pwsh tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       # Warm the images the AppHost-backed mail E2E fixture needs (Docker is preinstalled on the runner).
       - run: docker pull axllent/mailpit:v1.21 || true
@@ -111,9 +112,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: src/nuxt/package-lock.json
-      # --legacy-peer-deps: @nuxt/module-builder's toolchain (mkdist/unbuild) has an optional
-      # peer-dep graph that trips npm's arborist otherwise.
-      - run: npm ci --legacy-peer-deps
+      # src/nuxt/.npmrc pins legacy-peer-deps (npm 10's arborist crashes on the nuxt peer graph).
+      - run: npm ci
       - run: npm run dev:prepare
       - run: npm run test:types
       - run: npm test

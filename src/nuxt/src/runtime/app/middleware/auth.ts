@@ -1,7 +1,8 @@
 import { defineNuxtRouteMiddleware, navigateTo, useRuntimeConfig } from '#imports'
+import type { RouteMiddleware } from 'nuxt/app'
 import { useUserSession } from '../composables/useUserSession'
 
-export default defineNuxtRouteMiddleware((to) => {
+const middleware: RouteMiddleware = (to) => {
   const { loggedIn } = useUserSession()
   if (loggedIn.value) return
 
@@ -12,4 +13,6 @@ export default defineNuxtRouteMiddleware((to) => {
     { path: loginPath, query: { returnTo: to.fullPath } },
     { external: true, replace: true },
   )
-})
+}
+
+export default defineNuxtRouteMiddleware(middleware)
