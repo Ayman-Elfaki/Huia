@@ -15,8 +15,6 @@ export default defineNuxtConfig({
     session: {
       password: process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD ?? 'dev-only-session-password-change-me-1234567890',
     },
-    // Dev: Node's undici rejects the ASP.NET Core dev certificate.
-    allowInsecureTls: true,
   },
 
   nitro: {

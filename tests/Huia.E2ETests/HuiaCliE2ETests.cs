@@ -14,7 +14,7 @@ namespace Huia.E2ETests;
 public sealed partial class HuiaCliE2ETests(SampleHostFixture host)
 {
     private static readonly string CliDll = Path.Combine(
-        FindRepoRoot(), "samples", "Huia.Cli", "bin", "Release", "net10.0", "huia.dll");
+        RepoRoot.Find(), "samples", "Huia.Cli", "bin", "Release", "net10.0", "huia.dll");
 
     [SkippableFact]
     public async Task Device_login_then_whoami_then_logout()
@@ -126,17 +126,6 @@ public sealed partial class HuiaCliE2ETests(SampleHostFixture host)
 
     private static string Antiforgery(string html) =>
         AntiforgeryRegex().Match(html).Groups["v"].Value;
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null && !File.Exists(Path.Combine(dir, "Huia.slnx")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("Could not locate the repository root.");
-    }
 
     [GeneratedRegex(@"enter code:\s*(?<code>[A-Za-z0-9-]+)")]
     private static partial Regex UserCodeRegex();

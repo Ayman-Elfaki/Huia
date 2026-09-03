@@ -1523,7 +1523,7 @@ project-wide.
 | **dev:** `@nuxt/test-utils`, `vitest`, `nuxt`, `vue-tsc`, `@nuxt/schema` | current | Test + type-check harness. |
 | **dev:** `typescript` | `~5.6` | Tilde-pinned (TS minors carry breaking type-check changes). |
 | **dev:** `unstorage` | `^1.12` | Driver-backed integration tests. |
-| **dev:** `playwright-core` | `^1.48` | Deferred — for the follow-up E2E suite. |
+| E2E lives in the .NET `tests/Huia.E2ETests` project (Microsoft.Playwright) — see §10.5. | | |
 | **peer:** `nuxt` | `^4` | |
 
 `hookable`, `cookie-es` and `jose` are **not** needed (re-exported by Nuxt/Nitro, or done internally
@@ -1565,14 +1565,31 @@ by `openid-client`).
 `test/types.test-d.ts` (`expectTypeOf`): `requireUserSession(event)` narrows `user` to non-nullable;
 a consumer `declare module '#huia-auth'` augmentation merges into `UserClaims`.
 
-### 10.5 E2E — follow-up (out of scope for v0.1)
+### 10.5 E2E (`tests/Huia.E2ETests/HuiaAuthNuxt*`, `[Trait("Category","E2E")]`)
 
-A fixture mirroring `tests/Huia.E2ETests/FrontEndStackFixture.cs`: boot `Huia.IdentityServer` with
-`Huia__EnableE2E=true` / `Huia__Database=Sqlite` (in-memory shared cache), seed a
-`huia-auth-nuxt-playground` confidential client (plus one with `ft:par`), run `node
-playground/.output/server/index.mjs` with `NUXT_HUIA_AUTH_*` overrides, and drive
-login → silent refresh → logout with Playwright, including a chunked-cookie assertion (a user with
-many `roles` → multiple `__Host-huia_sess.N`).
+`HuiaAuthNuxtPlaygroundFixture` boots `Huia.IdentityServer` (`Huia__EnableE2E=true` /
+`Huia__Database=Sqlite`, in-memory shared cache) on `http://localhost:5319` and runs the built
+playground (`node src/nuxt/playground/.output/server/index.mjs`) on `:3030` with `NUXT_HUIA_AUTH_*`
+overrides. `Program.cs` seeds a `huia-auth-nuxt-playground` confidential web client in the `e2e`
+tenant with a **35 s** access-token lifetime. Skip-tolerant like the other front-end fixtures.
+
+`HuiaAuthNuxtE2ETests` (Playwright, reuses `FrontEndFlows`):
+
+- **Signs in, stores tokens server-side, serves a token-free session** — `/protected` bounces
+  through the Huia authorize endpoint (PAR: only `request_uri` in the browser URL); after the Razor
+  sign-in the page renders server-side with the user's claims; the browser holds a `huia_sess`
+  cookie and no cookie whose name contains `token`; `GET /api/_auth/session` returns
+  `{ loggedIn, user }` with no `accessToken` / `access_token` / `refresh*` anywhere in the body.
+- **Refreshes the access token transparently** — with the 35 s lifetime and
+  `earlyRefreshSeconds: 60`, two `/api/_auth/session` calls a second apart show `expiresAt`
+  advancing (a real `grant_type=refresh_token` round-trip to Huia), and the page is still
+  authenticated after.
+- **Sign-out clears the session and re-protects the route** — `/auth/oidc/logout` round-trips
+  through the OP `end_session` back to `/`, the `huia_sess*` cookies are gone, and `/protected`
+  redirects to Huia again.
+
+Not yet covered: the chunked-cookie path (a user with enough `roles` to exceed one cookie) — the
+unit suite exercises chunk split/reassembly directly.
 
 ### 10.6 CI
 

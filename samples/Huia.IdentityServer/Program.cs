@@ -13,6 +13,8 @@ var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310")!;
 var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000")!;
 var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001")!;
+// The huia-auth-nuxt module's own E2E playground (EnableE2E only).
+var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUrl", "http://localhost:3030")!;
 // Huia.External is the mock upstream IdP the "todo" tenant's external-login button federates to.
 var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
 
@@ -177,6 +179,18 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             tenant.AddSinglePageApplication("e2e-spa", client =>
                 client.RedirectUris.Add(new Uri($"{issuer}/e2e/e2e-callback")));
             tenant.AddMachineToMachineApplication("e2e-worker", "e2e-worker-secret");
+
+            // Confidential web client for the huia-auth-nuxt playground. A short access-token
+            // lifetime so the module's transparent refresh is exercised on the next request.
+            tenant.AddServerSideWebApplication("huia-auth-nuxt-playground", "huia-auth-nuxt-playground-secret", client =>
+            {
+                client.DisplayName = "huia-auth-nuxt playground";
+                client.RedirectUris.Add(new Uri($"{playgroundUrl}/auth/oidc/callback"));
+                client.PostLogoutRedirectUris.Add(new Uri($"{playgroundUrl}/"));
+                client.HomeUris.Add(new Uri($"{playgroundUrl}/"));
+                client.Token.AccessToken = TimeSpan.FromSeconds(35);
+                client.Token.RefreshToken = TimeSpan.FromMinutes(30);
+            });
         });
 
         // Self-service registration (on by default) with mandatory email confirmation, for the

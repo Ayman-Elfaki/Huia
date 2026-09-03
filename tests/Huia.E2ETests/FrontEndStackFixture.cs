@@ -14,7 +14,7 @@ namespace Huia.E2ETests;
 public sealed class FrontEndStackFixture : IAsyncLifetime
 {
     private readonly List<Process> _processes = [];
-    private readonly string _repoRoot = FindRepoRoot();
+    private readonly string _repoRoot = RepoRoot.Find();
 
     public string Issuer { get; } = "http://localhost:5320";
     public string ExternalIssuer { get; } = "http://localhost:5321";
@@ -246,19 +246,6 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
         return Path.Combine(_repoRoot, Path.Combine(projectSegments), "bin", "Release", "net10.0", $"{name}.dll");
     }
 
-    private static string FindRepoRoot()
-    {
-        // The repo root holds src/dotnet/Huia.slnx and the top-level samples/ + tests/ folders.
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null
-            && !File.Exists(Path.Combine(dir, "src", "dotnet", "Huia.slnx"))
-            && !Directory.Exists(Path.Combine(dir, ".git")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("Could not locate the repository root.");
-    }
 }
 
 [CollectionDefinition("frontend-stack")]

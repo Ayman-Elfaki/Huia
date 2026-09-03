@@ -32,7 +32,7 @@ public sealed class SampleHostFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = RepoRoot.Find();
         var dllPath = Path.Combine(repoRoot, "samples", "Huia.IdentityServer", "bin", "Release", "net10.0", "Huia.IdentityServer.dll");
         if (!File.Exists(dllPath))
         {
@@ -117,17 +117,6 @@ public sealed class SampleHostFixture : IAsyncLifetime
         }
 
         return Task.CompletedTask;
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null && !File.Exists(Path.Combine(dir, "Huia.slnx")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("Could not locate the repository root.");
     }
 }
 

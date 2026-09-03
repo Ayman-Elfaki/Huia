@@ -67,6 +67,9 @@ jobs:
         run: npm ci && npm run build
       - working-directory: samples/Huia.AdminUI
         run: npm ci && npm run build
+      # Build the huia-auth-nuxt playground .output for HuiaAuthNuxtPlaygroundFixture.
+      - working-directory: src/nuxt
+        run: npm ci && npm run dev:build
       - run: pwsh tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       # Warm the images the AppHost-backed mail E2E fixture needs (Docker is preinstalled on the runner).
       - run: docker pull axllent/mailpit:v1.21 || true

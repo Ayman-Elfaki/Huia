@@ -46,7 +46,10 @@ export function resolveAuthConfig(event: H3Event): ResolvedAuthConfig {
     console.warn('[huia-auth] no session password — set NUXT_HUIA_AUTH_SESSION_PASSWORD (>= 32 chars)')
   }
 
-  const baseName = raw.session.name || '__Host-huia_sess'
+  const configuredName = raw.session.name || '__Host-huia_sess'
+  // `__Host-` / `__Secure-` prefixed cookies are rejected by the browser unless `Secure` is set,
+  // so over plain http (dev) both the session and the transient oauth-state cookie use the bare name.
+  const baseName = secure ? configuredName : configuredName.replace(/^__Host-/, '').replace(/^__Secure-/, '')
   const oauthCookieName = baseName.endsWith('_sess')
     ? `${baseName.slice(0, -'_sess'.length)}_oauth`
     : `${baseName}_oauth`
