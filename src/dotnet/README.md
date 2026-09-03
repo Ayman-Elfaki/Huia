@@ -45,11 +45,15 @@ app.MapHuiaAdministrativeEndpoints()
 
 ## Layout
 
+This project is `src/dotnet/` inside the Huia monorepo (see the repo-root `README.md`).
+
 ```
-src/        Huia, Huia.EntityFrameworkCore, Huia.AspNetCore
-samples/    Huia.AppHost (Aspire), Huia.IdentityServer, Huia.External, Todo.Api, Todo.App, Huia.AdminUI
-tests/      Huia.Tests, Huia.IntegrationTests, Huia.E2ETests, Huia.Tests.PenTest
-docs/       VitePress documentation site
+src/dotnet/
+  src/        Huia, Huia.EntityFrameworkCore, Huia.AspNetCore
+  tests/      Huia.Tests, Huia.IntegrationTests, Huia.Tests.PenTest
+../../samples/  Huia.AppHost (Aspire), Huia.IdentityServer, Huia.External, Todo.Api, Todo.App, Huia.AdminUI
+../../tests/    Huia.E2ETests   (full-stack Playwright E2E)
+../../docs/     VitePress documentation site
 ```
 
 ## Build
@@ -59,5 +63,6 @@ dotnet build Huia.slnx -c Release
 dotnet test  Huia.slnx -c Release --filter "Category!=Container&Category!=E2E"
 ```
 
-The `Container` tests need Docker (Testcontainers PostgreSQL); the `E2E` tests need Playwright
-browsers (`pwsh tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install chromium`).
+The `Container` tests need Docker (Testcontainers PostgreSQL); the `E2E` tests (repo-root
+`tests/Huia.E2ETests`) need Playwright browsers
+(`pwsh ../../tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install chromium`).

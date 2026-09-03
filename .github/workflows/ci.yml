@@ -13,6 +13,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -23,6 +26,9 @@ jobs:
 
   pen-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -32,6 +38,9 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -50,7 +59,8 @@ jobs:
         with:
           node-version: 22
       # Release build of every sample the front-end E2E fixture launches out-of-process.
-      - run: dotnet build Huia.slnx -c Release
+      - working-directory: src/dotnet
+        run: dotnet build Huia.slnx -c Release
       # `npm run build` both Nuxt front-ends so `.output/server/index.mjs` exists for the fixture.
       - working-directory: samples/Todo.App
         run: npm ci --legacy-peer-deps && npm run build
@@ -73,6 +83,9 @@ jobs:
 
   web-assets:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dotnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -85,3 +98,22 @@ jobs:
       # bypasses its incremental check so the drift guard always compares a fresh build.
       - run: dotnet build src/Huia.AspNetCore/Huia.AspNetCore.csproj -c Release -p:ForceAccountUiAssets=true
       - run: git diff --exit-code src/Huia.AspNetCore/wwwroot
+
+  nuxt-auth-module:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/nuxt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/nuxt/package-lock.json
+      - run: npm ci
+      - run: npm run dev:prepare
+      - run: npm run test:types
+      - run: npm test
+      # nuxi build of the playground — smoke test that openid-client v6 (ESM) bundles under Nitro.
+      - run: npm run dev:build

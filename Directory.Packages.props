@@ -1,0 +1,12 @@
+<Project>
+
+  <!--
+    Repo-root central package management for the relocated samples/ and tests/ projects.
+    Single source of truth is src/dotnet/Directory.Packages.props — imported here so a project
+    at the repo root (e.g. samples/Huia.IdentityServer, tests/Huia.E2ETests) resolves the same
+    package versions. Projects under src/dotnet/ keep finding src/dotnet/Directory.Packages.props
+    first and never reach this file.
+  -->
+  <Import Project="src\dotnet\Directory.Packages.props" />
+
+</Project>

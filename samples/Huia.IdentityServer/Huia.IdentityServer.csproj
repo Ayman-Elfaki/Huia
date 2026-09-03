@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Huia.AspNetCore\Huia.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\dotnet\src\Huia.AspNetCore\Huia.AspNetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

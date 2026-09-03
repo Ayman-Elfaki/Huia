@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    Repo-root shared MSBuild settings.
+
+    The .NET solution and its own Directory.Build.props / Directory.Packages.props live in
+    src/dotnet/. samples/, tests/ (E2E only) and docs/ were lifted to the repo root, so their
+    projects no longer sit under src/dotnet/. This file (and Directory.Packages.props next to it)
+    re-exports the src/dotnet/ build settings so the relocated projects still get the shared
+    TargetFramework, analyzers, TreatWarningsAsErrors and central package management.
+
+    samples/Directory.Build.props and tests/Directory.Build.props still do
+    GetPathOfFileAbove('Directory.Build.props', '../') — which now resolves here.
+  -->
+  <Import Project="src\dotnet\Directory.Build.props" />
+
+</Project>

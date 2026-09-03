@@ -255,8 +255,11 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
 
     private static string FindRepoRoot()
     {
+        // The repo root holds src/dotnet/Huia.slnx and the top-level samples/ + tests/ folders.
         var dir = AppContext.BaseDirectory;
-        while (dir is not null && !File.Exists(Path.Combine(dir, "Huia.slnx")))
+        while (dir is not null
+            && !File.Exists(Path.Combine(dir, "src", "dotnet", "Huia.slnx"))
+            && !Directory.Exists(Path.Combine(dir, ".git")))
         {
             dir = Path.GetDirectoryName(dir);
         }

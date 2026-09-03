@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Huia.AspNetCore\Huia.AspNetCore.csproj" />
-    <ProjectReference Include="..\..\samples\Huia.IdentityServer\Huia.IdentityServer.csproj" />
+    <ProjectReference Include="..\..\..\..\samples\Huia.IdentityServer\Huia.IdentityServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>
