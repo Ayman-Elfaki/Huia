@@ -22,5 +22,5 @@ features:
   - title: Flows
     details: Authorization code + PKCE (with optional PAR), refresh, client credentials, device code, passwordless SMS one-time codes, and external login through the OpenIddict client.
   - title: First-party Nuxt module
-    details: huia-auth-nuxt runs the relying-party flow on the Nitro server — PKCE + PAR, transparent refresh, and a dual-layer session that keeps every token off the browser.
+    details: huia-nuxt runs the relying-party flow on the Nitro server — PKCE + PAR, transparent refresh, and a dual-layer session that keeps every token off the browser.
 ---

@@ -1,9 +1,8 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch: {}
 
 env:
   DOTNET_NOLOGO: 'true'
@@ -17,8 +16,8 @@ jobs:
       run:
         working-directory: src/dotnet
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
       - run: dotnet build Huia.slnx -c Release
@@ -30,8 +29,8 @@ jobs:
       run:
         working-directory: src/dotnet
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
       - run: dotnet test tests/Huia.Tests.PenTest/Huia.Tests.PenTest.csproj -c Release --filter "Category=PenTest"
@@ -42,8 +41,8 @@ jobs:
       run:
         working-directory: src/dotnet
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
       - run: dotnet test tests/Huia.IntegrationTests/Huia.IntegrationTests.csproj -c Release --filter "Category=Container"
@@ -51,8 +50,8 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
       - uses: actions/setup-node@v4
@@ -67,7 +66,7 @@ jobs:
         run: npm ci && npm run build
       - working-directory: samples/Huia.AdminUI
         run: npm ci && npm run build
-      # Build the huia-auth-nuxt playground .output for HuiaAuthNuxtPlaygroundFixture.
+      # Build the huia-nuxt playground .output for HuiaNuxtPlaygroundFixture.
       - working-directory: src/nuxt
         run: npm ci && npm run dev:build
       - run: pwsh tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
@@ -78,8 +77,8 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - working-directory: docs
@@ -91,11 +90,11 @@ jobs:
       run:
         working-directory: src/dotnet
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       # The BuildAccountUiAssets MSBuild target regenerates wwwroot/; -p:ForceAccountUiAssets=true
@@ -103,14 +102,14 @@ jobs:
       - run: dotnet build src/Huia.AspNetCore/Huia.AspNetCore.csproj -c Release -p:ForceAccountUiAssets=true
       - run: git diff --exit-code src/Huia.AspNetCore/wwwroot
 
-  nuxt-auth-module:
+  nuxt-module:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: src/nuxt
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm

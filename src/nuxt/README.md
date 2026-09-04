@@ -1,4 +1,4 @@
-# huia-auth-nuxt
+# huia-nuxt
 
 First-party **Nuxt 4** authentication module for the [Huia](https://github.com/Ayman-Elfaki/Huia)
 identity provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
@@ -12,13 +12,13 @@ server**.
 ## Install
 
 ```bash
-npm install huia-auth-nuxt
+npm install huia-nuxt
 ```
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['huia-auth-nuxt'],
+  modules: ['huia-nuxt'],
   huiaAuth: {
     huia: { baseUrl: 'https://id.example.com', tenant: 'acme' },
     clientId: 'acme-web',

@@ -90,7 +90,7 @@ builder.AddViteApp("todo-app", "../Todo.App")
     .WithEnvironment("NUXT_HUIA_AUTH_CLIENT_SECRET", "todo-app-secret")
     .WithEnvironment("NUXT_HUIA_AUTH_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
     .WithEnvironment("NUXT_HUIA_AUTH_HUIA_TENANT", "todo")
-    // Node's undici rejects the ASP.NET Core dev cert; this also lets huia-auth-nuxt discover it.
+    // Node's undici rejects the ASP.NET Core dev cert; this also lets huia-nuxt discover it.
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()

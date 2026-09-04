@@ -2,7 +2,7 @@
 
 `samples/Huia.AdminUI` is a Nuxt 4 admin console that puts a UI on every `/admin/*` endpoint the
 library exposes. It is a **confidential** client built on the first-party
-[`huia-auth-nuxt`](/nuxt/overview) module and signs in against the `master` tenant;
+[`huia-nuxt`](/nuxt/overview) module and signs in against the `master` tenant;
 [`nuxt-api-party`](https://nuxt-api-party.byjohann.dev/) proxies each call to
 `{{issuer}}/master/admin/...` and a Nitro plugin adds the access token via `getAccessToken(event)`,
 so the token never reaches the browser.

@@ -1,4 +1,4 @@
-# `huia-auth-nuxt` — route protection
+# `huia-nuxt` — route protection
 
 ## Client — pages
 

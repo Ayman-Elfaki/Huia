@@ -1,7 +1,7 @@
 # Migrating from `nuxt-oidc-auth`
 
 Both sample apps (`samples/Todo.App`, `samples/Huia.AdminUI`) were moved from the third-party
-`nuxt-oidc-auth` beta to `huia-auth-nuxt`. The full diff is commit `f363cec`; the shape of the change:
+`nuxt-oidc-auth` beta to `huia-nuxt`. The full diff is commit `f363cec`; the shape of the change:
 
 ## `package.json`
 
@@ -22,7 +22,7 @@ sidesteps an npm 10 arborist crash on the nuxt peer graph.
    modules: [
      '@nuxtjs/tailwindcss', '@nuxtjs/color-mode', 'shadcn-nuxt', 'nuxt-api-party',
 -    'nuxt-oidc-auth',
-+    '../../src/nuxt/src/module',   // from source in the monorepo; or 'huia-auth-nuxt' when installed
++    '../../src/nuxt/src/module',   // from source in the monorepo; or 'huia-nuxt' when installed
    ],
 
 -  oidc: {
@@ -58,7 +58,7 @@ registered for the old integration needs no change).
 
 ## Components & middleware
 
-| `nuxt-oidc-auth` | `huia-auth-nuxt` |
+| `nuxt-oidc-auth` | `huia-nuxt` |
 |---|---|
 | `const { loggedIn, user, login, logout } = useOidcAuth()` | `const { loggedIn, user } = useUserSession()` + `const { login, logout } = useAuth()` |
 | `user.value?.userInfo?.name` | `user.value?.name` (flat claims) |

@@ -1,4 +1,4 @@
-# `huia-auth-nuxt` — session model & security
+# `huia-nuxt` — session model & security
 
 ## Dual-layer persistence
 

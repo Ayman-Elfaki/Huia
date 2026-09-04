@@ -1,11 +1,11 @@
-# `huia-auth-nuxt` — Technical Specification
+# `huia-nuxt` — Technical Specification
 
 > A first-party **Nuxt 4** authentication module for the [Huia](../dotnet/README.md) identity
 > provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
 > transparent server-side token refresh, and a dual-layer session that keeps **every token on the
 > server**.
 
-- **Package:** `huia-auth-nuxt`
+- **Package:** `huia-nuxt`
 - **Target:** Nuxt `>=4.0.0`, Nitro `>=2.10`, Node `>=20.11` (Web Crypto, `globalThis.crypto`)
 - **Core library:** [`openid-client`](https://github.com/panva/openid-client) v6 (ESM-only, Web
   Crypto native, form-encoded token requests by design)
@@ -32,7 +32,7 @@
 
 ### 1.1 Summary
 
-`huia-auth-nuxt` performs the OAuth 2.0 **Authorization Code flow with PKCE** against a Huia tenant's
+`huia-nuxt` performs the OAuth 2.0 **Authorization Code flow with PKCE** against a Huia tenant's
 OpenID Provider (OP), completes the code exchange on the **Nitro server**, and persists the result
 across two layers:
 
@@ -130,7 +130,7 @@ The module also:
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['huia-auth-nuxt'],
+  modules: ['huia-nuxt'],
 
   huiaAuth: {
     // ── Which Huia OP ────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ is called out only because the previous `nuxt-oidc-auth` integration needed an e
 
 ```
 your-app/
-├─ nuxt.config.ts                 modules: ['huia-auth-nuxt'],  huiaAuth: { … }
+├─ nuxt.config.ts                 modules: ['huia-nuxt'],  huiaAuth: { … }
 ├─ app/
 │  ├─ pages/
 │  │  ├─ index.vue                public
@@ -251,7 +251,7 @@ composables `useUserSession` / `useAuth`, and the auto-imported server utilities
 
 ```
 src/nuxt/
-├─ package.json                   name: "huia-auth-nuxt"  (@nuxt/module-builder)
+├─ package.json                   name: "huia-nuxt"  (@nuxt/module-builder)
 ├─ build.config.ts
 ├─ tsconfig.json
 ├─ src/
@@ -1292,7 +1292,7 @@ const defaults = {
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
-    name: 'huia-auth-nuxt',
+    name: 'huia-nuxt',
     configKey: 'huiaAuth',
     compatibility: { nuxt: '>=4.0.0' },
   },
@@ -1565,15 +1565,15 @@ by `openid-client`).
 `test/types.test-d.ts` (`expectTypeOf`): `requireUserSession(event)` narrows `user` to non-nullable;
 a consumer `declare module '#huia-auth'` augmentation merges into `UserClaims`.
 
-### 10.5 E2E (`tests/Huia.E2ETests/HuiaAuthNuxt*`, `[Trait("Category","E2E")]`)
+### 10.5 E2E (`tests/Huia.E2ETests/HuiaNuxt*`, `[Trait("Category","E2E")]`)
 
-`HuiaAuthNuxtPlaygroundFixture` boots `Huia.IdentityServer` (`Huia__EnableE2E=true` /
+`HuiaNuxtPlaygroundFixture` boots `Huia.IdentityServer` (`Huia__EnableE2E=true` /
 `Huia__Database=Sqlite`, in-memory shared cache) on `http://localhost:5319` and runs the built
 playground (`node src/nuxt/playground/.output/server/index.mjs`) on `:3030` with `NUXT_HUIA_AUTH_*`
-overrides. `Program.cs` seeds a `huia-auth-nuxt-playground` confidential web client in the `e2e`
+overrides. `Program.cs` seeds a `huia-nuxt-playground` confidential web client in the `e2e`
 tenant with a **35 s** access-token lifetime. Skip-tolerant like the other front-end fixtures.
 
-`HuiaAuthNuxtE2ETests` (Playwright, reuses `FrontEndFlows`):
+`HuiaNuxtE2ETests` (Playwright, reuses `FrontEndFlows`):
 
 - **Signs in, stores tokens server-side, serves a token-free session** — `/protected` bounces
   through the Huia authorize endpoint (PAR: only `request_uri` in the browser URL); after the Razor
@@ -1593,6 +1593,14 @@ unit suite exercises chunk split/reassembly directly.
 
 ### 10.6 CI
 
-A `nuxt-auth-module` job in `.github/workflows/ci.yml` (`working-directory: src/nuxt`):
+A `nuxt-module` job in `.github/workflows/ci.yml` (`working-directory: src/nuxt`):
 `npm ci` → `npm run dev:prepare` → `npm run test:types` → `npm test` → `npm run dev:build` (the
 last is a bundling smoke test that `openid-client` v6's ESM output survives the Nitro/Rollup build).
+
+`.github/workflows/release-npm.yml` publishes the module to npm — triggered by a `nuxt-v*.*.*` tag
+(or manually via `workflow_dispatch`). It re-runs the same health checks, verifies the tag matches
+`package.json`'s `version` (versioning is manual — no changelogen/semantic-release), runs
+`npm run prepack` (`nuxt-module-build build`), then `npm publish` using an `NPM_TOKEN` secret scoped
+to the `npm` GitHub environment, and creates a GitHub release on a tag build. Mirrors
+`.github/workflows/release.yml`'s shape for the NuGet packages, which uses `v*.*.*` tags and an
+`environment: nuget` — the `nuxt-v` prefix keeps the two tag namespaces from colliding in one repo.

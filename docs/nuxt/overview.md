@@ -1,10 +1,10 @@
-# `huia-auth-nuxt` — overview
+# `huia-nuxt` — overview
 
-`huia-auth-nuxt` is the first-party **Nuxt 4** module for signing a relying-party app into a Huia
+`huia-nuxt` is the first-party **Nuxt 4** module for signing a relying-party app into a Huia
 tenant. It runs the OAuth 2.0 Authorization Code flow with PKCE (and RFC 9126 PAR) on the **Nitro
 server**, and keeps every token server-side.
 
-- Package: `huia-auth-nuxt` · config key `huiaAuth`
+- Package: `huia-nuxt` · config key `huiaAuth`
 - Built on [`openid-client`](https://github.com/panva/openid-client) v6 (ESM, Web Crypto)
 - Full build-to spec: [`src/nuxt/SPEC.md`](https://github.com/Ayman-Elfaki/Huia/blob/main/src/nuxt/SPEC.md)
 

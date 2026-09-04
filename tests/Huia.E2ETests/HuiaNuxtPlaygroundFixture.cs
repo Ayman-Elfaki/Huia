@@ -4,12 +4,12 @@ using System.Net.Http;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Boots <c>Huia.IdentityServer</c> (SQLite, E2E surface on) plus the built <c>huia-auth-nuxt</c>
+/// Boots <c>Huia.IdentityServer</c> (SQLite, E2E surface on) plus the built <c>huia-nuxt</c>
 /// playground (<c>node .output/server/index.mjs</c>) so Playwright can drive a real OIDC round-trip
 /// through the first-party module. Any missing build output or start-up failure leaves
 /// <see cref="Started"/> false and the specs skip.
 /// </summary>
-public sealed class HuiaAuthNuxtPlaygroundFixture : IAsyncLifetime
+public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
 {
     private readonly List<Process> _processes = [];
     private readonly string _repoRoot = RepoRoot.Find();
@@ -67,9 +67,9 @@ public sealed class HuiaAuthNuxtPlaygroundFixture : IAsyncLifetime
             ["NITRO_PORT"] = new Uri(PlaygroundUrl).Port.ToString(),
             ["NUXT_HUIA_AUTH_HUIA_BASE_URL"] = Issuer,
             ["NUXT_HUIA_AUTH_HUIA_TENANT"] = "e2e",
-            ["NUXT_HUIA_AUTH_CLIENT_ID"] = "huia-auth-nuxt-playground",
-            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "huia-auth-nuxt-playground-secret",
-            ["NUXT_HUIA_AUTH_SESSION_PASSWORD"] = "e2e-only-huia-auth-nuxt-session-password-0123456789",
+            ["NUXT_HUIA_AUTH_CLIENT_ID"] = "huia-nuxt-playground",
+            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "huia-nuxt-playground-secret",
+            ["NUXT_HUIA_AUTH_SESSION_PASSWORD"] = "e2e-only-huia-nuxt-session-password-0123456789",
         });
 
         using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
@@ -112,7 +112,7 @@ public sealed class HuiaAuthNuxtPlaygroundFixture : IAsyncLifetime
             WorkingDirectory = Path.GetDirectoryName(Path.GetDirectoryName(entry))!,
         };
         info.ArgumentList.Add(entry);
-        // Node's undici rejects the ASP.NET Core dev cert; also lets huia-auth-nuxt discover a plain-http issuer.
+        // Node's undici rejects the ASP.NET Core dev cert; also lets huia-nuxt discover a plain-http issuer.
         info.Environment["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
         foreach (var (k, v) in env)
         {
@@ -194,5 +194,5 @@ public sealed class HuiaAuthNuxtPlaygroundFixture : IAsyncLifetime
     }
 }
 
-[CollectionDefinition("huia-auth-nuxt")]
-public sealed class HuiaAuthNuxtPlaygroundCollection : ICollectionFixture<HuiaAuthNuxtPlaygroundFixture>;
+[CollectionDefinition("huia-nuxt")]
+public sealed class HuiaNuxtPlaygroundCollection : ICollectionFixture<HuiaNuxtPlaygroundFixture>;

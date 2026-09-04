@@ -5,14 +5,14 @@ using static Huia.E2ETests.FrontEndFlows;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Drives the first-party <c>huia-auth-nuxt</c> module end to end: its playground app against a real
+/// Drives the first-party <c>huia-nuxt</c> module end to end: its playground app against a real
 /// <c>Huia.IdentityServer</c> (<c>e2e</c> tenant, PAR advertised, a 35s access-token lifetime).
 /// Asserts the dual-layer session — tokens stay in Nitro Storage, the browser only ever sees the
 /// sealed session cookie — plus transparent refresh and RP-initiated logout.
 /// </summary>
 [Trait("Category", "E2E")]
-[Collection("huia-auth-nuxt")]
-public sealed class HuiaAuthNuxtE2ETests(HuiaAuthNuxtPlaygroundFixture fx)
+[Collection("huia-nuxt")]
+public sealed class HuiaNuxtE2ETests(HuiaNuxtPlaygroundFixture fx)
 {
     private const string UserEmail = "e2e-user@huia.local";
     private const string UserPassword = "Password1!";

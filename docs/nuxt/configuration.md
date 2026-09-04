@@ -1,9 +1,9 @@
-# `huia-auth-nuxt` — configuration
+# `huia-nuxt` — configuration
 
 ## Install
 
 ```bash
-npm install huia-auth-nuxt
+npm install huia-nuxt
 ```
 
 In the monorepo the sample apps reference the module from source instead
@@ -14,7 +14,7 @@ In the monorepo the sample apps reference the module from source instead
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['huia-auth-nuxt'],
+  modules: ['huia-nuxt'],
 
   huiaAuth: {
     huia: {

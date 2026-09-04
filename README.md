@@ -18,7 +18,7 @@ src/
                 Huia.AspNetCore            AddHuia()/UseHuia(), OpenIddict server + client, Razor account UI,
                                           passwordless SMS, key-lifecycle jobs, security headers
               plus tests/ (unit, integration, pen-test).
-  nuxt/       huia-auth-nuxt — a Nuxt 4 module: OIDC Authorization Code + PKCE + PAR, transparent
+  nuxt/       huia-nuxt — a Nuxt 4 module: OIDC Authorization Code + PKCE + PAR, transparent
               server-side token refresh, dual-layer session (Nitro Storage for tokens; encrypted,
               chunked cookies for the session id + minimal claims). Tokens never reach the browser.
               See src/nuxt/SPEC.md for the full technical specification.

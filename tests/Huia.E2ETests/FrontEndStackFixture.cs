@@ -90,8 +90,8 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
         });
 
         // The built `.output` bakes the config-time URLs, so point every base URL at the E2E issuer
-        // through the runtime-config env overrides (huia-auth-nuxt + nuxt-api-party both read these).
-        // StartNode already exports NODE_TLS_REJECT_UNAUTHORIZED=0, which also lets huia-auth-nuxt
+        // through the runtime-config env overrides (huia-nuxt + nuxt-api-party both read these).
+        // StartNode already exports NODE_TLS_REJECT_UNAUTHORIZED=0, which also lets huia-nuxt
         // discover the plain-http E2E issuer.
         var commonNuxt = new Dictionary<string, string>
         {

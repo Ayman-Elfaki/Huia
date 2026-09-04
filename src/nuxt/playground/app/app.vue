@@ -5,7 +5,7 @@ const { login, logout } = useAuth()
 
 <template>
   <div style="font-family: system-ui; max-width: 40rem; margin: 3rem auto;">
-    <h1>huia-auth-nuxt playground</h1>
+    <h1>huia-nuxt playground</h1>
     <p v-if="loggedIn">
       Signed in as <strong>{{ user?.name ?? user?.preferred_username ?? user?.sub }}</strong>
       <button style="margin-left: 1rem" @click="logout()">Sign out</button>

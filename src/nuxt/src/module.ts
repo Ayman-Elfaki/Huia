@@ -75,7 +75,7 @@ const defaults = {
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
-    name: 'huia-auth-nuxt',
+    name: 'huia-nuxt',
     configKey: 'huiaAuth',
     compatibility: { nuxt: '>=4.0.0' },
   },

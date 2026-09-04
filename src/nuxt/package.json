@@ -1,5 +1,5 @@
 {
-  "name": "huia-auth-nuxt",
+  "name": "huia-nuxt",
   "version": "0.1.0",
   "description": "First-party Nuxt 4 OIDC/OAuth2 (PKCE + PAR) authentication module for the Huia identity provider",
   "license": "MIT",
