@@ -1,10 +1,10 @@
 namespace Huia.Options;
 
 /// <summary>
-/// Settings for the passwordless SMS one-time-code sign-in. Enabled via
-/// <see cref="PasswordlessFlowOptions.UsePhoneLogin"/>.
+/// Settings for the passwordless SMS one-time-code sign-in, including its own lockout policy. Enabled
+/// via <see cref="HuiaTenantAuthenticationOptions.UsePhoneLogin"/>.
 /// </summary>
-public sealed class PhoneLoginOptions : IHuiaOptionsSection
+public sealed class PhoneOptions : IHuiaOptionsSection
 {
     /// <summary>
     /// Whether an unknown but well-formed number may start a sign-in. The account is <em>not</em> created
@@ -50,6 +50,23 @@ public sealed class PhoneLoginOptions : IHuiaOptionsSection
     /// <summary>Absolute ceiling on successful phone sign-ins per number per rolling 24 hours.</summary>
     public int SuccessfulLoginsPerDay { get; set; } = 5;
 
+    /// <summary>
+    /// Whether a sign-in through this flow requires the account's phone number to be confirmed. On by
+    /// default — a phone account's number is confirmed the moment its one-time code is verified, so this
+    /// only matters for edge cases (for example a phone number attached to an otherwise-unconfirmed
+    /// account by an administrator).
+    /// </summary>
+    public bool RequireConfirmedPhoneNumber { get; set; } = true;
+
+    /// <summary>The number of failed one-time-code sign-in attempts that triggers a lockout, for this flow only.</summary>
+    public int MaxFailedAccessAttempts { get; set; } = 5;
+
+    /// <summary>How long an account stays locked out once <see cref="MaxFailedAccessAttempts"/> is reached.</summary>
+    public TimeSpan LockoutDuration { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>Whether a newly created user is subject to this flow's lockout policy.</summary>
+    public bool AllowedForNewUsers { get; set; } = true;
+
     void IHuiaOptionsSection.Validate(string path, List<string> errors)
     {
         if (!string.IsNullOrWhiteSpace(DefaultCountry))
@@ -77,5 +94,9 @@ public sealed class PhoneLoginOptions : IHuiaOptionsSection
         errors.Require(SuccessfulLoginsPerDay >= SuccessfulLoginsPerWindow,
             HuiaOptionsValidation.Combine(path, nameof(SuccessfulLoginsPerDay)),
             "must be at least SuccessfulLoginsPerWindow.");
+        errors.Require(MaxFailedAccessAttempts >= 1,
+            HuiaOptionsValidation.Combine(path, nameof(MaxFailedAccessAttempts)), "must be at least 1.");
+        errors.Require(LockoutDuration > TimeSpan.Zero,
+            HuiaOptionsValidation.Combine(path, nameof(LockoutDuration)), "must be greater than zero.");
     }
 }
