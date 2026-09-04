@@ -1,10 +1,23 @@
 import type { UserClaims } from '../../types'
 
-/** Copy only the whitelisted keys out of the full id_token claim set. `sub` is always kept. */
+/**
+ * Copy only the whitelisted keys out of the full id_token claim set. `sub` is always kept.
+ *
+ * `roles` is special-cased: OpenIddict (and Huia) emit each role as a repeated claim of type
+ * `role` (singular) — a JWT collapses that into a single `role` claim, either a scalar string
+ * (one role) or an array (several). Normalize it into the `roles: string[]` shape consumers expect.
+ */
 export function pickUserClaims(claims: Record<string, unknown>, whitelist: string[]): UserClaims {
   const out: Record<string, unknown> = { sub: String(claims.sub ?? '') }
   for (const key of whitelist) {
     if (key === 'sub') continue
+    if (key === 'roles') {
+      const role = claims.role
+      if (role !== undefined) {
+        out.roles = Array.isArray(role) ? role.map(String) : [String(role)]
+      }
+      continue
+    }
     if (claims[key] !== undefined) out[key] = claims[key]
   }
   return out as UserClaims

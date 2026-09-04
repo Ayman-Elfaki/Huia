@@ -29,5 +29,16 @@ export function useUserSession() {
     clearLocal(): void {
       session.value = {}
     },
+
+    /** Whether the signed-in user has `role` (from the `roles` claim — requires the `roles` scope). */
+    hasRole(role: string): boolean {
+      return !!session.value.user?.roles?.includes(role)
+    },
+
+    /** Whether the signed-in user has at least one of `roles`. */
+    hasAnyRole(...roles: string[]): boolean {
+      const userRoles = session.value.user?.roles
+      return !!userRoles && roles.some(role => userRoles.includes(role))
+    },
   }
 }

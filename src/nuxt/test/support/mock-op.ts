@@ -118,7 +118,8 @@ export async function startMockOp(opts: Opts = {}): Promise<MockOp> {
       state.tokenCalls.push(form)
 
       const mkTokens = async (nonce: string) => {
-        const idToken = await new SignJWT({ nonce, name: 'Ada Lovelace', email: 'ada@example.test', roles: ['admin', 'user'] })
+        // `role` (singular) — the claim key OpenIddict/Huia actually emit; pickUserClaims maps it to `roles`.
+        const idToken = await new SignJWT({ nonce, name: 'Ada Lovelace', email: 'ada@example.test', role: ['admin', 'user'] })
           .setProtectedHeader({ alg: 'RS256', kid: 'mock-1' })
           .setIssuer(issuer())
           .setSubject('user-ada')

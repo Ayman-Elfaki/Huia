@@ -45,6 +45,9 @@ public sealed class LoginModel(
     /// <summary>The countries for the phone-tab country picker, when phone login is enabled.</summary>
     public IReadOnlyList<CountryDialInfo> Countries => countryCatalog.GetCountries();
 
+    /// <summary>The tenant's configured default region, used to preselect the phone-tab country picker.</summary>
+    public string? PhoneDefaultCountry => Tenant?.Authentication.Phone?.DefaultCountry;
+
     /// <summary>The sanitized return URL carried through the form.</summary>
     public string ReturnUrl { get; private set; } = "/";
 

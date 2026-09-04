@@ -12,18 +12,31 @@ describe('pickUserClaims', () => {
       sub: 'u1',
       name: 'Ada',
       email: 'ada@x.test',
-      roles: ['admin'],
       access_token: 'LEAK',
       ssn: '000-00-0000',
     }
-    const picked = pickUserClaims(claims, ['sub', 'name', 'email', 'roles'])
-    expect(picked).toEqual({ sub: 'u1', name: 'Ada', email: 'ada@x.test', roles: ['admin'] })
+    const picked = pickUserClaims(claims, ['sub', 'name', 'email'])
+    expect(picked).toEqual({ sub: 'u1', name: 'Ada', email: 'ada@x.test' })
     expect(picked).not.toHaveProperty('access_token')
     expect(picked).not.toHaveProperty('ssn')
   })
 
   it('always coerces sub to a string', () => {
     expect(pickUserClaims({ sub: 12345 }, []).sub).toBe('12345')
+  })
+
+  it('normalizes the OpenIddict "role" claim (singular) into "roles" (array)', () => {
+    // One role: OpenIddict/the JWT collapse a single-valued claim to a scalar string.
+    expect(pickUserClaims({ sub: 'u1', role: 'huia.administrator' }, ['roles']))
+      .toEqual({ sub: 'u1', roles: ['huia.administrator'] })
+
+    // Several roles: the JWT carries an array under the same singular key.
+    expect(pickUserClaims({ sub: 'u1', role: ['a', 'b'] }, ['roles']))
+      .toEqual({ sub: 'u1', roles: ['a', 'b'] })
+  })
+
+  it('omits roles when the id_token carries no role claim', () => {
+    expect(pickUserClaims({ sub: 'u1' }, ['roles'])).toEqual({ sub: 'u1' })
   })
 })
 

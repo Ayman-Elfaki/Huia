@@ -39,6 +39,9 @@ internal static partial class AdminEndpoints
         group.MapGet("users/{id}/roles", GetUserRolesAsync);
         group.MapPost("users/{id}/roles", AddUserRoleAsync);
         group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync);
+        group.MapPost("users/{id}/lock", LockUserAsync);
+        group.MapPost("users/{id}/unlock", UnlockUserAsync);
+        group.MapPost("users/{id}/verify-email", VerifyEmailAsync);
 
         group.MapGet("roles", ListRolesAsync);
         group.MapGet("roles/{id}", GetRoleAsync);
@@ -101,7 +104,7 @@ internal static partial class AdminEndpoints
             async id => await db.Set<HuiaUser>().IgnoreQueryFilters()
                 .FirstOrDefaultAsync(u => u.Id == id, context.RequestAborted),
             users => users.Select(u => new UserDto(u.Id, u.TenantId, u.UserName, u.Email, u.EmailConfirmed,
-                u.PhoneNumber, u.PhoneNumberConfirmed, Array.Empty<string>())),
+                u.PhoneNumber, u.PhoneNumberConfirmed, u.LockoutEnabled, u.LockoutEnd, Array.Empty<string>())),
             ReadQuery(context));
 
         var byUser = await RolesByUserAsync(db, [.. result.Data.Select(d => d.Id)], context.RequestAborted);
@@ -394,6 +397,8 @@ internal static partial class AdminEndpoints
         bool EmailConfirmed,
         string? PhoneNumber,
         bool PhoneNumberConfirmed,
+        bool LockoutEnabled,
+        DateTimeOffset? LockoutEnd,
         string[] Roles);
 
     private sealed record ClientDto(

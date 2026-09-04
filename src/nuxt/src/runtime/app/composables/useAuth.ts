@@ -2,13 +2,15 @@ import { navigateTo, useRoute, useRuntimeConfig } from '#imports'
 import { useUserSession } from './useUserSession'
 
 export function useAuth() {
-  const { user, loggedIn, session } = useUserSession()
+  const { user, loggedIn, session, hasRole, hasAnyRole } = useUserSession()
   const paths = useRuntimeConfig().public.huiaAuth as { loginPath: string, logoutPath: string }
 
   return {
     user,
     loggedIn,
     session,
+    hasRole,
+    hasAnyRole,
 
     login(opts: { returnTo?: string, locale?: string, prompt?: string } = {}) {
       const query: Record<string, string> = { returnTo: opts.returnTo ?? useRoute().fullPath }

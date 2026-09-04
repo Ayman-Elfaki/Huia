@@ -131,6 +131,80 @@ public sealed class AdminCrudTests : IAsyncLifetime
         (await client.PostAsJsonAsync("/master/admin/users", payload)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
 
+    [Fact]
+    public async Task A_user_can_be_locked_and_unlocked()
+    {
+        using var client = await AdminApiAsync();
+
+        var create = await client.PostAsJsonAsync("/master/admin/users", new
+        {
+            tenant = "acme",
+            email = "lockme@acme.test",
+            password = "Password1!",
+            firstName = "Lock",
+            lastName = "Me",
+            emailConfirmed = true,
+        });
+        create.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        var lock_ = await client.PostAsync($"/master/admin/users/{id}/lock", null);
+        lock_.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var afterLock = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users/{id}");
+        afterLock.GetProperty("lockoutEnabled").GetBoolean().ShouldBeTrue();
+        afterLock.GetProperty("lockoutEnd").GetDateTimeOffset().ShouldBeGreaterThan(DateTimeOffset.UtcNow.AddYears(1));
+
+        var unlock = await client.PostAsync($"/master/admin/users/{id}/unlock", null);
+        unlock.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var afterUnlock = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users/{id}");
+        afterUnlock.GetProperty("lockoutEnd").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task An_email_and_password_account_email_can_be_verified()
+    {
+        using var client = await AdminApiAsync();
+
+        var create = await client.PostAsJsonAsync("/master/admin/users", new
+        {
+            tenant = "acme",
+            email = "unverified@acme.test",
+            password = "Password1!",
+            firstName = "Un",
+            lastName = "Verified",
+            emailConfirmed = false,
+        });
+        create.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        var verify = await client.PostAsync($"/master/admin/users/{id}/verify-email", null);
+        verify.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var after = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users/{id}");
+        after.GetProperty("emailConfirmed").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_phone_accounts_email_cannot_be_verified()
+    {
+        using var client = await AdminApiAsync();
+
+        var create = await client.PostAsJsonAsync("/master/admin/users", new
+        {
+            tenant = "phone",
+            phoneNumber = "+15005550403",
+            firstName = "Ph",
+            lastName = "One",
+        });
+        create.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        var verify = await client.PostAsync($"/master/admin/users/{id}/verify-email", null);
+        verify.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
     // ------------------------------------------------------------------ clients
 
     [Fact]

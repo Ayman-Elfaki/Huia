@@ -12,7 +12,7 @@
     "title": "A tiny todo list, secured by Huia",
     "intro": "This sample signs in against the todo tenant of the Huia identity provider and stores tasks in a separate resource API using the issued access token.",
     "getStarted": "Get started",
-    "hint": "Sign in with a seeded account (alice{'@'}todo.test / Password1!) or register a new one, or use passwordless phone sign-in.",
+    "hint": "Sign in with a seeded account (alice{'@'}todo.test / Password1!2345) or register a new one, or use passwordless phone sign-in.",
     "signIn": "Sign in with Huia",
     "goToTasks": "Go to your tasks"
   },

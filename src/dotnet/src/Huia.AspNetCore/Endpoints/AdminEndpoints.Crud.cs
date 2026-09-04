@@ -32,7 +32,7 @@ internal static partial class AdminEndpoints
 
         var roles = (await RolesByUserAsync(db, [id], context.RequestAborted)).GetValueOrDefault(id, []);
         return Results.Ok(new UserDto(user.Id, user.TenantId, user.UserName, user.Email, user.EmailConfirmed,
-            user.PhoneNumber, user.PhoneNumberConfirmed, roles));
+            user.PhoneNumber, user.PhoneNumberConfirmed, user.LockoutEnabled, user.LockoutEnd, roles));
     }
 
     private static async Task<IResult> CreateUserAsync(HttpContext context, HuiaOptions options, CreateUserRequest body)
@@ -100,7 +100,8 @@ internal static partial class AdminEndpoints
             return Results.Created(
                 $"/admin/users/{Uri.EscapeDataString(user.Id)}",
                 new UserDto(user.Id, user.TenantId, user.UserName, user.Email, user.EmailConfirmed,
-                    user.PhoneNumber, user.PhoneNumberConfirmed, [.. body.Roles ?? []]));
+                    user.PhoneNumber, user.PhoneNumberConfirmed, user.LockoutEnabled, user.LockoutEnd,
+                    [.. body.Roles ?? []]));
         });
     }
 
@@ -176,6 +177,99 @@ internal static partial class AdminEndpoints
             }
 
             var result = await userManager.DeleteAsync(user);
+            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+        });
+    }
+
+    /// <summary>Locks a user out until <see cref="LockUserRequest.Until"/> (indefinitely by default).</summary>
+    private static async Task<IResult> LockUserAsync(HttpContext context, HuiaDbContext db, string id, LockUserRequest? body)
+    {
+        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        if (tenantId is null)
+        {
+            return Results.NotFound();
+        }
+
+        return await WithTenantScopeAsync(context, tenantId, async services =>
+        {
+            var userManager = services.GetRequiredService<HuiaUserManager>();
+            var user = await userManager.FindByIdAsync(id);
+            if (user is null)
+            {
+                return Results.NotFound();
+            }
+
+            await userManager.SetLockoutEnabledAsync(user, true);
+            var result = await userManager.SetLockoutEndDateAsync(user, body?.Until ?? DateTimeOffset.MaxValue);
+            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+        });
+    }
+
+    /// <summary>Clears an existing lockout and resets the failed-access counter.</summary>
+    private static async Task<IResult> UnlockUserAsync(HttpContext context, HuiaDbContext db, string id)
+    {
+        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        if (tenantId is null)
+        {
+            return Results.NotFound();
+        }
+
+        return await WithTenantScopeAsync(context, tenantId, async services =>
+        {
+            var userManager = services.GetRequiredService<HuiaUserManager>();
+            var user = await userManager.FindByIdAsync(id);
+            if (user is null)
+            {
+                return Results.NotFound();
+            }
+
+            var result = await userManager.SetLockoutEndDateAsync(user, null);
+            if (!result.Succeeded)
+            {
+                return IdentityProblem(result);
+            }
+
+            await userManager.ResetAccessFailedCountAsync(user);
+            return Results.NoContent();
+        });
+    }
+
+    /// <summary>Confirms an email-and-password account's email address without a confirmation link.</summary>
+    private static async Task<IResult> VerifyEmailAsync(HttpContext context, HuiaDbContext db, string id)
+    {
+        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        if (tenantId is null)
+        {
+            return Results.NotFound();
+        }
+
+        return await WithTenantScopeAsync(context, tenantId, async services =>
+        {
+            var userManager = services.GetRequiredService<HuiaUserManager>();
+            var user = await userManager.FindByIdAsync(id);
+            if (user is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (await userManager.GetUserTypeAsync(user) != HuiaUserType.Password)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["email"] = ["Only an email-and-password account has an email address to verify."],
+                });
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return Results.NoContent();
+            }
+
+            user.EmailConfirmed = true;
+            var result = await userManager.UpdateAsync(user);
             return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
         });
     }
@@ -569,6 +663,8 @@ internal static partial class AdminEndpoints
         bool? LockoutEnabled,
         DateTimeOffset? LockoutEnd,
         bool? ClearLockout);
+
+    private sealed record LockUserRequest(DateTimeOffset? Until);
 
     private sealed record ClientTokenLifetimesDto(
         TimeSpan? AccessToken,

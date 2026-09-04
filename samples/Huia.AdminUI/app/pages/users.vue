@@ -11,7 +11,13 @@ interface UserRow {
   emailConfirmed: boolean
   phoneNumber: string | null
   phoneNumberConfirmed: boolean
+  lockoutEnabled: boolean
+  lockoutEnd: string | null
   roles: string[]
+}
+
+function isLockedOut(row: UserRow) {
+  return !!row.lockoutEnd && new Date(row.lockoutEnd).getTime() > Date.now()
 }
 
 const tenantOptions = useTenantOptions()
@@ -64,7 +70,7 @@ function openEdit(row: UserRow) {
     firstName: '',
     lastName: '',
     emailConfirmed: row.emailConfirmed,
-    lockoutEnabled: false,
+    lockoutEnabled: row.lockoutEnabled,
     error: '',
   })
 }
@@ -124,6 +130,39 @@ async function remove(row: UserRow) {
   catch (e: any) {
     toast.error(problem(e))
     confirmDelete.value = null
+  }
+}
+
+async function lock(row: UserRow) {
+  try {
+    await $huia(`admin/users/${encodeURIComponent(row.id)}/lock`, { method: 'POST' })
+    toast.success(`${row.userName ?? 'User'} locked.`)
+    await refresh()
+  }
+  catch (e: any) {
+    toast.error(problem(e))
+  }
+}
+
+async function unlock(row: UserRow) {
+  try {
+    await $huia(`admin/users/${encodeURIComponent(row.id)}/unlock`, { method: 'POST' })
+    toast.success(`${row.userName ?? 'User'} unlocked.`)
+    await refresh()
+  }
+  catch (e: any) {
+    toast.error(problem(e))
+  }
+}
+
+async function verifyEmail(row: UserRow) {
+  try {
+    await $huia(`admin/users/${encodeURIComponent(row.id)}/verify-email`, { method: 'POST' })
+    toast.success(`Verified ${row.email}.`)
+    await refresh()
+  }
+  catch (e: any) {
+    toast.error(problem(e))
   }
 }
 
@@ -287,10 +326,22 @@ async function removeRole(row: UserRow, role: string) {
             </TableRow>
             <template v-for="row in rows" :key="row.id">
               <TableRow :data-testid="`user-${row.id}`">
-                <TableCell class="font-medium">{{ row.userName ?? '—' }}</TableCell>
+                <TableCell class="font-medium">
+                  {{ row.userName ?? '—' }}
+                  <Badge v-if="isLockedOut(row)" variant="destructive" class="ml-1" :data-testid="`user-locked-${row.id}`">locked</Badge>
+                </TableCell>
                 <TableCell>
                   {{ row.email ?? '—' }}
                   <Badge v-if="row.email && row.emailConfirmed" variant="secondary" class="ml-1">verified</Badge>
+                  <button
+                    v-else-if="row.email"
+                    type="button"
+                    class="ml-1 text-xs text-primary underline-offset-2 hover:underline"
+                    :data-testid="`user-verify-email-${row.id}`"
+                    @click="verifyEmail(row)"
+                  >
+                    verify
+                  </button>
                 </TableCell>
                 <TableCell>
                   {{ row.phoneNumber ?? '—' }}
@@ -310,6 +361,8 @@ async function removeRole(row: UserRow, role: string) {
                   <div class="flex justify-end gap-2">
                     <Button variant="ghost" size="sm" :data-testid="`user-roles-edit-${row.id}`" @click="openRoleEditor(row)">Roles</Button>
                     <Button variant="outline" size="sm" :data-testid="`user-edit-${row.id}`" @click="openEdit(row)">Edit</Button>
+                    <Button v-if="isLockedOut(row)" variant="outline" size="sm" :data-testid="`user-unlock-${row.id}`" @click="unlock(row)">Unlock</Button>
+                    <Button v-else variant="outline" size="sm" :data-testid="`user-lock-${row.id}`" @click="lock(row)">Lock</Button>
                     <Button variant="destructive" size="sm" :data-testid="`user-delete-${row.id}`" @click="confirmDelete = row">Delete</Button>
                   </div>
                 </TableCell>

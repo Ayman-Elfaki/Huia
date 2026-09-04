@@ -11,7 +11,7 @@
                         aria-label="@Localizer["PhoneLogin.Country"]" aria-controls="phone-country-listbox">
                     <span class="huia-country-code text-muted-foreground">@Localizer["PhoneLogin.Country"]</span>
                 </button>
-                <div data-popover aria-hidden="true">
+                <div data-popover aria-hidden="true" class="scrollbar">
                     <header>
                         <input type="text" role="combobox" autocomplete="off" spellcheck="false"
                                placeholder="@Localizer["PhoneLogin.SearchCountry"]" aria-label="@Localizer["PhoneLogin.SearchCountry"]" />
@@ -32,7 +32,7 @@
                         }
                     </div>
                 </div>
-                <input type="hidden" name="Input.Country" value="" />
+                <input type="hidden" name="Input.Country" value="@Model.PhoneDefaultCountry" />
             </div>
             <input id="phone-number" name="Input.PhoneNumber" class="input" type="tel" autocomplete="tel" inputmode="tel"
                    data-invalid-message="@Localizer["PhoneLogin.Invalid"]" />
