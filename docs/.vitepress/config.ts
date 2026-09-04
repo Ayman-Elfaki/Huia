@@ -33,6 +33,7 @@ export default withMermaid(defineConfig({
           { text: 'Endpoints', link: '/dotnet/endpoints' },
           { text: 'Passwordless SMS', link: '/dotnet/passwordless-sms' },
           { text: 'External login', link: '/dotnet/external-login' },
+          { text: 'Events', link: '/dotnet/events' },
         ],
       },
       {
