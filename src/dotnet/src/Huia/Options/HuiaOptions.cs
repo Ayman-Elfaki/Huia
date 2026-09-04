@@ -35,6 +35,9 @@ public sealed class HuiaOptions : IHuiaOptionsSection
     /// <summary>Controls how the start-up seeders reconcile the options tree with the database.</summary>
     public SeedingOptions Seeding { get; } = new();
 
+    /// <summary>Controls the OpenIddict.Quartz background pruning of authorizations and tokens.</summary>
+    public CleanupOptions Cleanup { get; } = new();
+
     /// <summary>The configured tenants, keyed by tenant identifier (also the base-path segment).</summary>
     public IDictionary<string, TenantOptions> Tenants { get; } =
         new Dictionary<string, TenantOptions>(StringComparer.Ordinal);
@@ -90,6 +93,7 @@ public sealed class HuiaOptions : IHuiaOptionsSection
         ((IHuiaOptionsSection)Sms).Validate(HuiaOptionsValidation.Combine(path, nameof(Sms)), errors);
         ((IHuiaOptionsSection)Keys).Validate(HuiaOptionsValidation.Combine(path, nameof(Keys)), errors);
         ((IHuiaOptionsSection)Seeding).Validate(HuiaOptionsValidation.Combine(path, nameof(Seeding)), errors);
+        ((IHuiaOptionsSection)Cleanup).Validate(HuiaOptionsValidation.Combine(path, nameof(Cleanup)), errors);
 
         errors.Require(Tenants.Count > 0, HuiaOptionsValidation.Combine(path, nameof(Tenants)),
             "at least one tenant must be configured.");

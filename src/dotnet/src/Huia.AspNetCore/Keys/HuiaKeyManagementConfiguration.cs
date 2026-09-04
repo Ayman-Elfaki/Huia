@@ -38,12 +38,6 @@ internal static class HuiaKeyManagementConfiguration
             Schedule<HuiaKeyDeletionJob>(quartz, "huia-key-deletion", "0 41 3 * * ?");
         });
 
-        services.AddQuartzHostedService(quartz =>
-        {
-            quartz.WaitForJobsToComplete = true;
-            quartz.AwaitApplicationStarted = true;
-        });
-
         return services;
     }
 

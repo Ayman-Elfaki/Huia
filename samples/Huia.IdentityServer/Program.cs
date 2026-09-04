@@ -54,6 +54,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
     huia.ConfigureEmail(email => builder.Configuration.GetSection("Huia:Email").Bind(email));
     huia.ConfigureSms(sms => sms.LogCodesToLogger = builder.Environment.IsDevelopment());
     huia.ConfigureKeys(keys => keys.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
+    huia.ConfigureCleanup(cleanup => cleanup.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
 
     huia.AddTenant("master", tenant =>
     {

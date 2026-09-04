@@ -97,6 +97,7 @@
     <PackageReference Include="OpenIddict.Client.SystemNetHttp" />
     <PackageReference Include="OpenIddict.Client.DataProtection" />
     <PackageReference Include="OpenIddict.Client.WebIntegration" />
+    <PackageReference Include="OpenIddict.Quartz" />
     <PackageReference Include="Quartz.Extensions.Hosting" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" />
     <PackageReference Include="libphonenumber-csharp" />

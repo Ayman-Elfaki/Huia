@@ -13,6 +13,7 @@ using Huia.Options;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Quartz;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -58,6 +59,18 @@ public static class HuiaServiceCollectionExtensions
         services.AddHuiaEventing();
         services.AddHuiaOpenIddict(options);
         services.AddHuiaKeyManagement(options);
+
+        // Centralized here (rather than in AddHuiaKeyManagement/AddHuiaOpenIddict) because either flag
+        // alone must be enough to actually run the scheduler that drives its own jobs.
+        if (options.Keys.EnableBackgroundJobs || options.Cleanup.EnableBackgroundJobs)
+        {
+            services.AddQuartzHostedService(quartz =>
+            {
+                quartz.WaitForJobsToComplete = true;
+                quartz.AwaitApplicationStarted = true;
+            });
+        }
+
         services.AddHostedService<HuiaClientSeeder>();
         services.AddHostedService<HuiaScopeSeeder>();
         services.AddHostedService<HuiaRoleSeeder>();

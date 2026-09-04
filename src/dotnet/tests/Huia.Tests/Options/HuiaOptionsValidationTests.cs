@@ -37,6 +37,50 @@ public class HuiaOptionsValidationTests
     }
 
     [Fact]
+    public void Cleanup_defaults_validate_cleanly()
+    {
+        var options = ValidOptions();
+        options.Cleanup.EnableBackgroundJobs.ShouldBeTrue();
+        options.Cleanup.PruneAuthorizations.ShouldBeTrue();
+        options.Cleanup.PruneTokens.ShouldBeTrue();
+        options.Cleanup.MinimumAuthorizationLifespan.ShouldBe(TimeSpan.FromDays(14));
+        options.Cleanup.MinimumTokenLifespan.ShouldBe(TimeSpan.FromDays(14));
+        options.Cleanup.MaximumRefireCount.ShouldBe(2);
+
+        Should.NotThrow(() => options.Validate());
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void A_cleanup_lifespan_below_ten_minutes_is_rejected(bool setAuthorization, bool setToken)
+    {
+        var options = ValidOptions();
+        if (setAuthorization)
+        {
+            options.Cleanup.MinimumAuthorizationLifespan = TimeSpan.FromMinutes(5);
+        }
+
+        if (setToken)
+        {
+            options.Cleanup.MinimumTokenLifespan = TimeSpan.FromMinutes(5);
+        }
+
+        Should.Throw<HuiaOptionsException>(() => options.Validate())
+            .Errors.ShouldContain(e => e.Contains("at least 10 minutes", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_negative_cleanup_maximum_refire_count_is_rejected()
+    {
+        var options = ValidOptions();
+        options.Cleanup.MaximumRefireCount = -1;
+
+        Should.Throw<HuiaOptionsException>(() => options.Validate())
+            .Errors.ShouldContain(e => e.Contains("must not be negative", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Issuer_is_required()
     {
         var options = new HuiaOptions();

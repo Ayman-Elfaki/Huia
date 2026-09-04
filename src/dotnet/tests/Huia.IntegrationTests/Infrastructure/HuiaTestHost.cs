@@ -113,6 +113,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
                             keys.EnableBackgroundJobs = false;
                             keys.KeySize = 2048;
                         });
+                        huia.ConfigureCleanup(cleanup => cleanup.EnableBackgroundJobs = false);
                         huia.AddTenant("master", tenant => tenant.Authentication.UseEmailAndPasswordLogin());
                         huia.AddTenant("acme", tenant =>
                         {

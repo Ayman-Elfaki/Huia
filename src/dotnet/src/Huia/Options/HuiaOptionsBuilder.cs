@@ -88,6 +88,16 @@ public sealed class HuiaOptionsBuilder
         return this;
     }
 
+    /// <summary>Configures the OpenIddict.Quartz background pruning of authorizations and tokens.</summary>
+    /// <param name="configure">The configuration callback.</param>
+    /// <returns>This builder, for chaining.</returns>
+    public HuiaOptionsBuilder ConfigureCleanup(Action<CleanupOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(Options.Cleanup);
+        return this;
+    }
+
     /// <summary>Adds or configures a tenant.</summary>
     /// <param name="tenantId">The tenant identifier / base-path segment.</param>
     /// <param name="configure">The configuration callback.</param>

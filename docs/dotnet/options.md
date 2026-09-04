@@ -15,6 +15,7 @@ HuiaOptions
 ├─ Sms : SmsOptions                             root SMS;  a tenant's Sms merges over this
 ├─ Keys : KeyManagementOptions                  signing-key lifecycle (EnableBackgroundJobs, rotation windows)
 ├─ Seeding : SeedingOptions                     PruneRemovedStaticEntities (off by default) — see Pruning below
+├─ Cleanup : CleanupOptions                     OpenIddict.Quartz pruning of authorizations/tokens — see Cleanup below
 └─ Tenants[id] : TenantOptions
    ├─ DisplayName : string?
    ├─ Authentication : HuiaTenantAuthenticationOptions   — fluent-only, see below; each sign-in method
@@ -175,6 +176,31 @@ and nothing references a scope by foreign key — at worst a client still reques
 `invalid_scope`). A static **role** that still has members is the one exception: it's skipped (and
 logged as a warning) rather than force-deleted, so removing a role declaration never silently drops a
 user's role assignment.
+
+## Cleanup
+
+```csharp
+huia.ConfigureCleanup(cleanup =>
+{
+    cleanup.EnableBackgroundJobs = true;               // default; turn off in tests
+    cleanup.PruneAuthorizations = true;
+    cleanup.PruneTokens = true;
+    cleanup.MinimumAuthorizationLifespan = TimeSpan.FromDays(14);  // must be >= 10 minutes
+    cleanup.MinimumTokenLifespan = TimeSpan.FromDays(14);          // must be >= 10 minutes
+    cleanup.MaximumRefireCount = 2;                    // must be >= 0
+});
+```
+
+Wires up [OpenIddict.Quartz](https://documentation.openiddict.com/), OpenIddict's own package for
+pruning orphaned and expired authorizations and tokens, onto Huia's existing Quartz scheduler (the one
+that also runs the signing-key lifecycle jobs). The job itself runs hourly with a short random startup
+jitter — that interval is fixed by OpenIddict.Quartz and is not configurable; the knobs above only
+control *what* it prunes and its own safety guards.
+
+`Cleanup.EnableBackgroundJobs` and `Keys.EnableBackgroundJobs` are independent toggles — turning off key
+background jobs does not implicitly turn off cleanup, or vice versa. The `Huia:EnableBackgroundJobs`
+config key in `Huia.IdentityServer`'s `Program.cs` is wired to both for convenience; define your own
+separate config keys if you need independent control in your own host.
 
 ## Validation
 

@@ -28,6 +28,26 @@ internal static class HuiaOpenIddictConfiguration
             .AddCore(core =>
             {
                 core.UseEntityFrameworkCore().UseDbContext<HuiaDbContext>();
+
+                if (options.Cleanup.EnableBackgroundJobs)
+                {
+                    core.UseQuartz(quartz =>
+                    {
+                        if (!options.Cleanup.PruneAuthorizations)
+                        {
+                            quartz.DisableAuthorizationPruning();
+                        }
+
+                        if (!options.Cleanup.PruneTokens)
+                        {
+                            quartz.DisableTokenPruning();
+                        }
+
+                        quartz.SetMaximumRefireCount(options.Cleanup.MaximumRefireCount);
+                        quartz.SetMinimumAuthorizationLifespan(options.Cleanup.MinimumAuthorizationLifespan);
+                        quartz.SetMinimumTokenLifespan(options.Cleanup.MinimumTokenLifespan);
+                    });
+                }
             });
 
         builder.AddServer(server =>

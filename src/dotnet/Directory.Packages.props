@@ -17,6 +17,7 @@
     <PackageVersion Include="OpenIddict.Client.SystemNetHttp" Version="$(OpenIddictVersion)" />
     <PackageVersion Include="OpenIddict.Client.DataProtection" Version="$(OpenIddictVersion)" />
     <PackageVersion Include="OpenIddict.Client.WebIntegration" Version="$(OpenIddictVersion)" />
+    <PackageVersion Include="OpenIddict.Quartz" Version="$(OpenIddictVersion)" />
   </ItemGroup>
 
   <ItemGroup Label="Multi-tenancy">
