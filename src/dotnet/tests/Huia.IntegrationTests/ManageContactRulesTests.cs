@@ -72,6 +72,14 @@ public sealed class ManageContactRulesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_phone_user_has_no_email_to_confirm()
+    {
+        var response = await _phoneApi.PostAsync("/phone/manage/email/confirm", null);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task A_phone_user_cannot_remove_its_number()
     {
         var response = await _phoneApi.DeleteAsync("/phone/manage/phone");

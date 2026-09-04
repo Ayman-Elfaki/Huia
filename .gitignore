@@ -49,3 +49,4 @@ appsettings.*.local.json
 
 ## JetBrains Rider / IntelliJ
 .idea/
+samples/Todo.Api/todo.db

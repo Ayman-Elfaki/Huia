@@ -100,6 +100,31 @@ public sealed class ManageEndpointsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task An_unconfirmed_email_can_be_resent_a_confirmation()
+    {
+        var unconfirmedId = await _host.SeedUserAsync("acme", "unconfirmed@acme.test", "Password1!", emailConfirmed: false);
+        var flow = new AuthCodeFlow(_host, "acme", "acme-spa", RedirectUri);
+        using var tokens = await flow.SignInAsync("unconfirmed@acme.test", "Password1!");
+        using var api = _host.CreateClient();
+        api.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", tokens.RootElement.GetProperty("access_token").GetString());
+
+        var response = await api.PostAsync("/acme/manage/email/confirm", null);
+        response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+
+        var url = _host.Email.ConfirmationUrl("unconfirmed@acme.test");
+        url.ShouldNotBeNull();
+        url.ShouldContain($"userId={unconfirmedId}");
+    }
+
+    [Fact]
+    public async Task An_already_confirmed_email_cannot_be_resent_a_confirmation()
+    {
+        var response = await _api.PostAsync("/acme/manage/email/confirm", null);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task A_password_user_cannot_add_a_phone_number()
     {
         var start = await _api.PutAsJsonAsync("/acme/manage/phone", new { phoneNumber = "+15005550123" });

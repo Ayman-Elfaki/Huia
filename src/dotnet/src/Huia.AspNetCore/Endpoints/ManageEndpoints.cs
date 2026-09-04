@@ -35,6 +35,7 @@ internal static class ManageEndpoints
         group.MapPut("profile", UpdateProfileAsync);
         group.MapGet("email", GetEmailAsync);
         group.MapPut("email", ChangeEmailAsync);
+        group.MapPost("email/confirm", SendEmailConfirmationAsync);
         group.MapPut("password", ChangePasswordAsync);
         group.MapGet("phone", GetPhoneAsync);
         group.MapPut("phone", StartPhoneChangeAsync);
@@ -160,13 +161,53 @@ internal static class ManageEndpoints
             return Problem(result);
         }
 
+        await SendConfirmationEmailAsync(context, userManager, emailSender, user);
+        return Results.Accepted();
+    }
+
+    /// <summary>(Re)sends the confirmation link for the account's current email address.</summary>
+    private static async Task<IResult> SendEmailConfirmationAsync(
+        HttpContext context, HuiaUserManager userManager, IHuiaEmailSender emailSender)
+    {
+        var user = await ResolveUserAsync(context, userManager);
+        if (user is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        if (await userManager.GetUserTypeAsync(user) == HuiaUserType.Phone)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["email"] = ["A phone-login account has no email address to confirm."],
+            });
+        }
+
+        if (string.IsNullOrEmpty(user.Email))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["email"] = ["No email address is set."] });
+        }
+
+        if (user.EmailConfirmed)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["email"] = ["This email address is already confirmed."],
+            });
+        }
+
+        await SendConfirmationEmailAsync(context, userManager, emailSender, user);
+        return Results.Accepted();
+    }
+
+    private static async Task SendConfirmationEmailAsync(
+        HttpContext context, HuiaUserManager userManager, IHuiaEmailSender emailSender, HuiaUser user)
+    {
         var rawToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
         var code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(rawToken));
         var confirmUrl = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}" +
                          $"/identity/account/confirmemail?userId={Uri.EscapeDataString(user.Id)}&code={code}";
         await emailSender.SendEmailConfirmationAsync(user, confirmUrl, context.RequestAborted);
-
-        return Results.Accepted();
     }
 
     private static async Task<IResult> ChangePasswordAsync(
