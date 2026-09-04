@@ -2,6 +2,7 @@ using Huia.AspNetCore.Configuration;
 using Huia.AspNetCore.DependencyInjection;
 using Huia.AspNetCore.Flows;
 using Huia.AspNetCore.HealthChecks;
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.Keys;
 using Huia.AspNetCore.Localization;
 using Huia.AspNetCore.OpenIddict;
@@ -59,6 +60,7 @@ public static class HuiaServiceCollectionExtensions
         services.AddHuiaKeyManagement(options);
         services.AddHostedService<HuiaClientSeeder>();
         services.AddHostedService<HuiaScopeSeeder>();
+        services.AddHostedService<HuiaRoleSeeder>();
 
         services.AddScoped<HuiaCspNonce>();
         services.AddScoped<IHuiaCspNonce>(sp => sp.GetRequiredService<HuiaCspNonce>());

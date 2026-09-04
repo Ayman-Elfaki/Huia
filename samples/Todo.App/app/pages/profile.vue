@@ -11,6 +11,11 @@ interface Profile {
   phoneNumberConfirmed: boolean
 }
 
+interface Email {
+  email: string | null
+  confirmed: boolean
+}
+
 interface Phone {
   phoneNumber: string | null
   confirmed: boolean
@@ -30,7 +35,9 @@ interface ExternalLogins {
 }
 
 const { t } = useI18n()
+const { user } = useAuth()
 const { data: profile, refresh } = await useHuiaData<Profile>('manage/profile')
+const { data: emailInfo } = await useHuiaData<Email>('manage/email')
 const { data: phone, refresh: refreshPhone } = await useHuiaData<Phone>('manage/phone')
 const { data: externalLogins, refresh: refreshExternal } = await useHuiaData<ExternalLogins>('manage/external-logins')
 
@@ -75,6 +82,30 @@ async function save() {
   }
   catch (e: any) {
     error.value = e?.data?.detail ?? e?.data?.data?.detail ?? t('profile.saveError')
+  }
+}
+
+// --- email confirmation ---
+const confirmBusy = ref(false)
+const confirmMessage = ref('')
+const confirmError = ref('')
+
+async function sendEmailConfirmation() {
+  confirmError.value = ''
+  confirmMessage.value = ''
+  confirmBusy.value = true
+  try {
+    await $huia('manage/email/confirm', { method: 'POST' })
+    confirmMessage.value = t('profile.emailConfirmationSent')
+  }
+  catch (e: any) {
+    confirmError.value = e?.data?.errors?.email?.[0]
+      ?? e?.data?.detail
+      ?? e?.data?.data?.detail
+      ?? t('profile.emailConfirmationError')
+  }
+  finally {
+    confirmBusy.value = false
   }
 }
 
@@ -165,7 +196,24 @@ async function removePhone() {
               <Input v-model="last" />
             </label>
           </div>
-          <p class="text-sm text-muted-foreground" data-testid="profile-email">{{ t('profile.email', { email: profile?.email ?? '—' }) }}</p>
+          <p class="text-sm text-muted-foreground" data-testid="profile-email">
+            {{ t('profile.email', { email: emailInfo?.email ?? profile?.email ?? '—' }) }}
+            <Badge v-if="emailInfo?.email && emailInfo.confirmed" variant="secondary" class="ml-2" data-testid="email-verified">{{ t('profile.verified') }}</Badge>
+            <template v-else-if="emailInfo?.email">
+              <Badge variant="outline" class="ml-2">{{ t('profile.unverified') }}</Badge>
+              <button
+                type="button"
+                class="ml-2 text-primary underline-offset-2 hover:underline disabled:opacity-50"
+                data-testid="email-send-confirmation"
+                :disabled="confirmBusy"
+                @click="sendEmailConfirmation"
+              >
+                {{ t('profile.emailSendConfirmation') }}
+              </button>
+            </template>
+          </p>
+          <p v-if="confirmMessage" class="text-sm text-primary" data-testid="email-confirmation-sent">{{ confirmMessage }}</p>
+          <p v-if="confirmError" class="text-sm text-destructive" data-testid="email-confirmation-error">{{ confirmError }}</p>
           <div class="flex items-center gap-3">
             <Button type="submit">{{ t('profile.save') }}</Button>
             <span v-if="saved" class="text-sm text-primary" data-testid="name-saved">{{ t('profile.saved') }}</span>
@@ -244,6 +292,24 @@ async function removePhone() {
           >{{ t('profile.manageProviders') }}</a>
           <p v-if="externalError" class="text-sm text-destructive" data-testid="linked-error">{{ externalError }}</p>
         </div>
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>{{ t('profile.claimsTitle') }}</CardTitle>
+        <CardDescription>{{ t('profile.claimsSubtitle') }}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm" data-testid="user-claims">
+          <template v-for="[key, value] in Object.entries(user ?? {})" :key="key">
+            <dt class="font-medium text-muted-foreground">{{ key }}</dt>
+            <dd v-if="Array.isArray(value)" class="flex flex-wrap gap-1">
+              <Badge v-for="item in value" :key="String(item)" variant="outline">{{ item }}</Badge>
+            </dd>
+            <dd v-else class="break-all">{{ value }}</dd>
+          </template>
+        </dl>
       </CardContent>
     </Card>
   </section>

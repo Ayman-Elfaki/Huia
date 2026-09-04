@@ -99,6 +99,7 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
         builder.Entity<HuiaRole>(b =>
         {
             b.Property(r => r.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(r => r.Origin).HasMaxLength(16).IsRequired();
             b.HasIndex(r => new { r.TenantId, r.NormalizedName }, "IX_HuiaRoles_Tenant_Name").IsUnique();
         });
     }

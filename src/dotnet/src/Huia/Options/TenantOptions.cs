@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Huia.Options;
 
 /// <summary>
@@ -7,6 +9,8 @@ namespace Huia.Options;
 /// </summary>
 public sealed class TenantOptions : IHuiaOptionsSection
 {
+    private static readonly Regex RoleNamePattern = new("^[A-Za-z0-9._:-]{1,256}$", RegexOptions.Compiled);
+
     /// <summary>Human-readable tenant name. Defaults to the tenant key when unset.</summary>
     public string? DisplayName { get; set; }
 
@@ -27,6 +31,14 @@ public sealed class TenantOptions : IHuiaOptionsSection
 
     /// <summary>Custom OAuth scopes to seed for this tenant, beyond the standard OIDC scopes.</summary>
     public IList<HuiaScopeDescriptor> Scopes { get; } = [];
+
+    /// <summary>
+    /// Code-defined ("static") roles to seed for this tenant: created at start-up if missing, and — like
+    /// <see cref="Clients"/> / <see cref="Scopes"/> — read-only afterwards through the admin API
+    /// (rename / delete return <c>409</c>). Only the initial creation is stamped static: a role that
+    /// already exists under that name is left alone, whatever its current origin.
+    /// </summary>
+    public IList<string> Roles { get; } = [];
 
     /// <summary>Adds a client descriptor and returns it for further configuration.</summary>
     /// <param name="clientId">The client id.</param>
@@ -49,6 +61,19 @@ public sealed class TenantOptions : IHuiaOptionsSection
         configure?.Invoke(descriptor);
         Scopes.Add(descriptor);
         return descriptor;
+    }
+
+    /// <summary>Declares one or more roles to seed for this tenant.</summary>
+    /// <param name="roles">The role names.</param>
+    /// <returns>This instance, for chaining.</returns>
+    public TenantOptions AddRoles(params string[] roles)
+    {
+        foreach (var role in roles)
+        {
+            Roles.Add(role);
+        }
+
+        return this;
     }
 
     /// <summary>
@@ -94,6 +119,22 @@ public sealed class TenantOptions : IHuiaOptionsSection
             ((IHuiaOptionsSection)Scopes[i]).Validate(scopePath, errors);
             errors.Require(seenScopeNames.Add(Scopes[i].Name), scopePath,
                 $"scope name '{Scopes[i].Name}' is used more than once in this tenant.");
+        }
+
+        var seenRoleNames = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < Roles.Count; i++)
+        {
+            var rolePath = HuiaOptionsValidation.Combine(path, $"{nameof(Roles)}[{i}]");
+            errors.Require(!string.IsNullOrWhiteSpace(Roles[i]), rolePath, "must not be empty.");
+            if (string.IsNullOrWhiteSpace(Roles[i]))
+            {
+                continue;
+            }
+
+            errors.Require(RoleNamePattern.IsMatch(Roles[i]), rolePath,
+                "must be 1-256 characters of letters, digits, '.', '_', ':' or '-'.");
+            errors.Require(seenRoleNames.Add(Roles[i]), rolePath,
+                $"role '{Roles[i]}' is declared more than once in this tenant.");
         }
     }
 }

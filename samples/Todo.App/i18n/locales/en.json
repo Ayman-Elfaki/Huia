@@ -31,6 +31,9 @@
     "firstName": "First name",
     "lastName": "Last name",
     "email": "Email: {email}",
+    "emailSendConfirmation": "Send confirmation email",
+    "emailConfirmationSent": "Confirmation email sent — check your inbox.",
+    "emailConfirmationError": "Could not send the confirmation email.",
     "save": "Save",
     "saved": "Saved",
     "saveError": "Could not save your profile.",
@@ -58,6 +61,8 @@
     "linkedNone": "No providers linked yet.",
     "unlink": "Unlink",
     "unlinkError": "Could not unlink that provider.",
-    "manageProviders": "Add or manage providers"
+    "manageProviders": "Add or manage providers",
+    "claimsTitle": "Your claims",
+    "claimsSubtitle": "The claims from your Huia sign-in, as seen by this app."
   }
 }

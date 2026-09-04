@@ -1,9 +1,11 @@
 using System.Net;
 using System.Text.Json;
 using Huia.AspNetCore.Multitenancy;
+using Huia.AspNetCore.OpenIddict;
 using Huia.IntegrationTests.Infrastructure;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.JsonWebTokens;
 using OpenIddict.Abstractions;
 
@@ -86,4 +88,63 @@ public sealed class ScopeSeedingTests : IAsyncLifetime
             ["client_secret"] = clientSecret,
             ["scope"] = scope,
         }));
+
+    // ------------------------------------------------------------------ pruning
+
+    [Fact]
+    public async Task Pruning_deletes_a_static_scope_no_longer_declared_in_its_still_configured_tenant()
+    {
+        await CreatePhantomStaticScopeAsync("ghost-scope", "scoped");
+
+        await RunScopeSeederAsync(pruneRemovedStaticEntities: true);
+
+        (await ScopeExistsAsync("ghost-scope")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Pruning_deletes_a_static_scope_whose_entire_tenant_was_removed_from_config()
+    {
+        await CreatePhantomStaticScopeAsync("ghost-scope", "ghost-tenant");
+
+        await RunScopeSeederAsync(pruneRemovedStaticEntities: true);
+
+        (await ScopeExistsAsync("ghost-scope")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Pruning_is_off_by_default_and_leaves_an_undeclared_static_scope_alone()
+    {
+        await CreatePhantomStaticScopeAsync("ghost-scope", "scoped");
+
+        await RunScopeSeederAsync(pruneRemovedStaticEntities: false);
+
+        (await ScopeExistsAsync("ghost-scope")).ShouldBeTrue();
+    }
+
+    /// <summary>Creates a scope directly through the manager, bypassing the options tree — simulating
+    /// "an earlier run declared this, the current code doesn't".</summary>
+    private async Task CreatePhantomStaticScopeAsync(string name, string tenantId)
+    {
+        await using var scope = _host.Services.CreateAsyncScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
+        var descriptor = new OpenIddictScopeDescriptor { Name = name };
+        descriptor.Properties[HuiaConstants.ApplicationProperties.Tenant] = JsonSerializer.SerializeToElement(tenantId);
+        descriptor.Properties[HuiaConstants.ApplicationProperties.Origin] = JsonSerializer.SerializeToElement(HuiaConstants.Origins.Static);
+        await manager.CreateAsync(descriptor);
+    }
+
+    private async Task<bool> ScopeExistsAsync(string name)
+    {
+        await using var scope = _host.Services.CreateAsyncScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
+        return await manager.FindByNameAsync(name) is not null;
+    }
+
+    /// <summary>Re-runs the scope seeder's start-up pass on demand, with the given pruning setting.</summary>
+    private async Task RunScopeSeederAsync(bool pruneRemovedStaticEntities)
+    {
+        _host.Services.GetRequiredService<HuiaOptions>().Seeding.PruneRemovedStaticEntities = pruneRemovedStaticEntities;
+        var seeder = _host.Services.GetServices<IHostedService>().OfType<HuiaScopeSeeder>().Single();
+        await seeder.StartAsync(CancellationToken.None);
+    }
 }

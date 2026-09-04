@@ -23,6 +23,7 @@ if (usePostgresVolume)
 }
 
 var postgres = postgresServer.AddDatabase("huia");
+var todoPostgres = postgresServer.AddDatabase("todo");
 
 // Mailpit is the local SMTP sink: it accepts every message on the `smtp` endpoint (no auth, no TLS)
 // and exposes a web UI + REST API on the `http` endpoint. The identity server sends real mail here in
@@ -68,7 +69,10 @@ var identityServer = builder.AddProject<Projects.Huia_IdentityServer>("huia-iden
 var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
     .WithReference(identityServer)
     .WaitFor(identityServer)
-    .WithEnvironment("Huia__BaseUrl", identityServer.GetEndpoint("https"));
+    .WithReference(todoPostgres)
+    .WaitFor(todoPostgres)
+    .WithEnvironment("Huia__BaseUrl", identityServer.GetEndpoint("https"))
+    .WithEnvironment("Todo__Database", "Postgres");
 
 // The admin CLI (device-authorization grant against the master tenant). It runs one command and exits,
 // so it does not start with the rest of the graph — press "Start" in the dashboard to open it in a

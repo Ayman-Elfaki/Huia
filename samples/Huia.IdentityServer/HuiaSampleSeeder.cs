@@ -16,6 +16,8 @@ internal sealed class HuiaSampleSeeder(
         await SeedAdminAsync();
         // The todo tenant sets a 12-char minimum + a required symbol (per-tenant IdentityOptions).
         await SeedUserAsync("todo", "alice@todo.test", "Password1!2345", "Alice", "Anderson");
+        // Demonstrates a user with several roles — the roles claim carries an array, not a scalar.
+        await AssignRolesAsync("todo", "alice@todo.test", "editor", "beta-tester");
         // Shares an email with a partner IdP user, so an external sign-in links to this account
         // (the todo tenant enables LinkExistingAccountsByEmail).
         await SeedUserAsync("todo", "link@partners.test", "Password1!2345", "Linus", "Existing");
@@ -100,6 +102,31 @@ internal sealed class HuiaSampleSeeder(
             }
 
             logger.LogInformation("Seeded sample user {Email} in tenant {Tenant}.", email, tenantId);
+        });
+
+    /// <summary>
+    /// Assigns the user (by username) to each role. The roles themselves are seeded declaratively via
+    /// <see cref="Huia.Options.TenantOptions.AddRoles"/> (see Program.cs), which runs before this
+    /// hosted service (registration order) — so by the time this runs, they already exist.
+    /// </summary>
+    private Task AssignRolesAsync(string tenantId, string userName, params string[] roles) =>
+        InTenantAsync(tenantId, async sp =>
+        {
+            var userManager = sp.GetRequiredService<UserManager<HuiaUser>>();
+
+            var user = await userManager.FindByNameAsync(userName);
+            if (user is null)
+            {
+                return;
+            }
+
+            foreach (var role in roles)
+            {
+                if (!await userManager.IsInRoleAsync(user, role))
+                {
+                    await userManager.AddToRoleAsync(user, role);
+                }
+            }
         });
 }
 

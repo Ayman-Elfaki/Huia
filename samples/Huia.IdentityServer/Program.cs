@@ -123,6 +123,11 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             scope.Resources.Add("reports-api");
         });
 
+        // Code-defined ("static") roles: created at start-up if missing, and read-only in the admin
+        // console like scopes/clients. Set Huia:Seeding:PruneRemovedStaticEntities to also delete one
+        // that's no longer declared here.
+        tenant.AddRoles("editor", "beta-tester");
+
         tenant.Authentication.UsePhoneLogin(phone =>
         {
             phone.DefaultCountry = "SA";

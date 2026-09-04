@@ -32,6 +32,9 @@ public sealed class HuiaOptions : IHuiaOptionsSection
     /// <summary>Signing-key lifecycle settings (shared across tenants).</summary>
     public KeyManagementOptions Keys { get; } = new();
 
+    /// <summary>Controls how the start-up seeders reconcile the options tree with the database.</summary>
+    public SeedingOptions Seeding { get; } = new();
+
     /// <summary>The configured tenants, keyed by tenant identifier (also the base-path segment).</summary>
     public IDictionary<string, TenantOptions> Tenants { get; } =
         new Dictionary<string, TenantOptions>(StringComparer.Ordinal);
@@ -86,6 +89,7 @@ public sealed class HuiaOptions : IHuiaOptionsSection
         ((IHuiaOptionsSection)Email).Validate(HuiaOptionsValidation.Combine(path, nameof(Email)), errors);
         ((IHuiaOptionsSection)Sms).Validate(HuiaOptionsValidation.Combine(path, nameof(Sms)), errors);
         ((IHuiaOptionsSection)Keys).Validate(HuiaOptionsValidation.Combine(path, nameof(Keys)), errors);
+        ((IHuiaOptionsSection)Seeding).Validate(HuiaOptionsValidation.Combine(path, nameof(Seeding)), errors);
 
         errors.Require(Tenants.Count > 0, HuiaOptionsValidation.Combine(path, nameof(Tenants)),
             "at least one tenant must be configured.");

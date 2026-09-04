@@ -25,6 +25,18 @@ public class HuiaOptionsValidationTests
     }
 
     [Fact]
+    public void PruneRemovedStaticEntities_defaults_to_false_and_either_value_validates()
+    {
+        var options = ValidOptions();
+        options.Seeding.PruneRemovedStaticEntities.ShouldBeFalse();
+
+        Should.NotThrow(() => options.Validate());
+
+        options.Seeding.PruneRemovedStaticEntities = true;
+        Should.NotThrow(() => options.Validate());
+    }
+
+    [Fact]
     public void Issuer_is_required()
     {
         var options = new HuiaOptions();
@@ -54,6 +66,36 @@ public class HuiaOptionsValidationTests
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("tenant", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void AddRoles_declares_code_defined_roles()
+    {
+        var options = ValidOptions();
+        options.Tenants["acme"].AddRoles("editor", "beta-tester");
+
+        Should.NotThrow(() => options.Validate());
+        options.Tenants["acme"].Roles.ShouldBe(["editor", "beta-tester"]);
+    }
+
+    [Fact]
+    public void A_duplicate_role_name_is_rejected()
+    {
+        var options = ValidOptions();
+        options.Tenants["acme"].AddRoles("editor", "editor");
+
+        Should.Throw<HuiaOptionsException>(() => options.Validate())
+            .Errors.ShouldContain(e => e.Contains("more than once", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_invalid_role_name_is_rejected()
+    {
+        var options = ValidOptions();
+        options.Tenants["acme"].AddRoles("has a space");
+
+        Should.Throw<HuiaOptionsException>(() => options.Validate())
+            .Errors.ShouldContain(e => e.Contains("Roles[0]", StringComparison.Ordinal));
     }
 
     [Fact]

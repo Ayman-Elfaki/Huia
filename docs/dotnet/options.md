@@ -14,6 +14,7 @@ HuiaOptions
 ├─ Email : EmailOptions                         root SMTP; a tenant's Email merges over this
 ├─ Sms : SmsOptions                             root SMS;  a tenant's Sms merges over this
 ├─ Keys : KeyManagementOptions                  signing-key lifecycle (EnableBackgroundJobs, rotation windows)
+├─ Seeding : SeedingOptions                     PruneRemovedStaticEntities (off by default) — see Pruning below
 └─ Tenants[id] : TenantOptions
    ├─ DisplayName : string?
    ├─ Authentication : HuiaTenantAuthenticationOptions   — fluent-only, see below; each sign-in method
@@ -23,7 +24,8 @@ HuiaOptions
    ├─ Email : EmailOptions?
    ├─ Sms : SmsOptions?
    ├─ Clients : IList<HuiaClientDescriptor>
-   └─ Scopes : IList<HuiaScopeDescriptor>
+   ├─ Scopes : IList<HuiaScopeDescriptor>
+   └─ Roles : IList<string>                             code-defined ("static") roles — see Roles below
 ```
 
 ## Sign-in methods — fluent only
@@ -145,6 +147,34 @@ tenant.AddScope("reports:read", scope =>
 
 Code-defined ("static") scopes and clients are **read-only in the admin console** and `PUT` / `DELETE`
 on them returns `409`. Runtime `POST /admin/{scopes,clients}` always creates a dynamic entity.
+
+## Roles
+
+```csharp
+tenant.AddRoles("editor", "beta-tester");
+```
+
+Creates each role for the tenant at start-up if it doesn't already exist, stamped "static" like scopes
+and clients — **read-only in the admin console**, and `PUT` / `DELETE` on it returns `409`. Only stamped
+at creation: a role that already exists under that name (created dynamically before the code declaration
+was added) is left alone. Runtime `POST /admin/roles` always creates a dynamic (fully editable) role.
+
+## Pruning removed static entities
+
+```csharp
+huia.ConfigureSeeding(seeding => seeding.PruneRemovedStaticEntities = true);
+```
+
+Off by default. When on, a static role / scope / client that no longer appears anywhere in the current
+options tree — including one whose entire tenant was removed — is **deleted** at the next start-up, not
+just left behind. Turning this on means removing a line of code deletes data, so it's an explicit,
+per-deployment opt-in rather than always-on behavior.
+
+Deleting a scope or client is always safe (OpenIddict cascades an application's authorizations/tokens,
+and nothing references a scope by foreign key — at worst a client still requesting a removed scope gets
+`invalid_scope`). A static **role** that still has members is the one exception: it's skipped (and
+logged as a warning) rather than force-deleted, so removing a role declaration never silently drops a
+user's role assignment.
 
 ## Validation
 

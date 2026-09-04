@@ -1,8 +1,10 @@
 using System.Net;
 using System.Text.Json;
+using Huia.AspNetCore.OpenIddict;
 using Huia.IntegrationTests.Infrastructure;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OpenIddict.Abstractions;
 
 namespace Huia.IntegrationTests;
@@ -61,5 +63,80 @@ public sealed class ClientSeedingTests : IAsyncLifetime
 
         properties["huia:client_uri"].GetString().ShouldBe("https://app.seeded.test/");
         properties["huia:logo_uri"].GetString().ShouldBe("https://cdn.seeded.test/logo.svg");
+    }
+
+    [Fact]
+    public async Task A_declaratively_seeded_client_is_stamped_static()
+    {
+        await using var scope = _host.Services.CreateAsyncScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+        var app = await manager.FindByClientIdAsync("seeded-worker")
+                  ?? throw new InvalidOperationException("The seeded client was not found.");
+
+        var properties = await manager.GetPropertiesAsync(app);
+        properties[HuiaConstants.ApplicationProperties.Origin].GetString().ShouldBe(HuiaConstants.Origins.Static);
+    }
+
+    // ------------------------------------------------------------------ pruning
+
+    [Fact]
+    public async Task Pruning_deletes_a_static_client_no_longer_declared_in_its_still_configured_tenant()
+    {
+        await CreatePhantomStaticClientAsync("ghost-client", "seeded");
+
+        await RunClientSeederAsync(pruneRemovedStaticEntities: true);
+
+        (await ClientExistsAsync("ghost-client")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Pruning_deletes_a_static_client_whose_entire_tenant_was_removed_from_config()
+    {
+        await CreatePhantomStaticClientAsync("ghost-client", "ghost-tenant");
+
+        await RunClientSeederAsync(pruneRemovedStaticEntities: true);
+
+        (await ClientExistsAsync("ghost-client")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Pruning_is_off_by_default_and_leaves_an_undeclared_static_client_alone()
+    {
+        await CreatePhantomStaticClientAsync("ghost-client", "seeded");
+
+        await RunClientSeederAsync(pruneRemovedStaticEntities: false);
+
+        (await ClientExistsAsync("ghost-client")).ShouldBeTrue();
+    }
+
+    /// <summary>Creates a client directly through the manager, bypassing the options tree — simulating
+    /// "an earlier run declared this, the current code doesn't".</summary>
+    private async Task CreatePhantomStaticClientAsync(string clientId, string tenantId)
+    {
+        await using var scope = _host.Services.CreateAsyncScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+        var client = new HuiaClientDescriptor
+        {
+            ClientId = clientId,
+            Kind = ClientKind.MachineToMachine,
+            ClientSecret = "ghost-secret-value",
+        };
+        var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(tenantId, client, HuiaConstants.Origins.Static);
+        await manager.CreateAsync(descriptor);
+    }
+
+    private async Task<bool> ClientExistsAsync(string clientId)
+    {
+        await using var scope = _host.Services.CreateAsyncScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+        return await manager.FindByClientIdAsync(clientId) is not null;
+    }
+
+    /// <summary>Re-runs the client seeder's start-up pass on demand, with the given pruning setting.</summary>
+    private async Task RunClientSeederAsync(bool pruneRemovedStaticEntities)
+    {
+        _host.Services.GetRequiredService<HuiaOptions>().Seeding.PruneRemovedStaticEntities = pruneRemovedStaticEntities;
+        var seeder = _host.Services.GetServices<IHostedService>().OfType<HuiaClientSeeder>().Single();
+        await seeder.StartAsync(CancellationToken.None);
     }
 }

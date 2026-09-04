@@ -7,8 +7,20 @@ var builder = WebApplication.CreateBuilder(args);
 var huiaBaseUrl = builder.Configuration.GetValue("Huia:BaseUrl", "https://localhost:5310")!;
 var authority = $"{huiaBaseUrl}/todo";
 
+var databaseProvider = builder.Configuration.GetValue("Todo:Database", "Sqlite")!;
 builder.Services.AddDbContext<TodoDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("todo") ?? "DataSource=todo.db"));
+{
+    if (string.Equals(databaseProvider, "Postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        var connectionString = builder.Configuration.GetConnectionString("todo")
+            ?? throw new InvalidOperationException("A 'todo' connection string is required for the Postgres provider.");
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        options.UseSqlite(builder.Configuration.GetConnectionString("todo") ?? "DataSource=todo.db");
+    }
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

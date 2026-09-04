@@ -7,6 +7,7 @@ interface RoleRow {
   id: string
   tenantId: string
   name: string | null
+  origin: 'static' | 'dynamic'
 }
 
 const tenantOptions = useTenantOptions()
@@ -121,7 +122,7 @@ async function remove(row: RoleRow) {
 
     <Card>
       <CardHeader class="flex-row items-center justify-between gap-4 space-y-0">
-        <CardDescription>Per-tenant roles.</CardDescription>
+        <CardDescription>Per-tenant roles. <strong>Static</strong> roles are defined in code and cannot be renamed or deleted here.</CardDescription>
         <Select
           :model-value="tenant"
           class="w-56"
@@ -141,29 +142,51 @@ async function remove(row: RoleRow) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Tenant</TableHead>
+              <TableHead>Origin</TableHead>
               <TableHead class="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-if="pending && rows.length === 0">
-              <TableCell colspan="3" class="text-muted-foreground">Loading…</TableCell>
+              <TableCell colspan="4" class="text-muted-foreground">Loading…</TableCell>
             </TableRow>
             <TableRow v-else-if="rows.length === 0">
-              <TableCell colspan="3" class="text-muted-foreground">No roles.</TableCell>
+              <TableCell colspan="4" class="text-muted-foreground">No roles.</TableCell>
             </TableRow>
             <template v-for="row in rows" :key="row.id">
               <TableRow :data-testid="`role-row-${row.name}`">
                 <TableCell class="font-medium">{{ row.name }}</TableCell>
                 <TableCell class="text-muted-foreground">{{ row.tenantId }}</TableCell>
+                <TableCell>
+                  <Badge :variant="row.origin === 'dynamic' ? 'default' : 'outline'">{{ row.origin }}</Badge>
+                </TableCell>
                 <TableCell class="text-right">
                   <div class="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" :data-testid="`role-edit-${row.name}`" @click="openEdit(row)">Rename</Button>
-                    <Button variant="destructive" size="sm" :data-testid="`role-delete-${row.name}`" @click="confirmDelete = row">Delete</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      :data-testid="`role-edit-${row.name}`"
+                      :disabled="row.origin === 'static'"
+                      :title="row.origin === 'static' ? 'Defined in code' : undefined"
+                      @click="openEdit(row)"
+                    >
+                      Rename
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      :data-testid="`role-delete-${row.name}`"
+                      :disabled="row.origin === 'static'"
+                      :title="row.origin === 'static' ? 'Defined in code' : undefined"
+                      @click="confirmDelete = row"
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
               <TableRow v-if="confirmDelete && confirmDelete.id === row.id" :data-testid="`role-confirm-${row.name}`">
-                <TableCell colspan="3">
+                <TableCell colspan="4">
                   <div class="flex items-center justify-between gap-4 rounded-md bg-muted px-3 py-2 text-sm">
                     <span>Delete role <strong>{{ row.name }}</strong> from tenant <strong>{{ row.tenantId }}</strong>? Members must be unassigned first.</span>
                     <div class="flex gap-2">

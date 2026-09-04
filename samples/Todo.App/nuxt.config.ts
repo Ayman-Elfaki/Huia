@@ -69,14 +69,14 @@ export default defineNuxtConfig({
     huia: { baseUrl: huiaBaseUrl, tenant: 'todo' },
     clientId: process.env.NUXT_HUIA_AUTH_CLIENT_ID ?? 'todo-app',
     clientSecret: process.env.NUXT_HUIA_AUTH_CLIENT_SECRET ?? 'todo-app-secret',
-    scopes: ['openid', 'profile', 'email', 'offline_access'],
+    scopes: ['openid', 'profile', 'email', 'roles', 'offline_access'],
     // forward ?ui_locales=<locale> to /connect/authorize so the Huia account UI matches the app locale
     allowedAuthParams: ['ui_locales'],
     par: { enabled: true },
     session: {
       password: process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD
         ?? 'dev-only-todo-session-password-change-me-01234567890',
-      userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name'],
+      userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
     },
   },
 })

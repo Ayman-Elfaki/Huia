@@ -30,7 +30,7 @@ internal static partial class AdminEndpoints
             source,
             builder => builder.Ascending(r => r.Id),
             async id => await db.Set<HuiaRole>().IgnoreQueryFilters().FirstOrDefaultAsync(r => r.Id == id, context.RequestAborted),
-            roles => roles.Select(r => new RoleDto(r.Id, r.TenantId, r.Name)),
+            roles => roles.Select(r => new RoleDto(r.Id, r.TenantId, r.Name, r.Origin)),
             ReadQuery(context));
 
         return Results.Ok(result);
@@ -48,7 +48,7 @@ internal static partial class AdminEndpoints
         var members = await db.Set<IdentityUserRole<string>>().IgnoreQueryFilters().AsNoTracking()
             .CountAsync(ur => ur.RoleId == id, context.RequestAborted);
 
-        return Results.Ok(new RoleDetailDto(role.Id, role.TenantId, role.Name, members));
+        return Results.Ok(new RoleDetailDto(role.Id, role.TenantId, role.Name, role.Origin, members));
     }
 
     private static async Task<IResult> CreateRoleAsync(HttpContext context, HuiaOptions options, CreateRoleRequest body)
@@ -74,10 +74,11 @@ internal static partial class AdminEndpoints
                 return Results.Conflict(new { message = $"Role '{body.Name}' already exists in tenant '{body.Tenant}'." });
             }
 
-            var role = new HuiaRole(body.Name) { TenantId = body.Tenant };
+            var role = new HuiaRole(body.Name) { TenantId = body.Tenant, Origin = HuiaConstants.Origins.Dynamic };
             var result = await roleManager.CreateAsync(role);
             return result.Succeeded
-                ? Results.Created($"/admin/roles/{Uri.EscapeDataString(role.Id)}", new RoleDto(role.Id, role.TenantId, role.Name))
+                ? Results.Created($"/admin/roles/{Uri.EscapeDataString(role.Id)}",
+                    new RoleDto(role.Id, role.TenantId, role.Name, role.Origin))
                 : IdentityProblem(result);
         });
     }
@@ -105,6 +106,11 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
+            if (role.Origin == HuiaConstants.Origins.Static)
+            {
+                return CodeDefinedRoleProblem();
+            }
+
             var result = await roleManager.SetRoleNameAsync(role, body.Name);
             if (result.Succeeded)
             {
@@ -117,13 +123,19 @@ internal static partial class AdminEndpoints
 
     private static async Task<IResult> DeleteRoleAsync(HttpContext context, HuiaDbContext db, string id)
     {
-        var tenantId = await db.Set<HuiaRole>().IgnoreQueryFilters().AsNoTracking()
-            .Where(r => r.Id == id).Select(r => r.TenantId).FirstOrDefaultAsync(context.RequestAborted);
-        if (tenantId is null)
+        var found = await db.Set<HuiaRole>().IgnoreQueryFilters().AsNoTracking()
+            .Where(r => r.Id == id).Select(r => new { r.TenantId, r.Origin }).FirstOrDefaultAsync(context.RequestAborted);
+        if (found is null)
         {
             return Results.NotFound();
         }
 
+        if (found.Origin == HuiaConstants.Origins.Static)
+        {
+            return CodeDefinedRoleProblem();
+        }
+
+        var tenantId = found.TenantId;
         if (await db.Set<IdentityUserRole<string>>().IgnoreQueryFilters().AsNoTracking().AnyAsync(ur => ur.RoleId == id, context.RequestAborted))
         {
             return Results.Problem(
@@ -225,9 +237,14 @@ internal static partial class AdminEndpoints
         });
     }
 
-    private sealed record RoleDto(string Id, string TenantId, string? Name);
+    private static IResult CodeDefinedRoleProblem()
+        => Results.Problem(
+            statusCode: StatusCodes.Status409Conflict,
+            title: "This role is defined in code and cannot be modified through the admin API.");
 
-    private sealed record RoleDetailDto(string Id, string TenantId, string? Name, int MemberCount);
+    private sealed record RoleDto(string Id, string TenantId, string? Name, string Origin);
+
+    private sealed record RoleDetailDto(string Id, string TenantId, string? Name, string Origin, int MemberCount);
 
     private sealed record CreateRoleRequest(string Tenant, string Name);
 

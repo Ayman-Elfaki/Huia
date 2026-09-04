@@ -9,6 +9,7 @@ interface Profile {
   phoneNumberConfirmed: boolean
 }
 
+const { user } = useAuth()
 const { data: profile, refresh } = await useHuiaData<Profile>('manage/profile')
 const first = ref('')
 const last = ref('')
@@ -68,6 +69,24 @@ async function save() {
             <span v-if="error" class="text-sm text-destructive">{{ error }}</span>
           </div>
         </form>
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Your claims</CardTitle>
+        <CardDescription>The claims from your Huia sign-in, as seen by this app.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm" data-testid="user-claims">
+          <template v-for="[key, value] in Object.entries(user ?? {})" :key="key">
+            <dt class="font-medium text-muted-foreground">{{ key }}</dt>
+            <dd v-if="Array.isArray(value)" class="flex flex-wrap gap-1">
+              <Badge v-for="item in value" :key="String(item)" variant="outline">{{ item }}</Badge>
+            </dd>
+            <dd v-else class="break-all">{{ value }}</dd>
+          </template>
+        </dl>
       </CardContent>
     </Card>
   </section>

@@ -31,6 +31,9 @@
     "firstName": "الاسم الأول",
     "lastName": "اسم العائلة",
     "email": "البريد الإلكتروني: {email}",
+    "emailSendConfirmation": "إرسال بريد التأكيد",
+    "emailConfirmationSent": "تم إرسال بريد التأكيد — تحقق من بريدك الوارد.",
+    "emailConfirmationError": "تعذّر إرسال بريد التأكيد.",
     "save": "حفظ",
     "saved": "تم الحفظ",
     "saveError": "تعذّر حفظ ملفك الشخصي.",
@@ -58,6 +61,8 @@
     "linkedNone": "لا يوجد مزوّدون مرتبطون بعد.",
     "unlink": "إلغاء الربط",
     "unlinkError": "تعذّر إلغاء ربط هذا المزوّد.",
-    "manageProviders": "إضافة المزوّدين أو إدارتهم"
+    "manageProviders": "إضافة المزوّدين أو إدارتهم",
+    "claimsTitle": "مطالباتك",
+    "claimsSubtitle": "المطالبات (claims) الصادرة من تسجيل دخولك عبر Huia، كما يراها هذا التطبيق."
   }
 }

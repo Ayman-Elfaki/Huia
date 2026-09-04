@@ -78,6 +78,16 @@ public sealed class HuiaOptionsBuilder
         return this;
     }
 
+    /// <summary>Configures how the start-up seeders reconcile the options tree with the database.</summary>
+    /// <param name="configure">The configuration callback.</param>
+    /// <returns>This builder, for chaining.</returns>
+    public HuiaOptionsBuilder ConfigureSeeding(Action<SeedingOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(Options.Seeding);
+        return this;
+    }
+
     /// <summary>Adds or configures a tenant.</summary>
     /// <param name="tenantId">The tenant identifier / base-path segment.</param>
     /// <param name="configure">The configuration callback.</param>
