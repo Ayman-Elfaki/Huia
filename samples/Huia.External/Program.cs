@@ -32,7 +32,7 @@ builder.Services.AddHuia(huia =>
         tenant.Branding.TermsUrl = new Uri($"{consumerBaseUrl}/legal/terms.html");
         tenant.Branding.PrivacyUrl = new Uri($"{consumerBaseUrl}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
-        tenant.Authentication.UsePasswordFlow(password => password.RequireConfirmedEmail = false);
+        tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
         tenant.AddServerSideWebApplication("huia-idp", "huia-idp-secret", client =>
         {
             client.DisplayName = "Todo (via partner sign-in)";

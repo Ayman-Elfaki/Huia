@@ -152,14 +152,17 @@ internal static class ExternalEndpoints
     /// </summary>
     private static async Task<IResult> ExternalLoginCallbackAsync(
         HttpContext context,
-        HuiaUserManager userManager,
-        SignInManager<HuiaUser> signInManager,
+        IHuiaFlowIdentityFactory flowIdentity,
         IMultiTenantContextAccessor tenantAccessor,
         IReturnUrlProtector returnUrlProtector,
         IHuiaEventPublisher events,
         HuiaOptions options,
         TimeProvider timeProvider)
     {
+        var external = flowIdentity.Create(HuiaAuthFlow.ExternalLogin);
+        var userManager = external.UserManager;
+        var signInManager = external.SignInManager;
+
         var tenantId = tenantAccessor.RequireCurrentTenantId();
         var pathBase = context.Request.PathBase.Value ?? string.Empty;
 
@@ -211,7 +214,7 @@ internal static class ExternalEndpoints
         {
             var providerVouches = !string.Equals(emailVerified, "false", StringComparison.OrdinalIgnoreCase);
             var accountLinkingEnabled = options.Tenants.TryGetValue(tenantId, out var tenant)
-                && tenant.Authentication.Passwordless.ExternalLogin?.AccountLinkingEnabled == true;
+                && tenant.Authentication.External?.AccountLinkingEnabled == true;
 
             var (outcome, linked) = await userManager.TryLinkExternalByEmailAsync(
                 email, providerVouches, accountLinkingEnabled, info.LoginProvider, info.ProviderKey, providerName);
@@ -281,7 +284,7 @@ internal static class ExternalEndpoints
             return false;
         }
 
-        var external = tenant.Authentication.Passwordless.ExternalLogin;
+        var external = tenant.Authentication.External;
         var match = external?.Providers.FirstOrDefault(p => string.Equals(p.Name, providerName, StringComparison.OrdinalIgnoreCase));
         if (match is null)
         {

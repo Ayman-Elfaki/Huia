@@ -16,8 +16,7 @@ public sealed class HealthCheckTests : IAsyncLifetime
         {
             huia.AddTenant("healthy", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordFlow();
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                 tenant.AddMachineToMachineApplication("healthy-worker", "healthy-secret-value");
             });
         });

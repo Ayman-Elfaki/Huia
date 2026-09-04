@@ -1,9 +1,28 @@
 # `HuiaUserManager` & user types
 
 `HuiaUserManager : UserManager<HuiaUser>` is registered by `AddHuia()` via
-`.AddUserManager<HuiaUserManager>()`, so `SignInManager<HuiaUser>` and every
-`UserManager<HuiaUser>` resolution in your code resolve to it. Inject `HuiaUserManager` directly to
-reach the extra members.
+`.AddUserManager<HuiaUserManager>()` (alongside `.AddSignInManager<HuiaSignInManager>()`), so
+`SignInManager<HuiaUser>` and every `UserManager<HuiaUser>` resolution in your code resolve to them.
+Inject `HuiaUserManager` directly to reach the extra members.
+
+## Flow-aware managers
+
+Confirmation policy differs per **authentication flow**, not just per tenant, so `AddHuia()` also
+registers a named `IdentityOptions` instance for each `HuiaAuthFlow`
+(`Default` / `Password` / `PhoneLogin` / `ExternalLogin`) and an `IHuiaFlowIdentityFactory`:
+
+```csharp
+var flow = factory.Create(HuiaAuthFlow.PhoneLogin);
+await flow.SignInManager.CanSignInAsync(user);   // phone flow: gates on a confirmed phone, never an email
+```
+
+`factory.Create(flow)` returns a `HuiaFlowIdentity` — a `HuiaUserManager` + `HuiaSignInManager` pair
+whose `.Options` is that flow's instance. All flows share the tenant's password / lockout policy;
+they differ only in `SignIn.RequireConfirmedEmail` / `…Account` / `…PhoneNumber`
+(`Password` → the tenant's `RequireConfirmedEmail`; `PhoneLogin` → confirmed phone; `ExternalLogin` →
+neither). The factory is scoped and binds to the tenant ambient when first called, so resolve it
+after tenant resolution or inside `HuiaTenantScope.Enter`. `/manage`, `/admin` and seeding use the
+DI-injected managers, which read the `Default` flow's (per-tenant) options.
 
 ## User types
 
@@ -68,5 +87,8 @@ when on, only happens for a confirmed, vouched-for address.
 `src/dotnet/tests/Huia.IntegrationTests/HuiaUserManagerTests.cs` covers the classification
 precedence, phone lookup tenant-scoping, `CreatePhoneUserAsync` shape, `CreateExternalUserAsync`
 create-and-link, the three `TryLinkExternalByEmailAsync` outcomes, and `CanRemoveExternalLoginAsync`.
-`HuiaTestHost.WithUserManagerAsync(tenantId, um => …)` hands a tenant-scoped `HuiaUserManager` for
-your own tests.
+`FlowIdentityOptionsTests`, `HuiaSignInManagerTests`, `HuiaUserManagerFlowTests` and
+`IdentityOptionsFlowTests` cover the per-flow options and manager pair (mirroring the ASP.NET Core
+Identity `SignInManagerTest` / `UserManagerTest` / `IdentityOptionsTest` scenarios on the real
+stack). `HuiaTestHost.WithUserManagerAsync(tenantId, um => …)` hands a tenant-scoped
+`HuiaUserManager`; `WithFlowIdentityAsync(tenantId, flow, fi => …)` hands a `HuiaFlowIdentity`.

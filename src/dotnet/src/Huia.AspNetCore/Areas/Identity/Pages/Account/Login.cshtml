@@ -2,7 +2,7 @@
 @model Huia.AspNetCore.Areas.Identity.Pages.Account.LoginModel
 
 @{
-    var showTabs = Model.IsPasswordEnabled && Model.IsPhoneLoginEnabled;
+    var showTabs = Model.IsEmailAndPasswordLoginEnabled && Model.IsPhoneLoginEnabled;
 }
 
 @section AboveCard {
@@ -31,7 +31,7 @@
         <partial name="_PhoneLoginForm" />
     </div>
 }
-else if (Model.IsPasswordEnabled)
+else if (Model.IsEmailAndPasswordLoginEnabled)
 {
     <partial name="_PasswordLoginForm" />
 }
@@ -59,7 +59,7 @@ else
 }
 
 @section BelowCard {
-    @if (Model.IsPasswordEnabled)
+    @if (Model.IsEmailAndPasswordLoginEnabled)
     {
         <div class="huia-links">
             <a asp-page="./ForgotPassword" asp-route-returnUrl="@Model.ReturnUrl">@Localizer["Login.ForgotPassword"]</a>

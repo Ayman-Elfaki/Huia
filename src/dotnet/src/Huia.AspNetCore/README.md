@@ -18,6 +18,10 @@ app.MapHuiaEndpoints(); // connect, manage, admin, account UI
 Cookie hardening is always on; call `AddHuiaSecurityHeaders()` to opt into the CSP / HSTS layer.
 `MapHuiaEndpoints()` also maps `/health/live` and `/health/ready` (see the getting-started guide).
 
+Identity is registered as `HuiaUserManager` + `HuiaSignInManager`, plus a named `IdentityOptions`
+instance per `HuiaAuthFlow` (`Default` / `Password` / `PhoneLogin` / `ExternalLogin`) reached through
+`IHuiaFlowIdentityFactory` — see [`docs/dotnet/user-manager.md`](../../../../docs/dotnet/user-manager.md).
+
 ## Account-UI assets
 
 The Razor Pages account UI is styled with [Basecoat](https://basecoatui.com) (Tailwind CSS +

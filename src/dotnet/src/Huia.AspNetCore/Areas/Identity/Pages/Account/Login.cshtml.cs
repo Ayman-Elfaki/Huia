@@ -23,8 +23,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 /// <c>VerifyOtp</c>.
 /// </summary>
 public sealed class LoginModel(
-    SignInManager<HuiaUser> signInManager,
-    HuiaUserManager userManager,
+    IHuiaFlowIdentityFactory flowIdentity,
     IReturnUrlProtector returnUrlProtector,
     IMultiTenantContextAccessor tenantAccessor,
     IHuiaEventPublisher events,
@@ -49,8 +48,8 @@ public sealed class LoginModel(
     /// <summary>The sanitized return URL carried through the form.</summary>
     public string ReturnUrl { get; private set; } = "/";
 
-    private PhoneLoginOptions PhoneOptions =>
-        Tenant?.Authentication.Passwordless.PhoneLogin ?? throw new InvalidOperationException("Phone login is not enabled.");
+    private PhoneOptions PhoneOptions =>
+        Tenant?.Authentication.Phone ?? throw new InvalidOperationException("Phone login is not enabled.");
 
     /// <summary>Handles the initial GET.</summary>
     /// <param name="returnUrl">The URL to return to after signing in.</param>
@@ -73,7 +72,7 @@ public sealed class LoginModel(
         SetHeadings();
         ReturnUrl = returnUrlProtector.SanitizeReturnUrl(returnUrl, HttpContext);
 
-        if (!IsPasswordEnabled)
+        if (!IsEmailAndPasswordLoginEnabled)
         {
             return NotFound();
         }
@@ -84,12 +83,13 @@ public sealed class LoginModel(
             return Page();
         }
 
-        var user = await userManager.FindByEmailAsync(Input.Email)
-                   ?? await userManager.FindByNameAsync(Input.Email);
+        var password = flowIdentity.Create(HuiaAuthFlow.EmailAndPasswordLogin);
+        var user = await password.UserManager.FindByEmailAsync(Input.Email)
+                   ?? await password.UserManager.FindByNameAsync(Input.Email);
 
         if (user is not null)
         {
-            var result = await signInManager.PasswordSignInAsync(user, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+            var result = await password.SignInManager.PasswordSignInAsync(user, Input.Password, Input.RememberMe, lockoutOnFailure: true);
             if (result.Succeeded)
             {
                 await events.PublishAsync(new UserLoggedInEvent(
@@ -130,7 +130,7 @@ public sealed class LoginModel(
             return Page();
         }
 
-        var defaultCountry = Input.Country ?? Tenant?.Authentication.Passwordless.PhoneLogin?.DefaultCountry;
+        var defaultCountry = Input.Country ?? Tenant?.Authentication.Phone?.DefaultCountry;
 
         if (!phoneNumbers.TryNormalize(Input.PhoneNumber, defaultCountry, out var e164))
         {
@@ -157,7 +157,7 @@ public sealed class LoginModel(
             return Page();
         }
 
-        var user = await userManager.FindByPhoneNumberAsync(e164);
+        var user = await flowIdentity.Create(HuiaAuthFlow.PhoneLogin).UserManager.FindByPhoneNumberAsync(e164);
 
         var state = new AuthFlowState { ReturnUrl = ReturnUrl, PhoneNumber = e164 };
         var maskedForEvent = phoneNumbers.Mask(e164);

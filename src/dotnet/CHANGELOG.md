@@ -5,6 +5,41 @@ All notable changes to Huia are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+
+- **`Huia`** — `HuiaTenantAuthenticationOptions.DisableRegistration()` turns off every anonymous
+  account-creation path in one call: `EmailAndPassword.AllowSelfServiceRegistration` and, when the
+  phone flow is enabled, `Phone.AllowAutoProvisioning` (left untouched — not implicitly enabling the
+  phone flow — when it was never used). `TenantOptions.DisableRegistration()` now delegates to it
+  instead of only turning off self-service email/password registration.
+- **`Huia.AspNetCore`** — flow-aware Identity managers. `HuiaAuthFlow`
+  (`Default` / `EmailAndPasswordLogin` / `PhoneLogin` / `ExternalLogin`) plus
+  `IHuiaFlowIdentityFactory`, which hands each flow a `HuiaUserManager` + new `HuiaSignInManager` pair
+  reading that flow's own named `IdentityOptions` instance. `AddHuiaFlowIdentity` registers one
+  `IdentityOptions` per flow, each built entirely from that flow's own options object
+  (`EmailAndPasswordLoginOptions` / `PhoneOptions`) — nothing is shared across flows, including
+  lockout (see *Changed*) — so the password path gates on a confirmed email with its own brute-force
+  ceiling, the phone path on a confirmed phone with its own unrelated ceiling, and the external path
+  on neither, with no bespoke branching. The interactive sign-in entry points (`Login`, `VerifyOtp`,
+  `CompleteProfile`, `Register`, `ForgotPassword` / `ResetPassword` / `ConfirmEmail`,
+  `ExternalEndpoints`, `/connect/token`) resolve managers through the factory; `/manage`, `/admin`
+  and seeding keep the default managers.
+
+### Changed
+
+- **`Huia.AspNetCore`** — **Breaking.** the custom `HuiaUserConfirmation : IUserConfirmation<HuiaUser>`
+  is removed (and its `services.Replace`). The confirmed-email vs confirmed-phone split is now a
+  property of the per-flow `IdentityOptions` (see *Added*) with the stock `DefaultUserConfirmation`.
+  The process-global `AddIdentity` registration is now a fixed, non-computed baseline — it no longer
+  derives a "least restrictive across tenants" password / lockout fallback, or unions
+  `SignIn.RequireConfirmedEmail` — every real request is served by the per-tenant or per-flow
+  projection instead.
+- **`Huia` / `Huia.AspNetCore`** — **Breaking.** lockout is per **flow**, per tenant, not per tenant.
+  `TenantOptions.Lockout` / `TenantLockoutOptions` are removed; `MaxFailedAccessAttempts` /
+  `LockoutDuration` / `AllowedForNewUsers` moved onto `EmailAndPasswordLoginOptions` and `PhoneOptions`
+  — each flow's own ceiling, independent of the other. Migration: `tenant.Lockout.MaxFailedAccessAttempts
+  = n` → the matching flow's `.MaxFailedAccessAttempts = n` inside its `Use*` configure lambda.
+
 ### Fixed
 
 - **`Huia.AspNetCore`** — the "forgot password" page now carries `returnUrl` through to its "Sign in"
@@ -25,15 +60,21 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Changed
 
-- **`Huia`** — **Breaking.** `HuiaTenantAuthenticationOptions.Password` / `.Passwordless` are no
-  longer public. Configure them exclusively through `tenant.Authentication.UsePasswordFlow(p => …)`
-  and `tenant.Authentication.UsePasswordlessFlow(pwl => …)`; the tenant exposes derived
-  `IsPasswordEnabled` / `IsPhoneLoginEnabled` / `IsExternalLoginEnabled` bools for reads. Migration:
-  `tenant.Authentication.Password.RequireConfirmedEmail = false` →
-  `tenant.Authentication.UsePasswordFlow(p => p.RequireConfirmedEmail = false)`.
+- **`Huia`** — **Breaking.** `HuiaTenantAuthenticationOptions.EmailAndPassword` / `.Phone` / `.External`
+  (formerly `.Password` / `.Passwordless`) are not public. Configure them exclusively through
+  `tenant.Authentication.UseEmailAndPasswordLogin(p => …)`, `.UsePhoneLogin(phone => …)` and
+  `.UseExternalLogin(ext => …)` — three top-level calls, no `Passwordless` umbrella grouping phone
+  and external together any more; the tenant exposes derived `IsEmailAndPasswordLoginEnabled` /
+  `IsPhoneLoginEnabled` / `IsExternalLoginEnabled` bools for reads. `PasswordFlowOptions` is renamed
+  `EmailAndPasswordLoginOptions`; `PhoneLoginOptions` is renamed `PhoneOptions`;
+  `PasswordlessFlowOptions` is removed. Migration:
+  `tenant.Authentication.UsePasswordFlow(p => …)` → `UseEmailAndPasswordLogin(p => …)`;
+  `tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(…))` → `UsePhoneLogin(…)`
+  (same for `UseExternalLogin`); `tenant.Authentication.Password.RequireConfirmedEmail = false` →
+  `tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false)`.
 - **`Huia`** — **Breaking.** `DefaultCountry` moved from `PasswordlessFlowOptions` to
-  `PhoneLoginOptions` (it is a phone-only concern). Migration:
-  `pwl.DefaultCountry = "SA"` → `pwl.UsePhoneLogin(phone => phone.DefaultCountry = "SA")`.
+  `PhoneOptions` (it is a phone-only concern). Migration:
+  `pwl.DefaultCountry = "SA"` → `UsePhoneLogin(phone => phone.DefaultCountry = "SA")`.
 - **`Huia`** — **Breaking.** `ExternalLoginOptions.LinkExistingAccountsByEmail()` →
   `EnableAccountsLinking()`; the backing flag `LinkToExistingConfirmedEmail` → `AccountLinkingEnabled`.
 - **`Huia`** — **Breaking.** `HuiaClientDescriptor.RequirePushedAuthorizationRequests` is now a fluent
@@ -42,14 +83,13 @@ All notable changes to Huia are documented here. The format is based on
   `client.RequirePushedAuthorizationRequests()`. The backing property is
   `RequiresPushedAuthorizationRequests`; the admin API's `ClientWriteRequest` JSON field is
   unchanged.
-- **`Huia` / `Huia.AspNetCore`** — password-complexity and lockout policy are now per tenant.
-  `PasswordFlowOptions` gains `RequireDigit` / `RequireLowercase` / `RequireUppercase` /
-  `RequireNonAlphanumeric` / `RequiredUniqueChars`, and a new `TenantOptions.Lockout`
-  (`TenantLockoutOptions`: `MaxFailedAccessAttempts`, `LockoutDuration`, `AllowedForNewUsers`) plus
-  `PasswordFlowOptions.RequireUniqueEmail`. `AddHuiaPerTenantIdentityOptions` projects them onto
-  `IdentityOptions` for the resolved tenant (via Finbuckle `ConfigurePerTenant` + a scoped
-  `IOptions<IdentityOptions>` bridge so `UserManager` / `SignInManager` observe them); the
-  process-global `AddIdentity` registration now keeps the least restrictive value across tenants.
+- **`Huia` / `Huia.AspNetCore`** — password-complexity policy is now per tenant.
+  `EmailAndPasswordLoginOptions` gains `RequireDigit` / `RequireLowercase` / `RequireUppercase` /
+  `RequireNonAlphanumeric` / `RequiredUniqueChars` / `RequireUniqueEmail`.
+  `AddHuiaPerTenantIdentityOptions` projects the password fields onto the default `IdentityOptions`
+  for the resolved tenant (via Finbuckle `ConfigurePerTenant` + a scoped `IOptions<IdentityOptions>`
+  bridge so the DI-injected `UserManager` / `SignInManager` observe them). Lockout is per flow, not
+  per tenant — see the per-flow-identity entries above.
 - **`Huia.AspNetCore`** — the account UI renders the tenant's branding: the `_Layout` shows
   `Branding.LogoUrl`, `Branding.FaviconUrl` and `Branding.AccentColor`, and a Terms / Privacy /
   Support footer from `Branding.TermsUrl` / `PrivacyUrl` / `SupportUrl` (previously defined but

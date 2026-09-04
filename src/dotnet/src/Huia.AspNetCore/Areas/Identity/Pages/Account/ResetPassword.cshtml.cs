@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.EntityFrameworkCore.Multitenancy;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Localization;
@@ -14,7 +14,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 
 /// <summary>Sets a new password from a reset link.</summary>
 public sealed class ResetPasswordModel(
-    UserManager<HuiaUser> userManager,
+    IHuiaFlowIdentityFactory flowIdentity,
     IMultiTenantContextAccessor tenantAccessor,
     IHuiaEventPublisher events,
     IStringLocalizer<SharedResource> localizer,
@@ -53,6 +53,7 @@ public sealed class ResetPasswordModel(
             return Page();
         }
 
+        var userManager = flowIdentity.Create(HuiaAuthFlow.EmailAndPasswordLogin).UserManager;
         var user = await userManager.FindByIdAsync(Input.UserId);
         if (user is not null)
         {

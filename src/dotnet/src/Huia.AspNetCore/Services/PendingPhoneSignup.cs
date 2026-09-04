@@ -22,14 +22,14 @@ public interface IPendingPhoneSignup
     /// <param name="code">The plain code (hashed before storage).</param>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns>The new record id.</returns>
-    string Create(string tenantId, string phoneNumber, string code, PhoneLoginOptions options);
+    string Create(string tenantId, string phoneNumber, string code, PhoneOptions options);
 
     /// <summary>Re-issues a code against an existing record in place.</summary>
     /// <param name="id">The record id.</param>
     /// <param name="code">The new plain code.</param>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns><see langword="true"/> when the record existed and was updated.</returns>
-    bool Reissue(string id, string code, PhoneLoginOptions options);
+    bool Reissue(string id, string code, PhoneOptions options);
 
     /// <summary>Gets a record by id, or <see langword="null"/> when unknown or expired.</summary>
     /// <param name="id">The record id.</param>
@@ -41,7 +41,7 @@ public interface IPendingPhoneSignup
     /// <param name="code">The candidate code.</param>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns>The verification outcome.</returns>
-    OtpVerifyResult Verify(string id, string code, PhoneLoginOptions options);
+    OtpVerifyResult Verify(string id, string code, PhoneOptions options);
 
     /// <summary>Drops a record.</summary>
     /// <param name="id">The record id.</param>
@@ -53,7 +53,7 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
 {
     private readonly ConcurrentDictionary<string, Entry> _entries = new(StringComparer.Ordinal);
 
-    public string Create(string tenantId, string phoneNumber, string code, PhoneLoginOptions options)
+    public string Create(string tenantId, string phoneNumber, string code, PhoneOptions options)
     {
         Sweep();
         var id = Guid.NewGuid().ToString("N");
@@ -64,7 +64,7 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
         return id;
     }
 
-    public bool Reissue(string id, string code, PhoneLoginOptions options)
+    public bool Reissue(string id, string code, PhoneOptions options)
     {
         if (!_entries.TryGetValue(id, out var entry))
         {
@@ -85,7 +85,7 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
     public PendingPhoneSignupRecord? Get(string id) =>
         TryGetLive(id, out var entry) ? new PendingPhoneSignupRecord(id, entry.TenantId, entry.PhoneNumber) : null;
 
-    public OtpVerifyResult Verify(string id, string code, PhoneLoginOptions options)
+    public OtpVerifyResult Verify(string id, string code, PhoneOptions options)
     {
         if (!TryGetLive(id, out var entry))
         {

@@ -72,9 +72,9 @@ internal static partial class AdminEndpoints
             .Select(kvp => new TenantDto(
                 kvp.Key,
                 kvp.Value.Branding.DisplayName ?? kvp.Value.DisplayName ?? kvp.Key,
-                kvp.Value.Authentication.Password.Enabled,
-                kvp.Value.Authentication.Passwordless.IsPhoneLoginEnabled,
-                kvp.Value.Authentication.Passwordless.IsExternalLoginEnabled,
+                kvp.Value.Authentication.IsEmailAndPasswordLoginEnabled,
+                kvp.Value.Authentication.IsPhoneLoginEnabled,
+                kvp.Value.Authentication.IsExternalLoginEnabled,
                 kvp.Value.Clients.Count))
             .OrderBy(t => t.TenantId, StringComparer.Ordinal)
             .ToList();

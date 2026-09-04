@@ -65,11 +65,14 @@ internal static class HuiaMultiTenancyConfiguration
     }
 
     /// <summary>
-    /// Projects each tenant's password-complexity and lockout policy (and the opt-in unique-email rule)
-    /// onto <see cref="IdentityOptions"/> for that tenant. Must run <em>after</em> <c>AddHuiaIdentity</c>,
-    /// which registers the process-global fallback. The confirmed-email / confirmed-phone rules are left
-    /// to that fallback plus the flow-aware <c>HuiaUserConfirmation</c> — mapping them onto
-    /// <see cref="SignInOptions"/> here would block password sign-in for phone-less accounts.
+    /// Projects each tenant's password-complexity policy (and the opt-in unique-email rule) onto the
+    /// default <see cref="IdentityOptions"/> for that tenant — this is what <c>/manage</c>'s
+    /// change-password endpoint and the admin API validate against. Must run <em>after</em>
+    /// <c>AddHuiaIdentity</c>, which registers the fixed baseline. Neither lockout nor the confirmed-email
+    /// / confirmed-phone rules are set here: lockout is per flow now (each flow's own options carry it —
+    /// see <c>AddHuiaFlowIdentity</c>), and this default instance is never consulted by a sign-in check
+    /// (nothing on the <c>Default</c> flow calls <c>CheckPasswordSignInAsync</c> / <c>IsLockedOutAsync</c>),
+    /// so a value here would be inert either way.
     /// </summary>
     /// <remarks>
     /// Finbuckle's <c>ConfigurePerTenant</c> re-projects only <see cref="IOptionsSnapshot{T}"/> /
@@ -88,19 +91,14 @@ internal static class HuiaMultiTenancyConfiguration
                     return;
                 }
 
-                var password = config.Authentication.Password;
-                identity.Password.RequiredLength = password.MinimumLength;
-                identity.Password.RequireDigit = password.RequireDigit;
-                identity.Password.RequireLowercase = password.RequireLowercase;
-                identity.Password.RequireUppercase = password.RequireUppercase;
-                identity.Password.RequireNonAlphanumeric = password.RequireNonAlphanumeric;
-                identity.Password.RequiredUniqueChars = password.RequiredUniqueChars;
-
-                identity.Lockout.MaxFailedAccessAttempts = config.Lockout.MaxFailedAccessAttempts;
-                identity.Lockout.DefaultLockoutTimeSpan = config.Lockout.LockoutDuration;
-                identity.Lockout.AllowedForNewUsers = config.Lockout.AllowedForNewUsers;
-
-                identity.User.RequireUniqueEmail = password.RequireUniqueEmail;
+                var emailAndPassword = config.Authentication.EmailAndPassword;
+                identity.Password.RequiredLength = emailAndPassword.MinimumLength;
+                identity.Password.RequireDigit = emailAndPassword.RequireDigit;
+                identity.Password.RequireLowercase = emailAndPassword.RequireLowercase;
+                identity.Password.RequireUppercase = emailAndPassword.RequireUppercase;
+                identity.Password.RequireNonAlphanumeric = emailAndPassword.RequireNonAlphanumeric;
+                identity.Password.RequiredUniqueChars = emailAndPassword.RequiredUniqueChars;
+                identity.User.RequireUniqueEmail = emailAndPassword.RequireUniqueEmail;
             });
 
         services.AddScoped<IOptions<IdentityOptions>>(sp =>

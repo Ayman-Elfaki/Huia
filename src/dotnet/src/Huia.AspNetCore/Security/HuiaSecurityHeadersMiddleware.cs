@@ -23,7 +23,7 @@ internal sealed class HuiaSecurityHeadersMiddleware(RequestDelegate next, IOptio
         .. huiaOptions.Tenants.Values
             .SelectMany(tenant => tenant.Clients
                 .SelectMany(client => client.RedirectUris.Concat(client.PostLogoutRedirectUris).Concat(client.HomeUris))
-                .Concat(tenant.Authentication.Passwordless.ExternalLogin?.Providers
+                .Concat(tenant.Authentication.External?.Providers
                     .Where(provider => provider.Authority is not null)
                     .Select(provider => new Uri(provider.Authority!, UriKind.Absolute)) ?? []))
             .Where(uri => uri.IsAbsoluteUri)

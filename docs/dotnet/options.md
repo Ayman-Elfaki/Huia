@@ -16,8 +16,9 @@ HuiaOptions
 ├─ Keys : KeyManagementOptions                  signing-key lifecycle (EnableBackgroundJobs, rotation windows)
 └─ Tenants[id] : TenantOptions
    ├─ DisplayName : string?
-   ├─ Authentication : HuiaTenantAuthenticationOptions   — fluent-only, see below
-   ├─ Lockout : TenantLockoutOptions                     MaxFailedAccessAttempts=5, LockoutDuration=15m, AllowedForNewUsers=true
+   ├─ Authentication : HuiaTenantAuthenticationOptions   — fluent-only, see below; each sign-in method
+   │                                                       carries its own lockout policy, there is no
+   │                                                       tenant-wide Lockout any more
    ├─ Branding : TenantBrandingOptions                   DisplayName, LogoUrl, FaviconUrl, AccentColor, TermsUrl, PrivacyUrl, SupportUrl
    ├─ Email : EmailOptions?
    ├─ Sms : SmsOptions?
@@ -27,15 +28,18 @@ HuiaOptions
 
 ## Sign-in methods — fluent only
 
-`tenant.Authentication` exposes **methods, not data properties**. The `PasswordFlowOptions` and
-`PasswordlessFlowOptions` objects are internal; configure them through `UsePasswordFlow` /
-`UsePasswordlessFlow` and read enablement through the derived bools.
+`tenant.Authentication` exposes **methods, not data properties**. `EmailAndPasswordLoginOptions`,
+`PhoneOptions` and `ExternalLoginOptions` are internal; configure them through `UseEmailAndPasswordLogin`
+/ `UsePhoneLogin` / `UseExternalLogin` — each is a top-level call, not nested under an umbrella — and
+read enablement through the derived bools. Each method's options carry their own **lockout** policy
+(`MaxFailedAccessAttempts`, `LockoutDuration`, `AllowedForNewUsers`) — a phone brute-force ceiling has
+nothing to do with a password brute-force ceiling, so there is no tenant-wide lockout setting.
 
 ```csharp
 huia.AddTenant("acme", tenant =>
 {
     tenant.Authentication
-        .UsePasswordFlow(p =>
+        .UseEmailAndPasswordLogin(p =>
         {
             p.MinimumLength = 12;              // default 10
             p.RequireDigit = true;            // default true
@@ -45,48 +49,60 @@ huia.AddTenant("acme", tenant =>
             p.RequiredUniqueChars = 1;
             p.RequireConfirmedEmail = true;   // default true
             p.RequireUniqueEmail = false;
-            p.AllowSelfServiceRegistration = true;  // or tenant.DisableRegistration()
+            p.AllowSelfServiceRegistration = true;  // or tenant.Authentication.DisableRegistration()
+            p.MaxFailedAccessAttempts = 5;    // this flow's own lockout ceiling
+            p.LockoutDuration = TimeSpan.FromMinutes(15);
+            p.AllowedForNewUsers = true;
         })
-        .UsePasswordlessFlow(pwl =>
+        .UsePhoneLogin(phone =>
         {
-            pwl.UsePhoneLogin(phone =>
+            phone.DefaultCountry = "SA";           // ISO 3166-1 alpha-2, for national numbers
+            phone.AllowAutoProvisioning = true;    // unknown well-formed number may start a sign-up
+            phone.CodeLength = 6;                  // 4–10
+            phone.CodeLifetime = TimeSpan.FromMinutes(5);
+            phone.MaxVerificationAttempts = 5;
+            phone.ResendCooldown = TimeSpan.FromSeconds(30);
+            phone.SuccessfulLoginsPerWindow = 1;   // successful-sign-in ceiling per number
+            phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
+            phone.SuccessfulLoginsPerDay = 5;
+            phone.RequireConfirmedPhoneNumber = true;  // default true
+            phone.MaxFailedAccessAttempts = 5;         // this flow's own lockout ceiling
+        })
+        .UseExternalLogin(ext =>
+        {
+            ext.AddGoogle("client-id", "client-secret");
+            ext.AddGitHub("client-id", "client-secret");
+            ext.AddMicrosoftAccount("client-id", "client-secret");
+            ext.AddOpenIdConnect("Partner", "id", "secret", "https://partner.example/", p =>
             {
-                phone.DefaultCountry = "SA";           // ISO 3166-1 alpha-2, for national numbers
-                phone.AllowAutoProvisioning = true;    // unknown well-formed number may start a sign-up
-                phone.CodeLength = 6;                  // 4–10
-                phone.CodeLifetime = TimeSpan.FromMinutes(5);
-                phone.MaxVerificationAttempts = 5;
-                phone.ResendCooldown = TimeSpan.FromSeconds(30);
-                phone.SuccessfulLoginsPerWindow = 1;   // successful-sign-in ceiling per number
-                phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
-                phone.SuccessfulLoginsPerDay = 5;
+                p.DisplayName = "Partner";
+                p.Scopes.Add("profile");
+                p.Scopes.Add("email");
             });
-            pwl.UseExternalLogin(ext =>
-            {
-                ext.AddGoogle("client-id", "client-secret");
-                ext.AddGitHub("client-id", "client-secret");
-                ext.AddMicrosoftAccount("client-id", "client-secret");
-                ext.AddOpenIdConnect("Partner", "id", "secret", "https://partner.example/", p =>
-                {
-                    p.DisplayName = "Partner";
-                    p.Scopes.Add("profile");
-                    p.Scopes.Add("email");
-                });
-                ext.EnableAccountsLinking();   // link a verified provider email to an existing confirmed account
-            });
+            ext.EnableAccountsLinking();   // link a verified provider email to an existing confirmed account
         });
 
     // reads (used by the account UI, the admin API, the OpenIddict client wiring):
-    // tenant.Authentication.IsPasswordEnabled
+    // tenant.Authentication.IsEmailAndPasswordLoginEnabled
     // tenant.Authentication.IsPhoneLoginEnabled
     // tenant.Authentication.IsExternalLoginEnabled
 });
 ```
 
+`tenant.Authentication.DisableRegistration()` turns off every anonymous account-creation path in one
+call: `AllowSelfServiceRegistration` and, when the phone flow is enabled, `AllowAutoProvisioning` —
+only an administrator can create accounts afterwards. `TenantOptions.DisableRegistration()` is a
+shortcut for the same call.
+
 ::: tip Migrating from an earlier version
-`tenant.Authentication.Password.RequireConfirmedEmail = false` →
-`tenant.Authentication.UsePasswordFlow(p => p.RequireConfirmedEmail = false)`.
-`pwl.DefaultCountry` moved onto `PhoneLoginOptions` — use `pwl.UsePhoneLogin(phone =>
+`UsePasswordFlow(p => ...)` → `UseEmailAndPasswordLogin(p => ...)`.
+`UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(...))` → `UsePhoneLogin(...)`, called directly on
+`tenant.Authentication` (same for `UseExternalLogin`) — the `Passwordless` umbrella is gone.
+`tenant.Lockout.MaxFailedAccessAttempts = n` → the matching flow's own
+`.MaxFailedAccessAttempts = n` inside its `Use*` lambda (lockout is per sign-in method now, not per
+tenant). `tenant.Authentication.Password.RequireConfirmedEmail = false` →
+`tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false)`.
+`pwl.DefaultCountry` moved onto `PhoneOptions` — use `UsePhoneLogin(phone =>
 phone.DefaultCountry = "SA")`. `ext.LinkExistingAccountsByEmail()` → `ext.EnableAccountsLinking()`.
 :::
 
@@ -134,7 +150,6 @@ on them returns `409`. Runtime `POST /admin/{scopes,clients}` always creates a d
 
 `HuiaOptions.Validate()` (also run by `HuiaOptionsBuilder.Build()`) walks the whole tree in one pass
 and throws `HuiaOptionsException` carrying **every** problem as
-`"Huia:Tenants:acme:Authentication:Passwordless:PhoneLogin:DefaultCountry: must be a two-letter
-upper-case ISO 3166-1 alpha-2 code."`-style messages. Cross-field rules include "at least one sign-in
-method enabled per tenant", `PendingSignupLifetime >= CodeLifetime`, and
-`SuccessfulLoginsPerDay >= SuccessfulLoginsPerWindow`.
+`"Huia:Tenants:acme:Authentication:Phone:DefaultCountry: must be a two-letter upper-case ISO 3166-1
+alpha-2 code."`-style messages. Cross-field rules include "at least one sign-in method enabled per
+tenant", `PendingSignupLifetime >= CodeLifetime`, and `SuccessfulLoginsPerDay >= SuccessfulLoginsPerWindow`.

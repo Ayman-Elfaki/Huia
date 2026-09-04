@@ -13,7 +13,7 @@ var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310")!;
 var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000")!;
 var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001")!;
-// The huia-auth-nuxt module's own E2E playground (EnableE2E only).
+// The huia-nuxt module's own E2E playground (EnableE2E only).
 var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUrl", "http://localhost:3030")!;
 // Huia.External is the mock upstream IdP the "todo" tenant's external-login button federates to.
 var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
@@ -65,11 +65,15 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         tenant.Branding.TermsUrl = new Uri($"{issuer}/legal/terms.html");
         tenant.Branding.PrivacyUrl = new Uri($"{issuer}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
-        tenant.Authentication.UsePasswordFlow(password => password.RequireConfirmedEmail = false);
+        tenant.Authentication.UseEmailAndPasswordLogin(password =>
+        {
+            password.RequireConfirmedEmail = false;
+
+            // Administrators fat-finger their password more than they get brute-forced; be lenient.
+            password.MaxFailedAccessAttempts = 10;
+        });
         tenant.DisableRegistration();
 
-        // Administrators fat-finger their password more than they get brute-forced; be lenient.
-        tenant.Lockout.MaxFailedAccessAttempts = 10;
         tenant.AddServerSideWebApplication("huia-admin-ui", "huia-admin-ui-secret", client =>
         {
             client.DisplayName = "Huia Admin Console";
@@ -101,14 +105,14 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         tenant.Branding.PrivacyUrl = new Uri($"{issuer}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
         // A stricter password policy than the master tenant, to show the per-tenant IdentityOptions.
-        tenant.Authentication.UsePasswordFlow(password =>
+        tenant.Authentication.UseEmailAndPasswordLogin(password =>
         {
             password.MinimumLength = 12;
             password.RequireNonAlphanumeric = true;
             password.RequireConfirmedEmail = false;
+            password.MaxFailedAccessAttempts = 3;
+            password.LockoutDuration = TimeSpan.FromMinutes(30);
         });
-        tenant.Lockout.MaxFailedAccessAttempts = 3;
-        tenant.Lockout.LockoutDuration = TimeSpan.FromMinutes(30);
 
         // A code-defined ("static") scope: the admin console shows it but will not let you edit or
         // delete it — those actions are reserved for scopes created through the admin API.
@@ -119,34 +123,34 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             scope.Resources.Add("reports-api");
         });
 
-        tenant.Authentication.UsePasswordlessFlow(pwl =>
+        tenant.Authentication.UsePhoneLogin(phone =>
         {
-            pwl.UsePhoneLogin(phone =>
-            {
-                phone.DefaultCountry = "SA";
-                phone.AllowAutoProvisioning = true;
+            phone.DefaultCountry = "SA";
+            phone.AllowAutoProvisioning = true;
 
-                // Throttle *successful* phone sign-ins per number: at most once every two minutes and
-                // five times a day. Both knobs live on PhoneLoginOptions and are configurable per tenant.
-                phone.SuccessfulLoginsPerWindow = 1;
-                phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
-                phone.SuccessfulLoginsPerDay = 5;
-            });
+            // Throttle *successful* phone sign-ins per number: at most once every two minutes and
+            // five times a day. Both knobs live on PhoneOptions and are configurable per tenant.
+            phone.SuccessfulLoginsPerWindow = 1;
+            phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
+            phone.SuccessfulLoginsPerDay = 5;
 
-            pwl.UseExternalLogin(ext =>
-            {
-                ext.AddOpenIdConnect(
-                    "HuiaExternal", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
-                    {
-                        p.DisplayName = "Partner";
-                        p.Scopes.Add("profile");
-                        p.Scopes.Add("email");
-                    });
+            // The phone flow's own lockout ceiling — independent of the password flow's above.
+            phone.MaxFailedAccessAttempts = 5;
+        });
 
-                // An external sign-in whose (verified) email matches an existing confirmed local
-                // account is linked to it instead of starting a new sign-up.
-                ext.EnableAccountsLinking();
-            });
+        tenant.Authentication.UseExternalLogin(ext =>
+        {
+            ext.AddOpenIdConnect(
+                "HuiaExternal", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
+                {
+                    p.DisplayName = "Partner";
+                    p.Scopes.Add("profile");
+                    p.Scopes.Add("email");
+                });
+
+            // An external sign-in whose (verified) email matches an existing confirmed local
+            // account is linked to it instead of starting a new sign-up.
+            ext.EnableAccountsLinking();
         });
 
         tenant.AddServerSideWebApplication("todo-app", "todo-app-secret", client =>
@@ -165,25 +169,25 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
     {
         huia.AddTenant("e2e", tenant =>
         {
-            tenant.Authentication.UsePasswordFlow(password => password.RequireConfirmedEmail = false);
-            tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(p =>
+            tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+            tenant.Authentication.UsePhoneLogin(p =>
             {
                 p.AllowAutoProvisioning = true;
-    
+
                 // The E2E stack reuses a handful of numbers across specs on one long-lived host, so keep
                 // the successful-sign-in throttle out of the way; the limiter has its own unit coverage.
                 p.SuccessfulLoginsPerWindow = 100;
                 p.SuccessfulLoginsPerDay = 1000;
-            }));
+            });
             tenant.AddSinglePageApplication("e2e-spa", client =>
                 client.RedirectUris.Add(new Uri($"{issuer}/e2e/e2e-callback")));
             tenant.AddMachineToMachineApplication("e2e-worker", "e2e-worker-secret");
 
-            // Confidential web client for the huia-auth-nuxt playground. A short access-token
+            // Confidential web client for the huia-nuxt playground. A short access-token
             // lifetime so the module's transparent refresh is exercised on the next request.
-            tenant.AddServerSideWebApplication("huia-auth-nuxt-playground", "huia-auth-nuxt-playground-secret", client =>
+            tenant.AddServerSideWebApplication("huia-nuxt-playground", "huia-nuxt-playground-secret", client =>
             {
-                client.DisplayName = "huia-auth-nuxt playground";
+                client.DisplayName = "huia-nuxt playground";
                 client.RedirectUris.Add(new Uri($"{playgroundUrl}/auth/oidc/callback"));
                 client.PostLogoutRedirectUris.Add(new Uri($"{playgroundUrl}/"));
                 client.HomeUris.Add(new Uri($"{playgroundUrl}/"));
@@ -196,7 +200,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         // confirm-email E2E spec.
         huia.AddTenant("e2e-signup", tenant =>
         {
-            tenant.Authentication.UsePasswordFlow(password => password.RequireConfirmedEmail = true);
+            tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = true);
         });
     }
 });

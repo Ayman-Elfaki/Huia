@@ -32,7 +32,7 @@ public interface IPhoneLoginRateLimiter
 
 /// <summary>
 /// In-memory <see cref="IPhoneLoginRateLimiter"/>: a short fixed window plus a rolling daily ceiling,
-/// bucketed by tenant + number and sized from the tenant's <see cref="PhoneLoginOptions"/>. Uses the
+/// bucketed by tenant + number and sized from the tenant's <see cref="PhoneOptions"/>. Uses the
 /// injected <see cref="TimeProvider"/> so tests can drive the clock, and separates a non-consuming
 /// check (<see cref="CanRecordLogin"/>) from the consuming record (<see cref="TryRecordLogin"/>). A
 /// distributed deployment swaps this for a store-backed one.
@@ -92,10 +92,10 @@ internal sealed class InMemoryPhoneLoginRateLimiter(HuiaOptions options, TimePro
         }
     }
 
-    private PhoneLoginOptions PhoneOptionsFor(string tenantId) =>
+    private PhoneOptions PhoneOptionsFor(string tenantId) =>
         options.Tenants.TryGetValue(tenantId, out var tenant)
-            ? tenant.Authentication.Passwordless.PhoneLogin ?? new PhoneLoginOptions()
-            : new PhoneLoginOptions();
+            ? tenant.Authentication.Phone ?? new PhoneOptions()
+            : new PhoneOptions();
 
     private readonly record struct Key(string TenantId, string PhoneNumber);
 

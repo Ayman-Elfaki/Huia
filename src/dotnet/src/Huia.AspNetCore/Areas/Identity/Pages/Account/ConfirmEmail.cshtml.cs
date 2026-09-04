@@ -1,7 +1,7 @@
 using System.Text;
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Localization;
@@ -9,7 +9,7 @@ using Microsoft.Extensions.Localization;
 namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 
 /// <summary>Consumes an email-confirmation link.</summary>
-public sealed class ConfirmEmailModel(UserManager<HuiaUser> userManager, IStringLocalizer<SharedResource> localizer) : HuiaAccountPageModel
+public sealed class ConfirmEmailModel(IHuiaFlowIdentityFactory flowIdentity, IStringLocalizer<SharedResource> localizer) : HuiaAccountPageModel
 {
     /// <summary>Whether the confirmation succeeded.</summary>
     public bool Confirmed { get; private set; }
@@ -28,6 +28,7 @@ public sealed class ConfirmEmailModel(UserManager<HuiaUser> userManager, IString
             return NotFound();
         }
 
+        var userManager = flowIdentity.Create(HuiaAuthFlow.EmailAndPasswordLogin).UserManager;
         var user = await userManager.FindByIdAsync(userId);
         if (user is not null)
         {

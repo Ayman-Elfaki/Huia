@@ -10,11 +10,8 @@ public sealed class TenantOptions : IHuiaOptionsSection
     /// <summary>Human-readable tenant name. Defaults to the tenant key when unset.</summary>
     public string? DisplayName { get; set; }
 
-    /// <summary>The sign-in methods available for this tenant.</summary>
+    /// <summary>The sign-in methods available for this tenant. Each carries its own lockout policy.</summary>
     public HuiaTenantAuthenticationOptions Authentication { get; } = new();
-
-    /// <summary>Account-lockout policy for this tenant.</summary>
-    public TenantLockoutOptions Lockout { get; } = new();
 
     /// <summary>Presentation settings for the account UI and emails.</summary>
     public TenantBrandingOptions Branding { get; } = new();
@@ -55,20 +52,21 @@ public sealed class TenantOptions : IHuiaOptionsSection
     }
 
     /// <summary>
-    /// Turns off self-service registration for this tenant. Registration is on by default; with it
-    /// disabled the account UI hides the "create an account" link and the register page returns 404.
+    /// Turns off every anonymous account-creation path for this tenant — self-service registration
+    /// (the account UI hides the "create an account" link and the register page returns 404) and, when
+    /// the phone flow is enabled, phone auto-provisioning. See
+    /// <see cref="HuiaTenantAuthenticationOptions.DisableRegistration"/>.
     /// </summary>
     /// <returns>This instance, for chaining.</returns>
     public TenantOptions DisableRegistration()
     {
-        Authentication.Password.AllowSelfServiceRegistration = false;
+        Authentication.DisableRegistration();
         return this;
     }
 
     void IHuiaOptionsSection.Validate(string path, List<string> errors)
     {
         ((IHuiaOptionsSection)Authentication).Validate(HuiaOptionsValidation.Combine(path, nameof(Authentication)), errors);
-        ((IHuiaOptionsSection)Lockout).Validate(HuiaOptionsValidation.Combine(path, nameof(Lockout)), errors);
         ((IHuiaOptionsSection)Branding).Validate(HuiaOptionsValidation.Combine(path, nameof(Branding)), errors);
         if (Email is not null)
         {

@@ -18,8 +18,7 @@ public sealed partial class DeviceFlowTests : IAsyncLifetime
         {
             huia.AddTenant("devices", tenant =>
             {
-                tenant.Authentication.UsePasswordFlow();
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                 tenant.AddDevice("device-cli", client => client.ClientSecret = "device-cli-secret");
             });
         });

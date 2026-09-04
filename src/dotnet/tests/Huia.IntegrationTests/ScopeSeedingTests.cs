@@ -19,8 +19,7 @@ public sealed class ScopeSeedingTests : IAsyncLifetime
         {
             huia.AddTenant("scoped", tenant =>
             {
-                tenant.Authentication.UsePasswordFlow();
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                 tenant.AddScope("reports", scope =>
                 {
                     scope.DisplayName = "Reports";
@@ -29,8 +28,7 @@ public sealed class ScopeSeedingTests : IAsyncLifetime
             });
             huia.AddTenant("unscoped", tenant =>
             {
-                tenant.Authentication.UsePasswordFlow();
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
             });
         });
 

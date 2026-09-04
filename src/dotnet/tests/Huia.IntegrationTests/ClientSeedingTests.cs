@@ -17,8 +17,7 @@ public sealed class ClientSeedingTests : IAsyncLifetime
         {
             huia.AddTenant("seeded", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordFlow();
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                 tenant.AddMachineToMachineApplication("seeded-worker", "seeded-secret-value", client =>
                     client.Token.AccessToken = TimeSpan.FromMinutes(5));
                 tenant.AddServerSideWebApplication("seeded-web", "seeded-web-secret", client =>

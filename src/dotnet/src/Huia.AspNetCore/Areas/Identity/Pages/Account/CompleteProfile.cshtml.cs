@@ -20,8 +20,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 /// here — never with blank names at request time.
 /// </summary>
 public sealed class CompleteProfileModel(
-    HuiaUserManager userManager,
-    SignInManager<HuiaUser> signInManager,
+    IHuiaFlowIdentityFactory flowIdentity,
     IPendingPhoneSignup pendingSignups,
     IMultiTenantContextAccessor tenantAccessor,
     IReturnUrlProtector returnUrlProtector,
@@ -73,11 +72,16 @@ public sealed class CompleteProfileModel(
         var tenantId = tenantAccessor.RequireCurrentTenantId();
         var returnUrl = returnUrlProtector.SanitizeReturnUrl(state.ReturnUrl, HttpContext);
 
+        // The completing account belongs to the flow that produced it: an external sign-up runs the
+        // external flow, everything else is a phone sign-up.
+        var flow = flowIdentity.Create(state.ExternalProvider is null ? HuiaAuthFlow.PhoneLogin : HuiaAuthFlow.ExternalLogin);
+        var userManager = flow.UserManager;
+
         var user = state switch
         {
-            { PendingSignupId: { } pendingId } => await CompletePhoneSignupAsync(tenantId, pendingId, state),
-            { UserId: { } userId } => await CompleteExistingUserAsync(userId),
-            { ExternalProvider: { } } => await CompleteExternalSignupAsync(tenantId, state),
+            { PendingSignupId: { } pendingId } => await CompletePhoneSignupAsync(userManager, tenantId, pendingId, state),
+            { UserId: { } userId } => await CompleteExistingUserAsync(userManager, userId),
+            { ExternalProvider: { } } => await CompleteExternalSignupAsync(userManager, tenantId, state),
             _ => null,
         };
 
@@ -105,14 +109,14 @@ public sealed class CompleteProfileModel(
             claims.Add(new Claim(HuiaConstants.ClaimTypes.AuthenticationMethod, HuiaConstants.AuthenticationMethods.Sms));
         }
 
-        await signInManager.SignInWithClaimsAsync(user, isPersistent: false, claims);
+        await flow.SignInManager.SignInWithClaimsAsync(user, isPersistent: false, claims);
         await events.PublishAsync(new UserLoggedInEvent(
             tenantId, user.Id, claims[0].Value, null, timeProvider.GetUtcNow()));
 
         return ResolvePostAuthRedirect(returnUrl);
     }
 
-    private async Task<HuiaUser?> CompletePhoneSignupAsync(string tenantId, string pendingId, AuthFlowState state)
+    private async Task<HuiaUser?> CompletePhoneSignupAsync(HuiaUserManager userManager, string tenantId, string pendingId, AuthFlowState state)
     {
         var pending = pendingSignups.Get(pendingId);
         var phoneNumber = pending?.PhoneNumber ?? state.PhoneNumber;
@@ -134,7 +138,7 @@ public sealed class CompleteProfileModel(
         return user;
     }
 
-    private async Task<HuiaUser?> CompleteExistingUserAsync(string userId)
+    private async Task<HuiaUser?> CompleteExistingUserAsync(HuiaUserManager userManager, string userId)
     {
         var user = await userManager.FindByIdAsync(userId);
         if (user is null)
@@ -148,7 +152,7 @@ public sealed class CompleteProfileModel(
         return result.Succeeded ? user : null;
     }
 
-    private async Task<HuiaUser?> CompleteExternalSignupAsync(string tenantId, AuthFlowState state)
+    private async Task<HuiaUser?> CompleteExternalSignupAsync(HuiaUserManager userManager, string tenantId, AuthFlowState state)
     {
         var email = state.Email;
 

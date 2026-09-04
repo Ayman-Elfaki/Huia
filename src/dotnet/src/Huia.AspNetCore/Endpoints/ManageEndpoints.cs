@@ -59,7 +59,7 @@ internal static class ManageEndpoints
         var linkedIds = logins.Select(l => l.LoginProvider).ToHashSet(StringComparer.Ordinal);
         var tenantId = tenantAccessor.RequireCurrentTenantId();
         var configured = huiaOptions.Tenants.TryGetValue(tenantId, out var tenant)
-            ? tenant.Authentication.Passwordless.ExternalLogin?.Providers ?? []
+            ? tenant.Authentication.External?.Providers ?? []
             : [];
 
         return Results.Ok(new ExternalLoginsDto(
@@ -329,10 +329,10 @@ internal static class ManageEndpoints
         return subject is null ? null : await userManager.FindByIdAsync(subject);
     }
 
-    private static PhoneLoginOptions PhoneOptions(HuiaOptions options, string tenantId) =>
+    private static PhoneOptions PhoneOptions(HuiaOptions options, string tenantId) =>
         options.Tenants.TryGetValue(tenantId, out var tenant)
-            ? tenant.Authentication.Passwordless.PhoneLogin ?? new PhoneLoginOptions()
-            : new PhoneLoginOptions();
+            ? tenant.Authentication.Phone ?? new PhoneOptions()
+            : new PhoneOptions();
 
     private static IResult Problem(IdentityResult result) =>
         Results.ValidationProblem(new Dictionary<string, string[]>

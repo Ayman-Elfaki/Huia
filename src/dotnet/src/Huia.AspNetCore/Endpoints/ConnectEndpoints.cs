@@ -3,6 +3,7 @@ using Huia.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.AspNetCore.Flows;
+using Huia.AspNetCore.Identity;
 using Huia.EntityFrameworkCore.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore;
@@ -182,7 +183,7 @@ internal static class ConnectEndpoints
 
     private static async Task<IResult> ExchangeAsync(
         HttpContext context,
-        SignInManager<HuiaUser> signInManager,
+        IHuiaFlowIdentityFactory flowIdentity,
         UserManager<HuiaUser> userManager,
         IMultiTenantContextAccessor tenantAccessor,
         IHuiaEventPublisher events,
@@ -220,21 +221,21 @@ internal static class ConnectEndpoints
                 return InvalidGrant("The account no longer exists.");
             }
 
-            // A phone-verified sign-in is gated on lockout only: an unconfirmed-email / phone-only
-            // account must not be blocked at the code exchange (SignInWithClaimsAsync already bypassed
-            // the confirmed-account check at login).
+            // Re-check the account against its flow's rules: the phone flow's IdentityOptions gate on a
+            // confirmed phone number (never an email), the password flow's on a confirmed account when
+            // the tenant asks for one. Lockout is checked for both.
             var isSmsSignIn = authenticate.Principal
                 .GetClaims(HuiaConstants.ClaimTypes.AuthenticationMethod)
                 .Contains(HuiaConstants.AuthenticationMethods.Sms, StringComparer.Ordinal);
 
-            if (isSmsSignIn)
+            var flow = flowIdentity.Create(isSmsSignIn ? HuiaAuthFlow.PhoneLogin : HuiaAuthFlow.EmailAndPasswordLogin);
+
+            if (await flow.UserManager.IsLockedOutAsync(user))
             {
-                if (await userManager.IsLockedOutAsync(user))
-                {
-                    return InvalidGrant("The account is locked.");
-                }
+                return InvalidGrant("The account is locked.");
             }
-            else if (!await signInManager.CanSignInAsync(user))
+
+            if (!await flow.SignInManager.CanSignInAsync(user))
             {
                 return InvalidGrant("The account is no longer allowed to sign in.");
             }

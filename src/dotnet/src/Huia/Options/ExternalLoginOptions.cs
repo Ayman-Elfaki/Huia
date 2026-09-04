@@ -3,7 +3,7 @@ namespace Huia.Options;
 /// <summary>
 /// The external identity providers wired for a tenant. External login is implemented exclusively through
 /// the OpenIddict client (never the classic ASP.NET Core authentication handlers). Enabled via
-/// <see cref="PasswordlessFlowOptions.UseExternalLogin"/>.
+/// <see cref="HuiaTenantAuthenticationOptions.UseExternalLogin"/>.
 /// </summary>
 public sealed class ExternalLoginOptions : IHuiaOptionsSection
 {

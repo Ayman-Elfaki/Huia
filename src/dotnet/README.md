@@ -19,7 +19,7 @@ builder.Services.AddHuia(huia =>
     huia.UseIssuer("https://id.example.com");
     huia.AddTenant("acme", tenant =>
     {
-        tenant.Authentication.UsePasswordFlow();
+        tenant.Authentication.UseEmailAndPasswordLogin();
         tenant.AddServerSideWebApplication("acme-web", "secret", client =>
             client.RedirectUris.Add(new Uri("https://acme.example.com/callback")));
     });

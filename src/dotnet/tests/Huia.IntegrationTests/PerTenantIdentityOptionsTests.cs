@@ -8,10 +8,13 @@ using Microsoft.Extensions.Options;
 namespace Huia.IntegrationTests;
 
 /// <summary>
-/// Per-tenant <see cref="IdentityOptions"/>: each tenant's password / lockout / uniqueness policy is
-/// projected onto the options the Identity managers read, including through the singleton
+/// Per-tenant <see cref="IdentityOptions"/> on the <c>Default</c> flow: each tenant's password /
+/// uniqueness policy is projected onto the options the DI-injected Identity managers read (used by
+/// <c>/manage</c>, <c>/admin</c>, seeding), including through the singleton
 /// <c>IOptions&lt;IdentityOptions&gt;</c> that <c>AddHuiaPerTenantIdentityOptions</c> bridges to the
-/// tenant-aware snapshot.
+/// tenant-aware snapshot. Lockout is no longer part of this projection — it is per flow now (see
+/// <c>FlowIdentityOptionsTests</c> / <c>IdentityOptionsFlowTests</c>), and the <c>Default</c> flow is
+/// never consulted by a sign-in check, so it carries none.
 /// </summary>
 public sealed class PerTenantIdentityOptionsTests : IAsyncLifetime
 {
@@ -23,27 +26,24 @@ public sealed class PerTenantIdentityOptionsTests : IAsyncLifetime
         {
             huia.AddTenant("strict", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordFlow(password =>
+                tenant.Authentication.UseEmailAndPasswordLogin(password =>
                 {
+                    password.RequireConfirmedEmail = false;
                     password.MinimumLength = 14;
                     password.RequireNonAlphanumeric = true;
                 });
-                tenant.Lockout.MaxFailedAccessAttempts = 3;
-                tenant.Lockout.LockoutDuration = TimeSpan.FromHours(1);
             });
 
             huia.AddTenant("lax", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordFlow(password =>
+                tenant.Authentication.UseEmailAndPasswordLogin(password =>
                 {
+                    password.RequireConfirmedEmail = false;
                     password.MinimumLength = 6;
                     password.RequireDigit = false;
                     password.RequireUppercase = false;
                     password.RequireLowercase = false;
                 });
-                tenant.Lockout.MaxFailedAccessAttempts = 10;
             });
         });
     }
@@ -51,10 +51,10 @@ public sealed class PerTenantIdentityOptionsTests : IAsyncLifetime
     public async Task DisposeAsync() => await _host.DisposeAsync();
 
     [Theory]
-    [InlineData("strict", 14, true, 3)]
-    [InlineData("lax", 6, false, 10)]
-    public void The_options_snapshot_carries_the_tenant_policy(
-        string tenantId, int expectedLength, bool expectedRequireDigit, int expectedMaxAttempts)
+    [InlineData("strict", 14, true)]
+    [InlineData("lax", 6, false)]
+    public void The_options_snapshot_carries_the_tenant_password_policy(
+        string tenantId, int expectedLength, bool expectedRequireDigit)
     {
         using var scope = _host.Services.CreateScope();
         using var _ = HuiaTenantScope.Enter(scope.ServiceProvider, tenantId);
@@ -63,13 +63,12 @@ public sealed class PerTenantIdentityOptionsTests : IAsyncLifetime
 
         options.Password.RequiredLength.ShouldBe(expectedLength);
         options.Password.RequireDigit.ShouldBe(expectedRequireDigit);
-        options.Lockout.MaxFailedAccessAttempts.ShouldBe(expectedMaxAttempts);
     }
 
     [Theory]
-    [InlineData("strict", 14, 3)]
-    [InlineData("lax", 6, 10)]
-    public void The_UserManager_sees_the_tenant_policy(string tenantId, int expectedLength, int expectedMaxAttempts)
+    [InlineData("strict", 14)]
+    [InlineData("lax", 6)]
+    public void The_UserManager_sees_the_tenant_password_policy(string tenantId, int expectedLength)
     {
         using var scope = _host.Services.CreateScope();
         using var _ = HuiaTenantScope.Enter(scope.ServiceProvider, tenantId);
@@ -77,7 +76,22 @@ public sealed class PerTenantIdentityOptionsTests : IAsyncLifetime
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
 
         userManager.Options.Password.RequiredLength.ShouldBe(expectedLength);
-        userManager.Options.Lockout.MaxFailedAccessAttempts.ShouldBe(expectedMaxAttempts);
+    }
+
+    [Theory]
+    [InlineData("strict")]
+    [InlineData("lax")]
+    public void The_default_options_do_not_gate_sign_in_on_confirmation(string tenantId)
+    {
+        using var scope = _host.Services.CreateScope();
+        using var _ = HuiaTenantScope.Enter(scope.ServiceProvider, tenantId);
+
+        var options = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IdentityOptions>>().Value;
+
+        // Confirmation gating lives on the named per-flow options now, never on the default instance.
+        options.SignIn.RequireConfirmedEmail.ShouldBeFalse();
+        options.SignIn.RequireConfirmedAccount.ShouldBeFalse();
+        options.SignIn.RequireConfirmedPhoneNumber.ShouldBeFalse();
     }
 
     [Fact]

@@ -1,51 +1,83 @@
 namespace Huia.Options;
 
 /// <summary>
-/// The sign-in methods available for a tenant: interactive password and passwordless. Configure them
-/// through <see cref="UsePasswordFlow"/> / <see cref="UsePasswordlessFlow"/> — the underlying option
-/// objects are not part of the public surface.
+/// The sign-in methods available for a tenant: email/password, phone (SMS one-time code), and external
+/// identity providers. Each is independently opt-in through <see cref="UseEmailAndPasswordLogin"/> /
+/// <see cref="UsePhoneLogin"/> / <see cref="UseExternalLogin"/> — the underlying option objects are not
+/// part of the public surface.
 /// </summary>
 public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
 {
-    /// <summary>The interactive username/password flow options. Configured via <see cref="UsePasswordFlow"/>.</summary>
-    internal PasswordFlowOptions Password { get; } = new();
+    /// <summary>The interactive email/password flow options. Configured via <see cref="UseEmailAndPasswordLogin"/>.</summary>
+    internal EmailAndPasswordLoginOptions EmailAndPassword { get; } = new();
 
-    /// <summary>The passwordless umbrella (phone one-time code and external providers). Configured via <see cref="UsePasswordlessFlow"/>.</summary>
-    internal PasswordlessFlowOptions Passwordless { get; } = new();
+    /// <summary>The phone (SMS one-time code) flow options, or <see langword="null"/> when never enabled. Configured via <see cref="UsePhoneLogin"/>.</summary>
+    internal PhoneOptions? Phone { get; private set; }
 
-    /// <summary>Whether the interactive password flow is enabled for this tenant.</summary>
-    public bool IsPasswordEnabled => Password.Enabled;
+    /// <summary>The external-provider flow options, or <see langword="null"/> when never enabled. Configured via <see cref="UseExternalLogin"/>.</summary>
+    internal ExternalLoginOptions? External { get; private set; }
 
-    /// <summary>Whether the passwordless phone (SMS one-time code) sign-in is enabled.</summary>
-    public bool IsPhoneLoginEnabled => Passwordless.IsPhoneLoginEnabled;
+    /// <summary>Whether the interactive email/password flow is enabled for this tenant.</summary>
+    public bool IsEmailAndPasswordLoginEnabled => EmailAndPassword.Enabled;
+
+    /// <summary>Whether the phone (SMS one-time code) sign-in flow is enabled.</summary>
+    public bool IsPhoneLoginEnabled => Phone is not null;
 
     /// <summary>Whether at least one external identity provider is configured.</summary>
-    public bool IsExternalLoginEnabled => Passwordless.IsExternalLoginEnabled;
+    public bool IsExternalLoginEnabled => External is { Providers.Count: > 0 };
 
     /// <summary>
-    /// Enables and configures the interactive password flow. Sugar over <see cref="Password"/> that
-    /// mirrors <see cref="UsePasswordlessFlow"/>: calling it sets <see cref="PasswordFlowOptions.Enabled"/>.
+    /// Enables and configures the interactive email/password flow. Calling it sets
+    /// <see cref="EmailAndPasswordLoginOptions.Enabled"/>.
     /// </summary>
-    /// <param name="configure">Optional further configuration for the password flow.</param>
+    /// <param name="configure">Optional further configuration for the flow.</param>
     /// <returns>This instance, for chaining.</returns>
-    public HuiaTenantAuthenticationOptions UsePasswordFlow(Action<PasswordFlowOptions>? configure = null)
+    public HuiaTenantAuthenticationOptions UseEmailAndPasswordLogin(Action<EmailAndPasswordLoginOptions>? configure = null)
     {
-        Password.Enabled = true;
-        configure?.Invoke(Password);
+        EmailAndPassword.Enabled = true;
+        configure?.Invoke(EmailAndPassword);
         return this;
     }
 
-    /// <summary>Enables and configures the passwordless umbrella. Sugar over <see cref="Passwordless"/>.</summary>
-    /// <param name="configure">Configuration for the passwordless sub-flows.</param>
+    /// <summary>Enables the passwordless phone (SMS one-time code) sign-in for this tenant.</summary>
+    /// <param name="configure">Optional configuration for the flow.</param>
     /// <returns>This instance, for chaining.</returns>
-    public HuiaTenantAuthenticationOptions UsePasswordlessFlow(Action<PasswordlessFlowOptions> configure)
+    public HuiaTenantAuthenticationOptions UsePhoneLogin(Action<PhoneOptions>? configure = null)
+    {
+        Phone ??= new PhoneOptions();
+        configure?.Invoke(Phone);
+        return this;
+    }
+
+    /// <summary>Enables external identity providers for this tenant.</summary>
+    /// <param name="configure">Configuration that registers at least one provider.</param>
+    /// <returns>This instance, for chaining.</returns>
+    public HuiaTenantAuthenticationOptions UseExternalLogin(Action<ExternalLoginOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
-        configure(Passwordless);
+        External ??= new ExternalLoginOptions();
+        configure(External);
         return this;
     }
 
-    /// <summary>Runs validation across both sign-in method groups.</summary>
+    /// <summary>
+    /// Turns off every anonymous account-creation path: self-service email/password registration, and
+    /// — when the phone flow is enabled — phone auto-provisioning (an unknown, well-formed number
+    /// starting its own sign-up). Only an administrator can create accounts afterwards.
+    /// </summary>
+    /// <returns>This instance, for chaining.</returns>
+    public HuiaTenantAuthenticationOptions DisableRegistration()
+    {
+        EmailAndPassword.AllowSelfServiceRegistration = false;
+        if (Phone is not null)
+        {
+            Phone.AllowAutoProvisioning = false;
+        }
+
+        return this;
+    }
+
+    /// <summary>Runs validation across all three sign-in methods.</summary>
     public void Validate()
     {
         var errors = new List<string>();
@@ -58,10 +90,18 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
 
     void IHuiaOptionsSection.Validate(string path, List<string> errors)
     {
-        ((IHuiaOptionsSection)Password).Validate(HuiaOptionsValidation.Combine(path, nameof(Password)), errors);
-        ((IHuiaOptionsSection)Passwordless).Validate(HuiaOptionsValidation.Combine(path, nameof(Passwordless)), errors);
+        ((IHuiaOptionsSection)EmailAndPassword).Validate(HuiaOptionsValidation.Combine(path, nameof(EmailAndPassword)), errors);
+        if (Phone is not null)
+        {
+            ((IHuiaOptionsSection)Phone).Validate(HuiaOptionsValidation.Combine(path, nameof(Phone)), errors);
+        }
 
-        var anyMethod = Password.Enabled || Passwordless.IsPhoneLoginEnabled || Passwordless.IsExternalLoginEnabled;
-        errors.Require(anyMethod, path, "at least one sign-in method must be enabled (password, phone, or external).");
+        if (External is not null)
+        {
+            ((IHuiaOptionsSection)External).Validate(HuiaOptionsValidation.Combine(path, nameof(External)), errors);
+        }
+
+        var anyMethod = EmailAndPassword.Enabled || Phone is not null || IsExternalLoginEnabled;
+        errors.Require(anyMethod, path, "at least one sign-in method must be enabled (email and password, phone, or external).");
     }
 }

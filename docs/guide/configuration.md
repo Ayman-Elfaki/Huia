@@ -5,32 +5,39 @@ The options tree is rooted at `HuiaOptions` and validated in one pass before any
 - `Issuer` / `PublicUrl` / `DisableTransportSecurityRequirement`
 - `Email` / `Sms` — root delivery settings, merged per tenant
 - `Keys` — the signing-key lifecycle (`RotationInterval`, `ActivationDelay`, `RetentionPeriod`, ...)
-- `Tenants[id]` — `Authentication` (password + passwordless umbrella), `Lockout`, `Branding`, `Clients`
+- `Tenants[id]` — `Authentication` (email/password, phone, external — each with its own lockout
+  policy), `Branding`, `Clients`
 
 Every node exposes `Validate()`; failures throw `HuiaOptionsException` with a path-prefixed list.
 
 ## Sign-in methods
 
-Both sign-in families are opt-in and symmetric — a tenant with neither fails validation:
+All three sign-in methods are opt-in and independent — a tenant with none of them fails validation:
 
 ```csharp
-tenant.Authentication.UsePasswordFlow();                  // interactive username/password
-tenant.Authentication.UsePasswordFlow(p =>                 // …with a stricter policy
+tenant.Authentication.UseEmailAndPasswordLogin();          // interactive email + password
+tenant.Authentication.UseEmailAndPasswordLogin(p =>         // …with a stricter policy
     p.MinimumLength = 12);
-tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin());
+tenant.Authentication.UsePhoneLogin();                      // passwordless SMS one-time code
+tenant.Authentication.UseExternalLogin(ext => ext.AddGoogle("client-id", "client-secret"));
 ```
 
-`UsePasswordFlow()` sets `Authentication.Password.Enabled`; that flag is `false` until it is called.
+`UseEmailAndPasswordLogin()` sets `Authentication.EmailAndPassword.Enabled`; that flag is `false`
+until it is called. `UsePhoneLogin()` / `UseExternalLogin()` are similarly off until called.
 
-### Password-flow policy
+### Email/password-flow policy
 
-`Authentication.Password` also carries the per-tenant sign-in policy:
+`Authentication.EmailAndPassword` also carries the per-tenant sign-in policy:
 
 - `RequireConfirmedEmail` (default `true`) — an interactive password sign-in needs a confirmed email.
 - `RequireUniqueEmail` (default `false`) — add Identity's tenant-scoped email-uniqueness check.
 - `AllowSelfServiceRegistration` (default `true`) — anonymous visitors may create their own account.
-  Call `tenant.DisableRegistration()` to turn it off (the account UI then hides the "create an
-  account" link and the register page returns 404).
+  Call `tenant.Authentication.DisableRegistration()` (or the `tenant.DisableRegistration()` shortcut)
+  to turn it off (the account UI then hides the "create an account" link and the register page
+  returns 404) — it also turns off `PhoneOptions.AllowAutoProvisioning` when the phone flow is
+  enabled, so every anonymous account-creation path is closed in one call.
+- `MaxFailedAccessAttempts` / `LockoutDuration` / `AllowedForNewUsers` — this flow's own lockout
+  policy. `PhoneOptions` carries the matching three properties for the phone flow, independently.
 
 The non-interactive `password` grant (ROPC) is **not** supported — use the authorization-code or
 device-authorization flow instead.
@@ -87,7 +94,7 @@ An external sign-in goes through the OpenIddict client, then a single dispatcher
   `GET` / `DELETE /manage/external-logins`; the last remaining sign-in method can't be removed.
 - **Logged out, provider already linked** — signs straight in.
 - **Logged out, email matches a local account** — linked only when the tenant opted in with
-  `ext.LinkExistingAccountsByEmail()` **and** the local email is confirmed **and** the provider's
+  `ext.EnableAccountsLinking()` **and** the local email is confirmed **and** the provider's
   `email_verified` isn't `false`. Otherwise the sign-in is refused with "email already registered" and
   no second account is created.
 - **Otherwise** — a name is collected and a new account is created.

@@ -19,8 +19,7 @@ public sealed class AdminEndpointsTests : IAsyncLifetime
             // reports its origin and refuses to mutate it.
             huia.AddTenant("scoped-admin", tenant =>
             {
-                tenant.Authentication.UsePasswordFlow();
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                 tenant.AddScope("reports:read", scope => scope.DisplayName = "Read reports");
             });
         });

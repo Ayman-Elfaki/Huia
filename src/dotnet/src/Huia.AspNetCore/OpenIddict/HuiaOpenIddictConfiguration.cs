@@ -22,7 +22,7 @@ internal static class HuiaOpenIddictConfiguration
     public static IServiceCollection AddHuiaOpenIddict(this IServiceCollection services, HuiaOptions options)
     {
         var relaxTransport = options.DisableTransportSecurityRequirement;
-        var anyExternalLogin = options.Tenants.Values.Any(t => t.Authentication.Passwordless.IsExternalLoginEnabled);
+        var anyExternalLogin = options.Tenants.Values.Any(t => t.Authentication.IsExternalLoginEnabled);
 
         var builder = services.AddOpenIddict()
             .AddCore(core =>
@@ -141,7 +141,7 @@ internal static class HuiaOpenIddictConfiguration
     {
         foreach (var (tenantId, tenant) in options.Tenants)
         {
-            var external = tenant.Authentication.Passwordless.ExternalLogin;
+            var external = tenant.Authentication.External;
             if (external is null)
             {
                 continue;

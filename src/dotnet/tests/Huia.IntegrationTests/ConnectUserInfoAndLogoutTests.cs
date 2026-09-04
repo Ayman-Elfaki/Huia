@@ -65,8 +65,7 @@ public sealed class ConnectUserInfoAndLogoutTests : IAsyncLifetime
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("logout-app", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordFlow();
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                 tenant.AddServerSideWebApplication("logout-web", "logout-web-secret", client =>
                 {
                     client.RedirectUris.Add(new Uri("https://app.example.test/callback"));

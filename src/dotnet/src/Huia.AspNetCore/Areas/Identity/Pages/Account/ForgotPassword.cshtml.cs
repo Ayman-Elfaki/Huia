@@ -2,9 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Huia.AspNetCore.Emails;
 using Huia.AspNetCore.Flows;
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Localization;
@@ -16,7 +16,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 /// the reset email is only sent when a matching confirmed account exists.
 /// </summary>
 public sealed class ForgotPasswordModel(
-    UserManager<HuiaUser> userManager,
+    IHuiaFlowIdentityFactory flowIdentity,
     IHuiaEmailSender emailSender,
     IReturnUrlProtector returnUrlProtector,
     IStringLocalizer<SharedResource> localizer) : HuiaAccountPageModel
@@ -56,6 +56,7 @@ public sealed class ForgotPasswordModel(
             return Page();
         }
 
+        var userManager = flowIdentity.Create(HuiaAuthFlow.EmailAndPasswordLogin).UserManager;
         var user = await userManager.FindByEmailAsync(Email);
         if (user is not null && await userManager.IsEmailConfirmedAsync(user))
         {

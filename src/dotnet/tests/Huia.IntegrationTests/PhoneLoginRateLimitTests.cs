@@ -8,7 +8,7 @@ namespace Huia.IntegrationTests;
 /// <summary>
 /// Covers the <em>successful</em>-sign-in throttle for phone login (distinct from code-request
 /// throttling): once per <c>SuccessfulLoginWindow</c> and an absolute daily ceiling, both configurable
-/// on <c>PhoneLoginOptions</c>.
+/// on <c>PhoneOptions</c>.
 /// </summary>
 public sealed class PhoneLoginRateLimitTests
 {
@@ -22,8 +22,8 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin());
+                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UsePhoneLogin();
             }));
 
         var number = FreshNumber();
@@ -43,9 +43,8 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-cfg", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordlessFlow(pwl =>
-                    pwl.UsePhoneLogin(phone => phone.SuccessfulLoginsPerWindow = 2));
+                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UsePhoneLogin(phone => phone.SuccessfulLoginsPerWindow = 2);
             }));
 
         var number = FreshNumber();
@@ -62,14 +61,14 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-daily", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(phone =>
+                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UsePhoneLogin(phone =>
                 {
                     // A tiny window that replenishes between calls, so only the daily ceiling can bite.
                     phone.SuccessfulLoginsPerWindow = 3;
                     phone.SuccessfulLoginWindow = TimeSpan.FromMilliseconds(100);
                     phone.SuccessfulLoginsPerDay = 3;
-                }));
+                });
             }));
 
         var limiter = host.Services.GetRequiredService<IPhoneLoginRateLimiter>();
@@ -94,8 +93,8 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-peek", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin());
+                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UsePhoneLogin();
             }));
 
         var limiter = host.Services.GetRequiredService<IPhoneLoginRateLimiter>();
@@ -122,8 +121,8 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-iso", tenant =>
             {
-                tenant.Authentication.Password.RequireConfirmedEmail = false;
-                tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin());
+                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UsePhoneLogin();
             }));
 
         var first = FreshNumber();

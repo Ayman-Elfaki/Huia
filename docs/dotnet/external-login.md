@@ -7,7 +7,7 @@ registering at least one provider.
 ## Configuration
 
 ```csharp
-tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UseExternalLogin(ext =>
+tenant.Authentication.UseExternalLogin(ext =>
 {
     ext.AddGoogle("client-id", "client-secret");
     ext.AddGitHub("client-id", "client-secret");
@@ -22,7 +22,7 @@ tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UseExternalLogin(ext =>
     // Opt-in: a logged-out external sign-in whose verified email matches an existing local account
     // links to it instead of starting a new sign-up (see the guard below).
     ext.EnableAccountsLinking();
-}));
+});
 ```
 
 Each `(tenant, provider)` becomes one `OpenIddictClientRegistration` with

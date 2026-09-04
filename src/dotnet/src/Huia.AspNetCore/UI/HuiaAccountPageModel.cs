@@ -29,19 +29,19 @@ public abstract class HuiaAccountPageModel : PageModel
         }
     }
 
-    /// <summary>Whether the interactive password form should be shown.</summary>
-    public bool IsPasswordEnabled => Tenant?.Authentication.Password.Enabled ?? true;
+    /// <summary>Whether the interactive email/password form should be shown.</summary>
+    public bool IsEmailAndPasswordLoginEnabled => Tenant?.Authentication.EmailAndPassword.Enabled ?? true;
 
     /// <summary>Whether anonymous visitors may register — controls whether the sign-up link is shown.</summary>
     public bool IsSelfServiceRegistrationEnabled =>
-        Tenant?.Authentication.Password.AllowSelfServiceRegistration ?? false;
+        Tenant?.Authentication.EmailAndPassword.AllowSelfServiceRegistration ?? false;
 
     /// <summary>Whether the passwordless phone (SMS one-time code) tab should be shown.</summary>
-    public bool IsPhoneLoginEnabled => Tenant?.Authentication.Passwordless.IsPhoneLoginEnabled ?? false;
+    public bool IsPhoneLoginEnabled => Tenant?.Authentication.IsPhoneLoginEnabled ?? false;
 
     /// <summary>The external providers to render sign-in buttons for.</summary>
     public IReadOnlyList<Options.ExternalProviderRegistration> ExternalProviders =>
-        Tenant?.Authentication.Passwordless.ExternalLogin?.Providers ?? [];
+        Tenant?.Authentication.External?.Providers ?? [];
 
     /// <summary>The tenant display name for the UI heading.</summary>
     public string DisplayName => Tenant?.Branding.DisplayName

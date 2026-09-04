@@ -48,7 +48,7 @@ builder.Services.AddHuia(huia =>
         huia.UseIssuer("https://id.example.com");
         huia.AddTenant("acme", tenant =>
         {
-            tenant.Authentication.UsePasswordFlow(p => p.MinimumLength = 12);
+            tenant.Authentication.UseEmailAndPasswordLogin(p => p.MinimumLength = 12);
             tenant.AddServerSideWebApplication("acme-web", "secret", client =>
             {
                 client.RedirectUris.Add(new Uri("https://acme.example.com/callback"));
@@ -142,8 +142,8 @@ HuiaOptions                                     (root; bound from "Huia" or buil
 └─ Tenants : IDictionary<string, TenantOptions> keyed by tenant id (also the base-path segment)
    └─ TenantOptions
       ├─ DisplayName : string?
-      ├─ Authentication : HuiaTenantAuthenticationOptions       ── fluent-only, see §3.2
-      ├─ Lockout : TenantLockoutOptions                         MaxFailedAccessAttempts / LockoutDuration / AllowedForNewUsers
+      ├─ Authentication : HuiaTenantAuthenticationOptions       ── fluent-only, see §3.2; each sign-in
+      │                                                            method carries its own lockout policy
       ├─ Branding : TenantBrandingOptions                       DisplayName / Logo / Favicon / Accent / Terms / Privacy / Support
       ├─ Email : EmailOptions?                                  merged over HuiaOptions.Email
       ├─ Sms : SmsOptions?                                      merged over HuiaOptions.Sms
@@ -153,47 +153,58 @@ HuiaOptions                                     (root; bound from "Huia" or buil
 
 ### 3.2 `HuiaTenantAuthenticationOptions` — fluent-only
 
-The password and passwordless option objects are **not public**. Configure exclusively through the
-`Use*` methods; read enablement through the derived bools:
+The email/password, phone and external option objects are **not public**. Configure exclusively
+through the three top-level `Use*` methods — there is no umbrella grouping phone and external
+together any more, each is a first-class call — and read enablement through the derived bools. Each
+method's options carry their own lockout policy (`MaxFailedAccessAttempts` / `LockoutDuration` /
+`AllowedForNewUsers`) — lockout is per **flow**, not per tenant, since a phone brute-force ceiling and
+a password brute-force ceiling are unrelated:
 
 ```csharp
 tenant.Authentication
-    .UsePasswordFlow(p =>                       // sets IsPasswordEnabled; p is PasswordFlowOptions
+    .UseEmailAndPasswordLogin(p =>              // sets IsEmailAndPasswordLoginEnabled; p is EmailAndPasswordLoginOptions
     {
         p.MinimumLength = 12;
         p.RequireNonAlphanumeric = true;
         p.RequireConfirmedEmail = false;
         p.RequireUniqueEmail = true;
-        p.AllowSelfServiceRegistration = false; // or tenant.DisableRegistration()
+        p.AllowSelfServiceRegistration = false; // or tenant.Authentication.DisableRegistration()
+        p.MaxFailedAccessAttempts = 5;          // this flow's own lockout policy
+        p.LockoutDuration = TimeSpan.FromMinutes(15);
+        p.AllowedForNewUsers = true;
     })
-    .UsePasswordlessFlow(pwl =>
+    .UsePhoneLogin(phone =>                     // sets IsPhoneLoginEnabled; phone is PhoneOptions
     {
-        pwl.UsePhoneLogin(phone =>             // sets IsPhoneLoginEnabled
-        {
-            phone.DefaultCountry = "SA";       // ISO 3166-1 alpha-2 — moved here from the umbrella
-            phone.AllowAutoProvisioning = true;
-            phone.CodeLength = 6;
-            phone.CodeLifetime = TimeSpan.FromMinutes(5);
-            phone.SuccessfulLoginsPerWindow = 1;
-            phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
-            phone.SuccessfulLoginsPerDay = 5;
-        });
-        pwl.UseExternalLogin(ext =>            // sets IsExternalLoginEnabled once a provider is added
-        {
-            ext.AddGoogle("id", "secret");
-            ext.AddOpenIdConnect("Partner", "id", "secret", "https://partner.example/");
-            ext.EnableAccountsLinking();       // was LinkExistingAccountsByEmail(); sets AccountLinkingEnabled
-        });
+        phone.DefaultCountry = "SA";            // ISO 3166-1 alpha-2
+        phone.AllowAutoProvisioning = true;
+        phone.CodeLength = 6;
+        phone.CodeLifetime = TimeSpan.FromMinutes(5);
+        phone.SuccessfulLoginsPerWindow = 1;
+        phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
+        phone.SuccessfulLoginsPerDay = 5;
+        phone.RequireConfirmedPhoneNumber = true;  // default true
+        phone.MaxFailedAccessAttempts = 5;         // this flow's own lockout policy, independent of the above
+    })
+    .UseExternalLogin(ext =>                    // sets IsExternalLoginEnabled once a provider is added
+    {
+        ext.AddGoogle("id", "secret");
+        ext.AddOpenIdConnect("Partner", "id", "secret", "https://partner.example/");
+        ext.EnableAccountsLinking();            // sets AccountLinkingEnabled
     });
 
 // reads:
-tenant.Authentication.IsPasswordEnabled       // => PasswordFlowOptions.Enabled
-tenant.Authentication.IsPhoneLoginEnabled     // => a PhoneLoginOptions was created
-tenant.Authentication.IsExternalLoginEnabled  // => at least one provider registered
+tenant.Authentication.IsEmailAndPasswordLoginEnabled  // => EmailAndPasswordLoginOptions.Enabled
+tenant.Authentication.IsPhoneLoginEnabled             // => a PhoneOptions was created
+tenant.Authentication.IsExternalLoginEnabled          // => at least one provider registered
 ```
 
+`Authentication.DisableRegistration()` turns off every anonymous account-creation path in one call:
+`EmailAndPassword.AllowSelfServiceRegistration` and, when the phone flow is enabled,
+`Phone.AllowAutoProvisioning` (untouched — not created — when the phone flow was never enabled, so
+this can't implicitly flip `IsPhoneLoginEnabled`). `TenantOptions.DisableRegistration()` delegates to it.
+
 Framework code inside `Huia` / `Huia.AspNetCore` reads the full objects through the `internal`
-`Authentication.Password` / `Authentication.Passwordless` accessors.
+`Authentication.EmailAndPassword` / `Authentication.Phone` / `Authentication.External` accessors.
 
 ### 3.3 `HuiaClientDescriptor`
 
@@ -219,12 +230,12 @@ internal interface IHuiaOptionsSection
 ```
 
 `HuiaOptions.Validate()` (also called from `HuiaOptionsBuilder.Build()`) walks the whole tree —
-`Email` / `Sms` / `Keys`, each `Tenants:{id}` → `Authentication` (→ `Password` + `Passwordless` →
-`PhoneLogin?` / `ExternalLogin` → `Providers[i]`) / `Lockout` / `Branding` / `Clients[i]` /
-`Scopes[i]` — appending `"Huia:Tenants:acme:Authentication:Passwordless:PhoneLogin:DefaultCountry:
-must be a two-letter …"`-style messages, then throws `HuiaOptionsException(IReadOnlyList<string>
-Errors)` if any. Cross-field rules include "at least one sign-in method enabled per tenant",
-`PendingSignupLifetime >= CodeLifetime`, `SuccessfulLoginsPerDay >= SuccessfulLoginsPerWindow`.
+`Email` / `Sms` / `Keys`, each `Tenants:{id}` → `Authentication` (→ `EmailAndPassword` / `Phone?` /
+`External?` → `Providers[i]`) / `Branding` / `Clients[i]` / `Scopes[i]` — appending
+`"Huia:Tenants:acme:Authentication:Phone:DefaultCountry: must be a two-letter …"`-style messages,
+then throws `HuiaOptionsException(IReadOnlyList<string> Errors)` if any. Cross-field rules include
+"at least one sign-in method enabled per tenant", `PendingSignupLifetime >= CodeLifetime`,
+`SuccessfulLoginsPerDay >= SuccessfulLoginsPerWindow`.
 
 ### 3.5 `Email` / `Sms` merge gotchas
 
@@ -256,10 +267,15 @@ Only `EmailOptions` and `SmsOptions` have `MergedWith(tenant?)`:
   binding lives in `Properties["huia:tenant"]` and is enforced at the endpoint / seed layer by
   `HuiaOpenIddict{Application,Scope}Store`.
 - **Per-tenant `IdentityOptions`** — `HuiaMultiTenancyConfiguration` projects the resolved tenant's
-  `Authentication.Password.*` / `Lockout.*` onto a scoped `IOptions<IdentityOptions>` (Finbuckle
-  `ConfigurePerTenant` + an `IOptions` bridge) so `UserManager` / `SignInManager` observe them. The
-  process-global `AddIdentity` registration (`HuiaIdentityConfiguration`) keeps the **least
-  restrictive** value across all tenants as the fallback.
+  `Authentication.EmailAndPassword.*` password fields (and `RequireUniqueEmail`) onto the default
+  (empty-name) `IdentityOptions` via a scoped `IOptions<IdentityOptions>` (Finbuckle
+  `ConfigurePerTenant` + an `IOptions` bridge) so the DI-injected `UserManager` / `SignInManager`
+  observe them — this is what `/manage`'s change-password endpoint and the admin API validate
+  against. **Lockout is not part of this projection**: it is per **flow** now (each flow's own
+  options carry `MaxFailedAccessAttempts` / `LockoutDuration` / `AllowedForNewUsers` — see §5.6),
+  and the default flow is never consulted by a sign-in check, so it stays at
+  `HuiaIdentityConfiguration`'s fixed, non-computed baseline. The confirmed-email / confirmed-phone
+  gate also varies per flow, so it is not set here either — see §5.6.
 - **Per-tenant auth** — `WithPerTenantAuthentication()` wraps every cookie scheme's
   `OnValidatePrincipal` to reject a ticket whose `__tenant__` property ≠ the request's resolved
   tenant. Per-tenant cookie names via `ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>`
@@ -278,9 +294,8 @@ Only `EmailOptions` and `SmsOptions` have `MergedWith(tenant?)`:
 
 `HuiaUser : IdentityUser<string>` and `HuiaRole : IdentityRole<string>` (in
 `Huia.EntityFrameworkCore.Entities`) add `TenantId`, `FirstName`, `LastName`, and
-`HasCompleteProfile`. `HuiaUserConfirmation : IUserConfirmation<HuiaUser>` replaces the stock one:
-`SignInManager.CanSignInAsync` returns true when the tenant's password flow does not
-`RequireConfirmedEmail`, so a phone-login account (no email) is never blocked on email confirmation.
+`HasCompleteProfile`. The confirmed-email vs confirmed-phone split is handled by per-flow
+`IdentityOptions` (§5.6) and the stock `DefaultUserConfirmation`, not a custom `IUserConfirmation`.
 
 ### 5.2 `HuiaUserType`
 
@@ -292,9 +307,10 @@ an email.
 
 ### 5.3 `HuiaUserManager : UserManager<HuiaUser>`
 
-Registered via `.AddUserManager<HuiaUserManager>()` on the `AddIdentity<HuiaUser, HuiaRole>()` chain,
-so `SignInManager` and every `UserManager<HuiaUser>` resolution get it. It consolidates the phone /
-external operations that were otherwise open-coded across the account UI and the endpoints:
+Registered via `.AddUserManager<HuiaUserManager>()` on the `AddIdentity<HuiaUser, HuiaRole>()` chain
+(alongside `.AddSignInManager<HuiaSignInManager>()`), so `SignInManager` and every
+`UserManager<HuiaUser>` resolution get it. It consolidates the phone / external operations that were
+otherwise open-coded across the account UI and the endpoints:
 
 | Member | Replaces |
 |---|---|
@@ -334,6 +350,46 @@ authentication handlers). `RegisterExternalProviders` adds one `OpenIddictClient
 (callback), `identity/account/externallogincallback` (dispatch — link to the live session, sign in an
 already-linked account, `TryLinkExternalByEmailAsync`, or hand off to `CompleteProfile`), and
 `signout-callback-oidc` for RP-initiated end-session at the upstream provider.
+
+### 5.6 Per-flow identity
+
+`HuiaAuthFlow` — `{ Default, EmailAndPasswordLogin, PhoneLogin, ExternalLogin }` — names the flow a
+request runs. Neither confirmation gating (`SignIn.RequireConfirmedEmail` / `…Account` /
+`…PhoneNumber`) nor lockout (`Lockout.MaxFailedAccessAttempts` / `…Duration` / `…AllowedForNewUsers`)
+can be expressed on one `IdentityOptions` per tenant: the password path wants a confirmed email and
+its own brute-force ceiling, the phone path a confirmed phone and an unrelated ceiling, the external
+path neither confirmation nor any lockout at all. So `AddHuiaFlowIdentity` registers **one named
+`IdentityOptions` per flow** (`HuiaFlowIdentityOptions.NameFor` →
+`"huia:flow:{password|phone|external}"`, `Default` → the empty name), each built from that flow's own
+options object — `EmailAndPasswordLoginOptions` / `PhoneOptions` — with nothing shared between flows:
+
+- `EmailAndPasswordLogin` (`HuiaFlowIdentityConfiguration.ApplyEmailAndPasswordFlow`) — `Password.*`
+  from the tenant's password-complexity fields, `Lockout.*` from that same options object's own
+  `MaxFailedAccessAttempts` / `LockoutDuration` / `AllowedForNewUsers`, `User.RequireUniqueEmail`,
+  and `SignIn.RequireConfirmedAccount = RequireConfirmedEmail`.
+- `PhoneLogin` (`ApplyPhoneFlow`) — its own `Lockout.*` (independent of the password flow's),
+  `SignIn.RequireConfirmedPhoneNumber` from `PhoneOptions.RequireConfirmedPhoneNumber` (default
+  `true`), everything else off.
+- `ExternalLogin` (`ApplyExternalFlow`) — no tenant-configurable policy at all: the upstream provider
+  is the confirmed factor and there is no failed-attempt surface to lock out on, so every `SignIn.*`
+  and `User.RequireUniqueEmail` stays off.
+
+All three also get the default token-provider map (`ApplyDefaultTokenProviders` — the built-in
+`AddDefaultTokenProviders` `Configure` calls only target the empty name). The `Default` (empty-name)
+instance carries none of this — see §4's per-tenant `IdentityOptions` bullet.
+
+`IHuiaFlowIdentityFactory` (scoped) hands a flow its `HuiaFlowIdentity` — a `HuiaUserManager` +
+`HuiaSignInManager` pair constructed with an `OptionsWrapper<IdentityOptions>` over that flow's named
+snapshot, memoised per flow per scope. It binds to the tenant ambient when first requested (resolve
+it after tenant resolution or inside `HuiaTenantScope.Enter`, exactly like a bare `HuiaUserManager`).
+
+The interactive flow entry points resolve managers through the factory:
+`Login` (`EmailAndPasswordLogin` / `PhoneLogin`), `VerifyOtp` / `CompleteProfile` (`PhoneLogin`, or
+`ExternalLogin` for an external sign-up), `Register` / `ForgotPassword` / `ResetPassword` /
+`ConfirmEmail` (`EmailAndPasswordLogin`), `ExternalEndpoints` (`ExternalLogin`), and `/connect/token`
+exchange (`PhoneLogin` when `amr=sms`, else `EmailAndPasswordLogin` — a lockout check plus a single
+`CanSignInAsync`, replacing the old `isSmsSignIn` branch). `/manage`, `/admin`, seeding and OTP token
+storage keep the DI-injected managers, which read the default (`Default`-flow) options.
 
 ---
 
@@ -420,7 +476,7 @@ It writes `Properties["huia:tenant"]`, `["huia:home_uris"]` (JSON), and maps `To
 | Account enumeration on phone login | unknown number with auto-provisioning off behaves identically to a known number (same redirect, same timing). |
 | External sign-in account takeover | link-by-email is off by default; even on, it requires `EmailConfirmed` **and** the provider vouches (`email_verified != false`); otherwise the sign-in is refused and no duplicate is created (`ExternalEmailLinkOutcome.Blocked`). |
 | Removing the last sign-in method | `HuiaUserManager.CanRemoveExternalLoginAsync` — an unlink is refused when it would leave no password, no phone and ≤ 1 login. |
-| Lockout bypass on token grants | the password grant uses `signInManager.CheckPasswordSignInAsync(lockoutOnFailure: true)`, honouring the per-tenant lockout policy. |
+| Lockout bypass on token grants | the password grant uses `signInManager.CheckPasswordSignInAsync(lockoutOnFailure: true)`, honouring the email/password flow's own lockout policy; `/connect/token` re-checks `IsLockedOutAsync` on the flow the sign-in came through (§5.6). |
 | Open redirect (`returnUrl`, `post_logout_redirect_uri`) | `IReturnUrlProtector` — DP-protected tokens, same-origin sanitisation. |
 | Response headers / CSP | `AddHuiaSecurityHeaders()` (opt-in) — per-request-nonce CSP (`script-src 'self' 'nonce-…'`, `style-src` nonce, `form-action` incl. external IdP origins), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS when `IsHttps && !DisableTransportSecurityRequirement`. |
 | Private key exposure | signing-key private material wrapped with Data Protection; `IHuiaKeyRing` memoises the imported RSA by `kid` only. |
@@ -439,11 +495,11 @@ xUnit v2 + **Shouldly** (no `Assert.*`); snake_case sentence method names
 | Project | Scope | Notes |
 |---|---|---|
 | **`Huia.Tests`** (`src/dotnet/tests/`) | Pure unit — options-tree validation, `Email`/`Sms` merge semantics, `HuiaDbContext` model (table renames, indexes) + tenant query filter. | in-memory SQLite; refs `Huia` + `Huia.EntityFrameworkCore` only. |
-| **`Huia.IntegrationTests`** (`src/dotnet/tests/`) | In-process host (`HuiaTestHost`: `HostBuilder` + `UseTestServer` + shared open `SqliteConnection`, schema via `EnsureCreatedAsync` in a hosted service before `AddHuia`). Auth-code + PKCE through the real Razor UI (`AuthorizationCodeFlowTests`, cookie-forwarding handler), refresh, client credentials, device, passwordless SMS (`PhoneFlow`), external login, `/manage` contact rules, admin CRUD, per-tenant `IdentityOptions`, key lifecycle, `HuiaUserManagerTests` (§5.3). Testcontainers-PostgreSQL tests carry `[Trait("Category","Container")]`. | `HuiaTestHost` helpers: `SeedUserAsync`, `SeedPhoneUserAsync`, `SeedInteractiveClientAsync`, `WithUserManagerAsync` (hands a tenant-scoped `HuiaUserManager`), `AddExternalLoginAsync`. |
+| **`Huia.IntegrationTests`** (`src/dotnet/tests/`) | In-process host (`HuiaTestHost`: `HostBuilder` + `UseTestServer` + shared open `SqliteConnection`, schema via `EnsureCreatedAsync` in a hosted service before `AddHuia`). Auth-code + PKCE through the real Razor UI (`AuthorizationCodeFlowTests`, cookie-forwarding handler), refresh, client credentials, device, passwordless SMS (`PhoneFlow`), external login, `/manage` contact rules, admin CRUD, per-tenant `IdentityOptions`, per-flow identity (§5.6 — `FlowIdentityOptionsTests`, `HuiaSignInManagerTests`, `HuiaUserManagerFlowTests`, `IdentityOptionsFlowTests`, mirroring the ASP.NET Core `SignInManagerTest` / `UserManagerTest` / `IdentityOptionsTest` scenarios), key lifecycle, `HuiaUserManagerTests` (§5.3). Testcontainers-PostgreSQL tests carry `[Trait("Category","Container")]`. | `HuiaTestHost` helpers: `SeedUserAsync`, `SeedPhoneUserAsync`, `SeedInteractiveClientAsync`, `WithUserManagerAsync` (tenant-scoped `HuiaUserManager`), `WithFlowIdentityAsync` (tenant-scoped `HuiaFlowIdentity`), `AddExternalLoginAsync`. |
 | **`Huia.Tests.PenTest`** (`src/dotnet/tests/`) | `[Trait("Category","PenTest")]` — cross-tenant token rejection, open-redirect, CSRF / state, privilege escalation, brute-force / rate-limit. Drives `samples/Huia.IdentityServer` out-of-process (port 5310) so the sample's rate limiter is really in the pipeline; a fresh cookie jar per sign-in. | |
-| **`tests/Huia.E2ETests`** (repo root) | `[Trait("Category","E2E")]`, `[SkippableFact]` + `Skip.IfNot(fixture.Started, …)`. `InteractiveSignInTests` / `MailFlowE2ETests` drive `samples/Huia.IdentityServer` via Playwright; `AdminUiE2ETests` drives the Aspire AppHost stack; `FrontEndAuthE2ETests` drives the Nuxt Todo.App through real OIDC (password / phone / external); `HuiaAuthNuxtE2ETests` drives the `huia-auth-nuxt` playground (see `../nuxt/SPEC.md` §10.5). Skip-tolerant — a missing build output or start-up failure skips, never fails. | `RepoRoot.Find()` (sentinel `src/dotnet/Huia.slnx`). |
+| **`tests/Huia.E2ETests`** (repo root) | `[Trait("Category","E2E")]`, `[SkippableFact]` + `Skip.IfNot(fixture.Started, …)`. `InteractiveSignInTests` / `MailFlowE2ETests` drive `samples/Huia.IdentityServer` via Playwright; `AdminUiE2ETests` drives the Aspire AppHost stack; `FrontEndAuthE2ETests` drives the Nuxt Todo.App through real OIDC (password / phone / external); `HuiaNuxtE2ETests` drives the `huia-nuxt` playground (see `../nuxt/SPEC.md` §10.5). Skip-tolerant — a missing build output or start-up failure skips, never fails. | `RepoRoot.Find()` (sentinel `src/dotnet/Huia.slnx`). |
 
 **CI jobs** (`.github/workflows/ci.yml`, `.NET` jobs run in `src/dotnet`): `build` (build + the
 default-filter tests), `pen-test`, `integration` (`Category=Container`), `e2e` (builds both Nuxt
 samples + the `src/nuxt` playground, installs Playwright, runs `Category=E2E`), `web-assets`
-(rebuilds `Huia.AspNetCore/wwwroot` and `git diff --exit-code`), `docs`, `nuxt-auth-module`.
+(rebuilds `Huia.AspNetCore/wwwroot` and `git diff --exit-code`), `docs`, `nuxt-module`.

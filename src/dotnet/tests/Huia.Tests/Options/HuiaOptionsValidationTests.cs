@@ -9,7 +9,7 @@ public class HuiaOptionsValidationTests
         var options = new HuiaOptions { Issuer = new Uri("https://id.example.test") };
         options.AddTenant("acme", tenant =>
         {
-            tenant.Authentication.UsePasswordFlow();
+            tenant.Authentication.UseEmailAndPasswordLogin();
             tenant.AddClient("acme-web", ClientKind.ServerSideWebApplication);
             var client = tenant.Clients[0];
             client.ClientSecret = "s3cret-value";
@@ -28,7 +28,7 @@ public class HuiaOptionsValidationTests
     public void Issuer_is_required()
     {
         var options = new HuiaOptions();
-        options.AddTenant("acme", t => t.Authentication.UsePasswordFlow());
+        options.AddTenant("acme", t => t.Authentication.UseEmailAndPasswordLogin());
 
         var ex = Should.Throw<HuiaOptionsException>(() => options.Validate());
         ex.Errors.ShouldContain(e => e.Contains("Issuer", StringComparison.Ordinal));
@@ -67,26 +67,48 @@ public class HuiaOptionsValidationTests
     }
 
     [Fact]
-    public void Password_flow_is_off_until_UsePasswordFlow_is_called()
+    public void Email_and_password_login_is_off_until_UseEmailAndPasswordLogin_is_called()
     {
         var tenant = new TenantOptions();
-        tenant.Authentication.Password.Enabled.ShouldBeFalse();
+        tenant.Authentication.EmailAndPassword.Enabled.ShouldBeFalse();
 
-        tenant.Authentication.UsePasswordFlow(password => password.MinimumLength = 12);
+        tenant.Authentication.UseEmailAndPasswordLogin(password => password.MinimumLength = 12);
 
-        tenant.Authentication.Password.Enabled.ShouldBeTrue();
-        tenant.Authentication.Password.MinimumLength.ShouldBe(12);
+        tenant.Authentication.EmailAndPassword.Enabled.ShouldBeTrue();
+        tenant.Authentication.EmailAndPassword.MinimumLength.ShouldBe(12);
     }
 
     [Fact]
     public void Self_service_registration_is_on_by_default_and_DisableRegistration_turns_it_off()
     {
         var tenant = new TenantOptions();
-        tenant.Authentication.Password.AllowSelfServiceRegistration.ShouldBeTrue();
+        tenant.Authentication.EmailAndPassword.AllowSelfServiceRegistration.ShouldBeTrue();
 
         tenant.DisableRegistration();
 
-        tenant.Authentication.Password.AllowSelfServiceRegistration.ShouldBeFalse();
+        tenant.Authentication.EmailAndPassword.AllowSelfServiceRegistration.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DisableRegistration_does_not_enable_the_phone_flow_when_it_was_never_used()
+    {
+        var tenant = new TenantOptions();
+
+        tenant.DisableRegistration();
+
+        tenant.Authentication.IsPhoneLoginEnabled.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DisableRegistration_also_turns_off_phone_auto_provisioning_when_the_phone_flow_is_enabled()
+    {
+        var tenant = new TenantOptions();
+        tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
+
+        tenant.DisableRegistration();
+
+        tenant.Authentication.EmailAndPassword.AllowSelfServiceRegistration.ShouldBeFalse();
+        tenant.Authentication.Phone!.AllowAutoProvisioning.ShouldBeFalse();
     }
 
     [Fact]
@@ -141,8 +163,7 @@ public class HuiaOptionsValidationTests
     public void An_invalid_default_country_is_rejected()
     {
         var options = ValidOptions();
-        options.Tenants["acme"].Authentication.UsePasswordlessFlow(pwl =>
-            pwl.UsePhoneLogin(phone => phone.DefaultCountry = "usa"));
+        options.Tenants["acme"].Authentication.UsePhoneLogin(phone => phone.DefaultCountry = "usa");
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("DefaultCountry", StringComparison.Ordinal));
@@ -152,11 +173,11 @@ public class HuiaOptionsValidationTests
     public void External_provider_names_must_be_unique()
     {
         var options = ValidOptions();
-        options.Tenants["acme"].Authentication.UsePasswordlessFlow(pwl => pwl.UseExternalLogin(ext =>
+        options.Tenants["acme"].Authentication.UseExternalLogin(ext =>
         {
             ext.AddOpenIdConnect("Partner", "id-1", "secret-1", "https://partner-a.example.test");
             ext.AddOpenIdConnect("Partner", "id-2", "secret-2", "https://partner-b.example.test");
-        }));
+        });
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("duplicated", StringComparison.Ordinal));

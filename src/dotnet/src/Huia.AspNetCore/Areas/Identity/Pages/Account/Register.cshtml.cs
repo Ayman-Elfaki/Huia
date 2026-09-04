@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Huia.AspNetCore.Emails;
 using Huia.AspNetCore.Flows;
+using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
 using Huia.Events;
@@ -16,8 +17,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 
 /// <summary>Self-service account creation. Available only when the tenant enables it.</summary>
 public sealed class RegisterModel(
-    UserManager<HuiaUser> userManager,
-    SignInManager<HuiaUser> signInManager,
+    IHuiaFlowIdentityFactory flowIdentity,
     IReturnUrlProtector returnUrlProtector,
     IMultiTenantContextAccessor tenantAccessor,
     IHuiaEventPublisher events,
@@ -33,7 +33,7 @@ public sealed class RegisterModel(
     public string ReturnUrl { get; private set; } = "/";
 
     /// <summary>Whether self-service registration is available for this tenant.</summary>
-    public bool RegistrationEnabled => Tenant?.Authentication.Password.AllowSelfServiceRegistration ?? false;
+    public bool RegistrationEnabled => Tenant?.Authentication.EmailAndPassword.AllowSelfServiceRegistration ?? false;
 
     /// <summary>Handles the initial GET.</summary>
     /// <param name="returnUrl">The URL to return to after registering.</param>
@@ -64,6 +64,7 @@ public sealed class RegisterModel(
         }
 
         var tenantId = tenantAccessor.RequireCurrentTenantId();
+        var password = flowIdentity.Create(HuiaAuthFlow.EmailAndPasswordLogin);
         var user = new HuiaUser
         {
             TenantId = tenantId,
@@ -73,7 +74,7 @@ public sealed class RegisterModel(
             LastName = Input.LastName,
         };
 
-        var result = await userManager.CreateAsync(user, Input.Password);
+        var result = await password.UserManager.CreateAsync(user, Input.Password);
         if (!result.Succeeded)
         {
             ErrorMessage = string.Join(" ", result.Errors.Select(e => e.Description));
@@ -83,13 +84,13 @@ public sealed class RegisterModel(
         await events.PublishAsync(new UserRegisteredEvent(
             tenantId, user.Id, user.UserName!, user.Email, HuiaConstants.AuthenticationMethods.Password, timeProvider.GetUtcNow()));
 
-        if (!(Tenant?.Authentication.Password.RequireConfirmedEmail ?? true))
+        if (!(Tenant?.Authentication.EmailAndPassword.RequireConfirmedEmail ?? true))
         {
-            await signInManager.SignInAsync(user, isPersistent: false);
+            await password.SignInManager.SignInAsync(user, isPersistent: false);
             return ResolvePostAuthRedirect(ReturnUrl);
         }
 
-        var rawToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        var rawToken = await password.UserManager.GenerateEmailConfirmationTokenAsync(user);
         var code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(rawToken));
         var confirmUrl = Url.Page("./ConfirmEmail", pageHandler: null,
             values: new { userId = user.Id, code }, protocol: Request.Scheme)!;

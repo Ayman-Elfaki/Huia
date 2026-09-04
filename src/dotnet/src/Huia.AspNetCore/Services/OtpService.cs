@@ -31,20 +31,20 @@ public interface IOtpService
     /// <summary>Generates a numeric code of the configured length.</summary>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns>The plain code.</returns>
-    string GenerateCode(PhoneLoginOptions options);
+    string GenerateCode(PhoneOptions options);
 
     /// <summary>Stores a hashed code for a user and returns the plain code to deliver.</summary>
     /// <param name="user">The account.</param>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns>The plain code.</returns>
-    Task<string> IssueAsync(HuiaUser user, PhoneLoginOptions options);
+    Task<string> IssueAsync(HuiaUser user, PhoneOptions options);
 
     /// <summary>Verifies a candidate code for a user, consuming it on success.</summary>
     /// <param name="user">The account.</param>
     /// <param name="code">The candidate code.</param>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns>The verification outcome.</returns>
-    Task<OtpVerifyResult> VerifyAsync(HuiaUser user, string code, PhoneLoginOptions options);
+    Task<OtpVerifyResult> VerifyAsync(HuiaUser user, string code, PhoneOptions options);
 }
 
 /// <summary>
@@ -56,7 +56,7 @@ internal sealed class OtpService(UserManager<HuiaUser> userManager, TimeProvider
     private const string Provider = HuiaConstants.PasswordlessLoginProvider;
     private const string TokenName = HuiaConstants.OtpTokenName;
 
-    public string GenerateCode(PhoneLoginOptions options)
+    public string GenerateCode(PhoneOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
         var max = (int)Math.Pow(10, options.CodeLength);
@@ -64,7 +64,7 @@ internal sealed class OtpService(UserManager<HuiaUser> userManager, TimeProvider
         return value.ToString().PadLeft(options.CodeLength, '0');
     }
 
-    public async Task<string> IssueAsync(HuiaUser user, PhoneLoginOptions options)
+    public async Task<string> IssueAsync(HuiaUser user, PhoneOptions options)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(options);
@@ -77,7 +77,7 @@ internal sealed class OtpService(UserManager<HuiaUser> userManager, TimeProvider
         return code;
     }
 
-    public async Task<OtpVerifyResult> VerifyAsync(HuiaUser user, string code, PhoneLoginOptions options)
+    public async Task<OtpVerifyResult> VerifyAsync(HuiaUser user, string code, PhoneOptions options)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(options);

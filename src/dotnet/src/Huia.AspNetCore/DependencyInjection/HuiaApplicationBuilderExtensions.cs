@@ -1,7 +1,5 @@
 using Finbuckle.MultiTenant.AspNetCore.Extensions;
 using Huia.AspNetCore.Security;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder;

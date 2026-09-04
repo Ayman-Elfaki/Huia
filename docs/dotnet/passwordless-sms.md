@@ -1,13 +1,14 @@
 # Passwordless SMS
 
-A tenant enables SMS one-time-code sign-in with `UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(…))`.
-The account UI then shows a **Phone** tab (alongside **Email** when the password flow is also on) that
-collects a number, dispatches a code, and hands off to a verification page.
+A tenant enables SMS one-time-code sign-in with `UsePhoneLogin(phone => …)`, called directly on
+`tenant.Authentication`. The account UI then shows a **Phone** tab (alongside **Email** when the
+email/password flow is also on) that collects a number, dispatches a code, and hands off to a
+verification page.
 
 ## Configuration
 
 ```csharp
-tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(phone =>
+tenant.Authentication.UsePhoneLogin(phone =>
 {
     phone.DefaultCountry = "SA";                  // interpret national numbers; format-checked only
     phone.AllowAutoProvisioning = true;           // unknown well-formed number may start a sign-up
@@ -20,7 +21,10 @@ tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(phone =>
     phone.SuccessfulLoginsPerWindow = 1;          // successful-sign-in ceiling per number
     phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
     phone.SuccessfulLoginsPerDay = 5;
-}));
+    phone.RequireConfirmedPhoneNumber = true;     // default true
+    phone.MaxFailedAccessAttempts = 5;            // this flow's own lockout ceiling — independent of
+    phone.LockoutDuration = TimeSpan.FromMinutes(15);  // the email/password flow's
+});
 ```
 
 An SMS provider is configured under `Huia:Sms` (root) and optionally per tenant (`tenant.Sms`);

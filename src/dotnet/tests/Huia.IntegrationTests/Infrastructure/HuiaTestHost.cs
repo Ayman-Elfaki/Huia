@@ -113,39 +113,39 @@ public sealed class HuiaTestHost : IAsyncDisposable
                             keys.EnableBackgroundJobs = false;
                             keys.KeySize = 2048;
                         });
-                        huia.AddTenant("master", tenant => tenant.Authentication.UsePasswordFlow());
+                        huia.AddTenant("master", tenant => tenant.Authentication.UseEmailAndPasswordLogin());
                         huia.AddTenant("acme", tenant =>
                         {
-                            tenant.Authentication.UsePasswordFlow();
-                            tenant.Authentication.Password.RequireConfirmedEmail = false;
+                            tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                             tenant.Branding.DisplayName = "Acme Corp";
                         });
                         huia.AddTenant("phone", tenant =>
-                            tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin()));
+                            tenant.Authentication.UsePhoneLogin());
                         huia.AddTenant("phone-auto", tenant =>
-                            tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true)));
+                            tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true));
                         huia.AddTenant("signup", tenant =>
                         {
-                            tenant.Authentication.UsePasswordFlow();
-                            tenant.Authentication.Password.RequireConfirmedEmail = true;
-                            tenant.Authentication.Password.AllowSelfServiceRegistration = true;
+                            tenant.Authentication.UseEmailAndPasswordLogin(password =>
+                            {
+                                password.RequireConfirmedEmail = true;
+                                password.AllowSelfServiceRegistration = true;
+                            });
                         });
                         huia.AddTenant("no-signup", tenant =>
                         {
-                            tenant.Authentication.UsePasswordFlow();
+                            tenant.Authentication.UseEmailAndPasswordLogin();
                             tenant.DisableRegistration();
                         });
                         huia.AddTenant("consumer", tenant =>
                         {
-                            tenant.Authentication.Password.RequireConfirmedEmail = false;
-                            tenant.Authentication.UsePasswordFlow();
-                            tenant.Authentication.UsePasswordlessFlow(pwl => pwl.UseExternalLogin(ext =>
+                            tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+                            tenant.Authentication.UseExternalLogin(ext =>
                                 ext.AddOpenIdConnect("HuiaExternal", "consumer-client", "consumer-secret", "https://partner.example.test", p =>
                                 {
                                     p.DisplayName = "Partner";
                                     p.Scopes.Add("profile");
                                     p.Scopes.Add("email");
-                                })));
+                                }));
                         });
                         configureOptions?.Invoke(huia);
                     });
@@ -356,6 +356,22 @@ public sealed class HuiaTestHost : IAsyncDisposable
         {
             var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             return await work(userManager);
+        }
+    }
+
+    /// <summary>Runs <paramref name="work"/> with a tenant-scoped <see cref="HuiaFlowIdentity"/> for <paramref name="flow"/>.</summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="tenantId">The tenant to enter.</param>
+    /// <param name="flow">The authentication flow.</param>
+    /// <param name="work">The callback.</param>
+    /// <returns>The callback's result.</returns>
+    public async Task<T> WithFlowIdentityAsync<T>(string tenantId, HuiaAuthFlow flow, Func<HuiaFlowIdentity, Task<T>> work)
+    {
+        await using var scope = _host.Services.CreateAsyncScope();
+        using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
+        {
+            var factory = scope.ServiceProvider.GetRequiredService<IHuiaFlowIdentityFactory>();
+            return await work(factory.Create(flow));
         }
     }
 

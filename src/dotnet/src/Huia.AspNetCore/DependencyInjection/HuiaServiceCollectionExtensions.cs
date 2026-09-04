@@ -12,7 +12,6 @@ using Huia.Options;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -46,19 +45,20 @@ public static class HuiaServiceCollectionExtensions
         }
 
         services.AddSingleton(options);
-        services.AddSingleton<IOptions<HuiaOptions>>(Options.Options.Create(options));
+        services.AddSingleton(Options.Options.Create(options));
 
         services.AddHuiaMultiTenancy(options);
-        services.AddHuiaIdentity(options);
+        services.AddHuiaIdentity();
         services.AddHuiaCookieHardening(requireSecure: !options.DisableTransportSecurityRequirement);
         services.AddHuiaPerTenantAuthentication();
         services.AddHuiaPerTenantIdentityOptions(options);
+        services.AddHuiaFlowIdentity(options);
         services.AddHuiaLocalization();
         services.AddHuiaEventing();
         services.AddHuiaOpenIddict(options);
         services.AddHuiaKeyManagement(options);
-        services.AddHostedService<Huia.AspNetCore.OpenIddict.HuiaClientSeeder>();
-        services.AddHostedService<Huia.AspNetCore.OpenIddict.HuiaScopeSeeder>();
+        services.AddHostedService<HuiaClientSeeder>();
+        services.AddHostedService<HuiaScopeSeeder>();
 
         services.AddScoped<HuiaCspNonce>();
         services.AddScoped<IHuiaCspNonce>(sp => sp.GetRequiredService<HuiaCspNonce>());
