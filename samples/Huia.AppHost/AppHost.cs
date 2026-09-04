@@ -19,6 +19,12 @@ var postgresPassword = builder.AddParameter("postgres-password", secret: true);
 var postgresServer = builder.AddPostgres("postgres", password: postgresPassword,port:59927);
 if (usePostgresVolume)
 {
+    // Huia ships no EF migrations by design (SchemaInitializer just calls EnsureCreatedAsync), so a
+    // schema change (e.g. a new column) is never applied to an already-existing database. If
+    // huia-identityserver starts crash-looping with a Postgres "column ... does not exist" error after
+    // pulling new code, delete the stale volume (`docker volume ls` for a name like
+    // "huia.apphost-*-postgres-data", then `docker volume rm`) — the next run recreates it fresh and
+    // reseeds everything. Or set Huia:UsePostgresVolume=false for a one-off ephemeral run instead.
     postgresServer.WithDataVolume();
 }
 
