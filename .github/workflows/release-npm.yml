@@ -1,0 +1,58 @@
+name: release-npm
+
+on:
+  push:
+    tags: ['nuxt-v*.*.*']
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    defaults:
+      run:
+        working-directory: src/nuxt
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/nuxt/package-lock.json
+          registry-url: https://registry.npmjs.org
+
+      # src/nuxt/.npmrc pins legacy-peer-deps (npm 10's arborist crashes on the nuxt peer graph).
+      - run: npm ci
+
+      - name: Verify tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/nuxt-v')
+        run: |
+          tag_version="${GITHUB_REF_NAME#nuxt-v}"
+          pkg_version="$(node -p "require('./package.json').version")"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version $pkg_version. Bump package.json and re-tag."
+            exit 1
+          fi
+
+      # Same proof-of-health steps as the ci.yml nuxt-module job, run once more before publishing.
+      - run: npm run dev:prepare
+      - run: npm run test:types
+      - run: npm test
+
+      - name: Build
+        run: npm run prepack
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/nuxt-v')
+        run: gh release create "${{ github.ref_name }}" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
