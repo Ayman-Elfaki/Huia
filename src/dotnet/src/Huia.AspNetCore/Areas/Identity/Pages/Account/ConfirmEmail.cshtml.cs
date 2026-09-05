@@ -1,4 +1,5 @@
 using System.Text;
+using Huia.AspNetCore.Flows;
 using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
@@ -14,6 +15,10 @@ public sealed class ConfirmEmailModel(IHuiaFlowIdentityFactory flowIdentity, ISt
     /// <summary>Whether the confirmation succeeded.</summary>
     public bool Confirmed { get; private set; }
 
+    /// <summary>The tenant's client application home, when one is registered. Offered instead of a
+    /// sign-in link, since the link is reached outside a valid OAuth flow.</summary>
+    public string? ClientHomeUrl { get; private set; }
+
     /// <summary>Handles the GET.</summary>
     /// <param name="userId">The user id from the link.</param>
     /// <param name="code">The Base64Url-encoded confirmation token.</param>
@@ -22,6 +27,7 @@ public sealed class ConfirmEmailModel(IHuiaFlowIdentityFactory flowIdentity, ISt
     {
         ViewData["Title"] = localizer["RegisterConfirmation.Title"].Value;
         ViewData["Heading"] = localizer["RegisterConfirmation.Heading"].Value;
+        ClientHomeUrl = TenantClientHome.Resolve(Tenant);
 
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(code))
         {

@@ -59,6 +59,15 @@ internal sealed partial class HuiaEmailSender(
         var email = options.Email.MergedWith(tenant?.Email);
         var culture = CultureInfo.CurrentUICulture;
 
+        // Emails have no request context, so resolve a possibly app-relative logo against the
+        // configured public base URL (falling back to the issuer) to get an absolute src.
+        var logoBase = options.PublicUrl ?? options.Issuer;
+        var logoUrl = tenant?.Branding.LogoUrl is { Length: > 0 } relativeOrAbsolute
+            && logoBase is not null
+            && Uri.TryCreate(logoBase, relativeOrAbsolute, out var absoluteLogo)
+                ? absoluteLogo.ToString()
+                : null;
+
         var model = new EmailModel(
             Subject: localizer[$"{keyPrefix}.Subject"].Value,
             Heading: localizer[$"{keyPrefix}.Heading"].Value,
@@ -69,7 +78,8 @@ internal sealed partial class HuiaEmailSender(
             BrandName: tenant?.Branding.DisplayName ?? tenant?.DisplayName ?? tenantId ?? "Huia",
             AccentColor: tenant?.Branding.AccentColor ?? "#4f46e5",
             Language: culture.TwoLetterISOLanguageName,
-            Direction: culture.TextInfo.IsRightToLeft ? "rtl" : "ltr");
+            Direction: culture.TextInfo.IsRightToLeft ? "rtl" : "ltr",
+            LogoUrl: logoUrl);
 
         var html = await renderer.RenderAsync("/Emails/Views/Message.cshtml", model);
         var text = $"{model.Heading}\n\n{model.Body}\n\n{model.ButtonText}: {model.ButtonUrl}\n";

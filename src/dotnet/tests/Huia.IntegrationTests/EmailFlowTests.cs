@@ -114,6 +114,27 @@ public sealed partial class EmailFlowTests : IAsyncLifetime
         html.ShouldContain("Confirm your email");
         html.ShouldContain("https://id.huia.test/master/confirm?x=1");
         html.ShouldContain("Acme Corp");
+        // No logo configured: the brand falls back to the text label, not an <img>.
+        html.ShouldContain("""<p class="brand">Acme Corp</p>""");
+    }
+
+    [Fact]
+    public async Task The_email_template_renders_the_branding_logo_when_one_is_set()
+    {
+        await using var scope = _host.Services.CreateAsyncScope();
+        var renderer = scope.ServiceProvider.GetRequiredService<RazorEmailRenderer>();
+
+        var model = new EmailModel(
+            "Confirm your email", "Confirm your email", "Hi Sam, please confirm.",
+            "Confirm email", "https://id.huia.test/master/confirm?x=1",
+            "If the button does not work:", "Acme Corp", "#4f46e5", "en", "ltr",
+            LogoUrl: "https://id.huia.test/brand/huia-logo.svg");
+
+        var html = await renderer.RenderAsync("/Emails/Views/Message.cshtml", model);
+
+        html.ShouldContain("""src="https://id.huia.test/brand/huia-logo.svg""");
+        html.ShouldContain("""alt="Acme Corp""");
+        html.ShouldNotContain("""<p class="brand">""");
     }
 
     private static async Task<string> AntiforgeryAsync(HttpClient client, string url)

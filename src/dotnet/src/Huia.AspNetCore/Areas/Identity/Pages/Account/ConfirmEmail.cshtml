@@ -10,6 +10,9 @@ else
     <div class="alert alert-destructive" role="alert">@Localizer["Error.Message"]</div>
 }
 
-<div class="huia-links">
-    <a asp-page="./Login">@Localizer["Common.SignIn"]</a>
-</div>
+@if (!string.IsNullOrEmpty(Model.ClientHomeUrl))
+{
+    <div class="huia-links">
+        <a href="@Model.ClientHomeUrl" data-testid="confirm-email-home">@string.Format(Localizer["Common.BackToApp"].Value, Model.DisplayName)</a>
+    </div>
+}

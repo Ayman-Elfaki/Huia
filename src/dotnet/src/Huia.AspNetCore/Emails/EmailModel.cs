@@ -11,6 +11,8 @@ namespace Huia.AspNetCore.Emails;
 /// <param name="AccentColor">The accent colour for the button and rule.</param>
 /// <param name="Language">The BCP-47 language tag for the <c>lang</c> attribute.</param>
 /// <param name="Direction"><c>ltr</c> or <c>rtl</c>.</param>
+/// <param name="LogoUrl">Absolute URL of the tenant's branding logo, shown in the header in place of
+/// <paramref name="BrandName"/>. <see langword="null"/> when the tenant has no logo configured.</param>
 public sealed record EmailModel(
     string Subject,
     string Heading,
@@ -21,4 +23,5 @@ public sealed record EmailModel(
     string BrandName,
     string AccentColor,
     string Language,
-    string Direction);
+    string Direction,
+    string? LogoUrl = null);

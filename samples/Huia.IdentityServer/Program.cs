@@ -12,6 +12,7 @@ var databaseProvider = builder.Configuration.GetValue("Huia:Database", "Sqlite")
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310")!;
 var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000")!;
+var todoApiUrl = builder.Configuration.GetValue("Clients:TodoApi:BaseUrl", "http://localhost:5330")!;
 var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001")!;
 // The huia-nuxt module's own E2E playground (EnableE2E only).
 var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUrl", "http://localhost:3030")!;
@@ -168,7 +169,15 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             client.PostLogoutRedirectUris.Add(new Uri($"{todoAppUrl}/"));
             client.HomeUris.Add(new Uri($"{todoAppUrl}/"));
         });
-        
+
+        // Public SPA client for the Todo API's Scalar reference UI: its "Authorize" button runs
+        // authorization code + PKCE against this tenant so protected endpoints can be tried live.
+        tenant.AddSinglePageApplication("todo-api-docs", client =>
+        {
+            client.DisplayName = "Todo API docs (Scalar)";
+            client.ClientUri = new Uri($"{todoApiUrl}/scalar");
+            client.RedirectUris.Add(new Uri($"{todoApiUrl}/scalar"));
+        });
     });
 
     if (enableE2E)
