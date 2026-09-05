@@ -42,12 +42,16 @@ else
 
 @if (Model.IsPasskeyLoginEnabled)
 {
-    <div class="huia-passkey" data-huia-passkey data-endpoint="@(Model.PathBase)/identity/account/passkey" data-return-url="@Model.ReturnUrl">
+    @* The fast path. Hidden by CSS (pre-paint) when WebAuthn is unavailable — no flash. Most returning
+       users pick their passkey from the email field's autofill and never click this. On cancel /
+       failure the button just resets and focus moves to the form; no error. *@
+    <div class="huia-passkey" data-huia-passkey data-mode="signin"
+         data-endpoint="@(Model.PathBase)/identity/account/passkey" data-return-url="@Model.ReturnUrl">
         @Html.AntiForgeryToken()
-        <button type="button" class="btn-outline w-full" data-huia-passkey-signin data-testid="passkey-signin">
-            @Localizer["Passkey.SignIn"]
+        <button type="button" class="btn-outline w-full" data-variant="outline" data-huia-passkey-signin data-testid="passkey-signin">
+            <partial name="_PasskeyMark" />
+            <span>@Localizer["Passkey.SignIn"]</span>
         </button>
-        <p class="huia-muted huia-passkey-error" role="alert" data-huia-passkey-error hidden></p>
     </div>
 }
 

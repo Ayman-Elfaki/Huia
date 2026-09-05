@@ -68,8 +68,7 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
 
     /// <summary>
     /// Enables passkey (WebAuthn / FIDO2) sign-in for this tenant: a discoverable one-tap sign-in on the
-    /// login page and — unless <see cref="PasskeyOptions.AllowSecondFactor"/> is turned off — the option
-    /// for a user to require a passkey as a second factor after a password sign-in.
+    /// login page and a one-time prompt to set one up after a first sign-in.
     /// </summary>
     /// <param name="configure">Optional configuration for the flow.</param>
     /// <returns>This instance, for chaining.</returns>

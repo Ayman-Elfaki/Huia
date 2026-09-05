@@ -1,10 +1,18 @@
-// Progressive enhancement for passkey (WebAuthn) sign-in, step-up and management. Talks to the
-// endpoints under identity/account/passkey/* (login + 2fa) or the Passkeys page handlers (manage).
-// No bundler: plain browser APIs only.
+// Progressive enhancement for passkey (WebAuthn) discoverable sign-in, the post-sign-up enrollment
+// prompt and credential management. Feature detection happens pre-paint in the layout
+// (html[data-webauthn]); this script only wires behaviour. No bundler: plain browser APIs.
 (() => {
   const supported =
     typeof window.PublicKeyCredential === "function" &&
     typeof navigator.credentials?.get === "function";
+
+  const strings = (() => {
+    try {
+      return JSON.parse(document.querySelector("[data-huia-passkey-strings]")?.textContent || "{}");
+    } catch {
+      return {};
+    }
+  })();
 
   const b64urlToBytes = (value) => {
     const pad = value.length % 4 === 0 ? "" : "=".repeat(4 - (value.length % 4));
@@ -25,7 +33,6 @@
     return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   };
 
-  // The server sends challenge / user.id / *.id as base64url strings; the browser wants ArrayBuffers.
   const toCreationOptions = (options) => {
     options.challenge = b64urlToBytes(options.challenge);
     options.user.id = b64urlToBytes(options.user.id);
@@ -68,6 +75,23 @@
     return json;
   };
 
+  // A friendly default name for a freshly created credential.
+  const guessDeviceName = (credential) => {
+    const device = strings.device || {};
+    const transports = credential.response?.getTransports?.() || [];
+    const attachment = credential.authenticatorAttachment;
+    if (transports.includes("hybrid")) {
+      return device.phone || "Phone";
+    }
+    if (transports.some((t) => t === "usb" || t === "nfc" || t === "ble")) {
+      return device.securityKey || "Security key";
+    }
+    if (transports.includes("internal") || attachment === "platform") {
+      return device.platform || "This device";
+    }
+    return device.fallback || "Passkey";
+  };
+
   document.querySelectorAll("[data-huia-passkey]").forEach((container) => {
     const mode = container.dataset.mode || "signin";
     const endpoint =
@@ -79,7 +103,9 @@
 
     const showError = (message) => {
       if (errorBox) {
-        errorBox.textContent = message;
+        if (message) {
+          errorBox.textContent = message;
+        }
         errorBox.hidden = false;
       }
     };
@@ -104,19 +130,31 @@
       return data;
     };
 
-    // --- discoverable primary sign-in (login page) ------------------------------------------------
-    if (mode === "signin" || mode === "signin-page") {
+    // --- discoverable sign-in (login page): understated fast path -------------------------------
+    if (mode === "signin") {
+      if (!supported) {
+        return;
+      }
       const returnUrl = container.dataset.returnUrl || "/";
+      const button = container.querySelector("[data-huia-passkey-signin]");
+
+      const focusForm = () => {
+        const active = document.querySelector('[role="tabpanel"]:not([hidden])') || document;
+        const field = active.querySelector('input[name="Input.Email"], input[name="Input.PhoneNumber"]')
+          || document.querySelector('input[name="Input.Email"], input[name="Input.PhoneNumber"]');
+        field?.focus();
+      };
 
       const assert = async (mediation) => {
         const optionsJson = await post("assertion-options", {});
-        const controller = mediation === "conditional" ? new AbortController() : null;
         const credential = await navigator.credentials.get({
           publicKey: toRequestOptions(optionsJson),
           mediation,
-          signal: controller ? controller.signal : undefined,
         });
         if (!credential) {
+          if (mediation !== "conditional") {
+            focusForm();
+          }
           return;
         }
         const result = await post("assertion", {
@@ -127,28 +165,20 @@
         window.location.assign(result.redirectUrl || returnUrl);
       };
 
-      const button = container.querySelector("[data-huia-passkey-signin]");
       if (button) {
-        if (!supported) {
-          button.disabled = true;
-        }
         button.addEventListener("click", async () => {
-          clearError();
           button.disabled = true;
           try {
             await assert("optional");
-          } catch (error) {
-            if (error.name !== "NotAllowedError" && error.name !== "AbortError") {
-              showError(container.dataset.errorText || "That passkey could not be used.");
-            }
+          } catch {
+            focusForm();
           } finally {
-            button.disabled = !supported ? true : false;
+            button.disabled = false;
           }
         });
       }
 
-      // Conditional UI: offer passkeys in the username field's autofill, when the browser supports it.
-      if (supported && window.PublicKeyCredential.isConditionalMediationAvailable) {
+      if (window.PublicKeyCredential.isConditionalMediationAvailable) {
         window.PublicKeyCredential.isConditionalMediationAvailable().then((available) => {
           if (available && document.querySelector('input[autocomplete~="webauthn"]')) {
             assert("conditional").catch(() => {});
@@ -158,69 +188,146 @@
       return;
     }
 
-    // --- passkey as a second factor (LoginWith2fa page) -----------------------------------------
-    if (mode === "2fa") {
-      const flow = container.dataset.flow || "";
-      const rememberSelector = container.dataset.rememberMachineSelector;
-      const button = container.querySelector("[data-huia-passkey-2fa]");
-      if (!button) {
+    // --- post-sign-up enrollment interstitial -------------------------------------------------
+    if (mode === "enroll") {
+      const returnUrl = container.dataset.returnUrl || "/";
+      const button = container.querySelector("[data-huia-passkey-enroll]");
+      const skipForm = container.querySelector("[data-huia-passkey-skip-form]");
+
+      if (!supported || typeof navigator.credentials.create !== "function") {
+        skipForm?.submit(); // auto-skip via the server so the "prompted once" flag is recorded
         return;
       }
-      if (!supported) {
-        button.disabled = true;
-      }
-      button.addEventListener("click", async () => {
+
+      button?.addEventListener("click", async () => {
         clearError();
         button.disabled = true;
         try {
-          const optionsJson = await post("2fa-options", { flow });
-          const credential = await navigator.credentials.get({ publicKey: toRequestOptions(optionsJson) });
-          const rememberMachine = rememberSelector ? !!document.querySelector(rememberSelector)?.checked : false;
-          const result = await post("2fa", {
+          const optionsJson = await post("?handler=CreationOptions", {});
+          const credential = await navigator.credentials.create({ publicKey: toCreationOptions(optionsJson) });
+          const result = await post("?handler=Register", {
             credential: serializeCredential(credential),
-            flow,
-            rememberMachine,
+            name: guessDeviceName(credential),
           });
-          window.location.assign(result.redirectUrl || "/");
-        } catch (error) {
-          if (error.name !== "NotAllowedError") {
-            showError("That passkey could not be used.");
-          }
-        } finally {
-          button.disabled = !supported;
+          window.location.assign(result.redirectUrl || returnUrl);
+        } catch {
+          showError();
+          button.disabled = false;
         }
       });
       return;
     }
 
-    // --- credential management (Passkeys page) -------------------------------------------------
+    // --- credential management (Passkeys page) ------------------------------------------------
     if (mode === "manage") {
-      const button = container.querySelector("[data-huia-passkey-register]");
-      if (!button) {
-        return;
+      wireManage(container, { supported, endpoint, token, post, toCreationOptions, serializeCredential, guessDeviceName, strings });
+    }
+  });
+
+  function wireManage(container, ctx) {
+    const addButton = container.querySelector("[data-huia-passkey-register]");
+    const errorBox = container.querySelector("[data-huia-passkey-error]");
+
+    if (addButton) {
+      if (!ctx.supported || typeof navigator.credentials.create !== "function") {
+        addButton.disabled = true;
       }
-      if (!supported || typeof navigator.credentials.create !== "function") {
-        button.disabled = true;
-      }
-      button.addEventListener("click", async () => {
-        clearError();
-        const name = window.prompt(container.dataset.namePrompt || "Name this passkey");
-        if (name === null) {
-          return;
-        }
-        button.disabled = true;
+      addButton.addEventListener("click", async () => {
+        if (errorBox) errorBox.hidden = true;
+        addButton.disabled = true;
         try {
-          const optionsJson = await post("?handler=CreationOptions", {});
-          const credential = await navigator.credentials.create({ publicKey: toCreationOptions(optionsJson) });
-          await post("?handler=Register", { credential: serializeCredential(credential), name });
+          const optionsJson = await ctx.post("?handler=CreationOptions", {});
+          const credential = await navigator.credentials.create({ publicKey: ctx.toCreationOptions(optionsJson) });
+          await ctx.post("?handler=Register", {
+            credential: ctx.serializeCredential(credential),
+            name: ctx.guessDeviceName(credential),
+          });
           window.location.reload();
         } catch (error) {
-          if (error.name !== "NotAllowedError") {
-            showError(error.message || "That passkey could not be registered.");
+          if (error.name !== "NotAllowedError" && errorBox) {
+            errorBox.textContent = error.message || ctx.strings.registerFailed || "That passkey could not be registered.";
+            errorBox.hidden = false;
           }
-          button.disabled = false;
+          addButton.disabled = false;
         }
       });
     }
-  });
+
+    // Inline rename: click the name → editable input; blur / Enter saves; Esc reverts.
+    container.querySelectorAll("[data-huia-passkey-name]").forEach((nameEl) => {
+      const id = nameEl.dataset.huiaPasskeyName;
+      nameEl.addEventListener("click", () => {
+        if (nameEl.querySelector("input")) {
+          return;
+        }
+        const current = nameEl.textContent.trim();
+        const input = document.createElement("input");
+        input.className = "input";
+        input.value = current;
+        input.setAttribute("aria-label", ctx.strings.renameLabel || "Passkey name");
+        nameEl.textContent = "";
+        nameEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        let done = false;
+        const finish = async (save) => {
+          if (done) return;
+          done = true;
+          const value = save ? input.value.trim() : current;
+          nameEl.textContent = value || (ctx.strings.unnamed || "Passkey");
+          if (save && value && value !== current) {
+            try {
+              await ctx.post("?handler=Rename", { id, name: value });
+            } catch {
+              nameEl.textContent = current;
+            }
+          }
+        };
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") { e.preventDefault(); finish(true); }
+          else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+        });
+        input.addEventListener("blur", () => finish(true));
+      });
+    });
+
+    // Two-step remove: first click reveals "Remove? Yes / Cancel" in the row.
+    container.querySelectorAll("[data-huia-passkey-remove]").forEach((form) => {
+      const trigger = form.querySelector("button[type=submit]");
+      if (!trigger) {
+        return;
+      }
+      trigger.addEventListener("click", (e) => {
+        if (form.dataset.confirming === "1") {
+          return; // second click submits the form for real
+        }
+        e.preventDefault();
+        form.dataset.confirming = "1";
+        const label = trigger.textContent;
+
+        const confirm = document.createElement("span");
+        confirm.className = "huia-passkey-confirm";
+        const yes = document.createElement("button");
+        yes.type = "submit";
+        yes.className = "huia-linkbtn huia-linkbtn-danger";
+        yes.textContent = ctx.strings.removeConfirmYes || "Remove";
+        const no = document.createElement("button");
+        no.type = "button";
+        no.className = "huia-linkbtn";
+        no.textContent = ctx.strings.cancel || "Cancel";
+        confirm.append(document.createTextNode((ctx.strings.removeConfirm || "Remove?") + " "), yes, no);
+
+        trigger.hidden = true;
+        form.appendChild(confirm);
+        yes.focus();
+        no.addEventListener("click", () => {
+          confirm.remove();
+          trigger.hidden = false;
+          delete form.dataset.confirming;
+          trigger.textContent = label;
+        });
+      });
+    });
+  }
 })();

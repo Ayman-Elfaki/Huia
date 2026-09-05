@@ -99,6 +99,22 @@ public partial class HuiaUserManager : UserManager<HuiaUser>
     }
 
     /// <summary>
+    /// True when removing one passkey would still leave a way to sign in — a password, a phone number,
+    /// an external login, or another passkey.
+    /// </summary>
+    public async Task<bool> CanRemovePasskeyAsync(HuiaUser user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (await HasPasswordAsync(user) || !string.IsNullOrEmpty(user.PhoneNumber) || (await GetLoginsAsync(user)).Count > 0)
+        {
+            return true;
+        }
+
+        return await CountPasskeysAsync(user) > 1;
+    }
+
+    /// <summary>
     /// Finds an account by its phone number (the <c>PhoneNumber</c> column, not the username). Scoped
     /// to the current tenant by <c>HuiaDbContext</c>'s global query filter.
     /// </summary>

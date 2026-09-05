@@ -19,8 +19,7 @@ public sealed record UserRegisteredEvent(
 /// <param name="TenantId">The tenant the user belongs to.</param>
 /// <param name="UserId">The user's identifier.</param>
 /// <param name="Method">
-/// The authentication method: <c>pwd</c>, <c>sms</c>, <c>passkey</c>, <c>mfa</c> (a password followed by
-/// a passkey step-up) or an external provider name.
+/// The authentication method: <c>pwd</c>, <c>sms</c>, <c>passkey</c> or an external provider name.
 /// </param>
 /// <param name="ClientId">The OAuth client the sign-in was performed for, if any.</param>
 /// <param name="OccurredAt">When the sign-in occurred (UTC).</param>

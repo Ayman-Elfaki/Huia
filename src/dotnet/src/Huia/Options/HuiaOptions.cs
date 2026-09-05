@@ -29,9 +29,6 @@ public sealed class HuiaOptions : IHuiaOptionsSection
     /// <summary>Root SMS settings, overridable per tenant.</summary>
     public SmsOptions Sms { get; } = new();
 
-    /// <summary>Host-wide relying-party settings for passkey (WebAuthn) ceremonies.</summary>
-    public HuiaPasskeyServerOptions Passkey { get; } = new();
-
     /// <summary>Signing-key lifecycle settings (shared across tenants).</summary>
     public KeyManagementOptions Keys { get; } = new();
 
@@ -94,7 +91,6 @@ public sealed class HuiaOptions : IHuiaOptionsSection
 
         ((IHuiaOptionsSection)Email).Validate(HuiaOptionsValidation.Combine(path, nameof(Email)), errors);
         ((IHuiaOptionsSection)Sms).Validate(HuiaOptionsValidation.Combine(path, nameof(Sms)), errors);
-        ((IHuiaOptionsSection)Passkey).Validate(HuiaOptionsValidation.Combine(path, nameof(Passkey)), errors);
         ((IHuiaOptionsSection)Keys).Validate(HuiaOptionsValidation.Combine(path, nameof(Keys)), errors);
         ((IHuiaOptionsSection)Seeding).Validate(HuiaOptionsValidation.Combine(path, nameof(Seeding)), errors);
         ((IHuiaOptionsSection)Cleanup).Validate(HuiaOptionsValidation.Combine(path, nameof(Cleanup)), errors);

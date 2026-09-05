@@ -30,9 +30,9 @@ internal static class HuiaCookieConfiguration
             options.SlidingExpiration = true;
         });
 
-        // huia.2fa-user — ASP.NET Core Identity's TwoFactorUserId scheme. Holds the pending second-factor
-        // user and the passkey ceremony challenge. SameSite=Lax so it survives the top-level nav from
-        // /connect/authorize to the login page; short-lived so a half-finished step-up cannot linger.
+        // huia.2fa-user — ASP.NET Core Identity's TwoFactorUserId scheme, reused by its passkey helpers to
+        // hold the attestation / assertion ceremony state. SameSite=Lax so it survives the top-level nav
+        // from /connect/authorize to the login page; short-lived so a half-finished ceremony cannot linger.
         services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme, options =>
         {
             options.Cookie.Name = HuiaConstants.Cookies.TwoFactorUser;

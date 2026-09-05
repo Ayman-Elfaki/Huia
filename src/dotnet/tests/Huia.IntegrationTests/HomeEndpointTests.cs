@@ -43,4 +43,17 @@ public sealed class HomeEndpointTests : IAsyncLifetime
         response.Headers.Location?.ToString().ShouldNotBe("/phone/");
         response.Headers.Location?.ToString().ShouldNotBe("/phone");
     }
+
+    [Fact]
+    public async Task A_pending_return_url_is_carried_onto_the_account_ui_redirect()
+    {
+        var pending = "/phone/connect/authorize?client_id=x&scope=openid";
+
+        var response = await _host.Client.GetAsync($"/phone/?ReturnUrl={Uri.EscapeDataString(pending)}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        var location = response.Headers.Location!.ToString();
+        location.ShouldContain("/identity/account/login");
+        location.ShouldContain($"ReturnUrl={Uri.EscapeDataString(pending)}");
+    }
 }

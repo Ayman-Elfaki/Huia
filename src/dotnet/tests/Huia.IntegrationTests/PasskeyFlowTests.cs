@@ -10,8 +10,8 @@ namespace Huia.IntegrationTests;
 
 /// <summary>
 /// End-to-end coverage of the passkey (WebAuthn) endpoints using an in-process software authenticator
-/// (<see cref="SoftwarePasskey"/>): discoverable primary sign-in, credential management, passkey as a
-/// second factor, recovery codes and tenant isolation.
+/// (<see cref="SoftwarePasskey"/>): discoverable primary sign-in, credential management, the
+/// post-sign-up enrollment prompt and tenant isolation.
 /// </summary>
 public sealed partial class PasskeyFlowTests : IAsyncLifetime
 {
@@ -24,11 +24,22 @@ public sealed partial class PasskeyFlowTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _host = await HuiaTestHost.StartAsync(configureOptions: huia =>
+        {
             huia.AddTenant("pkother", tenant =>
             {
                 tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
                 tenant.Authentication.UsePasskeyLogin();
-            }));
+            });
+            huia.AddTenant("pkrp", tenant =>
+            {
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+                tenant.Authentication.UsePasskeyLogin(passkey =>
+                {
+                    passkey.RelyingPartyId = "pkrp.localhost";
+                    passkey.AllowedOrigins.Add("http://pkrp.localhost");
+                });
+            });
+        });
 
         await _host.SeedInteractiveClientAsync("acme", "acme-spa", RedirectUri);
         _daveId = await _host.SeedUserAsync("acme", "dave@acme.test", "Password1!", emailConfirmed: true);
@@ -133,110 +144,155 @@ public sealed partial class PasskeyFlowTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Enabling_the_second_factor_requires_a_passkey_and_returns_recovery_codes()
+    public async Task Creation_options_require_a_discoverable_resident_key()
     {
         var api = await BearerClientAsync();
-
-        var tooEarly = await api.PutAsJsonAsync("/acme/manage/passkeys/two-factor", new { enabled = true });
-        tooEarly.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-
-        await RegisterPasskeyAsync(api, "acme", new SoftwarePasskey(Origin), "2FA key");
-
-        var enable = await api.PutAsJsonAsync("/acme/manage/passkeys/two-factor", new { enabled = true });
-        enable.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var body = await enable.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("enabled").GetBoolean().ShouldBeTrue();
-        body.GetProperty("recoveryCodes").GetArrayLength().ShouldBe(10);
-
-        (await api.GetFromJsonAsync<JsonElement>("/acme/manage/passkeys/two-factor"))
-            .GetProperty("enabled").GetBoolean().ShouldBeTrue();
-    }
-
-    [Fact]
-    public async Task The_last_passkey_cannot_be_removed_while_it_is_the_second_factor()
-    {
-        var passkey = new SoftwarePasskey(Origin);
-        var api = await BearerClientAsync();
-        await RegisterPasskeyAsync(api, "acme", passkey, "Only key");
-        (await api.PutAsJsonAsync("/acme/manage/passkeys/two-factor", new { enabled = true })).EnsureSuccessStatusCode();
-
-        var delete = await api.DeleteAsync($"/acme/manage/passkeys/{passkey.CredentialIdB64}");
-        delete.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-    }
-
-    [Fact]
-    public async Task A_password_sign_in_steps_up_to_a_passkey_second_factor()
-    {
-        var passkey = new SoftwarePasskey(Origin);
-        var api = await BearerClientAsync();
-        await RegisterPasskeyAsync(api, "acme", passkey, "Step-up key");
-        (await api.PutAsJsonAsync("/acme/manage/passkeys/two-factor", new { enabled = true })).EnsureSuccessStatusCode();
-
-        var browser = _host.CreateClient();
-        var loginUrl = await StartPasswordLoginAsync(browser, "acme", "acme-spa");
-        var pageToken = ExtractToken(await browser.GetStringAsync(loginUrl));
-
-        var post = await browser.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["Input.Email"] = "dave@acme.test",
-            ["Input.Password"] = "Password1!",
-            ["Input.RememberMe"] = "false",
-            ["__RequestVerificationToken"] = pageToken,
-        }));
-
-        post.StatusCode.ShouldBe(HttpStatusCode.Redirect);
-        post.Headers.Location!.ToString().ShouldContain("LoginWith2fa", Case.Insensitive);
-
-        var twoFaHtml = await browser.GetStringAsync(MakeLocal(post.Headers.Location!.ToString()));
-        var flow = ExtractFlow(twoFaHtml);
-        var afToken = ExtractToken(twoFaHtml);
-
-        var optionsJson = await CeremonyAsync(browser, afToken, "/acme/identity/account/passkey/2fa-options", new { flow });
-        var stepUp = await browser.SendAsync(CeremonyRequest(afToken, "/acme/identity/account/passkey/2fa",
-            new { credential = JsonDocument.Parse(passkey.CreateAssertion(optionsJson, _daveId)).RootElement, flow, rememberMachine = false }));
-
-        stepUp.StatusCode.ShouldBe(HttpStatusCode.OK, await stepUp.Content.ReadAsStringAsync());
-
-        (await _host.Events.WaitForAsync<UserLoggedInEvent>(e => e.UserId == _daveId && e.Method == "mfa")).ShouldNotBeNull();
-
-        var authorize = await browser.GetAsync(AuthorizeUrl("acme", "acme-spa"));
-        authorize.StatusCode.ShouldBe(HttpStatusCode.Redirect);
-        authorize.Headers.Location!.ToString().ShouldStartWith(RedirectUri);
-    }
-
-    [Fact]
-    public async Task A_recovery_code_completes_the_second_factor_when_the_passkey_is_unavailable()
-    {
-        var api = await BearerClientAsync();
-        await RegisterPasskeyAsync(api, "acme", new SoftwarePasskey(Origin), "Recovery key");
-        var enable = await (await api.PutAsJsonAsync("/acme/manage/passkeys/two-factor", new { enabled = true }))
+        var json = await (await api.SendAsync(WithOrigin(new HttpRequestMessage(
+            HttpMethod.Post, "/acme/manage/passkeys/creation-options") { Content = JsonContent.Create(new { }) })))
             .Content.ReadFromJsonAsync<JsonElement>();
-        var recoveryCode = enable.GetProperty("recoveryCodes")[0].GetString()!;
+
+        json.GetProperty("authenticatorSelection").GetProperty("residentKey").GetString().ShouldBe("required");
+    }
+
+    [Fact]
+    public async Task A_per_tenant_relying_party_id_is_reflected_in_the_ceremony_options()
+    {
+        var browser = _host.CreateClient();
+        var token = await AntiforgeryTokenAsync(browser, "pkrp");
+
+        var options = await CeremonyAsync(browser, token, "/pkrp/identity/account/passkey/assertion-options", new { });
+
+        JsonDocument.Parse(options).RootElement.GetProperty("rpId").GetString().ShouldBe("pkrp.localhost");
+    }
+
+    [Fact]
+    public async Task A_first_sign_up_is_redirected_to_the_passkey_enrollment_prompt()
+    {
+        var browser = _host.CreateClient();
+        var register = await RegisterViaUiAsync(browser, "acme", "newbie@acme.test", "Password1!");
+
+        register.StatusCode.ShouldBe(HttpStatusCode.Redirect, await register.Content.ReadAsStringAsync());
+        register.Headers.Location!.ToString().ShouldContain("passkeyenroll", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task Skipping_enrollment_returns_to_the_flow_and_is_not_prompted_again()
+    {
+        var browser = _host.CreateClient();
+        var toEnroll = await RegisterViaUiAsync(browser, "acme", "skipper@acme.test", "Password1!");
+        var enrollUrl = MakeLocal(toEnroll.Headers.Location!.ToString());
+        var enrollHtml = await browser.GetStringAsync(enrollUrl);
+
+        var skip = await browser.PostAsync("/acme/identity/account/passkeyenroll?handler=Skip", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["ReturnUrl"] = "/acme/",
+            ["__RequestVerificationToken"] = ExtractToken(enrollHtml),
+        }));
+        skip.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        skip.Headers.Location!.ToString().ShouldNotContain("passkeyenroll", Case.Insensitive);
+
+        // Sign out and sign in again — the prompt is not shown a second time.
+        await browser.PostAsync("/acme/identity/account/logout", new FormUrlEncodedContent(
+            new Dictionary<string, string> { ["__RequestVerificationToken"] = ExtractToken(await browser.GetStringAsync("/acme/identity/account/login")) }));
+
+        var loginUrl = "/acme/identity/account/login";
+        var loginPost = await browser.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Input.Email"] = "skipper@acme.test",
+            ["Input.Password"] = "Password1!",
+            ["__RequestVerificationToken"] = ExtractToken(await browser.GetStringAsync(loginUrl)),
+        }));
+
+        loginPost.StatusCode.ShouldBe(HttpStatusCode.Redirect, await loginPost.Content.ReadAsStringAsync());
+        loginPost.Headers.Location!.ToString().ShouldNotContain("passkeyenroll", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task Enrollment_registers_a_credential()
+    {
+        var browser = _host.CreateClient();
+        var toEnroll = await RegisterViaUiAsync(browser, "acme", "enroller@acme.test", "Password1!");
+        var enrollUrl = MakeLocal(toEnroll.Headers.Location!.ToString());
+        var token = ExtractToken(await browser.GetStringAsync(enrollUrl));
+
+        var passkey = new SoftwarePasskey(Origin);
+        var optionsJson = await CeremonyAsync(browser, token, "/acme/identity/account/passkeyenroll?handler=CreationOptions", new { });
+        var register = await browser.SendAsync(CeremonyRequest(token, "/acme/identity/account/passkeyenroll?handler=Register",
+            new { credential = JsonDocument.Parse(passkey.CreateAttestation(optionsJson)).RootElement, name = (string?)null }));
+
+        register.StatusCode.ShouldBe(HttpStatusCode.OK, await register.Content.ReadAsStringAsync());
+        (await register.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("redirectUrl").GetString().ShouldNotContain("passkeyenroll");
+
+        var enrollerId = await _host.WithUserManagerAsync("acme", async um => (await um.FindByEmailAsync("enroller@acme.test"))!.Id);
+        (await _host.Events.WaitForAsync<PasskeyRegisteredEvent>(e => e.UserId == enrollerId)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task A_user_that_already_has_a_passkey_is_not_prompted_at_sign_in()
+    {
+        var api = await BearerClientAsync();
+        await RegisterPasskeyAsync(api, "acme", new SoftwarePasskey(Origin), "Existing key");
 
         var browser = _host.CreateClient();
-        var loginUrl = await StartPasswordLoginAsync(browser, "acme", "acme-spa");
-        var pageToken = ExtractToken(await browser.GetStringAsync(loginUrl));
-        var post = await browser.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        var loginUrl = "/acme/identity/account/login";
+        var loginPost = await browser.PostAsync(loginUrl, new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["Input.Email"] = "dave@acme.test",
             ["Input.Password"] = "Password1!",
-            ["__RequestVerificationToken"] = pageToken,
+            ["__RequestVerificationToken"] = ExtractToken(await browser.GetStringAsync(loginUrl)),
         }));
 
-        var twoFaHtml = await browser.GetStringAsync(MakeLocal(post.Headers.Location!.ToString()));
-        var recoverPost = await browser.PostAsync("/acme/identity/account/loginwith2fa?handler=RecoveryCode", new FormUrlEncodedContent(new Dictionary<string, string>
+        loginPost.StatusCode.ShouldBe(HttpStatusCode.Redirect, await loginPost.Content.ReadAsStringAsync());
+        loginPost.Headers.Location!.ToString().ShouldNotContain("passkeyenroll", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task A_passkey_only_account_cannot_remove_its_last_passkey()
+    {
+        var loner = await _host.SeedUserAsync("acme", "loner@acme.test", password: null);
+        await _host.WithUserManagerAsync("acme", async um =>
         {
-            ["Flow"] = ExtractFlow(twoFaHtml),
-            ["RememberMe"] = "false",
-            ["Input.RecoveryCode"] = recoveryCode,
-            ["__RequestVerificationToken"] = ExtractToken(twoFaHtml),
-        }));
+            var u = (await um.FindByIdAsync(loner))!;
+            await um.AddOrUpdatePasskeyAsync(u, new Microsoft.AspNetCore.Identity.UserPasskeyInfo(
+                System.Security.Cryptography.RandomNumberGenerator.GetBytes(32), [1], DateTimeOffset.UtcNow, 0, null, true, true, true, [1], [1]) { Name = "only" });
+            return true;
+        });
 
-        recoverPost.StatusCode.ShouldBe(HttpStatusCode.Redirect, await recoverPost.Content.ReadAsStringAsync());
-        recoverPost.Headers.Location!.ToString().ShouldNotContain("loginwith2fa", Case.Insensitive);
+        var canRemove = await _host.WithUserManagerAsync("acme", async um =>
+            await um.CanRemovePasskeyAsync((await um.FindByIdAsync(loner))!));
+
+        canRemove.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task The_login_page_gates_the_passkey_block_on_webauthn_before_paint()
+    {
+        var client = _host.CreateClient();
+        var html = await client.GetStringAsync("/acme/identity/account/login");
+
+        // The block is rendered normally (no `hidden` attribute) — visibility is decided pre-paint by
+        // the head script + CSS, not by post-load JS.
+        var openTag = html[html.IndexOf("data-huia-passkey", StringComparison.Ordinal)..];
+        openTag = openTag[..openTag.IndexOf('>')];
+        openTag.ShouldNotContain("hidden");
+        html.ShouldContain("window.PublicKeyCredential");
     }
 
     // --- helpers ---------------------------------------------------------------------------------
+
+    private async Task<HttpResponseMessage> RegisterViaUiAsync(HttpClient browser, string tenant, string email, string password)
+    {
+        var url = $"/{tenant}/identity/account/register";
+        return await browser.PostAsync(url, new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Input.FirstName"] = "New",
+            ["Input.LastName"] = "User",
+            ["Input.Email"] = email,
+            ["Input.Password"] = password,
+            ["Input.ConfirmPassword"] = password,
+            ["__RequestVerificationToken"] = ExtractToken(await browser.GetStringAsync(url)),
+        }));
+    }
 
     private async Task<HttpClient> BearerClientAsync()
     {
@@ -296,12 +352,6 @@ public sealed partial class PasskeyFlowTests : IAsyncLifetime
         return await response.Content.ReadAsStringAsync();
     }
 
-    private async Task<string> StartPasswordLoginAsync(HttpClient browser, string tenant, string clientId)
-    {
-        var toLogin = await browser.GetAsync(AuthorizeUrl(tenant, clientId));
-        return MakeLocal(toLogin.Headers.Location!.ToString());
-    }
-
     private static string AuthorizeUrl(string tenant, string clientId) =>
         $"/{tenant}/connect/authorize?response_type=code&client_id={clientId}" +
         $"&redirect_uri={Uri.EscapeDataString(RedirectUri)}&scope=openid&code_challenge=x&code_challenge_method=plain&state=s";
@@ -312,12 +362,6 @@ public sealed partial class PasskeyFlowTests : IAsyncLifetime
     private static string ExtractToken(string html) =>
         TokenRegex().Match(html) is { Success: true } m ? m.Groups["v"].Value : throw new InvalidOperationException("no antiforgery token");
 
-    private static string ExtractFlow(string html) =>
-        FlowRegex().Match(html) is { Success: true } m ? m.Groups["v"].Value : throw new InvalidOperationException("no flow token");
-
     [GeneratedRegex("""name="__RequestVerificationToken"[^>]*value="(?<v>[^"]+)""")]
     private static partial Regex TokenRegex();
-
-    [GeneratedRegex("""name="Flow"[^>]*value="(?<v>[^"]*)""")]
-    private static partial Regex FlowRegex();
 }

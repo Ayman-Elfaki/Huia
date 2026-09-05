@@ -61,8 +61,9 @@ internal static class HuiaMultiTenancyConfiguration
             .ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>((cookie, tenant) =>
                 cookie.Cookie.Name = $"huia.2fa.{tenant.Identifier}");
 
-        // The transient scheme carries both the pending second-factor user and the passkey ceremony
-        // challenge. Per-tenant name so a browser can hold a step-up in flight for several tenants.
+        // ASP.NET Core Identity's passkey helpers stash the attestation / assertion ceremony state in
+        // this transient scheme. Per-tenant name so a browser can have a ceremony in flight for several
+        // tenants at once.
         services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme)
             .ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>((cookie, tenant) =>
                 cookie.Cookie.Name = $"{HuiaConstants.Cookies.TwoFactorUser}.{tenant.Identifier}");
@@ -71,9 +72,10 @@ internal static class HuiaMultiTenancyConfiguration
     }
 
     /// <summary>
-    /// Projects each tenant's passkey policy onto <see cref="IdentityPasskeyOptions"/> (user-verification
-    /// requirement, authenticator preference, ceremony timeout). The relying-party identity itself is
-    /// host-wide and set once in <c>AddHuiaIdentity</c>. Mirrors <see cref="AddHuiaPerTenantIdentityOptions"/>:
+    /// Projects each tenant's passkey policy onto <see cref="IdentityPasskeyOptions"/>: the relying-party
+    /// id and allowed origins, the user-verification requirement, the authenticator preference and the
+    /// ceremony timeout. The one globally-fixed setting (<c>ResidentKeyRequirement = "required"</c>) is in
+    /// <c>AddHuiaIdentity</c>. Mirrors <see cref="AddHuiaPerTenantIdentityOptions"/>:
     /// <see cref="Microsoft.AspNetCore.Identity.PasskeyHandler{TUser}"/> reads <see cref="IOptions{T}"/>, a
     /// process-wide snapshot, so a scoped re-registration re-points it at the tenant-aware value per request.
     /// </summary>
@@ -100,6 +102,36 @@ internal static class HuiaMultiTenancyConfiguration
                     _ => null,
                 };
                 passkey.AuthenticatorTimeout = policy.AuthenticatorTimeout;
+
+                // Per-tenant relying-party id. Left unset the framework uses Request.Host.Host.
+                if (!string.IsNullOrWhiteSpace(policy.RelyingPartyId))
+                {
+                    passkey.ServerDomain = policy.RelyingPartyId;
+                }
+
+                // Per-tenant allowed origins. Left empty the framework's default same-origin check applies.
+                if (policy.AllowedOrigins.Count > 0)
+                {
+                    var allowed = policy.AllowedOrigins
+                        .Select(o => new Uri(o, UriKind.Absolute).GetLeftPart(UriPartial.Authority))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    passkey.ValidateOrigin = context =>
+                    {
+                        if (string.IsNullOrEmpty(context.Origin) || !Uri.TryCreate(context.Origin, UriKind.Absolute, out var origin))
+                        {
+                            return ValueTask.FromResult(false);
+                        }
+
+                        if (allowed.Contains(origin.GetLeftPart(UriPartial.Authority)))
+                        {
+                            return ValueTask.FromResult(true);
+                        }
+
+                        var requestOrigin = context.HttpContext.Request.Headers.Origin.ToString();
+                        return ValueTask.FromResult(!context.CrossOrigin && string.Equals(requestOrigin, context.Origin, StringComparison.Ordinal));
+                    };
+                }
             });
 
         services.AddScoped<IOptions<IdentityPasskeyOptions>>(sp =>

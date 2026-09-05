@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Finbuckle.MultiTenant.Abstractions;
+using Huia.AspNetCore.Flows;
 using Huia.AspNetCore.Identity;
 using Huia.AspNetCore.UI;
 using Huia.EntityFrameworkCore.Entities;
@@ -20,6 +21,7 @@ namespace Huia.AspNetCore.Areas.Identity.Pages.Account;
 public sealed class PasskeysModel(
     HuiaUserManager userManager,
     HuiaSignInManager signInManager,
+    HuiaPasskeyRegistrar registrar,
     IMultiTenantContextAccessor tenantAccessor,
     IHuiaEventPublisher events,
     IStringLocalizer<SharedResource> localizer,
@@ -28,14 +30,14 @@ public sealed class PasskeysModel(
     /// <summary>The user's registered passkeys.</summary>
     public IReadOnlyList<PasskeyView> Passkeys { get; private set; } = [];
 
-    /// <summary>Whether a passkey is currently required as a second factor.</summary>
-    public bool TwoFactorEnabled { get; private set; }
+    /// <summary>False when the account's only way to sign in is a single passkey — Remove is then blocked.</summary>
+    public bool CanRemove { get; private set; } = true;
 
-    /// <summary>How many two-factor recovery codes remain unused.</summary>
-    public int RecoveryCodesLeft { get; private set; }
+    /// <summary>Localized UI strings the client script needs, as a JSON object.</summary>
+    public string StringsJson { get; private set; } = "{}";
 
-    /// <summary>Recovery codes to display once, immediately after enabling the second factor.</summary>
-    public IReadOnlyList<string> NewRecoveryCodes { get; private set; } = [];
+    /// <summary>The tenant's client application home, when one is registered. Offered as a "back to app" link.</summary>
+    public string? ClientHomeUrl { get; private set; }
 
     /// <summary>Handles the GET.</summary>
     public async Task<IActionResult> OnGetAsync()
@@ -85,52 +87,30 @@ public sealed class PasskeysModel(
             return NotFound();
         }
 
-        PasskeyAttestationResult attestation;
-        try
-        {
-            attestation = await signInManager.PerformPasskeyAttestationAsync(body.Credential.GetRawText());
-        }
-        catch (InvalidOperationException)
-        {
-            return BadRequest(new { error = "no_registration_in_progress" });
-        }
-
-        if (!attestation.Succeeded || attestation.Passkey is not { } passkeyInfo)
-        {
-            return BadRequest(new { error = attestation.Failure?.Message ?? "attestation_failed" });
-        }
-
-        passkeyInfo.Name = string.IsNullOrWhiteSpace(body.Name) ? null : body.Name.Trim();
-        var result = await userManager.AddOrUpdatePasskeyAsync(user, passkeyInfo);
-        if (!result.Succeeded)
-        {
-            return BadRequest(new { error = string.Join("; ", result.Errors.Select(e => e.Description)) });
-        }
-
-        var id = WebEncoders.Base64UrlEncode(passkeyInfo.CredentialId);
-        await events.PublishAsync(new PasskeyRegisteredEvent(
-            tenantAccessor.RequireCurrentTenantId(), user.Id, id.Length <= 12 ? id : id[..12], timeProvider.GetUtcNow()));
-        return new JsonResult(new { id });
+        var outcome = await registrar.RegisterAsync(user, body.Credential.GetRawText(), body.Name);
+        return outcome.Succeeded
+            ? new JsonResult(new { id = outcome.CredentialId })
+            : BadRequest(new { error = outcome.Error ?? "attestation_failed" });
     }
 
-    /// <summary>Renames a credential.</summary>
-    public async Task<IActionResult> OnPostRenameAsync(string id, string name)
+    /// <summary>Renames a credential (XHR from the inline name editor).</summary>
+    public async Task<IActionResult> OnPostRenameAsync([FromBody] RenameBody body)
     {
         var user = await CurrentUserAsync();
         if (user is null)
         {
-            return Redirect($"{PathBase}/identity/account/login");
+            return Unauthorized();
         }
 
-        if (TryDecode(id, out var credentialId))
+        if (!TryDecode(body.Id, out var credentialId) || !await userManager.RenamePasskeyAsync(user, credentialId, body.Name ?? string.Empty))
         {
-            await userManager.RenamePasskeyAsync(user, credentialId, name ?? string.Empty);
+            return NotFound();
         }
 
-        return RedirectToPage();
+        return new NoContentResult();
     }
 
-    /// <summary>Removes a credential.</summary>
+    /// <summary>Removes a credential (a real form POST — confirmed inline by the client).</summary>
     public async Task<IActionResult> OnPostDeleteAsync(string id)
     {
         var user = await CurrentUserAsync();
@@ -141,9 +121,9 @@ public sealed class PasskeysModel(
 
         if (TryDecode(id, out var credentialId) && await userManager.GetPasskeyAsync(user, credentialId) is not null)
         {
-            if (user.TwoFactorEnabled && await userManager.CountPasskeysAsync(user) <= 1)
+            if (!await userManager.CanRemovePasskeyAsync(user))
             {
-                ErrorMessage = localizer["Passkey.CannotRemoveLast"].Value;
+                ErrorMessage = localizer["Passkey.OnlyMethod"].Value;
             }
             else
             {
@@ -163,38 +143,6 @@ public sealed class PasskeysModel(
         return RedirectToPage();
     }
 
-    /// <summary>Enables or disables the passkey second factor.</summary>
-    public async Task<IActionResult> OnPostTwoFactorAsync(bool enabled)
-    {
-        var user = await CurrentUserAsync();
-        if (user is null)
-        {
-            return Redirect($"{PathBase}/identity/account/login");
-        }
-
-        SetHeadings();
-
-        if (enabled)
-        {
-            if (!IsPasskeySecondFactorAllowed || !await userManager.HasPasskeyAsync(user))
-            {
-                ErrorMessage = localizer["Passkey.NeedOneBeforeTwoFactor"].Value;
-                await LoadAsync(user);
-                return Page();
-            }
-
-            await userManager.SetTwoFactorEnabledAsync(user, true);
-            NewRecoveryCodes = (await userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10))?.ToArray() ?? [];
-        }
-        else
-        {
-            await userManager.SetTwoFactorEnabledAsync(user, false);
-        }
-
-        await LoadAsync(user);
-        return Page();
-    }
-
     private async Task<HuiaUser?> CurrentUserAsync() =>
         User.Identity?.IsAuthenticated == true ? await userManager.GetUserAsync(User) : null;
 
@@ -203,8 +151,25 @@ public sealed class PasskeysModel(
         Passkeys = (await userManager.GetPasskeysAsync(user))
             .Select(p => new PasskeyView(WebEncoders.Base64UrlEncode(p.CredentialId), p.Name, p.CreatedAt, p.IsBackedUp))
             .ToArray();
-        TwoFactorEnabled = user.TwoFactorEnabled;
-        RecoveryCodesLeft = await userManager.CountRecoveryCodesAsync(user);
+        CanRemove = await userManager.CanRemovePasskeyAsync(user);
+        ClientHomeUrl = TenantClientHome.Resolve(Tenant);
+
+        StringsJson = JsonSerializer.Serialize(new
+        {
+            device = new
+            {
+                platform = localizer["Passkey.Device.Platform"].Value,
+                phone = localizer["Passkey.Device.Phone"].Value,
+                securityKey = localizer["Passkey.Device.SecurityKey"].Value,
+                fallback = localizer["Passkey.Device.Fallback"].Value,
+            },
+            renameLabel = localizer["Passkey.RenameLabel"].Value,
+            unnamed = localizer["Passkey.Unnamed"].Value,
+            removeConfirm = localizer["Passkey.RemoveConfirm"].Value,
+            removeConfirmYes = localizer["Passkey.RemoveConfirmYes"].Value,
+            cancel = localizer["Common.Cancel"].Value,
+            registerFailed = localizer["Passkey.Failed"].Value,
+        });
     }
 
     private void SetHeadings()
@@ -238,4 +203,9 @@ public sealed class PasskeysModel(
     /// <param name="Credential">The WebAuthn attestation from <c>navigator.credentials.create</c>.</param>
     /// <param name="Name">A friendly name for the credential.</param>
     public sealed record RegisterBody(JsonElement Credential, string? Name);
+
+    /// <summary>Body of the rename handler.</summary>
+    /// <param name="Id">The base64url credential id.</param>
+    /// <param name="Name">The new friendly name.</param>
+    public sealed record RenameBody(string Id, string? Name);
 }

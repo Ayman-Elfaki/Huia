@@ -42,9 +42,6 @@ public abstract class HuiaAccountPageModel : PageModel
     /// <summary>Whether the discoverable "sign in with a passkey" control should be shown.</summary>
     public bool IsPasskeyLoginEnabled => Tenant?.Authentication.IsPasskeyLoginEnabled ?? false;
 
-    /// <summary>Whether a passkey may be required as a second factor for this tenant.</summary>
-    public bool IsPasskeySecondFactorAllowed => Tenant?.Authentication.Passkey is { AllowSecondFactor: true };
-
     /// <summary>The external providers to render sign-in buttons for.</summary>
     public IReadOnlyList<Options.ExternalProviderRegistration> ExternalProviders =>
         Tenant?.Authentication.External?.Providers ?? [];
@@ -83,6 +80,29 @@ public abstract class HuiaAccountPageModel : PageModel
         return TenantClientHome.Resolve(Tenant) is { } clientHome
             ? Redirect(clientHome)
             : LocalRedirect(returnUrl);
+    }
+
+    /// <summary>
+    /// The redirect to follow after a <em>first</em> interactive sign-in (a sign-up, a phone or external
+    /// first sign-in, or the first password sign-in that follows email confirmation). When the tenant
+    /// offers passkeys and the account has none, the user is sent to the one-time enrollment
+    /// interstitial first; otherwise this is <see cref="ResolvePostAuthRedirect"/>.
+    /// </summary>
+    /// <param name="user">The account that just signed in.</param>
+    /// <param name="returnUrl">A return URL already sanitized by <c>IReturnUrlProtector</c>.</param>
+    protected async Task<IActionResult> ResolvePostSignUpRedirectAsync(EntityFrameworkCore.Entities.HuiaUser user, string returnUrl)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (IsPasskeyLoginEnabled
+            && HttpContext.RequestServices.GetService<Identity.HuiaUserManager>() is { } userManager
+            && await userManager.CountPasskeysAsync(user) == 0
+            && await userManager.GetAuthenticationTokenAsync(user, HuiaConstants.PasskeyLoginProvider, HuiaConstants.EnrollPromptedTokenName) is null)
+        {
+            return RedirectToPage("./PasskeyEnroll", new { returnUrl });
+        }
+
+        return ResolvePostAuthRedirect(returnUrl);
     }
 
     /// <summary>

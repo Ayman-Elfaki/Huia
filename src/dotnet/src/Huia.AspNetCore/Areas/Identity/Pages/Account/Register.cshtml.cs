@@ -87,7 +87,7 @@ public sealed class RegisterModel(
         if (!(Tenant?.Authentication.EmailAndPassword.RequireConfirmedEmail ?? true))
         {
             await password.SignInManager.SignInAsync(user, isPersistent: false);
-            return ResolvePostAuthRedirect(ReturnUrl);
+            return await ResolvePostSignUpRedirectAsync(user, ReturnUrl);
         }
 
         var rawToken = await password.UserManager.GenerateEmailConfirmationTokenAsync(user);

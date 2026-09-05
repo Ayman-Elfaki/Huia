@@ -6,18 +6,7 @@
     <div class="alert alert-destructive" role="alert" data-testid="passkeys-error">@Model.ErrorMessage</div>
 }
 
-@if (Model.NewRecoveryCodes.Count > 0)
-{
-    <div class="alert" role="status" data-testid="recovery-codes">
-        <p>@Localizer["Passkey.RecoveryCodesIntro"]</p>
-        <ul class="huia-recovery-codes">
-            @foreach (var code in Model.NewRecoveryCodes)
-            {
-                <li><code>@code</code></li>
-            }
-        </ul>
-    </div>
-}
+<script type="application/json" data-huia-passkey-strings>@Html.Raw(Model.StringsJson)</script>
 
 <section class="huia-passkey-list" data-huia-passkey data-endpoint="." data-mode="manage" data-testid="passkey-list">
     @Html.AntiForgeryToken()
@@ -32,41 +21,45 @@
             @foreach (var passkey in Model.Passkeys)
             {
                 <li class="huia-passkey-row" data-testid="passkey-row">
-                    <div>
-                        <span class="huia-passkey-name">@(string.IsNullOrEmpty(passkey.Name) ? Localizer["Passkey.Unnamed"].Value : passkey.Name)</span>
-                        <span class="huia-muted">@passkey.CreatedAt.ToString("d")</span>
+                    <partial name="_PasskeyMark" />
+                    <div class="huia-passkey-meta">
+                        <span class="huia-passkey-name" data-huia-passkey-name="@passkey.Id" role="button" tabindex="0"
+                              title="@Localizer["Passkey.RenameLabel"]">@(string.IsNullOrEmpty(passkey.Name) ? Localizer["Passkey.Unnamed"].Value : passkey.Name)</span>
+                        <span class="huia-muted">
+                            @passkey.CreatedAt.ToString("d")
+                            @if (passkey.IsBackedUp)
+                            {
+                                <span class="huia-passkey-pill" data-testid="passkey-synced">@Localizer["Passkey.Synced"]</span>
+                            }
+                        </span>
                     </div>
-                    <form method="post" asp-page-handler="Delete">
-                        <input type="hidden" name="id" value="@passkey.Id" />
-                        <button type="submit" class="huia-linkbtn" data-testid="passkey-delete">@Localizer["Common.Remove"]</button>
-                    </form>
+                    @if (Model.CanRemove)
+                    {
+                        <form method="post" asp-page-handler="Delete" data-huia-passkey-remove>
+                            <input type="hidden" name="id" value="@passkey.Id" />
+                            <button type="submit" class="huia-linkbtn huia-linkbtn-danger" data-testid="passkey-delete">@Localizer["Common.Remove"]</button>
+                        </form>
+                    }
                 </li>
             }
         </ul>
+
+        @if (!Model.CanRemove)
+        {
+            <p class="huia-muted" data-testid="passkey-only-method">@Localizer["Passkey.OnlyMethod"]</p>
+        }
     }
 
-    <button type="button" class="btn w-full" data-huia-passkey-register data-testid="passkey-register">@Localizer["Passkey.Add"]</button>
+    <button type="button" class="btn w-full" data-huia-passkey-register data-testid="passkey-register">
+        <partial name="_PasskeyMark" />
+        <span>@Localizer["Passkey.Add"]</span>
+    </button>
     <p class="huia-muted huia-passkey-error" role="alert" data-huia-passkey-error hidden></p>
 </section>
 
-@if (Model.IsPasskeySecondFactorAllowed)
+@if (!string.IsNullOrEmpty(Model.ClientHomeUrl))
 {
-    <section class="huia-passkey-2fa">
-        <h2 class="text-base font-semibold">@Localizer["Passkey.TwoFactorHeading"]</h2>
-        <p class="huia-muted">@Localizer["Passkey.TwoFactorIntro"]</p>
-        <form method="post" asp-page-handler="TwoFactor">
-            <input type="hidden" name="enabled" value="@((!Model.TwoFactorEnabled).ToString().ToLowerInvariant())" />
-            @if (Model.TwoFactorEnabled)
-            {
-                <p data-testid="twofactor-state">@string.Format(Localizer["Passkey.TwoFactorOn"].Value, Model.RecoveryCodesLeft)</p>
-                <button type="submit" class="btn-outline w-full" data-testid="twofactor-disable">@Localizer["Passkey.TwoFactorDisable"]</button>
-            }
-            else
-            {
-                <button type="submit" class="btn w-full" data-testid="twofactor-enable" disabled="@(Model.Passkeys.Count == 0)">@Localizer["Passkey.TwoFactorEnable"]</button>
-            }
-        </form>
-    </section>
+    <a class="btn-outline w-full" href="@Model.ClientHomeUrl" data-testid="passkeys-home">@string.Format(Localizer["SignedIn.Continue"].Value, Model.DisplayName)</a>
 }
 
 @section Scripts {

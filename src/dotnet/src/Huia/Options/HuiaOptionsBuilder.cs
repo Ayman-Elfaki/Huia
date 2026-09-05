@@ -68,16 +68,6 @@ public sealed class HuiaOptionsBuilder
         return this;
     }
 
-    /// <summary>Configures the host-wide passkey (WebAuthn) relying-party settings.</summary>
-    /// <param name="configure">The configuration callback.</param>
-    /// <returns>This builder, for chaining.</returns>
-    public HuiaOptionsBuilder ConfigurePasskeys(Action<HuiaPasskeyServerOptions> configure)
-    {
-        ArgumentNullException.ThrowIfNull(configure);
-        configure(Options.Passkey);
-        return this;
-    }
-
     /// <summary>Configures the signing-key lifecycle.</summary>
     /// <param name="configure">The configuration callback.</param>
     /// <returns>This builder, for chaining.</returns>

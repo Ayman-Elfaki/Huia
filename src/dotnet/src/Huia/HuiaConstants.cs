@@ -16,6 +16,15 @@ public static class HuiaConstants
     /// <summary>Token name, under <see cref="PasswordlessLoginProvider"/>, that stores the hashed one-time code.</summary>
     public const string OtpTokenName = "otp";
 
+    /// <summary>Login provider name used for Huia-issued passkey-related user tokens.</summary>
+    public const string PasskeyLoginProvider = "Huia.Passkey";
+
+    /// <summary>
+    /// Token name, under <see cref="PasskeyLoginProvider"/>, set to <c>"1"</c> once an account has been
+    /// shown the post-sign-up passkey enrollment interstitial (so it is offered at most once).
+    /// </summary>
+    public const string EnrollPromptedTokenName = "enroll-prompted";
+
     /// <summary>Names of the authorization policies Huia registers.</summary>
     public static class Policies
     {
@@ -40,9 +49,10 @@ public static class HuiaConstants
         public const string Flow = "huia.flow";
 
         /// <summary>
-        /// The short-lived transient cookie that carries the pending second-factor user and the passkey
-        /// ceremony challenge (ASP.NET Core Identity's <c>TwoFactorUserId</c> scheme). <c>SameSite=Lax</c>
-        /// so it survives the top-level navigation from <c>/connect/authorize</c> to the login page.
+        /// The short-lived transient cookie that carries the passkey attestation / assertion ceremony
+        /// state (ASP.NET Core Identity's <c>TwoFactorUserId</c> scheme, which its passkey helpers reuse).
+        /// <c>SameSite=Lax</c> so it survives the top-level navigation from <c>/connect/authorize</c> to
+        /// the login page.
         /// </summary>
         public const string TwoFactorUser = "huia.2fa-user";
 
@@ -123,8 +133,5 @@ public static class HuiaConstants
 
         /// <summary>Passkey (WebAuthn / FIDO2) assertion.</summary>
         public const string Passkey = "passkey";
-
-        /// <summary>Multiple factors were presented (for example a password followed by a passkey step-up).</summary>
-        public const string MultiFactor = "mfa";
     }
 }

@@ -27,8 +27,8 @@ public enum HuiaAuthFlow
     ExternalLogin = 3,
 
     /// <summary>
-    /// Passkey (WebAuthn) sign-in — a discoverable primary assertion, or a step-up second factor after a
-    /// password sign-in. Possession of the credential is the confirmed factor.
+    /// Passkey (WebAuthn) sign-in — a discoverable, usernameless assertion. Possession of the credential
+    /// is the confirmed factor.
     /// </summary>
     Passkey = 4,
 }

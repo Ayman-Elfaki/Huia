@@ -436,9 +436,6 @@
   <data name="Passkey.SignIn" xml:space="preserve">
     <value>تسجيل الدخول بمفتاح مرور</value>
   </data>
-  <data name="Passkey.Unsupported" xml:space="preserve">
-    <value>لا يمكن لهذا المتصفح تسجيل الدخول بمفتاح مرور.</value>
-  </data>
   <data name="Passkey.Failed" xml:space="preserve">
     <value>تعذّر استخدام مفتاح المرور. حاول مرة أخرى أو اختر طريقة أخرى.</value>
   </data>
@@ -460,58 +457,55 @@
   <data name="Passkey.Add" xml:space="preserve">
     <value>إضافة مفتاح مرور</value>
   </data>
-  <data name="Passkey.NamePrompt" xml:space="preserve">
-    <value>سمِّ مفتاح المرور هذا (مثل "حاسوب العمل")</value>
+  <data name="Passkey.EnrollTitle" xml:space="preserve">
+    <value>تسجيل دخول أسرع</value>
   </data>
-  <data name="Passkey.CannotRemoveLast" xml:space="preserve">
-    <value>لا يمكنك إزالة آخر مفتاح مرور بينما يُطلب كعامل ثانٍ.</value>
+  <data name="Passkey.EnrollHeading" xml:space="preserve">
+    <value>اجعل المرة القادمة فورية</value>
   </data>
-  <data name="Passkey.NeedOneBeforeTwoFactor" xml:space="preserve">
-    <value>سجّل مفتاح مرور قبل طلبه كعامل ثانٍ.</value>
+  <data name="Passkey.EnrollIntro" xml:space="preserve">
+    <value>سجّل الدخول ببصمتك أو وجهك أو قفل الشاشة — دون أي كتابة.</value>
   </data>
-  <data name="Passkey.TwoFactorHeading" xml:space="preserve">
-    <value>المصادقة الثنائية</value>
+  <data name="Passkey.EnrollAction" xml:space="preserve">
+    <value>إعداد مفتاح مرور</value>
   </data>
-  <data name="Passkey.TwoFactorIntro" xml:space="preserve">
-    <value>اطلب مفتاح مرور بعد كلمة المرور عند تسجيل الدخول.</value>
+  <data name="Passkey.EnrollSkip" xml:space="preserve">
+    <value>تخطي الآن</value>
   </data>
-  <data name="Passkey.TwoFactorEnable" xml:space="preserve">
-    <value>طلب مفتاح مرور كعامل ثانٍ</value>
+  <data name="Passkey.EnrollLater" xml:space="preserve">
+    <value>لا بأس — يمكنك إضافة واحد لاحقًا من حسابك.</value>
   </data>
-  <data name="Passkey.TwoFactorDisable" xml:space="preserve">
-    <value>إيقاف طلب عامل ثانٍ</value>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>إلغاء</value>
   </data>
-  <data name="Passkey.TwoFactorOn" xml:space="preserve">
-    <value>يُطلب مفتاح مرور كعامل ثانٍ. تبقّى {0} من رموز الاسترداد.</value>
+  <data name="Passkey.Synced" xml:space="preserve">
+    <value>متزامن</value>
   </data>
-  <data name="Passkey.RecoveryCodesIntro" xml:space="preserve">
-    <value>احفظ رموز الاسترداد هذه في مكان آمن. يُستخدم كل رمز مرة واحدة إذا فقدت مفتاح المرور.</value>
+  <data name="Passkey.Device.Platform" xml:space="preserve">
+    <value>هذا الجهاز</value>
   </data>
-  <data name="LoginWith2fa.Title" xml:space="preserve">
-    <value>تسجيل الدخول بخطوتين</value>
+  <data name="Passkey.Device.Phone" xml:space="preserve">
+    <value>الهاتف</value>
   </data>
-  <data name="LoginWith2fa.Heading" xml:space="preserve">
-    <value>أكِّد هويتك</value>
+  <data name="Passkey.Device.SecurityKey" xml:space="preserve">
+    <value>مفتاح أمان</value>
   </data>
-  <data name="LoginWith2fa.Intro" xml:space="preserve">
-    <value>يتطلب حسابك مفتاح مرور بعد كلمة المرور.</value>
+  <data name="Passkey.Device.Fallback" xml:space="preserve">
+    <value>مفتاح مرور</value>
   </data>
-  <data name="LoginWith2fa.UsePasskey" xml:space="preserve">
-    <value>استخدم مفتاح المرور</value>
+  <data name="Passkey.RenameLabel" xml:space="preserve">
+    <value>اسم مفتاح المرور</value>
   </data>
-  <data name="LoginWith2fa.RememberMachine" xml:space="preserve">
-    <value>لا تسأل مرة أخرى على هذا الجهاز</value>
+  <data name="Passkey.RemoveConfirm" xml:space="preserve">
+    <value>إزالة مفتاح المرور هذا؟</value>
   </data>
-  <data name="LoginWith2fa.UseRecoveryCode" xml:space="preserve">
-    <value>استخدم رمز استرداد بدلاً من ذلك</value>
+  <data name="Passkey.RemoveConfirmYes" xml:space="preserve">
+    <value>إزالة</value>
   </data>
-  <data name="LoginWith2fa.RecoveryCode" xml:space="preserve">
-    <value>رمز الاسترداد</value>
+  <data name="Passkey.OnlyMethod" xml:space="preserve">
+    <value>مفتاح المرور هذا هو طريقتك الوحيدة لتسجيل الدخول. أضف طريقة أخرى قبل إزالته.</value>
   </data>
-  <data name="LoginWith2fa.Verify" xml:space="preserve">
-    <value>تحقّق</value>
-  </data>
-  <data name="LoginWith2fa.RecoveryInvalid" xml:space="preserve">
-    <value>رمز الاسترداد غير صالح.</value>
+  <data name="Passkey.EnrollReassure" xml:space="preserve">
+    <value>لا تزال كلمة المرور تعمل.</value>
   </data>
 </root>

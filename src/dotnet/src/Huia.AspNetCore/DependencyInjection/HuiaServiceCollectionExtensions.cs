@@ -50,7 +50,7 @@ public static class HuiaServiceCollectionExtensions
         services.AddSingleton(Options.Options.Create(options));
 
         services.AddHuiaMultiTenancy(options);
-        services.AddHuiaIdentity(options);
+        services.AddHuiaIdentity();
         services.AddHuiaCookieHardening(requireSecure: !options.DisableTransportSecurityRequirement);
         services.AddHuiaPerTenantAuthentication();
         services.AddHuiaPerTenantIdentityOptions(options);
@@ -78,6 +78,7 @@ public static class HuiaServiceCollectionExtensions
 
         services.AddScoped<HuiaCspNonce>();
         services.AddScoped<IHuiaCspNonce>(sp => sp.GetRequiredService<HuiaCspNonce>());
+        services.AddScoped<Huia.AspNetCore.Identity.HuiaPasskeyRegistrar>();
         services.AddOptions<HuiaSecurityHeadersOptions>();
 
         // Passwordless SMS + shared flow services (always on; hosts replace the SMS / CAPTCHA senders).

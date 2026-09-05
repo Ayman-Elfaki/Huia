@@ -164,7 +164,7 @@ public sealed class VerifyOtpModel(
             [new Claim(HuiaConstants.ClaimTypes.AuthenticationMethod, HuiaConstants.AuthenticationMethods.Sms)]);
         await events.PublishAsync(new UserLoggedInEvent(tenantId, user.Id, HuiaConstants.AuthenticationMethods.Sms, null, timeProvider.GetUtcNow()));
 
-        return ResolvePostAuthRedirect(returnUrl);
+        return await ResolvePostSignUpRedirectAsync(user, returnUrl);
     }
 
     /// <summary>Re-issues a code against the same subject, then redirects back to this page.</summary>

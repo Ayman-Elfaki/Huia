@@ -443,12 +443,31 @@
     margin-inline-start: 0.5rem;
   }
 
-  /* Passkey sign-in / management */
+  /* ---- Passkey sign-in / enrollment / management ---- */
+
+  .huia-passkey-mark {
+    inline-size: 1.1em;
+    block-size: 1.1em;
+    flex: none;
+  }
+
+  /* Login: the fast path. A slim outlined button leads, then a hairline before the forms. */
   .huia-passkey {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-block: 0.75rem;
+  }
+
+  .huia-passkey[data-mode="signin"] > .huia-divider {
+    margin-block: 0.25rem 0;
+  }
+
+  .huia-passkey [data-huia-passkey-signin],
+  .huia-passkey-list [data-huia-passkey-register] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
   }
 
   .huia-passkey-error {
@@ -456,27 +475,30 @@
     font-size: 0.875rem;
   }
 
-  .huia-recovery {
-    margin-block-start: 0.75rem;
-    font-size: 0.875rem;
+  /* Enrollment: a positive "one more thing" moment. */
+  .huia-passkey-hero {
+    display: flex;
+    justify-content: center;
+    color: var(--primary);
   }
 
-  .huia-recovery > summary {
-    cursor: pointer;
-    color: var(--muted-foreground);
+  .huia-passkey-hero .huia-passkey-mark {
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
   }
 
-  .huia-recovery > .form {
-    margin-block-start: 0.75rem;
+  .huia-passkey-enroll {
+    margin-block-start: 0.5rem;
+    align-items: stretch;
+    text-align: center;
   }
 
-  .huia-recovery-codes {
-    margin: 0.5rem 0 0;
-    padding-inline-start: 1.25rem;
-    font-family: var(--font-mono);
-    line-height: 1.7;
+  .huia-passkey-enroll > [data-huia-passkey-skip-form] {
+    display: flex;
+    justify-content: center;
   }
 
+  /* Management list. */
   .huia-passkeys {
     list-style: none;
     margin: 0.5rem 0;
@@ -489,28 +511,78 @@
   .huia-passkey-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    gap: 0.625rem;
     padding: 0.625rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
   }
 
-  .huia-passkey-row > div {
+  .huia-passkey-row > .huia-passkey-mark {
+    color: var(--muted-foreground);
+  }
+
+  .huia-passkey-meta {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    flex: 1;
+    gap: 0.15rem;
+  }
+
+  .huia-passkey-meta > .huia-muted {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
   }
 
   .huia-passkey-name {
     font-weight: 500;
+    cursor: text;
+    border-radius: 0.25rem;
   }
 
-  .huia-passkey-2fa {
-    margin-block-start: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  .huia-passkey-name:hover {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
   }
+
+  .huia-passkey-name > .input {
+    inline-size: 100%;
+    min-height: 2rem;
+  }
+
+  .huia-passkey-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .huia-passkey-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+  }
+
+  .huia-linkbtn-danger {
+    color: var(--destructive);
+  }
+
+  .huia-linkbtn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
 }
 
 /*
@@ -525,6 +597,20 @@
 }
 
 html:not([data-js]) .huia-js-only {
+  display: none !important;
+}
+
+/*
+ * `<html data-webauthn>` is set by the same pre-paint script when `window.PublicKeyCredential` exists.
+ * The passkey affordances are hidden before first paint when it is absent — no flash, no layout
+ * shift. The enrollment page is the exception: only its "set up" button is hidden (the "Not now"
+ * form stays reachable, and passkey.js auto-submits it).
+ */
+html:not([data-webauthn]) [data-huia-passkey]:not([data-mode="enroll"]) {
+  display: none !important;
+}
+
+html:not([data-webauthn]) [data-huia-passkey-enroll] {
   display: none !important;
 }
 

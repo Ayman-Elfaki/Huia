@@ -113,7 +113,7 @@ public sealed class CompleteProfileModel(
         await events.PublishAsync(new UserLoggedInEvent(
             tenantId, user.Id, claims[0].Value, null, timeProvider.GetUtcNow()));
 
-        return ResolvePostAuthRedirect(returnUrl);
+        return await ResolvePostSignUpRedirectAsync(user, returnUrl);
     }
 
     private async Task<HuiaUser?> CompletePhoneSignupAsync(HuiaUserManager userManager, string tenantId, string pendingId, AuthFlowState state)

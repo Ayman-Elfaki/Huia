@@ -8,15 +8,15 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var databaseProvider = builder.Configuration.GetValue("Huia:Database", "Sqlite")!;
+var databaseProvider = builder.Configuration.GetValue("Huia:Database", "Sqlite");
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
-var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310")!;
-var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000")!;
-var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001")!;
+var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310");
+var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000");
+var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001");
 // The huia-nuxt module's own E2E playground (EnableE2E only).
-var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUrl", "http://localhost:3030")!;
+var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUrl", "http://localhost:3030");
 // Huia.External is the mock upstream IdP the "todo" tenant's external-login button federates to.
-var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
+var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320");
 
 // A single shared in-memory SQLite connection kept open for the process lifetime.
 SqliteConnection? sqliteConnection = null;
@@ -53,8 +53,6 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
 
     huia.ConfigureEmail(email => builder.Configuration.GetSection("Huia:Email").Bind(email));
     huia.ConfigureSms(sms => sms.LogCodesToLogger = builder.Environment.IsDevelopment());
-    // The relying-party id defaults to the request host, which is right for this single-host sample.
-    huia.ConfigurePasskeys(passkey => passkey.RelyingPartyName = "Huia");
     huia.ConfigureKeys(keys => keys.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
     huia.ConfigureCleanup(cleanup => cleanup.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
 

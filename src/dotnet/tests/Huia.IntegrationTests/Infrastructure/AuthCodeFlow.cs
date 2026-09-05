@@ -49,7 +49,7 @@ public sealed partial class AuthCodeFlow(HuiaTestHost host, string tenant, strin
         }));
 
         postLogin.StatusCode.ShouldBe(HttpStatusCode.Redirect, await SafeBody(postLogin));
-        var backToAuthorize = postLogin.Headers.Location!.ToString();
+        var backToAuthorize = await SkipPasskeyEnrollAsync(postLogin.Headers.Location!.ToString());
 
         var toCallback = await _client.GetAsync(MakeAbsoluteLocal(backToAuthorize));
         toCallback.StatusCode.ShouldBe(HttpStatusCode.Redirect, await SafeBody(toCallback));
@@ -113,6 +113,34 @@ public sealed partial class AuthCodeFlow(HuiaTestHost host, string tenant, strin
         }));
 
         return await postLogin.Content.ReadAsStringAsync();
+    }
+
+    /// <summary>
+    /// A first interactive sign-in on a passkey-enabled tenant is redirected once to the enrollment
+    /// interstitial. A relying-party integration does not care about it — follow the redirect and click
+    /// "Skip for now", then carry on to wherever that lands (the original authorize URL).
+    /// </summary>
+    private async Task<string> SkipPasskeyEnrollAsync(string location)
+    {
+        if (!location.Contains("passkeyenroll", StringComparison.OrdinalIgnoreCase))
+        {
+            return location;
+        }
+
+        var page = await _client.GetStringAsync(MakeAbsoluteLocal(location));
+        var antiforgery = ExtractAntiforgeryToken(page);
+        var returnUrl = ExtractQueryValue(location, "returnUrl") ?? "/";
+
+        var skip = await _client.PostAsync(
+            MakeAbsoluteLocal($"/{tenant}/identity/account/passkeyenroll?handler=Skip"),
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["ReturnUrl"] = returnUrl,
+                ["__RequestVerificationToken"] = antiforgery,
+            }));
+
+        skip.StatusCode.ShouldBe(HttpStatusCode.Redirect, await SafeBody(skip));
+        return skip.Headers.Location!.ToString();
     }
 
     private string MakeAbsoluteLocal(string location) =>

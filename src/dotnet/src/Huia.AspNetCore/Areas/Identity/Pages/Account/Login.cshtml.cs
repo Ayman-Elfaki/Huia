@@ -97,15 +97,7 @@ public sealed class LoginModel(
             {
                 await events.PublishAsync(new UserLoggedInEvent(
                     tenantAccessor.RequireCurrentTenantId(), user.Id, HuiaConstants.AuthenticationMethods.Password, null, timeProvider.GetUtcNow()));
-                return ResolvePostAuthRedirect(ReturnUrl);
-            }
-
-            if (result.RequiresTwoFactor)
-            {
-                // The password step stored a pending-2FA cookie; carry the account id in the protected
-                // flow token too, because the passkey ceremony overwrites that cookie (see LoginWith2fa).
-                var flow = returnUrlProtector.Tokenize(new AuthFlowState { ReturnUrl = ReturnUrl, UserId = user.Id });
-                return RedirectToPage("./LoginWith2fa", new { flow, rememberMe = Input.RememberMe });
+                return await ResolvePostSignUpRedirectAsync(user, ReturnUrl);
             }
 
             if (result.IsLockedOut)

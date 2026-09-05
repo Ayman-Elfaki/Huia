@@ -122,7 +122,12 @@ public static class HuiaEndpointRouteBuilderExtensions
                 }
 
                 var page = context.User.Identity?.IsAuthenticated == true ? "signedin" : "login";
-                return Http.Results.Redirect($"{context.Request.PathBase}/identity/account/{page}");
+
+                // Carry a pending return URL (typically a /connect/authorize the client linked through
+                // the tenant root) onto the account UI so the flow resumes once the user is signed in.
+                var returnUrl = context.Request.Query["ReturnUrl"].ToString();
+                var suffix = string.IsNullOrEmpty(returnUrl) ? string.Empty : $"?ReturnUrl={System.Uri.EscapeDataString(returnUrl)}";
+                return Http.Results.Redirect($"{context.Request.PathBase}/identity/account/{page}{suffix}");
             }
 
             var tenant = tenantAccessor.CurrentTenantId()

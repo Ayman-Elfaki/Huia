@@ -26,9 +26,9 @@ Razor Pages (`Areas/Identity/Pages/Account`), English + Arabic (RTL), one commit
 
 | Page | Notes |
 |---|---|
-| `login` | one page, tabs for password + phone when both are enabled; a "sign in with a passkey" button and external-provider buttons below |
-| `loginwith2fa` | passkey (or recovery-code) step-up after a password sign-in for an account that requires a second factor |
-| `passkeys` | cookie-authenticated passkey management (list / add / rename / delete, the second-factor toggle) — the browser-user counterpart of `manage/passkeys/*` |
+| `login` | passkey-first when the tenant enables passkeys (feature-detected, silent fallback); tabs for password + phone when both are enabled; external-provider buttons below |
+| `passkeyenroll` | one-time, skippable "set up a passkey" prompt shown after a first sign-in on a passkey tenant |
+| `passkeys` | cookie-authenticated passkey management (list / add / inline-rename / two-step remove) — the browser-user counterpart of `manage/passkeys/*` |
 | `register` | 404 when `AllowSelfServiceRegistration` is off; auto-signs-in when the tenant does not `RequireConfirmedEmail`, else sends a confirmation link |
 | `verifyotp` | step 2 of the phone flow — segmented code input sized from `CodeLength`, resend cooldown |
 | `completeprofile` | collects a name for a phone auto-provisioning signup or a first-time external sign-in — the account is created **here**, never with blank names earlier |
@@ -47,11 +47,10 @@ caller is resolved from the token `sub`.
 | `GET/PUT manage/email` + `POST manage/email/confirm` | a `Phone` account cannot set an email |
 | `GET/PUT manage/phone` + `POST manage/phone/confirm` + `DELETE manage/phone` | a `Password` / `External` account cannot set a phone; a `Phone` account cannot remove it (a phone-user's username tracks the number in lock-step) |
 | `GET manage/external-logins` + `DELETE manage/external-logins/{provider}/{key}` | an unlink is refused when it would leave no other sign-in method |
-| `POST manage/passkeys/creation-options` + `POST/GET/PATCH/DELETE manage/passkeys[/{id}]` | passkey registration and management; `DELETE` returns `409` for the last passkey while the second factor is on |
-| `GET/PUT manage/passkeys/two-factor` + `POST manage/passkeys/recovery-codes` | enable / disable the passkey second factor; enabling returns ten recovery codes once |
+| `POST manage/passkeys/creation-options` + `POST/GET/PATCH/DELETE manage/passkeys[/{id}]` | passkey registration and management; `DELETE` returns `409` when the passkey is the account's only sign-in method |
 
 Passkey ceremonies also have anonymous routes under `identity/account/passkey/*`
-(`assertion-options`, `assertion`, `2fa-options`, `2fa`) — antiforgery- and origin-checked, mapped
+(`assertion-options`, `assertion`) — antiforgery- and origin-checked, mapped
 with the account UI. See [Passkeys](/dotnet/passkeys).
 
 ## Admin (`/master/admin` in the sample)

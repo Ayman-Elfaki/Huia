@@ -19,7 +19,10 @@
 
 @if (Model.IsPasskeyLoginEnabled)
 {
-    <a class="huia-linkbtn" asp-page="./Passkeys" data-testid="signed-in-passkeys">@Localizer["Passkey.ManageLink"]</a>
+    <a class="huia-linkbtn huia-linkbtn-icon" asp-page="./Passkeys" data-testid="signed-in-passkeys">
+        <partial name="_PasskeyMark" />
+        <span>@Localizer["Passkey.ManageLink"]</span>
+    </a>
 }
 
 <form method="post" asp-page="./Logout">

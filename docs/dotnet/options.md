@@ -86,9 +86,10 @@ huia.AddTenant("acme", tenant =>
         })
         .UsePasskeyLogin(passkey =>
         {
+            passkey.RelyingPartyId = "acme.example.com";  // null (default) → the request host
+            passkey.AllowedOrigins.Add("https://app.acme.example.com");  // extra origins beyond the request origin
             passkey.UserVerification = PasskeyUserVerification.Required;   // Preferred | Required | Discouraged
             passkey.AuthenticatorAttachment = PasskeyAuthenticatorAttachment.Any;  // Any | Platform | CrossPlatform
-            passkey.AllowSecondFactor = true;            // may a user require a passkey as a 2nd factor?
             passkey.AuthenticatorTimeout = TimeSpan.FromMinutes(2);       // 30s – 10m
         });
 
@@ -100,10 +101,10 @@ huia.AddTenant("acme", tenant =>
 });
 ```
 
-The passkey **relying-party identity** is host-wide (Huia serves every tenant from one origin), so it
-is set once with `huia.ConfigurePasskeys(p => { p.RelyingPartyId = …; p.RelyingPartyName = …; p.AllowedOrigins.Add(…); })`
-rather than per tenant. Leaving `RelyingPartyId` null uses the request host. See
-[Passkeys](/dotnet/passkeys).
+The passkey **relying-party identity** (`RelyingPartyId`, `AllowedOrigins`) is per tenant — there is
+no host-wide passkey configuration. Left unset the RP id is the request host and origin validation is
+the framework's same-origin check. Every credential is a discoverable resident key. See
+[Passkeys](/dotnet/passkeys) for the RP-id-vs-host constraint.
 
 `tenant.Authentication.DisableRegistration()` turns off every anonymous account-creation path in one
 call: `AllowSelfServiceRegistration` and, when the phone flow is enabled, `AllowAutoProvisioning` —

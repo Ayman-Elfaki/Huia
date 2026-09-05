@@ -27,7 +27,6 @@ public class PasskeyOptionsTests
 
         passkey.UserVerification.ShouldBe(PasskeyUserVerification.Required);
         passkey.AuthenticatorAttachment.ShouldBe(PasskeyAuthenticatorAttachment.Any);
-        passkey.AllowSecondFactor.ShouldBeTrue();
         passkey.AuthenticatorTimeout.ShouldBe(TimeSpan.FromMinutes(2));
     }
 
@@ -55,11 +54,13 @@ public class PasskeyOptionsTests
         Should.NotThrow(() => options.Validate());
     }
 
-    [Fact]
-    public void A_relying_party_id_with_a_scheme_or_port_is_rejected()
+    [Theory]
+    [InlineData("https://id.example.test")]
+    [InlineData("id.example.test:5001")]
+    [InlineData("id.example.test/path")]
+    public void A_per_tenant_relying_party_id_that_is_not_a_bare_host_is_rejected(string relyingPartyId)
     {
-        var options = OptionsWithPasskeyTenant();
-        options.Passkey.RelyingPartyId = "https://id.example.test";
+        var options = OptionsWithPasskeyTenant(p => p.RelyingPartyId = relyingPartyId);
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("RelyingPartyId", StringComparison.Ordinal));
@@ -68,18 +69,19 @@ public class PasskeyOptionsTests
     [Fact]
     public void A_bare_host_relying_party_id_and_absolute_allowed_origins_validate()
     {
-        var options = OptionsWithPasskeyTenant();
-        options.Passkey.RelyingPartyId = "id.example.test";
-        options.Passkey.AllowedOrigins.Add("https://app.example.test");
+        var options = OptionsWithPasskeyTenant(p =>
+        {
+            p.RelyingPartyId = "acme.example.test";
+            p.AllowedOrigins.Add("https://app.example.test");
+        });
 
         Should.NotThrow(() => options.Validate());
     }
 
     [Fact]
-    public void An_allowed_origin_with_a_path_is_rejected()
+    public void A_per_tenant_allowed_origin_with_a_path_is_rejected()
     {
-        var options = OptionsWithPasskeyTenant();
-        options.Passkey.AllowedOrigins.Add("https://app.example.test/callback");
+        var options = OptionsWithPasskeyTenant(p => p.AllowedOrigins.Add("https://app.example.test/callback"));
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("AllowedOrigins", StringComparison.Ordinal));

@@ -436,9 +436,6 @@
   <data name="Passkey.SignIn" xml:space="preserve">
     <value>Sign in with a passkey</value>
   </data>
-  <data name="Passkey.Unsupported" xml:space="preserve">
-    <value>This browser cannot sign in with a passkey.</value>
-  </data>
   <data name="Passkey.Failed" xml:space="preserve">
     <value>That passkey could not be used. Try again or choose another method.</value>
   </data>
@@ -460,58 +457,55 @@
   <data name="Passkey.Add" xml:space="preserve">
     <value>Add a passkey</value>
   </data>
-  <data name="Passkey.NamePrompt" xml:space="preserve">
-    <value>Name this passkey (for example "Work laptop")</value>
+  <data name="Passkey.EnrollTitle" xml:space="preserve">
+    <value>Faster sign-in</value>
   </data>
-  <data name="Passkey.CannotRemoveLast" xml:space="preserve">
-    <value>You cannot remove your last passkey while it is required as a second factor.</value>
+  <data name="Passkey.EnrollHeading" xml:space="preserve">
+    <value>Make next time instant</value>
   </data>
-  <data name="Passkey.NeedOneBeforeTwoFactor" xml:space="preserve">
-    <value>Register a passkey before requiring it as a second factor.</value>
+  <data name="Passkey.EnrollIntro" xml:space="preserve">
+    <value>Sign in with your fingerprint, face or screen lock — nothing to type.</value>
   </data>
-  <data name="Passkey.TwoFactorHeading" xml:space="preserve">
-    <value>Two-factor authentication</value>
+  <data name="Passkey.EnrollAction" xml:space="preserve">
+    <value>Set up a passkey</value>
   </data>
-  <data name="Passkey.TwoFactorIntro" xml:space="preserve">
-    <value>Require a passkey after your password when signing in.</value>
+  <data name="Passkey.EnrollSkip" xml:space="preserve">
+    <value>Skip for now</value>
   </data>
-  <data name="Passkey.TwoFactorEnable" xml:space="preserve">
-    <value>Require a passkey as a second factor</value>
+  <data name="Passkey.EnrollLater" xml:space="preserve">
+    <value>No problem — you can add one later from your account.</value>
   </data>
-  <data name="Passkey.TwoFactorDisable" xml:space="preserve">
-    <value>Stop requiring a second factor</value>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>Cancel</value>
   </data>
-  <data name="Passkey.TwoFactorOn" xml:space="preserve">
-    <value>A passkey is required as a second factor. {0} recovery codes remain.</value>
+  <data name="Passkey.Synced" xml:space="preserve">
+    <value>Synced</value>
   </data>
-  <data name="Passkey.RecoveryCodesIntro" xml:space="preserve">
-    <value>Store these recovery codes somewhere safe. Each one can be used once if you lose your passkey.</value>
+  <data name="Passkey.Device.Platform" xml:space="preserve">
+    <value>This device</value>
   </data>
-  <data name="LoginWith2fa.Title" xml:space="preserve">
-    <value>Two-factor sign-in</value>
+  <data name="Passkey.Device.Phone" xml:space="preserve">
+    <value>Phone</value>
   </data>
-  <data name="LoginWith2fa.Heading" xml:space="preserve">
-    <value>Confirm it's you</value>
+  <data name="Passkey.Device.SecurityKey" xml:space="preserve">
+    <value>Security key</value>
   </data>
-  <data name="LoginWith2fa.Intro" xml:space="preserve">
-    <value>Your account requires a passkey after your password.</value>
+  <data name="Passkey.Device.Fallback" xml:space="preserve">
+    <value>Passkey</value>
   </data>
-  <data name="LoginWith2fa.UsePasskey" xml:space="preserve">
-    <value>Use your passkey</value>
+  <data name="Passkey.RenameLabel" xml:space="preserve">
+    <value>Passkey name</value>
   </data>
-  <data name="LoginWith2fa.RememberMachine" xml:space="preserve">
-    <value>Don't ask again on this device</value>
+  <data name="Passkey.RemoveConfirm" xml:space="preserve">
+    <value>Remove this passkey?</value>
   </data>
-  <data name="LoginWith2fa.UseRecoveryCode" xml:space="preserve">
-    <value>Use a recovery code instead</value>
+  <data name="Passkey.RemoveConfirmYes" xml:space="preserve">
+    <value>Remove</value>
   </data>
-  <data name="LoginWith2fa.RecoveryCode" xml:space="preserve">
-    <value>Recovery code</value>
+  <data name="Passkey.OnlyMethod" xml:space="preserve">
+    <value>This passkey is your only way to sign in. Add another sign-in method before removing it.</value>
   </data>
-  <data name="LoginWith2fa.Verify" xml:space="preserve">
-    <value>Verify</value>
-  </data>
-  <data name="LoginWith2fa.RecoveryInvalid" xml:space="preserve">
-    <value>That recovery code is not valid.</value>
+  <data name="Passkey.EnrollReassure" xml:space="preserve">
+    <value>Your password still works.</value>
   </data>
 </root>

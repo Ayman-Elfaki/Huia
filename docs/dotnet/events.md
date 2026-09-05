@@ -53,7 +53,7 @@ only masked (`PhoneNumberMask`, last four digits retained — see `IPhoneNumberS
 | Event | Fields | Raised when |
 |---|---|---|
 | `UserRegisteredEvent` | `UserId`, `UserName`, `Email?`, `Method` | A new account is persisted — `Method` is `password`, `sms`, or an external provider name. |
-| `UserLoggedInEvent` | `UserId`, `Method`, `ClientId?` | A sign-in succeeds, interactively or via `/connect/token`. `Method` is `pwd`, `sms`, `passkey`, `mfa` (a password then a passkey step-up), or an external provider name. `ClientId` is the OAuth client the sign-in was for, when there is one. |
+| `UserLoggedInEvent` | `UserId`, `Method`, `ClientId?` | A sign-in succeeds, interactively or via `/connect/token`. `Method` is `pwd`, `sms`, `passkey`, or an external provider name. `ClientId` is the OAuth client the sign-in was for, when there is one. |
 | `PasswordChangedEvent` | `UserId`, `Reset` | A password is set or changed — `Reset` is `true` for a forgot-password flow, `false` for an authenticated change via `/manage/password`. |
 | `OtpRequestedEvent` | `UserId?`, `PhoneNumberMask`, `Delivered` | A one-time code is generated and a delivery attempt made. `UserId` is `null` when the number has no account yet (auto-provisioning); `Delivered` reflects whether the SMS provider accepted the message. |
 | `OtpVerifiedEvent` | `UserId?`, `PhoneNumberMask` | A one-time code is verified successfully. |

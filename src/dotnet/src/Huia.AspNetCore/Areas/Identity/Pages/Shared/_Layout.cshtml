@@ -19,13 +19,18 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @{
+        // Synchronous, pre-paint: mark that JS ran and whether WebAuthn is available, so the passkey
+        // affordances can be shown/hidden by CSS with no flash or layout shift.
+        const string featureDetect = "document.documentElement.dataset.js='1';if(window.PublicKeyCredential)document.documentElement.dataset.webauthn='1';";
+    }
     @if (!string.IsNullOrEmpty(nonce))
     {
-        <script nonce="@nonce">document.documentElement.dataset.js = "1";</script>
+        <script nonce="@nonce">@Html.Raw(featureDetect)</script>
     }
     else
     {
-        <script>document.documentElement.dataset.js = "1";</script>
+        <script>@Html.Raw(featureDetect)</script>
     }
     <title>@ViewData["Title"] · @heading</title>
     <link rel="stylesheet" href="@(pathBase)/_content/Huia.AspNetCore/css/huia.css" />
