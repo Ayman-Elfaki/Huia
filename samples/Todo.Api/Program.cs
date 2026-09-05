@@ -1,11 +1,19 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
+using OpenIddict.Validation.AspNetCore;
+using Scalar.AspNetCore;
 using Todo.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var huiaBaseUrl = builder.Configuration.GetValue("Huia:BaseUrl", "https://localhost:5310")!;
 var authority = $"{huiaBaseUrl}/todo";
+
+// Where Scalar's "Authorize" flow sends the browser back with the code — must match the redirect URI
+// registered for the "todo-api-docs" client in the identity server. Scalar handles the callback on
+// its own reference route.
+var publicUrl = builder.Configuration.GetValue("Todo:PublicUrl", "http://localhost:5330")!;
+var scalarRedirectUri = $"{publicUrl}/scalar";
 
 var databaseProvider = builder.Configuration.GetValue("Todo:Database", "Sqlite")!;
 builder.Services.AddDbContext<TodoDbContext>(options =>
@@ -22,18 +30,38 @@ builder.Services.AddDbContext<TodoDbContext>(options =>
     }
 });
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+// Validate the access token against the "todo" tenant issuer. OpenIddict fetches the tenant's
+// discovery document + JWKS over HTTP and verifies the JWT locally — no shared key material, so this
+// works as a standalone resource server. Replaces Microsoft's JwtBearer handler.
+builder.Services.AddOpenIddict()
+    .AddValidation(options =>
     {
-        options.Authority = authority;
-        options.RequireHttpsMetadata = builder.Environment.IsProduction();
-        options.MapInboundClaims = false;
-        options.TokenValidationParameters.ValidateAudience = false;
-        options.TokenValidationParameters.NameClaimType = "name";
-        options.TokenValidationParameters.RoleClaimType = "role";
+        options.SetIssuer(authority);
+        options.UseSystemNetHttp();
+        options.UseAspNetCore();
     });
 
+builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
 builder.Services.AddAuthorization();
+
+// OpenAPI document + an OpenID Connect security scheme so the Scalar reference can drive the
+// authorization-code + PKCE flow against the "todo" tenant.
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+{
+    document.Components ??= new OpenApiComponents();
+    document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+    document.Components.SecuritySchemes["oidc"] = new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.OpenIdConnect,
+        OpenIdConnectUrl = new Uri($"{authority}/.well-known/openid-configuration"),
+    };
+    document.Security ??= [];
+    document.Security.Add(new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("oidc", document)] = [],
+    });
+    return Task.CompletedTask;
+}));
 
 var app = builder.Build();
 
@@ -44,6 +72,18 @@ using (var scope = app.Services.CreateScope())
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// /openapi/v1.json + a Scalar reference UI at /scalar wired for OAuth "try it".
+app.MapOpenApi();
+app.MapScalarApiReference(options => options
+    .AddPreferredSecuritySchemes("oidc")
+    .AddAuthorizationCodeFlow("oidc", flow =>
+    {
+        flow.ClientId = "todo-api-docs";
+        flow.Pkce = Pkce.Sha256;
+        flow.SelectedScopes = ["openid", "profile", "email"];
+        flow.WithRedirectUri(scalarRedirectUri);
+    }));
 
 var todos = app.MapGroup("/todos").RequireAuthorization();
 

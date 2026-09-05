@@ -79,6 +79,9 @@
   <data name="Common.Back" xml:space="preserve">
     <value>رجوع</value>
   </data>
+  <data name="Common.BackToApp" xml:space="preserve">
+    <value>العودة إلى {0}</value>
+  </data>
   <data name="Common.Duration.Seconds" xml:space="preserve">
     <value>{0} ثانية</value>
   </data>

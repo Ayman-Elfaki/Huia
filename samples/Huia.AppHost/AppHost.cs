@@ -31,6 +31,18 @@ if (usePostgresVolume)
 var postgres = postgresServer.AddDatabase("huia");
 var todoPostgres = postgresServer.AddDatabase("todo");
 
+// Shared Redis. The Nuxt sample apps (todo-app, admin-app) mount their server-side session/token
+// store on it via Nitro's `redis` storage driver, so sign-in state survives an app restart and is
+// shared across instances. Given a plain redis:// URL because that is what unstorage's driver wants.
+var redis = builder.AddRedis("redis");
+if (!enableE2E)
+{
+    redis = redis.WithDataVolume("huia-redis-data");
+}
+
+var redisUrl = ReferenceExpression.Create(
+    $"redis://{redis.GetEndpoint("tcp").Property(EndpointProperty.Host)}:{redis.GetEndpoint("tcp").Property(EndpointProperty.Port)}");
+
 // Mailpit is the local SMTP sink: it accepts every message on the `smtp` endpoint (no auth, no TLS)
 // and exposes a web UI + REST API on the `http` endpoint. The identity server sends real mail here in
 // `aspire run` and the E2E suite asserts against the REST API. Pinned to the tag CI pre-pulls.
@@ -80,6 +92,11 @@ var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
     .WithEnvironment("Huia__BaseUrl", identityServer.GetEndpoint("https"))
     .WithEnvironment("Todo__Database", "Postgres");
 
+// The externally reachable origin of the API — used to build the Scalar reference's OAuth redirect
+// URI, which must match the redirect URI the identity server registers for the "todo-api-docs" client.
+todoApi.WithEnvironment("Todo__PublicUrl", todoApi.GetEndpoint("http"));
+identityServer.WithEnvironment("Clients__TodoApi__BaseUrl", todoApi.GetEndpoint("http"));
+
 // The admin CLI (device-authorization grant against the master tenant). It runs one command and exits,
 // so it does not start with the rest of the graph — press "Start" in the dashboard to open it in a
 // terminal (e.g. `huia login`, which waits for you to approve the device code in the browser).
@@ -94,6 +111,9 @@ builder.AddViteApp("todo-app", "../Todo.App")
     .WithHttpEndpoint(port: 3000, env: "PORT")
     .WaitFor(identityServer)
     .WaitFor(todoApi)
+    .WithReference(redis)
+    .WaitFor(redis)
+    .WithEnvironment("NUXT_REDIS_URL", redisUrl)
     .WithEnvironment("NUXT_PUBLIC_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
     .WithEnvironment("NUXT_PUBLIC_TODO_API_URL", todoApi.GetEndpoint("http"))
     .WithEnvironment("NUXT_HUIA_AUTH_SESSION_PASSWORD", GenerateRandomUrlSafeString())
@@ -111,6 +131,9 @@ builder.AddViteApp("admin-app", "../Huia.AdminUI")
     // (http://localhost:3001/...) under both `aspire run` and Aspire.Hosting.Testing.
     .WithHttpEndpoint(port: 3001, targetPort: 3001, env: "PORT", isProxied: false)
     .WaitFor(identityServer)
+    .WithReference(redis)
+    .WaitFor(redis)
+    .WithEnvironment("NUXT_REDIS_URL", redisUrl)
     .WithEnvironment("NUXT_PUBLIC_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
     .WithEnvironment("NUXT_HUIA_AUTH_SESSION_PASSWORD", GenerateRandomUrlSafeString())
     .WithEnvironment("NUXT_HUIA_AUTH_CLIENT_SECRET", "huia-admin-ui-secret")

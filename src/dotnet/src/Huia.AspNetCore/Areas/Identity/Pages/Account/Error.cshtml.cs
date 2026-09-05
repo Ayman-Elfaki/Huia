@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Huia.AspNetCore.Flows;
 using Huia.AspNetCore.UI;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
@@ -14,12 +15,17 @@ public sealed class ErrorModel(IStringLocalizer<SharedResource> localizer) : Hui
     /// <summary>A correlation id the user can quote to support.</summary>
     public string RequestId { get; private set; } = string.Empty;
 
+    /// <summary>The tenant's client application home, when one is registered. The only link offered here —
+    /// the sign-in page is not, since whatever OAuth flow led here is no longer valid.</summary>
+    public string? ClientHomeUrl { get; private set; }
+
     /// <summary>Handles the GET (also reached by the exception handler re-execute).</summary>
     public void OnGet()
     {
         ViewData["Title"] = localizer["Error.Title"].Value;
         ViewData["Heading"] = localizer["Error.Title"].Value;
 
+        ClientHomeUrl = TenantClientHome.Resolve(Tenant);
         RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
 
         if (HttpContext.Features.Get<IExceptionHandlerFeature>() is not null)

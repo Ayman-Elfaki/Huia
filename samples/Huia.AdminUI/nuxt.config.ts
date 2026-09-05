@@ -38,6 +38,12 @@ export default defineNuxtConfig({
     componentDir: './app/components/ui',
   },
 
+  // Server-side session/token store. In the Aspire stack this is Redis (shared across instances,
+  // survives an app restart); a bare `npm run dev` falls back to Nitro's in-memory default.
+  nitro: process.env.NUXT_REDIS_URL
+    ? { storage: { 'huia-auth': { driver: 'redis', url: process.env.NUXT_REDIS_URL } } }
+    : {},
+
   // Server-side proxy to the master-tenant APIs; the bearer token is added by
   // server/plugins/api-party-auth.ts and never reaches the browser.
   apiParty: {

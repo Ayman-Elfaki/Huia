@@ -17,6 +17,7 @@
         .wrap { max-width: 480px; margin: 0 auto; padding: 40px 16px; }
         .card { background: #ffffff; border: 1px solid #e4e4e7; border-radius: 14px; padding: 32px; }
         .brand { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a; margin: 0 0 12px; font-weight: 600; }
+        .brand-logo { display: block; height: 28px; width: auto; margin: 0 0 16px; border: 0; }
         h1 { font-size: 21px; line-height: 1.3; margin: 0 0 16px; font-weight: 600; }
         p { font-size: 15px; line-height: 1.6; margin: 0 0 20px; color: #27272a; }
         .btn {
@@ -36,7 +37,14 @@
 <body>
     <div class="wrap">
         <div class="card">
-            <p class="brand">@Model.BrandName</p>
+            @if (!string.IsNullOrEmpty(Model.LogoUrl))
+            {
+                <img class="brand-logo" src="@Model.LogoUrl" alt="@Model.BrandName" height="28" />
+            }
+            else
+            {
+                <p class="brand">@Model.BrandName</p>
+            }
             <h1>@Model.Heading</h1>
             <p>@Model.Body</p>
             <p style="margin-bottom: 0;"><a class="btn" href="@Model.ButtonUrl">@Model.ButtonText</a></p>

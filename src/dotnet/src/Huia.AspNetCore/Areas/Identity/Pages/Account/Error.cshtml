@@ -8,6 +8,9 @@
     <p class="huia-muted" data-testid="error-request-id">@Localizer["Error.RequestId"]: <code>@Model.RequestId</code></p>
 }
 
-<div class="huia-links">
-    <a asp-page="./Login">@Localizer["Error.BackToSignIn"]</a>
-</div>
+@if (!string.IsNullOrEmpty(Model.ClientHomeUrl))
+{
+    <div class="huia-links">
+        <a href="@Model.ClientHomeUrl" data-testid="error-home">@string.Format(Localizer["Common.BackToApp"].Value, Model.DisplayName)</a>
+    </div>
+}
