@@ -1,4 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Finbuckle.MultiTenant.EntityFrameworkCore.Extensions;
 using Finbuckle.MultiTenant.Identity.EntityFrameworkCore;
 using Huia.EntityFrameworkCore.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -51,6 +52,7 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
         RenameIdentityTables(builder);
         RenameOpenIddictTables(builder);
         ApplyTenantScopedIndexes(builder);
+        ConfigurePasskeys(builder);
         ConfigureSigningKeys(builder);
     }
 
@@ -63,6 +65,42 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
         builder.Entity<IdentityUserLogin<string>>().ToTable("HuiaUserLogins");
         builder.Entity<IdentityUserToken<string>>().ToTable("HuiaUserTokens");
         builder.Entity<IdentityRoleClaim<string>>().ToTable("HuiaRoleClaims");
+    }
+
+    /// <summary>
+    /// Configures the passkey (WebAuthn credential) entity deterministically, whether or not the base
+    /// <c>OnModelCreating</c> already mapped it (it does so only when
+    /// <c>IdentityOptions.Stores.SchemaVersion</c> resolves to <c>Version3</c> — true on the DI path,
+    /// not when the context is constructed directly by the model tests or a design-time factory).
+    /// Re-declares the key, the JSON-owned <c>Data</c> column and the user foreign key, renames the
+    /// table, and — when Finbuckle has not already done so — makes the entity multi-tenant so a
+    /// credential is scoped to its tenant on read and stamped on write like every other Identity row.
+    /// </summary>
+    private static void ConfigurePasskeys(ModelBuilder builder)
+    {
+        var passkey = builder.Entity<IdentityUserPasskey<string>>();
+        passkey.ToTable("HuiaUserPasskeys");
+        passkey.HasKey(p => p.CredentialId);
+        passkey.Property(p => p.CredentialId).HasMaxLength(1024);
+        passkey.OwnsOne(p => p.Data, owned => owned.ToJson());
+
+        builder.Entity<HuiaUser>()
+            .HasMany<IdentityUserPasskey<string>>()
+            .WithOne()
+            .HasForeignKey(p => p.UserId)
+            .IsRequired();
+
+        var alreadyMultiTenant = builder.Model
+            .FindEntityType(typeof(IdentityUserPasskey<string>))!
+            .FindProperty("TenantId") is not null;
+
+        if (!alreadyMultiTenant)
+        {
+            passkey.IsMultiTenant().AdjustUniqueIndexes();
+        }
+
+        builder.Entity<IdentityUserPasskey<string>>()
+            .HasIndex(["TenantId", nameof(IdentityUserPasskey<string>.UserId)], "IX_HuiaUserPasskeys_Tenant_User");
     }
 
     private static void RenameOpenIddictTables(ModelBuilder builder)

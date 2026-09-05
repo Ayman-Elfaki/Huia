@@ -53,6 +53,8 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
 
     huia.ConfigureEmail(email => builder.Configuration.GetSection("Huia:Email").Bind(email));
     huia.ConfigureSms(sms => sms.LogCodesToLogger = builder.Environment.IsDevelopment());
+    // The relying-party id defaults to the request host, which is right for this single-host sample.
+    huia.ConfigurePasskeys(passkey => passkey.RelyingPartyName = "Huia");
     huia.ConfigureKeys(keys => keys.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
     huia.ConfigureCleanup(cleanup => cleanup.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
 
@@ -129,6 +131,10 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         // that's no longer declared here.
         tenant.AddRoles("editor", "beta-tester");
 
+        // Passkeys: a discoverable one-tap sign-in and the option to require a passkey as a second
+        // factor after the password.
+        tenant.Authentication.UsePasskeyLogin();
+
         tenant.Authentication.UsePhoneLogin(phone =>
         {
             phone.DefaultCountry = "SA";
@@ -176,6 +182,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         huia.AddTenant("e2e", tenant =>
         {
             tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+            tenant.Authentication.UsePasskeyLogin(passkey => passkey.UserVerification = PasskeyUserVerification.Preferred);
             tenant.Authentication.UsePhoneLogin(p =>
             {
                 p.AllowAutoProvisioning = true;

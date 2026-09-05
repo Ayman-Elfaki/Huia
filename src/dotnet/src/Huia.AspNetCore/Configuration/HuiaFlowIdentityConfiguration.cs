@@ -45,6 +45,10 @@ internal static class HuiaFlowIdentityConfiguration
             .Configure(ApplyDefaultTokenProviders)
             .ConfigurePerTenant<IdentityOptions, HuiaTenantInfo>((identity, _) => ApplyExternalFlow(identity));
 
+        services.AddOptions<IdentityOptions>(HuiaFlowIdentityOptions.Passkey)
+            .Configure(ApplyDefaultTokenProviders)
+            .ConfigurePerTenant<IdentityOptions, HuiaTenantInfo>((identity, _) => ApplyPasskeyFlow(identity));
+
         services.TryAddScoped<HuiaFlowIdentityFactory>();
         services.TryAddScoped<IHuiaFlowIdentityFactory>(sp => sp.GetRequiredService<HuiaFlowIdentityFactory>());
 
@@ -109,6 +113,19 @@ internal static class HuiaFlowIdentityConfiguration
     /// confirmed factor and there is no failed-attempt surface to lock out on.
     /// </summary>
     private static void ApplyExternalFlow(IdentityOptions identity)
+    {
+        identity.SignIn.RequireConfirmedAccount = false;
+        identity.SignIn.RequireConfirmedEmail = false;
+        identity.SignIn.RequireConfirmedPhoneNumber = false;
+        identity.User.RequireUniqueEmail = false;
+    }
+
+    /// <summary>
+    /// Passkey sign-in gates on nothing extra: possession of the credential (registered while
+    /// authenticated) is the confirmed factor, and a WebAuthn assertion has no password-style
+    /// failed-attempt surface to lock out on.
+    /// </summary>
+    private static void ApplyPasskeyFlow(IdentityOptions identity)
     {
         identity.SignIn.RequireConfirmedAccount = false;
         identity.SignIn.RequireConfirmedEmail = false;

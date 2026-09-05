@@ -100,6 +100,14 @@ public sealed class LoginModel(
                 return ResolvePostAuthRedirect(ReturnUrl);
             }
 
+            if (result.RequiresTwoFactor)
+            {
+                // The password step stored a pending-2FA cookie; carry the account id in the protected
+                // flow token too, because the passkey ceremony overwrites that cookie (see LoginWith2fa).
+                var flow = returnUrlProtector.Tokenize(new AuthFlowState { ReturnUrl = ReturnUrl, UserId = user.Id });
+                return RedirectToPage("./LoginWith2fa", new { flow, rememberMe = Input.RememberMe });
+            }
+
             if (result.IsLockedOut)
             {
                 ErrorMessage = localizer["Login.LockedOut"].Value;

@@ -46,6 +46,11 @@ public sealed class HuiaSecurityHeadersOptions
     /// <summary>The <c>Referrer-Policy</c> header value.</summary>
     public string ReferrerPolicy { get; set; } = "no-referrer";
 
-    /// <summary>The <c>Permissions-Policy</c> header value.</summary>
-    public string PermissionsPolicy { get; set; } = "camera=(), microphone=(), geolocation=()";
+    /// <summary>
+    /// The <c>Permissions-Policy</c> header value. The passkey directives are stated explicitly (the
+    /// default already permits them for same-origin) so the account UI's WebAuthn ceremonies survive a
+    /// stricter host policy.
+    /// </summary>
+    public string PermissionsPolicy { get; set; } =
+        "camera=(), microphone=(), geolocation=(), publickey-credentials-get=(self), publickey-credentials-create=(self)";
 }

@@ -17,6 +17,11 @@
     <a class="btn w-full" href="@Model.ClientHomeUrl" data-testid="signed-in-continue">@string.Format(Localizer["SignedIn.Continue"].Value, Model.DisplayName)</a>
 }
 
+@if (Model.IsPasskeyLoginEnabled)
+{
+    <a class="huia-linkbtn" asp-page="./Passkeys" data-testid="signed-in-passkeys">@Localizer["Passkey.ManageLink"]</a>
+}
+
 <form method="post" asp-page="./Logout">
     <button class="btn-outline w-full" type="submit" data-testid="signed-in-sign-out">@Localizer["SignedIn.SignOut"]</button>
 </form>

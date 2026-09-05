@@ -40,6 +40,17 @@ else
     <partial name="_PhoneLoginForm" />
 }
 
+@if (Model.IsPasskeyLoginEnabled)
+{
+    <div class="huia-passkey" data-huia-passkey data-endpoint="@(Model.PathBase)/identity/account/passkey" data-return-url="@Model.ReturnUrl">
+        @Html.AntiForgeryToken()
+        <button type="button" class="btn-outline w-full" data-huia-passkey-signin data-testid="passkey-signin">
+            @Localizer["Passkey.SignIn"]
+        </button>
+        <p class="huia-muted huia-passkey-error" role="alert" data-huia-passkey-error hidden></p>
+    </div>
+}
+
 @if (Model.ExternalProviders.Count > 0)
 {
     <div class="huia-divider">@Localizer["Login.OrContinueWith"]</div>
@@ -76,5 +87,9 @@ else
     {
         <script src="@(Model.PathBase)/_content/Huia.AspNetCore/js/libphonenumber.js" nonce="@CspNonce.Value" defer></script>
         <script src="@(Model.PathBase)/_content/Huia.AspNetCore/js/phone-validate.js" nonce="@CspNonce.Value" defer></script>
+    }
+    @if (Model.IsPasskeyLoginEnabled)
+    {
+        <script src="@(Model.PathBase)/_content/Huia.AspNetCore/js/passkey.js" nonce="@CspNonce.Value" defer></script>
     }
 }

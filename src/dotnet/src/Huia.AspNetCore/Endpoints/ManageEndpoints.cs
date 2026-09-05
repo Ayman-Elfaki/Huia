@@ -44,6 +44,8 @@ internal static class ManageEndpoints
         group.MapGet("external-logins", GetExternalLoginsAsync);
         group.MapDelete("external-logins/{provider}/{providerKey}", RemoveExternalLoginAsync);
 
+        PasskeyEndpoints.MapHuiaManagePasskeyEndpoints(group);
+
         return group;
     }
 
@@ -362,7 +364,7 @@ internal static class ManageEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<HuiaUser?> ResolveUserAsync(HttpContext context, HuiaUserManager userManager)
+    internal static async Task<HuiaUser?> ResolveUserAsync(HttpContext context, HuiaUserManager userManager)
     {
         var principal = context.User;
         var subject = principal.FindFirstValue(OpenIddictConstants.Claims.Subject)

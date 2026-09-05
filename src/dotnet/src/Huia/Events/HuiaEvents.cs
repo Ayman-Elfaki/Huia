@@ -18,7 +18,10 @@ public sealed record UserRegisteredEvent(
 /// <summary>Raised after a user has successfully signed in (interactive or token flow).</summary>
 /// <param name="TenantId">The tenant the user belongs to.</param>
 /// <param name="UserId">The user's identifier.</param>
-/// <param name="Method">The authentication method: <c>password</c>, <c>sms</c> or an external provider name.</param>
+/// <param name="Method">
+/// The authentication method: <c>pwd</c>, <c>sms</c>, <c>passkey</c>, <c>mfa</c> (a password followed by
+/// a passkey step-up) or an external provider name.
+/// </param>
 /// <param name="ClientId">The OAuth client the sign-in was performed for, if any.</param>
 /// <param name="OccurredAt">When the sign-in occurred (UTC).</param>
 public sealed record UserLoggedInEvent(
@@ -67,6 +70,28 @@ public sealed record OtpVerifiedEvent(
     string TenantId,
     string? UserId,
     string PhoneNumberMask,
+    DateTimeOffset OccurredAt) : IHuiaEvent;
+
+/// <summary>Raised after a user has registered a new passkey (WebAuthn credential).</summary>
+/// <param name="TenantId">The tenant the user belongs to.</param>
+/// <param name="UserId">The user's identifier.</param>
+/// <param name="CredentialId">The base64url credential id, truncated to a short prefix for correlation.</param>
+/// <param name="OccurredAt">When the passkey was registered (UTC).</param>
+public sealed record PasskeyRegisteredEvent(
+    string TenantId,
+    string UserId,
+    string CredentialId,
+    DateTimeOffset OccurredAt) : IHuiaEvent;
+
+/// <summary>Raised after a user has removed one of their passkeys.</summary>
+/// <param name="TenantId">The tenant the user belongs to.</param>
+/// <param name="UserId">The user's identifier.</param>
+/// <param name="CredentialId">The base64url credential id, truncated to a short prefix for correlation.</param>
+/// <param name="OccurredAt">When the passkey was removed (UTC).</param>
+public sealed record PasskeyRemovedEvent(
+    string TenantId,
+    string UserId,
+    string CredentialId,
     DateTimeOffset OccurredAt) : IHuiaEvent;
 
 /// <summary>Raised when a user's phone number is confirmed or removed.</summary>

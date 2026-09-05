@@ -32,6 +32,7 @@ export default withMermaid(defineConfig({
           { text: 'HuiaUserManager & user types', link: '/dotnet/user-manager' },
           { text: 'Endpoints', link: '/dotnet/endpoints' },
           { text: 'Passwordless SMS', link: '/dotnet/passwordless-sms' },
+          { text: 'Passkeys', link: '/dotnet/passkeys' },
           { text: 'External login', link: '/dotnet/external-login' },
           { text: 'Events', link: '/dotnet/events' },
         ],

@@ -17,6 +17,9 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
     /// <summary>The external-provider flow options, or <see langword="null"/> when never enabled. Configured via <see cref="UseExternalLogin"/>.</summary>
     internal ExternalLoginOptions? External { get; private set; }
 
+    /// <summary>The passkey (WebAuthn) flow options, or <see langword="null"/> when never enabled. Configured via <see cref="UsePasskeyLogin"/>.</summary>
+    internal PasskeyOptions? Passkey { get; private set; }
+
     /// <summary>Whether the interactive email/password flow is enabled for this tenant.</summary>
     public bool IsEmailAndPasswordLoginEnabled => EmailAndPassword.Enabled;
 
@@ -25,6 +28,9 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
 
     /// <summary>Whether at least one external identity provider is configured.</summary>
     public bool IsExternalLoginEnabled => External is { Providers.Count: > 0 };
+
+    /// <summary>Whether passkey (WebAuthn) sign-in is enabled for this tenant.</summary>
+    public bool IsPasskeyLoginEnabled => Passkey is not null;
 
     /// <summary>
     /// Enables and configures the interactive email/password flow. Calling it sets
@@ -57,6 +63,20 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
         ArgumentNullException.ThrowIfNull(configure);
         External ??= new ExternalLoginOptions();
         configure(External);
+        return this;
+    }
+
+    /// <summary>
+    /// Enables passkey (WebAuthn / FIDO2) sign-in for this tenant: a discoverable one-tap sign-in on the
+    /// login page and — unless <see cref="PasskeyOptions.AllowSecondFactor"/> is turned off — the option
+    /// for a user to require a passkey as a second factor after a password sign-in.
+    /// </summary>
+    /// <param name="configure">Optional configuration for the flow.</param>
+    /// <returns>This instance, for chaining.</returns>
+    public HuiaTenantAuthenticationOptions UsePasskeyLogin(Action<PasskeyOptions>? configure = null)
+    {
+        Passkey ??= new PasskeyOptions();
+        configure?.Invoke(Passkey);
         return this;
     }
 
@@ -101,7 +121,12 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
             ((IHuiaOptionsSection)External).Validate(HuiaOptionsValidation.Combine(path, nameof(External)), errors);
         }
 
-        var anyMethod = EmailAndPassword.Enabled || Phone is not null || IsExternalLoginEnabled;
-        errors.Require(anyMethod, path, "at least one sign-in method must be enabled (email and password, phone, or external).");
+        if (Passkey is not null)
+        {
+            ((IHuiaOptionsSection)Passkey).Validate(HuiaOptionsValidation.Combine(path, nameof(Passkey)), errors);
+        }
+
+        var anyMethod = EmailAndPassword.Enabled || Phone is not null || IsExternalLoginEnabled || Passkey is not null;
+        errors.Require(anyMethod, path, "at least one sign-in method must be enabled (email and password, phone, external, or passkey).");
     }
 }

@@ -30,6 +30,18 @@ internal static class HuiaCookieConfiguration
             options.SlidingExpiration = true;
         });
 
+        // huia.2fa-user — ASP.NET Core Identity's TwoFactorUserId scheme. Holds the pending second-factor
+        // user and the passkey ceremony challenge. SameSite=Lax so it survives the top-level nav from
+        // /connect/authorize to the login page; short-lived so a half-finished step-up cannot linger.
+        services.Configure<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme, options =>
+        {
+            options.Cookie.Name = HuiaConstants.Cookies.TwoFactorUser;
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SecurePolicy = securePolicy;
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+        });
+
         // huia.csrf — antiforgery. Strict is fine here: antiforgery only matters on same-site form posts.
         services.AddAntiforgery(options =>
         {

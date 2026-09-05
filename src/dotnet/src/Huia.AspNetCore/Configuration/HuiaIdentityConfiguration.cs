@@ -1,6 +1,7 @@
 using Huia.AspNetCore.Identity;
 using Huia.EntityFrameworkCore;
 using Huia.EntityFrameworkCore.Entities;
+using Huia.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,7 +19,7 @@ namespace Huia.AspNetCore.Configuration;
 /// </summary>
 internal static class HuiaIdentityConfiguration
 {
-    public static IServiceCollection AddHuiaIdentity(this IServiceCollection services)
+    public static IServiceCollection AddHuiaIdentity(this IServiceCollection services, HuiaOptions options)
     {
         services.AddIdentity<HuiaUser, HuiaRole>(identity =>
             {
@@ -32,12 +33,58 @@ internal static class HuiaIdentityConfiguration
                 identity.SignIn.RequireConfirmedEmail = false;
                 identity.SignIn.RequireConfirmedAccount = false;
                 identity.SignIn.RequireConfirmedPhoneNumber = false;
+
+                // Version3 is what maps the passkey (WebAuthn credential) entity into the model — without
+                // it every UserManager/SignInManager passkey call throws. HuiaDbContext reads this back
+                // through its application service provider when building the model.
+                identity.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
             })
             .AddEntityFrameworkStores<HuiaDbContext>()
             .AddDefaultTokenProviders()
             .AddUserManager<HuiaUserManager>()
             .AddSignInManager<HuiaSignInManager>();
 
+        ConfigurePasskeyServer(services, options.Passkey);
+
         return services;
+    }
+
+    /// <summary>
+    /// Projects the host-wide relying-party settings onto <see cref="IdentityPasskeyOptions"/>. The
+    /// relying-party id defaults to the request host (correct for a single-host deployment); origin
+    /// validation falls back to the framework's same-origin check unless extra origins are configured.
+    /// </summary>
+    private static void ConfigurePasskeyServer(IServiceCollection services, HuiaPasskeyServerOptions passkey)
+    {
+        services.Configure<IdentityPasskeyOptions>(identity =>
+        {
+            if (!string.IsNullOrWhiteSpace(passkey.RelyingPartyId))
+            {
+                identity.ServerDomain = passkey.RelyingPartyId;
+            }
+
+            if (passkey.AllowedOrigins.Count > 0)
+            {
+                var allowed = passkey.AllowedOrigins
+                    .Select(o => new Uri(o, UriKind.Absolute).GetLeftPart(UriPartial.Authority))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                identity.ValidateOrigin = context =>
+                {
+                    if (string.IsNullOrEmpty(context.Origin) || !Uri.TryCreate(context.Origin, UriKind.Absolute, out var origin))
+                    {
+                        return ValueTask.FromResult(false);
+                    }
+
+                    if (allowed.Contains(origin.GetLeftPart(UriPartial.Authority)))
+                    {
+                        return ValueTask.FromResult(true);
+                    }
+
+                    var requestOrigin = context.HttpContext.Request.Headers.Origin.ToString();
+                    return ValueTask.FromResult(!context.CrossOrigin && string.Equals(requestOrigin, context.Origin, StringComparison.Ordinal));
+                };
+            }
+        });
     }
 }

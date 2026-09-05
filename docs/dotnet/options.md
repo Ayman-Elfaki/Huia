@@ -83,14 +83,27 @@ huia.AddTenant("acme", tenant =>
                 p.Scopes.Add("email");
             });
             ext.EnableAccountsLinking();   // link a verified provider email to an existing confirmed account
+        })
+        .UsePasskeyLogin(passkey =>
+        {
+            passkey.UserVerification = PasskeyUserVerification.Required;   // Preferred | Required | Discouraged
+            passkey.AuthenticatorAttachment = PasskeyAuthenticatorAttachment.Any;  // Any | Platform | CrossPlatform
+            passkey.AllowSecondFactor = true;            // may a user require a passkey as a 2nd factor?
+            passkey.AuthenticatorTimeout = TimeSpan.FromMinutes(2);       // 30s – 10m
         });
 
     // reads (used by the account UI, the admin API, the OpenIddict client wiring):
     // tenant.Authentication.IsEmailAndPasswordLoginEnabled
     // tenant.Authentication.IsPhoneLoginEnabled
     // tenant.Authentication.IsExternalLoginEnabled
+    // tenant.Authentication.IsPasskeyLoginEnabled
 });
 ```
+
+The passkey **relying-party identity** is host-wide (Huia serves every tenant from one origin), so it
+is set once with `huia.ConfigurePasskeys(p => { p.RelyingPartyId = …; p.RelyingPartyName = …; p.AllowedOrigins.Add(…); })`
+rather than per tenant. Leaving `RelyingPartyId` null uses the request host. See
+[Passkeys](/dotnet/passkeys).
 
 `tenant.Authentication.DisableRegistration()` turns off every anonymous account-creation path in one
 call: `AllowSelfServiceRegistration` and, when the phone flow is enabled, `AllowAutoProvisioning` —

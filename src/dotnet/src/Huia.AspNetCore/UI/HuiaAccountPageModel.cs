@@ -39,6 +39,12 @@ public abstract class HuiaAccountPageModel : PageModel
     /// <summary>Whether the passwordless phone (SMS one-time code) tab should be shown.</summary>
     public bool IsPhoneLoginEnabled => Tenant?.Authentication.IsPhoneLoginEnabled ?? false;
 
+    /// <summary>Whether the discoverable "sign in with a passkey" control should be shown.</summary>
+    public bool IsPasskeyLoginEnabled => Tenant?.Authentication.IsPasskeyLoginEnabled ?? false;
+
+    /// <summary>Whether a passkey may be required as a second factor for this tenant.</summary>
+    public bool IsPasskeySecondFactorAllowed => Tenant?.Authentication.Passkey is { AllowSecondFactor: true };
+
     /// <summary>The external providers to render sign-in buttons for.</summary>
     public IReadOnlyList<Options.ExternalProviderRegistration> ExternalProviders =>
         Tenant?.Authentication.External?.Providers ?? [];

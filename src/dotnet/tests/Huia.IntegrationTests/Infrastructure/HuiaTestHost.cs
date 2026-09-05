@@ -118,6 +118,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
                         huia.AddTenant("acme", tenant =>
                         {
                             tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+                            tenant.Authentication.UsePasskeyLogin();
                             tenant.Branding.DisplayName = "Acme Corp";
                         });
                         huia.AddTenant("phone", tenant =>
@@ -191,6 +192,8 @@ public sealed class HuiaTestHost : IAsyncDisposable
         Add<Huia.Events.OtpRequestedEvent>();
         Add<Huia.Events.OtpVerifiedEvent>();
         Add<Huia.Events.PhoneChangedEvent>();
+        Add<Huia.Events.PasskeyRegisteredEvent>();
+        Add<Huia.Events.PasskeyRemovedEvent>();
     }
 
     /// <summary>Seeds a confidential client-credentials application bound to a tenant.</summary>

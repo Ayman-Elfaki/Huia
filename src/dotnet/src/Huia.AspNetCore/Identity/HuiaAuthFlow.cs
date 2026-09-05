@@ -25,4 +25,10 @@ public enum HuiaAuthFlow
 
     /// <summary>Federated sign-in through an external identity provider. The provider is the confirmed factor.</summary>
     ExternalLogin = 3,
+
+    /// <summary>
+    /// Passkey (WebAuthn) sign-in — a discoverable primary assertion, or a step-up second factor after a
+    /// password sign-in. Possession of the credential is the confirmed factor.
+    /// </summary>
+    Passkey = 4,
 }

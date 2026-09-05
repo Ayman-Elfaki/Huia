@@ -53,13 +53,15 @@ only masked (`PhoneNumberMask`, last four digits retained — see `IPhoneNumberS
 | Event | Fields | Raised when |
 |---|---|---|
 | `UserRegisteredEvent` | `UserId`, `UserName`, `Email?`, `Method` | A new account is persisted — `Method` is `password`, `sms`, or an external provider name. |
-| `UserLoggedInEvent` | `UserId`, `Method`, `ClientId?` | A sign-in succeeds, interactively or via `/connect/token`. `ClientId` is the OAuth client the sign-in was for, when there is one. |
+| `UserLoggedInEvent` | `UserId`, `Method`, `ClientId?` | A sign-in succeeds, interactively or via `/connect/token`. `Method` is `pwd`, `sms`, `passkey`, `mfa` (a password then a passkey step-up), or an external provider name. `ClientId` is the OAuth client the sign-in was for, when there is one. |
 | `PasswordChangedEvent` | `UserId`, `Reset` | A password is set or changed — `Reset` is `true` for a forgot-password flow, `false` for an authenticated change via `/manage/password`. |
 | `OtpRequestedEvent` | `UserId?`, `PhoneNumberMask`, `Delivered` | A one-time code is generated and a delivery attempt made. `UserId` is `null` when the number has no account yet (auto-provisioning); `Delivered` reflects whether the SMS provider accepted the message. |
 | `OtpVerifiedEvent` | `UserId?`, `PhoneNumberMask` | A one-time code is verified successfully. |
 | `PhoneChangedEvent` | `UserId`, `PhoneNumberMask?`, `Confirmed` | A phone number is confirmed or removed — `Confirmed` distinguishes the two; `PhoneNumberMask` is `null` on removal. |
+| `PasskeyRegisteredEvent` | `UserId`, `CredentialId` | A passkey (WebAuthn credential) is registered. `CredentialId` is the base64url id, truncated. |
+| `PasskeyRemovedEvent` | `UserId`, `CredentialId` | A passkey is removed. |
 
-All six live in the `Huia.Events` namespace (the framework-free `Huia` package) alongside `IHuiaEvent`,
+All live in the `Huia.Events` namespace (the framework-free `Huia` package) alongside `IHuiaEvent`,
 `IHuiaEventPublisher` and `IHuiaEventHandler<TEvent>` — none of it depends on ASP.NET Core.
 
 ## Publishing your own events

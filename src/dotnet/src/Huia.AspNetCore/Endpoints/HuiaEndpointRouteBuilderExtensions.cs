@@ -29,6 +29,7 @@ public static class HuiaEndpointRouteBuilderExtensions
         {
             endpoints.MapRazorPages();
             endpoints.MapHuiaExternalEndpoints();
+            endpoints.MapHuiaPasskeyEndpoints();
         }
 
         return endpoints;

@@ -61,6 +61,50 @@ internal static class HuiaMultiTenancyConfiguration
             .ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>((cookie, tenant) =>
                 cookie.Cookie.Name = $"huia.2fa.{tenant.Identifier}");
 
+        // The transient scheme carries both the pending second-factor user and the passkey ceremony
+        // challenge. Per-tenant name so a browser can hold a step-up in flight for several tenants.
+        services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme)
+            .ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>((cookie, tenant) =>
+                cookie.Cookie.Name = $"{HuiaConstants.Cookies.TwoFactorUser}.{tenant.Identifier}");
+
+        return services;
+    }
+
+    /// <summary>
+    /// Projects each tenant's passkey policy onto <see cref="IdentityPasskeyOptions"/> (user-verification
+    /// requirement, authenticator preference, ceremony timeout). The relying-party identity itself is
+    /// host-wide and set once in <c>AddHuiaIdentity</c>. Mirrors <see cref="AddHuiaPerTenantIdentityOptions"/>:
+    /// <see cref="Microsoft.AspNetCore.Identity.PasskeyHandler{TUser}"/> reads <see cref="IOptions{T}"/>, a
+    /// process-wide snapshot, so a scoped re-registration re-points it at the tenant-aware value per request.
+    /// </summary>
+    public static IServiceCollection AddHuiaPerTenantPasskeyOptions(this IServiceCollection services, HuiaOptions options)
+    {
+        services.AddOptions<IdentityPasskeyOptions>()
+            .ConfigurePerTenant<IdentityPasskeyOptions, HuiaTenantInfo>((passkey, tenant) =>
+            {
+                if (!options.Tenants.TryGetValue(tenant.Identifier, out var config) || config.Authentication.Passkey is not { } policy)
+                {
+                    return;
+                }
+
+                passkey.UserVerificationRequirement = policy.UserVerification switch
+                {
+                    PasskeyUserVerification.Required => "required",
+                    PasskeyUserVerification.Discouraged => "discouraged",
+                    _ => "preferred",
+                };
+                passkey.AuthenticatorAttachment = policy.AuthenticatorAttachment switch
+                {
+                    PasskeyAuthenticatorAttachment.Platform => "platform",
+                    PasskeyAuthenticatorAttachment.CrossPlatform => "cross-platform",
+                    _ => null,
+                };
+                passkey.AuthenticatorTimeout = policy.AuthenticatorTimeout;
+            });
+
+        services.AddScoped<IOptions<IdentityPasskeyOptions>>(sp =>
+            new OptionsWrapper<IdentityPasskeyOptions>(sp.GetRequiredService<IOptionsSnapshot<IdentityPasskeyOptions>>().Value));
+
         return services;
     }
 

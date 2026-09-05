@@ -39,6 +39,13 @@ public static class HuiaConstants
         /// <summary>The flow-state cookie (protected return URLs and pending-flow payloads). <c>SameSite=Strict</c>.</summary>
         public const string Flow = "huia.flow";
 
+        /// <summary>
+        /// The short-lived transient cookie that carries the pending second-factor user and the passkey
+        /// ceremony challenge (ASP.NET Core Identity's <c>TwoFactorUserId</c> scheme). <c>SameSite=Lax</c>
+        /// so it survives the top-level navigation from <c>/connect/authorize</c> to the login page.
+        /// </summary>
+        public const string TwoFactorUser = "huia.2fa-user";
+
         /// <summary>The antiforgery cookie. <c>SameSite=Strict</c>, <c>HttpOnly</c>.</summary>
         public const string AntiForgery = "huia.csrf";
     }
@@ -113,5 +120,11 @@ public static class HuiaConstants
 
         /// <summary>Passwordless SMS one-time code.</summary>
         public const string Sms = "sms";
+
+        /// <summary>Passkey (WebAuthn / FIDO2) assertion.</summary>
+        public const string Passkey = "passkey";
+
+        /// <summary>Multiple factors were presented (for example a password followed by a passkey step-up).</summary>
+        public const string MultiFactor = "mfa";
     }
 }

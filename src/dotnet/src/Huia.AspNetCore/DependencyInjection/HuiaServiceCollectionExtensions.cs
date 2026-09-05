@@ -50,10 +50,11 @@ public static class HuiaServiceCollectionExtensions
         services.AddSingleton(Options.Options.Create(options));
 
         services.AddHuiaMultiTenancy(options);
-        services.AddHuiaIdentity();
+        services.AddHuiaIdentity(options);
         services.AddHuiaCookieHardening(requireSecure: !options.DisableTransportSecurityRequirement);
         services.AddHuiaPerTenantAuthentication();
         services.AddHuiaPerTenantIdentityOptions(options);
+        services.AddHuiaPerTenantPasskeyOptions(options);
         services.AddHuiaFlowIdentity(options);
         services.AddHuiaLocalization();
         services.AddHuiaEventing();

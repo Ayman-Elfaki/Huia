@@ -52,6 +52,36 @@ public partial class HuiaUserManager : UserManager<HuiaUser>
         return string.IsNullOrEmpty(user.PhoneNumber) ? HuiaUserType.Unknown : HuiaUserType.Phone;
     }
 
+    /// <summary>The number of passkeys (WebAuthn credentials) registered to <paramref name="user"/>.</summary>
+    public async Task<int> CountPasskeysAsync(HuiaUser user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return (await GetPasskeysAsync(user)).Count;
+    }
+
+    /// <summary>Whether <paramref name="user"/> has at least one registered passkey.</summary>
+    public async Task<bool> HasPasskeyAsync(HuiaUser user) => await CountPasskeysAsync(user) > 0;
+
+    /// <summary>
+    /// Renames one of the user's passkeys. Returns <see langword="false"/> when no credential with
+    /// <paramref name="credentialId"/> belongs to the user.
+    /// </summary>
+    public async Task<bool> RenamePasskeyAsync(HuiaUser user, byte[] credentialId, string name)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(credentialId);
+
+        var passkey = await GetPasskeyAsync(user, credentialId);
+        if (passkey is null)
+        {
+            return false;
+        }
+
+        passkey.Name = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        var result = await AddOrUpdatePasskeyAsync(user, passkey);
+        return result.Succeeded;
+    }
+
     /// <summary>
     /// True when removing one external login would still leave a way to sign in — a password, another
     /// external login, or a phone number.
