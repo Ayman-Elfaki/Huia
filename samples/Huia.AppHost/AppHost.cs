@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.Configuration;
 
 var builder = DistributedApplication.CreateBuilder(args);
@@ -16,7 +17,7 @@ var usePostgresVolume = builder.Configuration.GetValue("Huia:UsePostgresVolume",
 // initialised with the first run's password, rejects it ("password authentication failed for user postgres").
 var postgresPassword = builder.AddParameter("postgres-password", secret: true);
 
-var postgresServer = builder.AddPostgres("postgres", password: postgresPassword,port:59927);
+var postgresServer = builder.AddPostgres("postgres", password: postgresPassword, port: 59927);
 if (usePostgresVolume)
 {
     // Huia ships no EF migrations by design (SchemaInitializer just calls EnsureCreatedAsync), so a
@@ -33,15 +34,27 @@ var todoPostgres = postgresServer.AddDatabase("todo");
 
 // Shared Redis. The Nuxt sample apps (todo-app, admin-app) mount their server-side session/token
 // store on it via Nitro's `redis` storage driver, so sign-in state survives an app restart and is
-// shared across instances. Given a plain redis:// URL because that is what unstorage's driver wants.
-var redis = builder.AddRedis("redis");
+// shared across instances.
+var redis = builder.AddRedis("redis").WithRedisInsight();
+
 if (!enableE2E)
 {
     redis = redis.WithDataVolume("huia-redis-data");
 }
 
-var redisUrl = ReferenceExpression.Create(
-    $"redis://{redis.GetEndpoint("tcp").Property(EndpointProperty.Host)}:{redis.GetEndpoint("tcp").Property(EndpointProperty.Port)}");
+// Aspire 13.5's AddRedis switches the primary endpoint to TLS whenever a dev HTTPS certificate is
+// present. Its own health check — and the plain ioredis clients in the Nuxt apps — can't speak TLS,
+// so Redis logs "Error accepting a client connection: wrong version number" on a loop, never turns
+// healthy, and everything that WaitFor()s it stays stuck. Opt this resource out: plaintext, one port.
+#pragma warning disable ASPIRECERTIFICATES001
+redis.WithAnnotation(
+    new HttpsCertificateAnnotation { UseDeveloperCertificate = false },
+    ResourceAnnotationMutationBehavior.Replace);
+#pragma warning restore ASPIRECERTIFICATES001
+
+// redis://:{password}@{host}:{port} — Aspire builds this (URI-encoded password, right scheme/host/port)
+// so it stays correct whether or not TLS is in play.
+var redisUrl = redis.Resource.UriExpression;
 
 // Mailpit is the local SMTP sink: it accepts every message on the `smtp` endpoint (no auth, no TLS)
 // and exposes a web UI + REST API on the `http` endpoint. The identity server sends real mail here in
@@ -85,6 +98,12 @@ var identityServer = builder.AddProject<Projects.Huia_IdentityServer>("huia-iden
     .WaitFor(external);
 
 var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
+    .WithExternalHttpEndpoints()
+    .WithUrlForEndpoint("http", url =>
+    {
+        url.DisplayText = "Scalar UI";
+        url.Url = "/scalar"; // Appends /scalar to the base URL
+    })
     .WithReference(identityServer)
     .WaitFor(identityServer)
     .WithReference(todoPostgres)
