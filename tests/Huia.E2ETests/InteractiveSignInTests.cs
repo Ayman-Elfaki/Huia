@@ -31,6 +31,16 @@ public sealed class InteractiveSignInTests(SampleHostFixture host)
         await page.FillAsync("[data-testid=login-form] input[name='Input.Password']", "Password1!");
         await page.ClickAsync("[data-testid=login-submit]");
 
+        // The e2e tenant has passkeys enabled, so a first sign-in shows the one-time "set up a passkey"
+        // page before the client callback. This spec is about the code hand-off — skip enrollment.
+        await page.WaitForURLAsync(
+            u => u.Contains("/e2e-callback", StringComparison.Ordinal) || u.Contains("/passkeyenroll", StringComparison.Ordinal),
+            new PageWaitForURLOptions { Timeout = 15_000 });
+        if (page.Url.Contains("/passkeyenroll", StringComparison.Ordinal))
+        {
+            await page.ClickAsync("[data-testid=passkey-enroll-skip]");
+        }
+
         await page.WaitForURLAsync("**/e2e-callback**", new PageWaitForURLOptions { Timeout = 15_000 });
 
         // The authorization code is delivered on the redirect back to the client's callback.

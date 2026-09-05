@@ -81,9 +81,18 @@ internal static class FrontEndFlows
     {
         try
         {
+            // A tenant with passkeys enabled interposes a one-time "set up a passkey" page on the first
+            // interactive sign-in. These specs cover the OIDC round-trip, not enrollment — skip past it.
             await page.WaitForURLAsync(
-                u => u.StartsWith(prefix, StringComparison.Ordinal) && !u.Contains("/auth/oidc/", StringComparison.Ordinal),
+                u => IsAppUrl(u, prefix) || u.Contains(PasskeyEnrollMarker, StringComparison.Ordinal),
                 new() { Timeout = 30_000 });
+
+            if (page.Url.Contains(PasskeyEnrollMarker, StringComparison.Ordinal))
+            {
+                await page.ClickAsync("[data-testid=passkey-enroll-skip]");
+                await page.WaitForURLAsync(u => IsAppUrl(u, prefix), new() { Timeout = 30_000 });
+            }
+
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         }
         catch (TimeoutException ex)
@@ -93,4 +102,9 @@ internal static class FrontEndFlows
                 $"Never returned to {prefix}. Stuck at {page.Url}\n--- page ---\n{(body.Length > 4000 ? body[..4000] : body)}", ex);
         }
     }
+
+    private const string PasskeyEnrollMarker = "/identity/account/passkeyenroll";
+
+    private static bool IsAppUrl(string url, string prefix) =>
+        url.StartsWith(prefix, StringComparison.Ordinal) && !url.Contains("/auth/oidc/", StringComparison.Ordinal);
 }
