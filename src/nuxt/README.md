@@ -1,6 +1,6 @@
-# huia-nuxt
+# nuxt-huia
 
-First-party **Nuxt 4** authentication module for the [Huia](https://github.com/Ayman-Elfaki/Huia)
+**Nuxt 4** authentication module for the [Huia](https://github.com/Ayman-Elfaki/Huia)
 identity provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
 transparent server-side token refresh, and a dual-layer session that keeps **every token on the
 server**.

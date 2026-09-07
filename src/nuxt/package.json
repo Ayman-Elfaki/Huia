@@ -1,7 +1,7 @@
 {
-  "name": "huia-nuxt",
-  "version": "1.0.0-alpha.1",
-  "description": "First-party Nuxt 4 OIDC/OAuth2 (PKCE + PAR) authentication module for the Huia identity provider",
+  "name": "nuxt-huia",
+  "version": "1.0.0-alpha.2",
+  "description": "Nuxt 4 OIDC/OAuth2 (PKCE + PAR) authentication module for the Huia identity provider",
   "license": "MIT",
   "type": "module",
   "repository": {
