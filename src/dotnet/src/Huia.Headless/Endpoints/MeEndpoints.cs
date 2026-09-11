@@ -1,5 +1,5 @@
 using Huia.Entities;
-using Huia.Identity;
+using Huia.Headless.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -19,7 +19,7 @@ internal static class MeEndpoints
         endpoints.MapGet("identity/me", GetMeAsync).RequireAuthorization();
     }
 
-    private static async Task<IResult> GetMeAsync(HttpContext context, HuiaUserManager<HuiaUser> userManager)
+    private static async Task<IResult> GetMeAsync(HttpContext context, HuiaUserManager userManager)
     {
         var user = await userManager.GetUserAsync(context.User);
         if (user is null)

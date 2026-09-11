@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Huia.Entities;
 using Huia.Events;
+using Huia.Headless.Identity;
 using Huia.Identity;
 using Huia.Multitenancy;
 using Huia.Options;
@@ -102,7 +103,7 @@ internal static class PasskeyEndpoints
     // ---- bearer-protected: credential management ------------------------------------------------
 
     private static async Task<IResult> CreationOptionsAsync(
-        HttpContext context, HuiaSignInManager<HuiaUser> signInManager, HuiaUserManager<HuiaUser> userManager,
+        HttpContext context, HuiaSignInManager<HuiaUser> signInManager, HuiaUserManager userManager,
         IHuiaTenantContext tenantContext, HuiaOptions options)
     {
         if (!PasskeyEnabled(options, tenantContext))
@@ -128,7 +129,7 @@ internal static class PasskeyEndpoints
     }
 
     private static async Task<IResult> RegisterAsync(
-        HttpContext context, HuiaUserManager<HuiaUser> userManager, HuiaPasskeyRegistrar<HuiaUser> registrar,
+        HttpContext context, HuiaUserManager userManager, HuiaPasskeyRegistrar<HuiaUser> registrar,
         IHuiaTenantContext tenantContext, HuiaOptions options, PasskeyRegistrationRequest body)
     {
         if (!PasskeyEnabled(options, tenantContext))
@@ -156,7 +157,7 @@ internal static class PasskeyEndpoints
         return Results.Ok(ToDto(passkey));
     }
 
-    private static async Task<IResult> ListAsync(HttpContext context, HuiaUserManager<HuiaUser> userManager)
+    private static async Task<IResult> ListAsync(HttpContext context, HuiaUserManager userManager)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -168,7 +169,7 @@ internal static class PasskeyEndpoints
         return Results.Ok(passkeys.Select(ToDto).ToArray());
     }
 
-    private static async Task<IResult> RenameAsync(HttpContext context, HuiaUserManager<HuiaUser> userManager, string id, RenamePasskeyRequest body)
+    private static async Task<IResult> RenameAsync(HttpContext context, HuiaUserManager userManager, string id, RenamePasskeyRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -187,7 +188,7 @@ internal static class PasskeyEndpoints
     }
 
     private static async Task<IResult> RemoveAsync(
-        HttpContext context, HuiaUserManager<HuiaUser> userManager, IHuiaTenantContext tenantContext,
+        HttpContext context, HuiaUserManager userManager, IHuiaTenantContext tenantContext,
         IHuiaEventPublisher events, TimeProvider timeProvider, string id)
     {
         var user = await ResolveUserAsync(context, userManager);
@@ -242,7 +243,7 @@ internal static class PasskeyEndpoints
         }
     }
 
-    private static async Task<HuiaUser?> ResolveUserAsync(HttpContext context, HuiaUserManager<HuiaUser> userManager) =>
+    private static async Task<HuiaUser?> ResolveUserAsync(HttpContext context, HuiaUserManager userManager) =>
         await userManager.GetUserAsync(context.User);
 
     private static bool TryDecodeId(string id, out byte[] credentialId)

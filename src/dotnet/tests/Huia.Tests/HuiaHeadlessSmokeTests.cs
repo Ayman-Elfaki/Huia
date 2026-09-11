@@ -1,6 +1,7 @@
 using Huia.Entities;
 using Huia.Headless.EntityFrameworkCore;
 using Huia.Identity;
+using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,10 +41,19 @@ public sealed class HuiaHeadlessSmokeTests
         using var scope = provider.CreateScope();
         var sp = scope.ServiceProvider;
 
-        sp.GetRequiredService<UserManager<HuiaUser>>().ShouldBeOfType<HuiaUserManager<HuiaUser>>();
+        sp.GetRequiredService<UserManager<HuiaUser>>().ShouldBeOfType<Huia.Headless.Identity.HuiaUserManager>();
         sp.GetRequiredService<SignInManager<HuiaUser>>().ShouldBeOfType<HuiaSignInManager<HuiaUser>>();
         sp.GetRequiredService<RoleManager<HuiaRole>>().ShouldNotBeNull();
         sp.GetRequiredService<HuiaPasskeyRegistrar<HuiaUser>>().ShouldNotBeNull();
+
+        // Passwordless SMS phone login shares its services with Huia.OpenId.
+        sp.GetRequiredService<IPhoneNumberService>().ShouldNotBeNull();
+        sp.GetRequiredService<IOtpService<HuiaUser>>().ShouldNotBeNull();
+        sp.GetRequiredService<IOtpRateLimiter>().ShouldNotBeNull();
+        sp.GetRequiredService<IPhoneLoginRateLimiter>().ShouldNotBeNull();
+        sp.GetRequiredService<IPendingPhoneSignup>().ShouldNotBeNull();
+        sp.GetRequiredService<ISmsSender>().ShouldNotBeNull();
+        sp.GetRequiredService<Huia.Headless.Services.IPhoneLoginFlowStore>().ShouldNotBeNull();
     }
 
     [Fact]
