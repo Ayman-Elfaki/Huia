@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Huia common persistence: the Huia*-renamed ASP.NET Core Identity schema (users, roles, passkeys) shared by every Huia identity-provider flavor. Not multi-tenant, not OpenIddict-aware — those are layered on by Huia.OpenId.EntityFrameworkCore and Huia.Headless.EntityFrameworkCore. Provider-agnostic; ships no migrations.</Description>
+    <PackageTags>identity-provider;entity-framework-core</PackageTags>
+    <RootNamespace>Huia.EntityFrameworkCore</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia\Huia.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+  </ItemGroup>
+
+</Project>

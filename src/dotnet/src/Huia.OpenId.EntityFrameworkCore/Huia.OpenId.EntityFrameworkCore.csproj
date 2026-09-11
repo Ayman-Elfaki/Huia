@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Huia\Huia.csproj" />
+    <ProjectReference Include="..\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

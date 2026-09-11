@@ -1,6 +1,7 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Finbuckle.MultiTenant.EntityFrameworkCore.Extensions;
 using Finbuckle.MultiTenant.Identity.EntityFrameworkCore;
+using Huia.EntityFrameworkCore;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -49,54 +50,30 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
         base.OnModelCreating(builder);
         builder.UseOpenIddict();
 
-        RenameIdentityTables(builder);
+        builder.ConfigureHuiaIdentitySchema<HuiaUser, HuiaRole>();
         RenameOpenIddictTables(builder);
         ApplyTenantScopedIndexes(builder);
-        ConfigurePasskeys(builder);
+        MakePasskeysMultiTenant(builder);
         ConfigureSigningKeys(builder);
     }
 
-    private static void RenameIdentityTables(ModelBuilder builder)
-    {
-        builder.Entity<HuiaUser>().ToTable("HuiaUsers");
-        builder.Entity<HuiaRole>().ToTable("HuiaRoles");
-        builder.Entity<IdentityUserRole<string>>().ToTable("HuiaUserRoles");
-        builder.Entity<IdentityUserClaim<string>>().ToTable("HuiaUserClaims");
-        builder.Entity<IdentityUserLogin<string>>().ToTable("HuiaUserLogins");
-        builder.Entity<IdentityUserToken<string>>().ToTable("HuiaUserTokens");
-        builder.Entity<IdentityRoleClaim<string>>().ToTable("HuiaRoleClaims");
-    }
-
     /// <summary>
-    /// Configures the passkey (WebAuthn credential) entity deterministically, whether or not the base
-    /// <c>OnModelCreating</c> already mapped it (it does so only when
-    /// <c>IdentityOptions.Stores.SchemaVersion</c> resolves to <c>Version3</c> — true on the DI path,
-    /// not when the context is constructed directly by the model tests or a design-time factory).
-    /// Re-declares the key, the JSON-owned <c>Data</c> column and the user foreign key, renames the
-    /// table, and — when Finbuckle has not already done so — makes the entity multi-tenant so a
+    /// Makes the passkey (WebAuthn credential) entity multi-tenant, on top of the plain configuration
+    /// <see cref="HuiaIdentitySchemaConventions.ConfigureHuiaIdentitySchema{TUser,TRole}"/> already applied
+    /// — when Finbuckle has not already done so (the base <c>OnModelCreating</c> only makes it multi-tenant
+    /// when <c>IdentityOptions.Stores.SchemaVersion</c> resolves to <c>Version3</c> — true on the DI path,
+    /// not when the context is constructed directly by the model tests or a design-time factory) — so a
     /// credential is scoped to its tenant on read and stamped on write like every other Identity row.
     /// </summary>
-    private static void ConfigurePasskeys(ModelBuilder builder)
+    private static void MakePasskeysMultiTenant(ModelBuilder builder)
     {
-        var passkey = builder.Entity<IdentityUserPasskey<string>>();
-        passkey.ToTable("HuiaUserPasskeys");
-        passkey.HasKey(p => p.CredentialId);
-        passkey.Property(p => p.CredentialId).HasMaxLength(1024);
-        passkey.OwnsOne(p => p.Data, owned => owned.ToJson());
-
-        builder.Entity<HuiaUser>()
-            .HasMany<IdentityUserPasskey<string>>()
-            .WithOne()
-            .HasForeignKey(p => p.UserId)
-            .IsRequired();
-
         var alreadyMultiTenant = builder.Model
             .FindEntityType(typeof(IdentityUserPasskey<string>))!
             .FindProperty("TenantId") is not null;
 
         if (!alreadyMultiTenant)
         {
-            passkey.IsMultiTenant().AdjustUniqueIndexes();
+            builder.Entity<IdentityUserPasskey<string>>().IsMultiTenant().AdjustUniqueIndexes();
         }
 
         builder.Entity<IdentityUserPasskey<string>>()
@@ -128,8 +105,6 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
         builder.Entity<HuiaUser>(b =>
         {
             b.Property(u => u.TenantId).HasMaxLength(64).IsRequired();
-            b.Property(u => u.FirstName).HasMaxLength(256);
-            b.Property(u => u.LastName).HasMaxLength(256);
             b.HasIndex(u => new { u.TenantId, u.NormalizedUserName }, "IX_HuiaUsers_Tenant_UserName").IsUnique();
             b.HasIndex(u => new { u.TenantId, u.NormalizedEmail }, "IX_HuiaUsers_Tenant_Email");
         });
@@ -137,7 +112,6 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
         builder.Entity<HuiaRole>(b =>
         {
             b.Property(r => r.TenantId).HasMaxLength(64).IsRequired();
-            b.Property(r => r.Origin).HasMaxLength(16).IsRequired();
             b.HasIndex(r => new { r.TenantId, r.NormalizedName }, "IX_HuiaRoles_Tenant_Name").IsUnique();
         });
     }
