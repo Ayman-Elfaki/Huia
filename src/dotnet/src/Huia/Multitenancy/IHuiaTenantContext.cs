@@ -12,6 +12,11 @@ public interface IHuiaTenantContext
     /// <exception cref="InvalidOperationException">No tenant is in scope.</exception>
     string CurrentTenantId { get; }
 
+    /// <summary>The current tenant identifier, or <see langword="null"/> when none is in scope (for example
+    /// a request whose path resolved to no tenant segment). Prefer <see cref="CurrentTenantId"/> wherever a
+    /// tenant is always expected to be in scope; use this only where "no tenant" is a legitimate outcome.</summary>
+    string? CurrentTenantIdOrDefault { get; }
+
     /// <summary>
     /// Sets the ambient tenant for a block of work outside an HTTP request — seeding, background jobs,
     /// administrative operations that touch another tenant. Callers must enter the scope <em>before</em>

@@ -12,6 +12,9 @@ internal sealed class HuiaFinbuckleTenantContext(IMultiTenantContextAccessor acc
     public string CurrentTenantId => accessor.RequireCurrentTenantId();
 
     /// <inheritdoc />
+    public string? CurrentTenantIdOrDefault => accessor.CurrentTenantId();
+
+    /// <inheritdoc />
     public IDisposable EnterTenantScope(IServiceProvider scopedServices, string tenantId) =>
         HuiaTenantScope.Enter(scopedServices, tenantId);
 }
