@@ -1,7 +1,6 @@
-using Huia;
 using Microsoft.AspNetCore.Identity;
 
-namespace Huia.EntityFrameworkCore.Entities;
+namespace Huia.Entities;
 
 /// <summary>
 /// A role. Not multi-tenant — <c>Huia.OpenId.EntityFrameworkCore.Entities.HuiaRole</c> subclasses this to

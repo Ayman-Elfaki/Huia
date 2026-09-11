@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace Huia.EntityFrameworkCore.Entities;
+namespace Huia.Entities;
 
 /// <summary>
 /// A user account. Not multi-tenant — <c>Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser</c> subclasses

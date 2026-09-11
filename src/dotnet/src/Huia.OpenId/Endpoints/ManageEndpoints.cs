@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using Huia.Identity;
 using Huia.OpenId.Emails;
 using Huia.OpenId.Identity;
 using Huia.OpenId.Services;

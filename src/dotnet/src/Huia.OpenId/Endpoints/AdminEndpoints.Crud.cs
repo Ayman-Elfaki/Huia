@@ -1,3 +1,4 @@
+using Huia.Identity;
 using Huia.OpenId.Identity;
 using Huia.OpenId.Keys;
 using Huia.OpenId.Multitenancy;

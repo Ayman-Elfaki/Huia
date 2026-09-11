@@ -1,5 +1,5 @@
 using Huia.DependencyInjection;
-using Huia.EntityFrameworkCore.Entities;
+using Huia.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;

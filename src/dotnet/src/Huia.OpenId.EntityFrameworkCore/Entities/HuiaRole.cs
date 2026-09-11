@@ -4,7 +4,7 @@ namespace Huia.OpenId.EntityFrameworkCore.Entities;
 /// A role. Belongs to exactly one tenant via <see cref="TenantId"/>; role-name uniqueness is scoped to
 /// that tenant by a composite index rather than the Identity global default.
 /// </summary>
-public class HuiaRole : Huia.EntityFrameworkCore.Entities.HuiaRole
+public class HuiaRole : Huia.Entities.HuiaRole
 {
     /// <summary>Creates a role with a generated identifier.</summary>
     public HuiaRole()

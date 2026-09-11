@@ -1,10 +1,10 @@
-namespace Huia.OpenId.Identity;
+namespace Huia.Identity;
 
 /// <summary>
 /// How an account signs in. Determines which contact details it may change through <c>/manage/*</c>:
 /// a password or external account owns an email and must not carry a phone number; a phone-login
 /// account owns its number (which doubles as the username) and must not carry an email. Resolved by
-/// <see cref="HuiaUserManager.GetUserTypeAsync"/>.
+/// <c>HuiaUserManager&lt;TUser&gt;.GetUserTypeAsync</c>.
 /// </summary>
 public enum HuiaUserType
 {
