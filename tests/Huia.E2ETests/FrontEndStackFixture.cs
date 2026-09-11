@@ -95,15 +95,15 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
         // discover the plain-http E2E issuer.
         var commonNuxt = new Dictionary<string, string>
         {
-            ["NUXT_HUIA_AUTH_SESSION_PASSWORD"] = "e2e-only-huia-auth-session-password-0123456789abcdef",
+            ["NUXT_HUIA_SESSION_PASSWORD"] = "e2e-only-huia-auth-session-password-0123456789abcdef",
         };
 
         StartNode(todoAppOutput, new(commonNuxt)
         {
             ["PORT"] = new Uri(TodoAppUrl).Port.ToString(),
-            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "todo-app-secret",
-            ["NUXT_HUIA_AUTH_HUIA_BASE_URL"] = Issuer,
-            ["NUXT_HUIA_AUTH_HUIA_TENANT"] = "todo",
+            ["NUXT_HUIA_CLIENT_SECRET"] = "todo-app-secret",
+            ["NUXT_HUIA_BASE_URL"] = Issuer,
+            ["NUXT_HUIA_TENANT"] = "todo",
             ["NUXT_API_PARTY_ENDPOINTS_HUIA_URL"] = $"{Issuer}/todo",
             ["NUXT_API_PARTY_ENDPOINTS_TODO_API_URL"] = TodoApiUrl,
         });
@@ -111,9 +111,9 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
         StartNode(adminAppOutput, new(commonNuxt)
         {
             ["PORT"] = new Uri(AdminAppUrl).Port.ToString(),
-            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "huia-admin-ui-secret",
-            ["NUXT_HUIA_AUTH_HUIA_BASE_URL"] = Issuer,
-            ["NUXT_HUIA_AUTH_HUIA_TENANT"] = "master",
+            ["NUXT_HUIA_CLIENT_SECRET"] = "huia-admin-ui-secret",
+            ["NUXT_HUIA_BASE_URL"] = Issuer,
+            ["NUXT_HUIA_TENANT"] = "master",
             ["NUXT_API_PARTY_ENDPOINTS_HUIA_URL"] = $"{Issuer}/master",
         });
 

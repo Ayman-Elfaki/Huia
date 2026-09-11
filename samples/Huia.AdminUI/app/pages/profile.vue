@@ -9,7 +9,7 @@ interface Profile {
   phoneNumberConfirmed: boolean
 }
 
-const { user } = useAuth()
+const { user } = useHuia()
 const { data: profile, refresh } = await useHuiaData<Profile>('manage/profile')
 const first = ref('')
 const last = ref('')

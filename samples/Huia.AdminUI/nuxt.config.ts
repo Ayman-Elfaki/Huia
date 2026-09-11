@@ -52,14 +52,15 @@ export default defineNuxtConfig({
     },
   },
 
-  huiaAuth: {
-    huia: { baseUrl: huiaBaseUrl, tenant: 'master' },
-    clientId: process.env.NUXT_HUIA_AUTH_CLIENT_ID ?? 'huia-admin-ui',
-    clientSecret: process.env.NUXT_HUIA_AUTH_CLIENT_SECRET ?? 'huia-admin-ui-secret',
+  huia: {
+    baseUrl: huiaBaseUrl,
+    tenant: 'master',
+    clientId: process.env.NUXT_HUIA_CLIENT_ID ?? 'huia-admin-ui',
+    clientSecret: process.env.NUXT_HUIA_CLIENT_SECRET ?? 'huia-admin-ui-secret',
     scopes: ['openid', 'profile', 'email', 'roles', 'offline_access'],
     par: { enabled: true, required: true },
     session: {
-      password: process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD
+      password: process.env.NUXT_HUIA_SESSION_PASSWORD
         ?? 'dev-only-admin-session-password-change-me-0123456789',
     },
   },

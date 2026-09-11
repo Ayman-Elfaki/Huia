@@ -2,7 +2,7 @@
 import { Moon, Sun } from 'lucide-vue-next'
 
 const { loggedIn, user } = useUserSession()
-const { logout } = useAuth()
+const { logout } = useHuia()
 const colorMode = useColorMode()
 
 const displayName = computed(() =>

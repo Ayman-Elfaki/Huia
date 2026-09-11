@@ -65,11 +65,11 @@ public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
         {
             ["PORT"] = new Uri(PlaygroundUrl).Port.ToString(),
             ["NITRO_PORT"] = new Uri(PlaygroundUrl).Port.ToString(),
-            ["NUXT_HUIA_AUTH_HUIA_BASE_URL"] = Issuer,
-            ["NUXT_HUIA_AUTH_HUIA_TENANT"] = "e2e",
-            ["NUXT_HUIA_AUTH_CLIENT_ID"] = "huia-nuxt-playground",
-            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "huia-nuxt-playground-secret",
-            ["NUXT_HUIA_AUTH_SESSION_PASSWORD"] = "e2e-only-huia-nuxt-session-password-0123456789",
+            ["NUXT_HUIA_BASE_URL"] = Issuer,
+            ["NUXT_HUIA_TENANT"] = "e2e",
+            ["NUXT_HUIA_CLIENT_ID"] = "huia-nuxt-playground",
+            ["NUXT_HUIA_CLIENT_SECRET"] = "huia-nuxt-playground-secret",
+            ["NUXT_HUIA_SESSION_PASSWORD"] = "e2e-only-huia-nuxt-session-password-0123456789",
         });
 
         using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };

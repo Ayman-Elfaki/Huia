@@ -2,7 +2,7 @@
 import { Languages, Moon, Sun } from 'lucide-vue-next'
 
 const { loggedIn, user } = useUserSession()
-const { login, logout } = useAuth()
+const { login, logout } = useHuia()
 const route = useRoute()
 const colorMode = useColorMode()
 const { locale, locales, setLocale, t } = useI18n()

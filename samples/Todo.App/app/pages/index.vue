@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { loggedIn, login } = useAuth()
+const { loggedIn, login } = useHuia()
 const { t, locale } = useI18n()
 
 function signIn() {
