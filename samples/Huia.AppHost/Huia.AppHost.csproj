@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Huia.External\Huia.External.csproj" />
     <ProjectReference Include="..\Huia.Cli\Huia.Cli.csproj" />
     <ProjectReference Include="..\Todo.Api\Todo.Api.csproj" />
+    <ProjectReference Include="..\Shop.Api\Shop.Api.csproj" />
   </ItemGroup>
 
 </Project>

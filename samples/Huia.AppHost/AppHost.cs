@@ -6,6 +6,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 const string todoAppUrl = "http://localhost:3000";
 const string adminAppUrl = "http://localhost:3001";
+const string shopAppUrl = "http://localhost:3002";
 
 // E2E toggle and Postgres-volume toggle are configuration-driven so the Aspire.Hosting.Testing
 // fixture can flip them (E2E on, ephemeral database) without editing this file.
@@ -116,6 +117,15 @@ var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
 todoApi.WithEnvironment("Todo__PublicUrl", todoApi.GetEndpoint("http"));
 identityServer.WithEnvironment("Clients__TodoApi__BaseUrl", todoApi.GetEndpoint("http"));
 
+// Huia.Headless is single-tenant and entirely self-contained — its bearer tokens are only valid
+// against the app that minted them, so unlike todoApi/identityServer this never shares a database or
+// waits on the OIDC identity server.
+var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
+    .WithExternalHttpEndpoints()
+    .WithEnvironment("Huia__EnableE2E", enableE2E ? "true" : "false")
+    .WithEnvironment("Shop__AppUrl", shopAppUrl);
+shopApi.WithEnvironment("Huia__Issuer", shopApi.GetEndpoint("https"));
+
 // The admin CLI (device-authorization grant against the master tenant). It runs one command and exits,
 // so it does not start with the rest of the graph — press "Start" in the dashboard to open it in a
 // terminal (e.g. `huia login`, which waits for you to approve the device code in the browser).
@@ -158,6 +168,17 @@ builder.AddViteApp("admin-app", "../Huia.AdminUI")
     .WithEnvironment("NUXT_HUIA_CLIENT_SECRET", "huia-admin-ui-secret")
     .WithEnvironment("NUXT_HUIA_BASE_URL", identityServer.GetEndpoint("https"))
     .WithEnvironment("NUXT_HUIA_TENANT", "master")
+    .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
+    .WithExternalHttpEndpoints()
+    .WithNpm()
+    ;
+
+builder.AddViteApp("shop-app", "../Shop.App")
+    .WithHttpEndpoint(port: 3002, env: "PORT")
+    .WaitFor(shopApi)
+    .WithEnvironment("NUXT_PUBLIC_SHOP_API_URL", shopApi.GetEndpoint("https"))
+    .WithEnvironment("NUXT_HUIA_HEADLESS_SESSION_PASSWORD", GenerateRandomUrlSafeString())
+    // Node's undici rejects the ASP.NET Core dev cert; this also lets nuxt-huia-headless call Shop.Api.
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()
