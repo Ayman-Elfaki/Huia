@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     'shadcn-nuxt',
     'nuxt-api-party',
     // first-party auth module — referenced from source in the monorepo
-    '../../src/nuxt/src/module',
+    '../../src/nuxt/nuxt-huia-oidc/src/module',
   ],
   css: ['~/assets/css/main.css'],
 

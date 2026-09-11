@@ -66,8 +66,8 @@ jobs:
         run: npm ci && npm run build
       - working-directory: samples/Huia.AdminUI
         run: npm ci && npm run build
-      # Build the huia-nuxt playground .output for HuiaNuxtPlaygroundFixture.
-      - working-directory: src/nuxt
+      # Build the nuxt-huia-oidc playground .output for HuiaNuxtPlaygroundFixture.
+      - working-directory: src/nuxt/nuxt-huia-oidc
         run: npm ci && npm run dev:build
       - run: pwsh tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       # Warm the images the AppHost-backed mail E2E fixture needs (Docker is preinstalled on the runner).
@@ -106,15 +106,15 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: src/nuxt
+        working-directory: src/nuxt/nuxt-huia-oidc
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: src/nuxt/package-lock.json
-      # src/nuxt/.npmrc pins legacy-peer-deps (npm 10's arborist crashes on the nuxt peer graph).
+          cache-dependency-path: src/nuxt/nuxt-huia-oidc/package-lock.json
+      # src/nuxt/nuxt-huia-oidc/.npmrc pins legacy-peer-deps (npm 10's arborist crashes on the nuxt peer graph).
       - run: npm ci
       - run: npm run dev:prepare
       - run: npm run test:types

@@ -36,7 +36,7 @@ public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
     private async Task StartAsync()
     {
         var idpDll = Path.Combine(_repoRoot, "samples", "Huia.IdentityServer", "bin", "Release", "net10.0", "Huia.IdentityServer.dll");
-        var playgroundEntry = Path.Combine(_repoRoot, "src", "nuxt", "playground", ".output", "server", "index.mjs");
+        var playgroundEntry = Path.Combine(_repoRoot, "src", "nuxt", "nuxt-huia-oidc", "playground", ".output", "server", "index.mjs");
 
         if (!File.Exists(idpDll))
         {
@@ -45,7 +45,7 @@ public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
         }
         if (!File.Exists(playgroundEntry))
         {
-            SkipReason = $"Missing {playgroundEntry}. Run `npm --prefix src/nuxt run dev:build`.";
+            SkipReason = $"Missing {playgroundEntry}. Run `npm --prefix src/nuxt/nuxt-huia-oidc run dev:build`.";
             return;
         }
 
