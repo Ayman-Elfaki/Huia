@@ -1,0 +1,67 @@
+@page
+@model Huia.OpenId.Areas.Identity.Pages.Account.PasskeysModel
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-destructive" role="alert" data-testid="passkeys-error">@Model.ErrorMessage</div>
+}
+
+<script type="application/json" data-huia-passkey-strings>@Html.Raw(Model.StringsJson)</script>
+
+<section class="huia-passkey-list" data-huia-passkey data-endpoint="." data-mode="manage" data-testid="passkey-list">
+    @Html.AntiForgeryToken()
+
+    @if (Model.Passkeys.Count == 0)
+    {
+        <p class="huia-muted" data-testid="passkeys-empty">@Localizer["Passkey.None"]</p>
+    }
+    else
+    {
+        <ul class="huia-passkeys">
+            @foreach (var passkey in Model.Passkeys)
+            {
+                <li class="huia-passkey-row" data-testid="passkey-row">
+                    <partial name="_PasskeyMark" />
+                    <div class="huia-passkey-meta">
+                        <span class="huia-passkey-name" data-huia-passkey-name="@passkey.Id" role="button" tabindex="0"
+                              title="@Localizer["Passkey.RenameLabel"]">@(string.IsNullOrEmpty(passkey.Name) ? Localizer["Passkey.Unnamed"].Value : passkey.Name)</span>
+                        <span class="huia-muted">
+                            @passkey.CreatedAt.ToString("d")
+                            @if (passkey.IsBackedUp)
+                            {
+                                <span class="huia-passkey-pill" data-testid="passkey-synced">@Localizer["Passkey.Synced"]</span>
+                            }
+                        </span>
+                    </div>
+                    @if (Model.CanRemove)
+                    {
+                        <form method="post" asp-page-handler="Delete" data-huia-passkey-remove>
+                            <input type="hidden" name="id" value="@passkey.Id" />
+                            <button type="submit" class="huia-linkbtn huia-linkbtn-danger" data-testid="passkey-delete">@Localizer["Common.Remove"]</button>
+                        </form>
+                    }
+                </li>
+            }
+        </ul>
+
+        @if (!Model.CanRemove)
+        {
+            <p class="huia-muted" data-testid="passkey-only-method">@Localizer["Passkey.OnlyMethod"]</p>
+        }
+    }
+
+    <button type="button" class="btn w-full" data-huia-passkey-register data-testid="passkey-register">
+        <partial name="_PasskeyMark" />
+        <span>@Localizer["Passkey.Add"]</span>
+    </button>
+    <p class="huia-muted huia-passkey-error" role="alert" data-huia-passkey-error hidden></p>
+</section>
+
+@if (!string.IsNullOrEmpty(Model.ClientHomeUrl))
+{
+    <a class="btn-outline w-full" href="@Model.ClientHomeUrl" data-testid="passkeys-home">@string.Format(Localizer["SignedIn.Continue"].Value, Model.DisplayName)</a>
+}
+
+@section Scripts {
+    <script src="@(Model.PathBase)/_content/Huia.OpenId/js/passkey.js" nonce="@CspNonce.Value" defer></script>
+}

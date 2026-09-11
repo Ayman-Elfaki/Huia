@@ -10,10 +10,6 @@ public class HuiaOptionsValidationTests
         options.AddTenant("acme", tenant =>
         {
             tenant.Authentication.UseEmailAndPasswordLogin();
-            tenant.AddClient("acme-web", ClientKind.ServerSideWebApplication);
-            var client = tenant.Clients[0];
-            client.ClientSecret = "s3cret-value";
-            client.RedirectUris.Add(new Uri("https://acme.example.test/callback"));
         });
         return options;
     }
@@ -197,40 +193,6 @@ public class HuiaOptionsValidationTests
         tenant.Authentication.Phone!.AllowAutoProvisioning.ShouldBeFalse();
     }
 
-    [Fact]
-    public void A_confidential_client_without_a_secret_is_rejected()
-    {
-        var options = ValidOptions();
-        options.Tenants["acme"].Clients[0].ClientSecret = null;
-
-        Should.Throw<HuiaOptionsException>(() => options.Validate())
-            .Errors.ShouldContain(e => e.Contains("confidential client", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void A_public_client_with_a_secret_is_rejected()
-    {
-        var options = ValidOptions();
-        options.Tenants["acme"].AddClient("acme-spa", ClientKind.SinglePageApplication);
-        var spa = options.Tenants["acme"].Clients[1];
-        spa.ClientSecret = "should-not-be-here";
-        spa.RedirectUris.Add(new Uri("https://acme.example.test/spa"));
-
-        Should.Throw<HuiaOptionsException>(() => options.Validate())
-            .Errors.ShouldContain(e => e.Contains("public", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Duplicate_client_ids_within_a_tenant_are_rejected()
-    {
-        var options = ValidOptions();
-        var dup = options.Tenants["acme"].AddClient("acme-web", ClientKind.MachineToMachine);
-        dup.ClientSecret = "another-secret";
-
-        Should.Throw<HuiaOptionsException>(() => options.Validate())
-            .Errors.ShouldContain(e => e.Contains("more than once", StringComparison.Ordinal));
-    }
-
     [Theory]
     [InlineData("acme", true)]
     [InlineData("acme-corp", true)]
@@ -253,19 +215,5 @@ public class HuiaOptionsValidationTests
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("DefaultCountry", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void External_provider_names_must_be_unique()
-    {
-        var options = ValidOptions();
-        options.Tenants["acme"].Authentication.UseExternalLogin(ext =>
-        {
-            ext.AddOpenIdConnect("Partner", "id-1", "secret-1", "https://partner-a.example.test");
-            ext.AddOpenIdConnect("Partner", "id-2", "secret-2", "https://partner-b.example.test");
-        });
-
-        Should.Throw<HuiaOptionsException>(() => options.Validate())
-            .Errors.ShouldContain(e => e.Contains("duplicated", StringComparison.Ordinal));
     }
 }

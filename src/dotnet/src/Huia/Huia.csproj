@@ -1,17 +1,35 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <Description>Huia core: multi-tenant OpenID Connect / OAuth 2.0 Identity Provider domain model, options tree, eventing abstractions and constants. Free of ASP.NET Core and Entity Framework Core dependencies.</Description>
-    <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;oidc</PackageTags>
+    <Description>Huia core: multi-tenant domain model, options tree, eventing abstractions, identity managers, phone/OTP, signing key lifecycle, email sender, health checks, and common manage/admin endpoints. Free of Entity Framework Core and OpenIddict dependencies.</Description>
+    <PackageTags>identity;multi-tenant;headless;openid;auth</PackageTags>
     <RootNamespace>Huia</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
   </PropertyGroup>
 
-  <!-- Guard: the core package must stay free of ASP.NET Core and EF Core dependencies. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Finbuckle.MultiTenant" />
+    <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" />
+    <PackageReference Include="libphonenumber-csharp" />
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="MimeKit" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Quartz" />
+    <PackageReference Include="Quartz.Extensions.Hosting" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" />
+    <PackageReference Include="MR.AspNetCore.Pagination" />
+  </ItemGroup>
+
+  <!-- Guard: the core package must stay free of Entity Framework Core and OpenIddict dependencies. -->
   <Target Name="_HuiaCoreDependencyGuard" BeforeTargets="CollectPackageReferences">
     <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('Microsoft.EntityFrameworkCore'))"
            Text="Huia core must not reference Entity Framework Core (%(PackageReference.Identity))." />
-    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('Microsoft.AspNetCore'))"
-           Text="Huia core must not reference ASP.NET Core (%(PackageReference.Identity))." />
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('OpenIddict'))"
+           Text="Huia core must not reference OpenIddict (%(PackageReference.Identity))." />
   </Target>
 
 </Project>

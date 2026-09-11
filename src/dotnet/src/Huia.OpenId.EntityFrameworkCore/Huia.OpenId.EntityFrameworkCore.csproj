@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Huia OpenID persistence: HuiaOpenIdDbContext, OpenIddict stores, and passkey entity mapping.</Description>
+    <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;entity-framework-core;openiddict</PackageTags>
+    <RootNamespace>Huia.OpenId.EntityFrameworkCore</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenIddict.Abstractions" />
+    <PackageReference Include="OpenIddict.Core" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore" />
+  </ItemGroup>
+
+</Project>

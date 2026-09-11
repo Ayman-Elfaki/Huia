@@ -6,7 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\dotnet\src\Huia.AspNetCore\Huia.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\dotnet\src\Huia.OpenId\Huia.OpenId.csproj" />
+    <ProjectReference Include="..\..\src\dotnet\src\Huia.OpenId.EntityFrameworkCore\Huia.OpenId.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

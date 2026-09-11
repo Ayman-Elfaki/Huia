@@ -1,5 +1,8 @@
-using Huia.AspNetCore.Identity;
-using Huia.AspNetCore.Multitenancy;
+using Huia.Identity;
+using Huia.Multitenancy;
+using Huia.OpenId.Identity;
+using Huia.OpenId.Options;
+using Huia.Options;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,12 +35,15 @@ public sealed class FlowIdentityOptionsTests : IAsyncLifetime
                 phone.AllowAutoProvisioning = true;
                 phone.MaxFailedAccessAttempts = 4;
             });
-            tenant.Authentication.UseExternalLogin(ext => ext.AddOpenIdConnect(
-                "HuiaExternal", "flowtest-client", "flowtest-secret", "https://partner.flowtest.test", p =>
-                {
-                    p.DisplayName = "Partner";
-                    p.Scopes.Add("email");
-                }));
+            tenant.AddHuiaOpenId(openId =>
+            {
+                openId.UseExternalLogin(ext => ext.AddOpenIdConnect(
+                    "HuiaExternal", "flowtest-client", "flowtest-secret", "https://partner.flowtest.test", p =>
+                    {
+                        p.DisplayName = "Partner";
+                        p.Scopes.Add("email");
+                    }));
+            });
         }));
     }
 

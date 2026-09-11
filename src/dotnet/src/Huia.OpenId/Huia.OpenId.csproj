@@ -1,0 +1,110 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <Description>Huia ASP.NET Core integration: AddHuia() / UseHuia(), Finbuckle base-path multi-tenancy, the OpenIddict server and client, the Razor Pages account UI, passwordless SMS, the signing-key lifecycle jobs and opt-in security headers.</Description>
+    <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;aspnetcore;openiddict;razor-pages</PackageTags>
+    <RootNamespace>Huia.OpenId</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- The account-UI asset build (BuildAccountUiAssets target below). `wwwroot/` is committed. -->
+  <ItemGroup>
+    <Content Remove="node_modules/**;package.json;package-lock.json" />
+    <None Remove="node_modules/**" />
+    <Compile Remove="node_modules/**" />
+    <EmbeddedResource Remove="node_modules/**" />
+    <None Include="package.json">
+      <Pack>false</Pack>
+    </None>
+    <None Include="package-lock.json">
+      <Pack>false</Pack>
+    </None>
+    <None Update="Assets\styles\huia.css">
+      <Pack>false</Pack>
+    </None>
+  </ItemGroup>
+
+  <!--
+    Regenerates the committed account-UI assets under wwwroot/ (replaces the former build-assets.mjs):
+    runs the Tailwind v4 CLI over Assets/styles/huia.css, then copies the vendored JS/CSS/SVG out of
+    node_modules. Runs during the build only when node_modules is present (a Node-less `dotnet build` —
+    the CI `build` job, `dotnet pack`, a package consumer — leaves the committed wwwroot/ untouched).
+    Incremental via a stamp file; -p:ForceAccountUiAssets=true runs `npm ci` first and bypasses the
+    incremental check (the CI drift guard). -p:SkipAccountUiAssets=true disables it outright.
+  -->
+  <PropertyGroup>
+    <!-- A stamp the target touches on every run gates the incremental check: the Tailwind CLI and the
+         copies all skip writing when the output is byte-identical, so no built file has a reliable
+         timestamp. When forced, Outputs points at a path that never exists so the check always fails. -->
+    <_AccountUiStamp>$(BaseIntermediateOutputPath)accountui.assets.stamp</_AccountUiStamp>
+    <_AccountUiOutputs Condition="'$(ForceAccountUiAssets)' != 'true'">$(_AccountUiStamp)</_AccountUiOutputs>
+    <_AccountUiOutputs Condition="'$(ForceAccountUiAssets)' == 'true'">$(BaseIntermediateOutputPath)__force_account_ui_assets__</_AccountUiOutputs>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <_AccountUiInput Include="Assets/styles/huia.css;package.json;package-lock.json" />
+    <_AccountUiInput Include="Areas/**/*.cshtml;Emails/**/*.cshtml" />
+    <_AccountUiBrand Include="google;github;microsoft;apple;gitlab;bitbucket;openid" />
+  </ItemGroup>
+
+  <Target Name="BuildAccountUiAssets"
+          Condition="'$(SkipAccountUiAssets)' != 'true' and (Exists('$(MSBuildProjectDirectory)/node_modules') or '$(ForceAccountUiAssets)' == 'true')"
+          BeforeTargets="BeforeBuild;ResolveStaticWebAssetsInputs"
+          Inputs="@(_AccountUiInput);$(MSBuildProjectFullPath)"
+          Outputs="$(_AccountUiOutputs)">
+
+    <Exec Condition="!Exists('$(MSBuildProjectDirectory)/node_modules')"
+          Command="npm ci" WorkingDirectory="$(MSBuildProjectDirectory)" />
+
+    <Exec Command="node &quot;node_modules/@tailwindcss/cli/dist/index.mjs&quot; -i &quot;Assets/styles/huia.css&quot; -o &quot;wwwroot/css/huia.css&quot; --minify"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+
+    <Copy SourceFiles="node_modules/basecoat-css/dist/js/all.min.js"
+          DestinationFiles="wwwroot/js/basecoat.js" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="node_modules/libphonenumber-js/bundle/libphonenumber-js.min.js"
+          DestinationFiles="wwwroot/js/libphonenumber.js" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="node_modules/flag-icons/css/flag-icons.min.css"
+          DestinationFiles="wwwroot/css/flag-icons.css" SkipUnchangedFiles="true" />
+
+    <RemoveDir Directories="wwwroot/flags" />
+    <ItemGroup>
+      <_AccountUiFlag Include="node_modules/flag-icons/flags/4x3/*.svg" />
+      <_AccountUiBrandSvg Include="node_modules/@fortawesome/fontawesome-free/svgs/brands/%(_AccountUiBrand.Identity).svg" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_AccountUiFlag)" DestinationFolder="wwwroot/flags/4x3" SkipUnchangedFiles="true" />
+    <!-- Not every brand ships in every FontAwesome release; skip the missing ones. -->
+    <Copy SourceFiles="@(_AccountUiBrandSvg)" DestinationFolder="wwwroot/img/brands"
+          SkipUnchangedFiles="true" ContinueOnError="true" />
+
+    <Touch Files="$(_AccountUiStamp)" AlwaysCreate="true" />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia\Huia.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="OpenIddict.Abstractions" />
+    <PackageReference Include="OpenIddict.Core" />
+    <PackageReference Include="OpenIddict.AspNetCore" />
+    <PackageReference Include="OpenIddict.Validation.AspNetCore" />
+    <PackageReference Include="OpenIddict.Validation.SystemNetHttp" />
+    <PackageReference Include="OpenIddict.Client.AspNetCore" />
+    <PackageReference Include="OpenIddict.Client.SystemNetHttp" />
+    <PackageReference Include="OpenIddict.Client.DataProtection" />
+    <PackageReference Include="OpenIddict.Client.WebIntegration" />
+    <PackageReference Include="OpenIddict.Quartz" />
+    <PackageReference Include="Quartz.Extensions.Hosting" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" />
+    <PackageReference Include="libphonenumber-csharp" />
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="MR.AspNetCore.Pagination" />
+  </ItemGroup>
+
+</Project>

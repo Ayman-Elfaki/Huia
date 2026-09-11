@@ -14,6 +14,13 @@ public sealed class HuiaOptionsException : Exception
         Errors = errors;
     }
 
+    /// <summary>Creates the exception from a single validation error.</summary>
+    /// <param name="error">The human-readable validation error.</param>
+    public HuiaOptionsException(string error)
+        : this([error])
+    {
+    }
+
     /// <summary>The individual validation errors, each prefixed with its configuration path.</summary>
     public IReadOnlyList<string> Errors { get; }
 

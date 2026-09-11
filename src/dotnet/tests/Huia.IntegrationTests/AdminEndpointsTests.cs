@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Huia.IntegrationTests.Infrastructure;
+using Huia.OpenId.Options;
+using Huia.Options;
 
 namespace Huia.IntegrationTests;
 
@@ -20,7 +22,7 @@ public sealed class AdminEndpointsTests : IAsyncLifetime
             huia.AddTenant("scoped-admin", tenant =>
             {
                 tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-                tenant.AddScope("reports:read", scope => scope.DisplayName = "Read reports");
+                tenant.AddHuiaOpenId(openId => openId.AddScope("reports:read", scope => scope.DisplayName = "Read reports"));
             });
         });
         await _host.SeedInteractiveClientAsync("master", "master-spa", RedirectUri);

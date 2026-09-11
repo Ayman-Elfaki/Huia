@@ -1,4 +1,4 @@
-using Huia.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore;
 
 namespace Huia.IdentityServer;
 
@@ -16,7 +16,7 @@ internal sealed class SchemaInitializer(IServiceProvider services, ILogger<Schem
             try
             {
                 await using var scope = services.CreateAsyncScope();
-                var context = scope.ServiceProvider.GetRequiredService<HuiaDbContext>();
+                var context = scope.ServiceProvider.GetRequiredService<HuiaOpenIdDbContext>();
                 await context.Database.EnsureCreatedAsync(cancellationToken);
                 return;
             }

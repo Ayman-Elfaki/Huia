@@ -1,6 +1,8 @@
-using Huia.AspNetCore.Multitenancy;
-using Huia.EntityFrameworkCore;
-using Huia.EntityFrameworkCore.Entities;
+using Huia;
+using Huia.Identity;
+using Huia.Multitenancy;
+using Huia.OpenId;
+using Huia.OpenId.EntityFrameworkCore;
 using Huia.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
@@ -14,10 +16,10 @@ var consumerBaseUrl = builder.Configuration.GetValue("Consumer:BaseUrl", "https:
 var connection = new SqliteConnection(builder.Configuration.GetConnectionString("huia") ?? "DataSource=:memory:");
 connection.Open();
 builder.Services.AddSingleton(connection);
-builder.Services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(connection).UseOpenIddict());
+builder.Services.AddDbContext<HuiaOpenIdDbContext>(options => options.UseSqlite(connection).UseOpenIddict());
 builder.Services.AddHostedService<SchemaInitializer>();
 
-builder.Services.AddHuia(huia =>
+var huiaBuilder = builder.Services.AddHuia(huia =>
 {
     huia.UseIssuer(issuer);
     huia.DisableTransportSecurityRequirement();
@@ -33,27 +35,31 @@ builder.Services.AddHuia(huia =>
         tenant.Branding.PrivacyUrl = new Uri($"{consumerBaseUrl}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
         tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-        tenant.AddServerSideWebApplication("huia-idp", "huia-idp-secret", client =>
+        tenant.AddHuiaOpenId(openId =>
         {
-            client.DisplayName = "Todo (via partner sign-in)";
-            client.ClientUri = new Uri($"{consumerBaseUrl}/todo/");
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternal"));
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternalpartial"));
-            // The downstream Huia's OpenIddict-client post-logout callback, so signing out of the Todo
-            // app also ends this partner session.
-            client.PostLogoutRedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signout-callback-oidc"));
-            client.Scopes.Add("email");
-            client.Scopes.Add("profile");
+            openId.AddServerSideWebApplication("huia-idp", "huia-idp-secret", client =>
+            {
+                client.DisplayName = "Todo (via partner sign-in)";
+                client.ClientUri = new Uri($"{consumerBaseUrl}/todo/");
+                client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternal"));
+                client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternalpartial"));
+                // The downstream Huia's OpenIddict-client post-logout callback, so signing out of the Todo
+                // app also ends this partner session.
+                client.PostLogoutRedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signout-callback-oidc"));
+                client.Scopes.Add("email");
+                client.Scopes.Add("profile");
+            });
         });
     });
-}).AddHuiaUi();
+}).AddHuiaOpenId();
+
+huiaBuilder.AddHuiaUi();
 
 builder.Services.AddHostedService<PartnerUserSeeder>();
 
 var app = builder.Build();
-app.UseHuia();
-app.MapHuiaEndpoints();
-app.MapHuiaHome("partners");
+app.UseHuiaOpenId();
+app.MapHuiaOpenIdEndpoints();
 app.Run();
 
 /// <summary>Test entry point marker.</summary>
@@ -64,7 +70,7 @@ internal sealed class SchemaInitializer(IServiceProvider services) : IHostedServ
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await using var scope = services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<HuiaDbContext>().Database.EnsureCreatedAsync(cancellationToken);
+        await scope.ServiceProvider.GetRequiredService<HuiaOpenIdDbContext>().Database.EnsureCreatedAsync(cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

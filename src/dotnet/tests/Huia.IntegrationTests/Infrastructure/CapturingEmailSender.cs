@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using Huia.AspNetCore.Emails;
-using Huia.EntityFrameworkCore.Entities;
+using Huia.Emails;
+using Huia.Identity;
 
 namespace Huia.IntegrationTests.Infrastructure;
 

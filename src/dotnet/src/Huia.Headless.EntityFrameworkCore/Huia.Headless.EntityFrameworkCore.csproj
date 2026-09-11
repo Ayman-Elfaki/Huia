@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Huia headless Entity Framework Core integration: revocable rotated refresh token entity, store and DbContext base.</Description>
+    <PackageTags>identity;multi-tenant;efcore;entity-framework-core;headless;refresh-tokens</PackageTags>
+    <RootNamespace>Huia.Headless.EntityFrameworkCore</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Huia.Headless\Huia.Headless.csproj" />
+  </ItemGroup>
+
+  <!-- Hard guard: Huia.Headless.EntityFrameworkCore must never depend on OpenIddict directly -->
+  <Target Name="EnforceZeroOpenIddictDependency" BeforeTargets="BeforeBuild">
+    <Error Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'OpenIddict.Core'))"
+           Text="Huia.Headless.EntityFrameworkCore must not reference OpenIddict." />
+    <Error Condition="@(ProjectReference->AnyHaveMetadataValue('Filename', 'Huia.OpenId'))"
+           Text="Huia.Headless.EntityFrameworkCore must not reference Huia.OpenId." />
+    <Error Condition="@(ProjectReference->AnyHaveMetadataValue('Filename', 'Huia.OpenId.EntityFrameworkCore'))"
+           Text="Huia.Headless.EntityFrameworkCore must not reference Huia.OpenId.EntityFrameworkCore." />
+  </Target>
+
+</Project>

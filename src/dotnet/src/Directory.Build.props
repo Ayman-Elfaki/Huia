@@ -30,8 +30,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Huia.AspNetCore reads internal option accessors (e.g. HuiaTenantAuthenticationOptions.Password). -->
+    <!-- Huia.AspNetCore / Huia.OpenId and Huia.Headless read internal option accessors. -->
     <InternalsVisibleTo Include="Huia.AspNetCore" />
+    <InternalsVisibleTo Include="Huia.OpenId" />
+    <InternalsVisibleTo Include="Huia.Headless" />
+    <InternalsVisibleTo Include="Huia.Headless.EntityFrameworkCore" />
+    <InternalsVisibleTo Include="Huia.OpenId.EntityFrameworkCore" />
     <InternalsVisibleTo Include="Huia.Tests" />
     <InternalsVisibleTo Include="Huia.IntegrationTests" />
     <InternalsVisibleTo Include="Huia.E2ETests" />

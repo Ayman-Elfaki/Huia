@@ -1,5 +1,6 @@
-using Huia.AspNetCore.Keys;
+using Huia.Keys;
 using Huia.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore;
 using Huia.EntityFrameworkCore.Entities;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;

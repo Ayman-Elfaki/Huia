@@ -1,6 +1,7 @@
 using System.Net;
 using Huia.EntityFrameworkCore;
 using Huia.EntityFrameworkCore.Entities;
+using Huia.Identity;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text.Json;
-using Huia.AspNetCore.OpenIddict;
 using Huia.IntegrationTests.Infrastructure;
+using Huia.OpenId;
+using Huia.OpenId.OpenIddict;
+using Huia.OpenId.Options;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,13 +22,16 @@ public sealed class ClientSeedingTests : IAsyncLifetime
             huia.AddTenant("seeded", tenant =>
             {
                 tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-                tenant.AddMachineToMachineApplication("seeded-worker", "seeded-secret-value", client =>
-                    client.Token.AccessToken = TimeSpan.FromMinutes(5));
-                tenant.AddServerSideWebApplication("seeded-web", "seeded-web-secret", client =>
+                tenant.AddHuiaOpenId(openId =>
                 {
-                    client.RedirectUris.Add(new Uri("https://app.seeded.test/callback"));
-                    client.ClientUri = new Uri("https://app.seeded.test/");
-                    client.LogoUri = new Uri("https://cdn.seeded.test/logo.svg");
+                    openId.AddMachineToMachineApplication("seeded-worker", "seeded-secret-value", client =>
+                        client.Token.AccessToken = TimeSpan.FromMinutes(5));
+                    openId.AddServerSideWebApplication("seeded-web", "seeded-web-secret", client =>
+                    {
+                        client.RedirectUris.Add(new Uri("https://app.seeded.test/callback"));
+                        client.ClientUri = new Uri("https://app.seeded.test/");
+                        client.LogoUri = new Uri("https://cdn.seeded.test/logo.svg");
+                    });
                 });
             });
         });
@@ -74,7 +79,7 @@ public sealed class ClientSeedingTests : IAsyncLifetime
                   ?? throw new InvalidOperationException("The seeded client was not found.");
 
         var properties = await manager.GetPropertiesAsync(app);
-        properties[HuiaConstants.ApplicationProperties.Origin].GetString().ShouldBe(HuiaConstants.Origins.Static);
+        properties[HuiaOpenIdConstants.ApplicationProperties.Origin].GetString().ShouldBe(HuiaOpenIdConstants.Origins.Static);
     }
 
     // ------------------------------------------------------------------ pruning
@@ -121,7 +126,7 @@ public sealed class ClientSeedingTests : IAsyncLifetime
             Kind = ClientKind.MachineToMachine,
             ClientSecret = "ghost-secret-value",
         };
-        var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(tenantId, client, HuiaConstants.Origins.Static);
+        var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(tenantId, client, HuiaOpenIdConstants.Origins.Static);
         await manager.CreateAsync(descriptor);
     }
 

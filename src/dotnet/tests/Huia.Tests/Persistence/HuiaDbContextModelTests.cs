@@ -1,7 +1,8 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.EntityFrameworkCore;
 using Huia.EntityFrameworkCore.Entities;
-using Huia.EntityFrameworkCore.Multitenancy;
+using Huia.Identity;
+using Huia.Multitenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace Huia.Tests.Persistence;
@@ -43,9 +44,6 @@ public sealed class HuiaDbContextModelTests : IDisposable
         Table<HuiaUser>().ShouldBe("HuiaUsers");
         Table<HuiaRole>().ShouldBe("HuiaRoles");
         Table<HuiaSigningKey>().ShouldBe("HuiaSigningKeys");
-        _context.Model.GetEntityTypes()
-            .First(e => e.ClrType.Name == "OpenIddictEntityFrameworkCoreApplication")
-            .GetTableName().ShouldBe("HuiaApplications");
     }
 
     [Fact]

@@ -2,7 +2,8 @@ using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.EntityFrameworkCore;
 using Huia.EntityFrameworkCore.Entities;
-using Huia.EntityFrameworkCore.Multitenancy;
+using Huia.Identity;
+using Huia.Multitenancy;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Huia headless bearer-token identity API: multi-tenant, phone/OTP login, revocable refresh tokens, direct JWT minting.</Description>
+    <PackageTags>identity;multi-tenant;bearer-token;jwt;headless;aspnetcore</PackageTags>
+    <RootNamespace>Huia.Headless</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia\Huia.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <!-- Hard guard: Huia.Headless must never depend on EF Core or OpenIddict directly -->
+  <Target Name="EnforceZeroEfCoreDependency" BeforeTargets="BeforeBuild">
+    <Error Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'Microsoft.EntityFrameworkCore'))"
+           Text="Huia.Headless must not reference Microsoft.EntityFrameworkCore. The package is storage-agnostic." />
+    <Error Condition="@(ProjectReference->AnyHaveMetadataValue('Filename', 'Huia.EntityFrameworkCore'))"
+           Text="Huia.Headless must not reference Huia.EntityFrameworkCore." />
+    <Error Condition="@(ProjectReference->AnyHaveMetadataValue('Filename', 'Huia.Headless.EntityFrameworkCore'))"
+           Text="Huia.Headless must not reference Huia.Headless.EntityFrameworkCore." />
+  </Target>
+
+  <Target Name="EnforceZeroOpenIddictDependency" BeforeTargets="BeforeBuild">
+    <Error Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'OpenIddict.Core'))"
+           Text="Huia.Headless must not reference OpenIddict." />
+    <Error Condition="@(ProjectReference->AnyHaveMetadataValue('Filename', 'Huia.OpenId'))"
+           Text="Huia.Headless must not reference Huia.OpenId." />
+  </Target>
+
+</Project>

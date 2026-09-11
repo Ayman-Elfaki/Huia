@@ -1,10 +1,9 @@
 namespace Huia.Options;
 
 /// <summary>
-/// The sign-in methods available for a tenant: email/password, phone (SMS one-time code), and external
-/// identity providers. Each is independently opt-in through <see cref="UseEmailAndPasswordLogin"/> /
-/// <see cref="UsePhoneLogin"/> / <see cref="UseExternalLogin"/> — the underlying option objects are not
-/// part of the public surface.
+/// The sign-in methods available for a tenant: email/password and phone (SMS one-time code).
+/// Each is independently opt-in through <see cref="UseEmailAndPasswordLogin"/> /
+/// <see cref="UsePhoneLogin"/> — the underlying option objects are not part of the public surface.
 /// </summary>
 public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
 {
@@ -14,20 +13,17 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
     /// <summary>The phone (SMS one-time code) flow options, or <see langword="null"/> when never enabled. Configured via <see cref="UsePhoneLogin"/>.</summary>
     internal PhoneOptions? Phone { get; private set; }
 
-    /// <summary>The external-provider flow options, or <see langword="null"/> when never enabled. Configured via <see cref="UseExternalLogin"/>.</summary>
-    internal ExternalLoginOptions? External { get; private set; }
-
     /// <summary>The passkey (WebAuthn) flow options, or <see langword="null"/> when never enabled. Configured via <see cref="UsePasskeyLogin"/>.</summary>
     internal PasskeyOptions? Passkey { get; private set; }
+
+    /// <summary>Hook for extensions (e.g. OpenId external login) to indicate a sign-in method is enabled.</summary>
+    internal Func<bool>? HasAdditionalLoginMethod { get; set; }
 
     /// <summary>Whether the interactive email/password flow is enabled for this tenant.</summary>
     public bool IsEmailAndPasswordLoginEnabled => EmailAndPassword.Enabled;
 
     /// <summary>Whether the phone (SMS one-time code) sign-in flow is enabled.</summary>
     public bool IsPhoneLoginEnabled => Phone is not null;
-
-    /// <summary>Whether at least one external identity provider is configured.</summary>
-    public bool IsExternalLoginEnabled => External is { Providers.Count: > 0 };
 
     /// <summary>Whether passkey (WebAuthn) sign-in is enabled for this tenant.</summary>
     public bool IsPasskeyLoginEnabled => Passkey is not null;
@@ -52,17 +48,6 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
     {
         Phone ??= new PhoneOptions();
         configure?.Invoke(Phone);
-        return this;
-    }
-
-    /// <summary>Enables external identity providers for this tenant.</summary>
-    /// <param name="configure">Configuration that registers at least one provider.</param>
-    /// <returns>This instance, for chaining.</returns>
-    public HuiaTenantAuthenticationOptions UseExternalLogin(Action<ExternalLoginOptions> configure)
-    {
-        ArgumentNullException.ThrowIfNull(configure);
-        External ??= new ExternalLoginOptions();
-        configure(External);
         return this;
     }
 
@@ -96,7 +81,7 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
         return this;
     }
 
-    /// <summary>Runs validation across all three sign-in methods.</summary>
+    /// <summary>Runs validation across all configured sign-in methods.</summary>
     public void Validate()
     {
         var errors = new List<string>();
@@ -115,17 +100,12 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
             ((IHuiaOptionsSection)Phone).Validate(HuiaOptionsValidation.Combine(path, nameof(Phone)), errors);
         }
 
-        if (External is not null)
-        {
-            ((IHuiaOptionsSection)External).Validate(HuiaOptionsValidation.Combine(path, nameof(External)), errors);
-        }
-
         if (Passkey is not null)
         {
             ((IHuiaOptionsSection)Passkey).Validate(HuiaOptionsValidation.Combine(path, nameof(Passkey)), errors);
         }
 
-        var anyMethod = EmailAndPassword.Enabled || Phone is not null || IsExternalLoginEnabled || Passkey is not null;
+        var anyMethod = EmailAndPassword.Enabled || Phone is not null || Passkey is not null || HasAdditionalLoginMethod?.Invoke() == true;
         errors.Require(anyMethod, path, "at least one sign-in method must be enabled (email and password, phone, external, or passkey).");
     }
 }

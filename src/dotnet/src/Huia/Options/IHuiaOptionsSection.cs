@@ -4,7 +4,7 @@ namespace Huia.Options;
 /// Implemented by every node in the Huia options tree. Nodes append their problems to the supplied
 /// error list rather than throwing, so a single validation pass can report everything wrong at once.
 /// </summary>
-internal interface IHuiaOptionsSection
+public interface IHuiaOptionsSection
 {
     /// <summary>Validates this node and its children.</summary>
     /// <param name="path">The configuration path of this node (for example <c>Huia:Tenants:acme</c>).</param>

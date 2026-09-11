@@ -1,8 +1,10 @@
 using System.Net;
 using System.Text.Json;
-using Huia.AspNetCore.Multitenancy;
-using Huia.AspNetCore.OpenIddict;
 using Huia.IntegrationTests.Infrastructure;
+using Huia.Multitenancy;
+using Huia.OpenId;
+using Huia.OpenId.OpenIddict;
+using Huia.OpenId.Options;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,10 +24,13 @@ public sealed class ScopeSeedingTests : IAsyncLifetime
             huia.AddTenant("scoped", tenant =>
             {
                 tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-                tenant.AddScope("reports", scope =>
+                tenant.AddHuiaOpenId(openId =>
                 {
-                    scope.DisplayName = "Reports";
-                    scope.Resources.Add("reports-api");
+                    openId.AddScope("reports", scope =>
+                    {
+                        scope.DisplayName = "Reports";
+                        scope.Resources.Add("reports-api");
+                    });
                 });
             });
             huia.AddTenant("unscoped", tenant =>
@@ -128,8 +133,8 @@ public sealed class ScopeSeedingTests : IAsyncLifetime
         await using var scope = _host.Services.CreateAsyncScope();
         var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
         var descriptor = new OpenIddictScopeDescriptor { Name = name };
-        descriptor.Properties[HuiaConstants.ApplicationProperties.Tenant] = JsonSerializer.SerializeToElement(tenantId);
-        descriptor.Properties[HuiaConstants.ApplicationProperties.Origin] = JsonSerializer.SerializeToElement(HuiaConstants.Origins.Static);
+        descriptor.Properties[HuiaOpenIdConstants.ApplicationProperties.Tenant] = JsonSerializer.SerializeToElement(tenantId);
+        descriptor.Properties[HuiaOpenIdConstants.ApplicationProperties.Origin] = JsonSerializer.SerializeToElement(HuiaOpenIdConstants.Origins.Static);
         await manager.CreateAsync(descriptor);
     }
 

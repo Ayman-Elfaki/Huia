@@ -1,8 +1,0 @@
-@page "{code:int?}"
-@model Huia.AspNetCore.Areas.Identity.Pages.Account.StatusModel
-
-<p data-testid="status-page" data-status-code="@Model.Code">@Model.Body</p>
-
-<div class="huia-links">
-    <a asp-page="./Login">@Localizer["Error.BackToSignIn"]</a>
-</div>

@@ -1,11 +1,16 @@
 using System.Net;
 using Finbuckle.MultiTenant.Abstractions;
-using Huia.AspNetCore.Identity;
-using Huia.AspNetCore.Multitenancy;
+using Huia.DependencyInjection;
+using Huia.Emails;
 using Huia.EntityFrameworkCore;
-using Huia.EntityFrameworkCore.Entities;
-using Huia.EntityFrameworkCore.Multitenancy;
+using Huia.Identity;
+using Huia.Multitenancy;
+using Huia.OpenId;
+using Huia.OpenId.EntityFrameworkCore;
+using Huia.OpenId.Identity;
+using Huia.OpenId.Options;
 using Huia.Options;
+using Huia.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -81,7 +86,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
     public static async Task<HuiaTestHost> StartAsync(
         Action<HuiaOptionsBuilder>? configureOptions = null,
         Action<IEndpointRouteBuilder>? configureEndpoints = null,
-        Action<Huia.AspNetCore.DependencyInjection.IHuiaBuilder>? configureBuilder = null,
+        Action<IHuiaBuilder>? configureBuilder = null,
         TimeProvider? timeProvider = null)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
@@ -101,7 +106,9 @@ public sealed class HuiaTestHost : IAsyncDisposable
                         services.AddSingleton(timeProvider);
                     }
 
-                    services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(connection));
+                    services.AddDbContext<HuiaOpenIdDbContext>(options => options.UseSqlite(connection).UseOpenIddict());
+                    services.AddScoped<HuiaDbContext>(sp => sp.GetRequiredService<HuiaOpenIdDbContext>());
+                    services.AddHuiaOpenIdEntityFrameworkCore<HuiaOpenIdDbContext>();
                     services.AddSingleton<IHostedService, SchemaInitializer>();
 
                     var builder = services.AddHuia(huia =>
@@ -141,32 +148,34 @@ public sealed class HuiaTestHost : IAsyncDisposable
                         huia.AddTenant("consumer", tenant =>
                         {
                             tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-                            tenant.Authentication.UseExternalLogin(ext =>
-                                ext.AddOpenIdConnect("HuiaExternal", "consumer-client", "consumer-secret", "https://partner.example.test", p =>
-                                {
-                                    p.DisplayName = "Partner";
-                                    p.Scopes.Add("profile");
-                                    p.Scopes.Add("email");
-                                }));
+                            tenant.AddHuiaOpenId(openId =>
+                                openId.UseExternalLogin(ext =>
+                                    ext.AddOpenIdConnect("HuiaExternal", "consumer-client", "consumer-secret", "https://partner.example.test", p =>
+                                    {
+                                        p.DisplayName = "Partner";
+                                        p.Scopes.Add("profile");
+                                        p.Scopes.Add("email");
+                                    })));
                         });
                         configureOptions?.Invoke(huia);
-                    });
+                    }).AddHuiaOpenId();
                     builder.AddHuiaUi();
                     services.AddSingleton(sms);
-                    services.AddScoped<Huia.AspNetCore.Services.ISmsSender>(_ => sms);
+                    services.AddScoped<ISmsSender>(_ => sms);
                     services.AddSingleton(email);
-                    services.AddScoped<Huia.AspNetCore.Emails.IHuiaEmailSender>(_ => email);
+                    services.AddScoped<IHuiaEmailSender>(_ => email);
                     services.AddSingleton(eventCollector);
                     RegisterEventCollector(services, eventCollector);
                     configureBuilder?.Invoke(builder);
                 });
                 web.Configure(app =>
                 {
-                    app.UseHuia();
+                    app.UseDeveloperExceptionPage();
+                    app.UseHuiaOpenId();
                     app.UseEndpoints(endpoints =>
                     {
-                        endpoints.MapHuiaEndpoints();
-                        endpoints.MapHuiaAdminEndpoints()
+                        endpoints.MapHuiaOpenIdEndpoints();
+                        endpoints.MapHuiaOpenIdAdminEndpoints()
                             .RequireAuthorization(policy => policy.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator));
                         endpoints.MapGet("/probe", (HttpContext context, IMultiTenantContextAccessor tenantAccessor) => Results.Ok(new ProbeResult(
                             tenantAccessor.CurrentTenantId(),
@@ -442,7 +451,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             using var scope = services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<HuiaDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<HuiaOpenIdDbContext>();
             await context.Database.EnsureCreatedAsync(cancellationToken);
         }
 

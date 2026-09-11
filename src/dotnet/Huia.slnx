@@ -11,7 +11,10 @@
   <Folder Name="/src/">
     <Project Path="src/Huia/Huia.csproj" />
     <Project Path="src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj" />
-    <Project Path="src/Huia.AspNetCore/Huia.AspNetCore.csproj" />
+    <Project Path="src/Huia.OpenId/Huia.OpenId.csproj" />
+    <Project Path="src/Huia.OpenId.EntityFrameworkCore/Huia.OpenId.EntityFrameworkCore.csproj" />
+    <Project Path="src/Huia.Headless/Huia.Headless.csproj" />
+    <Project Path="src/Huia.Headless.EntityFrameworkCore/Huia.Headless.EntityFrameworkCore.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="../../samples/Huia.AppHost/Huia.AppHost.csproj" />
@@ -19,6 +22,7 @@
     <Project Path="../../samples/Huia.External/Huia.External.csproj" />
     <Project Path="../../samples/Huia.Cli/Huia.Cli.csproj" />
     <Project Path="../../samples/Todo.Api/Todo.Api.csproj" />
+    <Project Path="../../samples/Shop.Api/Shop.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Huia.Tests/Huia.Tests.csproj" />

@@ -11,6 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup Label="OpenIddict">
+    <PackageVersion Include="OpenIddict.Abstractions" Version="$(OpenIddictVersion)" />
+    <PackageVersion Include="OpenIddict.Core" Version="$(OpenIddictVersion)" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="$(OpenIddictVersion)" />
     <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="$(OpenIddictVersion)" />
     <PackageVersion Include="OpenIddict.Client.AspNetCore" Version="$(OpenIddictVersion)" />
@@ -35,6 +37,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EfCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(EfCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 

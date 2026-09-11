@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
-    <PackageReference Include="OpenIddict.EntityFrameworkCore" />
     <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" />
     <PackageReference Include="Finbuckle.MultiTenant.Identity.EntityFrameworkCore" />
   </ItemGroup>

@@ -26,41 +26,31 @@ public sealed class TenantOptions : IHuiaOptionsSection
     /// <summary>Tenant-level SMS overrides. Merged over <see cref="HuiaOptions.Sms"/>.</summary>
     public SmsOptions? Sms { get; set; }
 
-    /// <summary>OAuth clients to seed for this tenant.</summary>
-    public IList<HuiaClientDescriptor> Clients { get; } = [];
-
-    /// <summary>Custom OAuth scopes to seed for this tenant, beyond the standard OIDC scopes.</summary>
-    public IList<HuiaScopeDescriptor> Scopes { get; } = [];
-
     /// <summary>
-    /// Code-defined ("static") roles to seed for this tenant: created at start-up if missing, and — like
-    /// <see cref="Clients"/> / <see cref="Scopes"/> — read-only afterwards through the admin API
-    /// (rename / delete return <c>409</c>). Only the initial creation is stamped static: a role that
-    /// already exists under that name is left alone, whatever its current origin.
+    /// Code-defined ("static") roles to seed for this tenant: created at start-up if missing, and
+    /// read-only afterwards through the admin API (rename / delete return <c>409</c>).
+    /// Only the initial creation is stamped static: a role that already exists under that name is
+    /// left alone, whatever its current origin.
     /// </summary>
     public IList<string> Roles { get; } = [];
 
-    /// <summary>Adds a client descriptor and returns it for further configuration.</summary>
-    /// <param name="clientId">The client id.</param>
-    /// <param name="kind">The client shape.</param>
-    /// <returns>The newly added descriptor.</returns>
-    public HuiaClientDescriptor AddClient(string clientId, ClientKind kind)
-    {
-        var descriptor = new HuiaClientDescriptor { ClientId = clientId, Kind = kind };
-        Clients.Add(descriptor);
-        return descriptor;
-    }
+    /// <summary>Per-flavor extensions (OpenId or Headless) registered for this tenant.</summary>
+    public IDictionary<Type, IHuiaOptionsSection> Extensions { get; } = new Dictionary<Type, IHuiaOptionsSection>();
 
-    /// <summary>Adds a custom scope descriptor and returns it for further configuration.</summary>
-    /// <param name="name">The scope name.</param>
-    /// <param name="configure">Further configuration (display name, description, resources).</param>
-    /// <returns>The newly added descriptor.</returns>
-    public HuiaScopeDescriptor AddScope(string name, Action<HuiaScopeDescriptor>? configure = null)
+    /// <summary>Gets or adds a typed extension instance.</summary>
+    /// <typeparam name="T">The extension type.</typeparam>
+    /// <param name="factory">Factory used when the extension is not yet present.</param>
+    /// <returns>The extension instance.</returns>
+    public T GetOrAddExtension<T>(Func<T> factory) where T : class, IHuiaOptionsSection
     {
-        var descriptor = new HuiaScopeDescriptor { Name = name };
-        configure?.Invoke(descriptor);
-        Scopes.Add(descriptor);
-        return descriptor;
+        ArgumentNullException.ThrowIfNull(factory);
+        if (!Extensions.TryGetValue(typeof(T), out var existing))
+        {
+            existing = factory();
+            Extensions[typeof(T)] = existing;
+        }
+
+        return (T)existing;
     }
 
     /// <summary>Declares one or more roles to seed for this tenant.</summary>
@@ -103,22 +93,10 @@ public sealed class TenantOptions : IHuiaOptionsSection
             ((IHuiaOptionsSection)Sms).Validate(HuiaOptionsValidation.Combine(path, nameof(Sms)), errors);
         }
 
-        var seenClientIds = new HashSet<string>(StringComparer.Ordinal);
-        for (var i = 0; i < Clients.Count; i++)
+        foreach (var (type, extension) in Extensions)
         {
-            var clientPath = HuiaOptionsValidation.Combine(path, $"{nameof(Clients)}[{i}]");
-            ((IHuiaOptionsSection)Clients[i]).Validate(clientPath, errors);
-            errors.Require(seenClientIds.Add(Clients[i].ClientId), clientPath,
-                $"client id '{Clients[i].ClientId}' is used more than once in this tenant.");
-        }
-
-        var seenScopeNames = new HashSet<string>(StringComparer.Ordinal);
-        for (var i = 0; i < Scopes.Count; i++)
-        {
-            var scopePath = HuiaOptionsValidation.Combine(path, $"{nameof(Scopes)}[{i}]");
-            ((IHuiaOptionsSection)Scopes[i]).Validate(scopePath, errors);
-            errors.Require(seenScopeNames.Add(Scopes[i].Name), scopePath,
-                $"scope name '{Scopes[i].Name}' is used more than once in this tenant.");
+            var extPath = HuiaOptionsValidation.Combine(path, type.Name);
+            extension.Validate(extPath, errors);
         }
 
         var seenRoleNames = new HashSet<string>(StringComparer.Ordinal);

@@ -1,7 +1,12 @@
 using Huia;
-using Huia.EntityFrameworkCore;
+using Huia.Emails;
+using Huia.Identity;
 using Huia.IdentityServer;
+using Huia.OpenId;
+using Huia.OpenId.EntityFrameworkCore;
+using Huia.OpenId.Options;
 using Huia.Options;
+using Huia.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -27,14 +32,17 @@ if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase
     sqliteConnection = new SqliteConnection(connectionString);
     sqliteConnection.Open();
     builder.Services.AddSingleton(sqliteConnection);
-    builder.Services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(sqliteConnection).UseOpenIddict());
+    builder.Services.AddDbContext<HuiaOpenIdDbContext>(options => options.UseSqlite(sqliteConnection).UseOpenIddict());
 }
 else
 {
     var connectionString = builder.Configuration.GetConnectionString("huia")
         ?? throw new InvalidOperationException("A 'huia' connection string is required for the Postgres provider.");
-    builder.Services.AddDbContext<HuiaDbContext>(options => options.UseNpgsql(connectionString).UseOpenIddict());
+    builder.Services.AddDbContext<HuiaOpenIdDbContext>(options => options.UseNpgsql(connectionString).UseOpenIddict());
 }
+
+builder.Services.AddScoped<Huia.EntityFrameworkCore.HuiaDbContext>(sp => sp.GetRequiredService<HuiaOpenIdDbContext>());
+builder.Services.AddHuiaOpenIdEntityFrameworkCore<HuiaOpenIdDbContext>();
 
 // The schema initializer runs before any Huia hosted service (registration order).
 builder.Services.AddHostedService<SchemaInitializer>();
@@ -74,25 +82,31 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             // Administrators fat-finger their password more than they get brute-forced; be lenient.
             password.MaxFailedAccessAttempts = 10;
         });
-        tenant.DisableRegistration();
 
-        tenant.AddServerSideWebApplication("huia-admin-ui", "huia-admin-ui-secret", client =>
-        {
-            client.DisplayName = "Huia Admin Console";
-            client.ClientUri = new Uri($"{adminAppUrl}/");
-            client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
-            client.RedirectUris.Add(new Uri($"{adminAppUrl}/auth/oidc/callback"));
-            client.PostLogoutRedirectUris.Add(new Uri($"{adminAppUrl}/"));
-            client.HomeUris.Add(new Uri($"{adminAppUrl}/"));
-            client.RequirePushedAuthorizationRequests();
-        });
+        // Passkeys: a discoverable one-tap sign-in and the option to require a passkey as a second
+        // factor after the password.
+        tenant.Authentication.UsePasskeyLogin();
 
-        // The Huia.Cli admin tool signs in here with the device-authorization grant.
-        tenant.AddDevice("huia-cli", client =>
+        tenant.AddHuiaOpenId(openId =>
         {
-            client.ClientSecret = "huia-cli-secret";
-            client.Token.DeviceCode = TimeSpan.FromMinutes(10);
-            client.Token.UserCode = TimeSpan.FromMinutes(10);
+            openId.AddServerSideWebApplication("huia-admin", "huia-admin-secret", client =>
+            {
+                client.DisplayName = "Huia Admin Console";
+                client.ClientUri = new Uri($"{adminAppUrl}/");
+                client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
+                client.RedirectUris.Add(new Uri($"{adminAppUrl}/auth/oidc/callback"));
+                client.PostLogoutRedirectUris.Add(new Uri($"{adminAppUrl}/"));
+                client.HomeUris.Add(new Uri($"{adminAppUrl}/"));
+                client.RequirePushedAuthorizationRequests();
+            });
+
+            // The Huia.Cli admin tool signs in here with the device-authorization grant.
+            openId.AddDevice("huia-cli", client =>
+            {
+                client.ClientSecret = "huia-cli-secret";
+                client.Token.DeviceCode = TimeSpan.FromMinutes(10);
+                client.Token.UserCode = TimeSpan.FromMinutes(10);
+            });
         });
     });
 
@@ -114,15 +128,6 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             password.RequireConfirmedEmail = false;
             password.MaxFailedAccessAttempts = 3;
             password.LockoutDuration = TimeSpan.FromMinutes(30);
-        });
-
-        // A code-defined ("static") scope: the admin console shows it but will not let you edit or
-        // delete it — those actions are reserved for scopes created through the admin API.
-        tenant.AddScope("reports:read", scope =>
-        {
-            scope.DisplayName = "Read reports";
-            scope.Description = "Read-only access to the reporting API.";
-            scope.Resources.Add("reports-api");
         });
 
         // Code-defined ("static") roles: created at start-up if missing, and read-only in the admin
@@ -149,38 +154,50 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             phone.MaxFailedAccessAttempts = 5;
         });
 
-        tenant.Authentication.UseExternalLogin(ext =>
+        tenant.AddHuiaOpenId(openId =>
         {
-            ext.AddOpenIdConnect(
-                "HuiaExternal", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
-                {
-                    p.DisplayName = "Partner";
-                    p.Scopes.Add("profile");
-                    p.Scopes.Add("email");
-                });
+            // A code-defined ("static") scope: the admin console shows it but will not let you edit or
+            // delete it — those actions are reserved for scopes created through the admin API.
+            openId.AddScope("reports:read", scope =>
+            {
+                scope.DisplayName = "Read reports";
+                scope.Description = "Read-only access to the reporting API.";
+                scope.Resources.Add("reports-api");
+            });
 
-            // An external sign-in whose (verified) email matches an existing confirmed local
-            // account is linked to it instead of starting a new sign-up.
-            ext.EnableAccountsLinking();
-        });
+            openId.UseExternalLogin(ext =>
+            {
+                ext.AddOpenIdConnect(
+                    "HuiaExternal", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
+                    {
+                        p.DisplayName = "Partner";
+                        p.Scopes.Add("profile");
+                        p.Scopes.Add("email");
+                    });
 
-        tenant.AddServerSideWebApplication("todo-app", "todo-app-secret", client =>
-        {
-            client.DisplayName = "Todo";
-            client.ClientUri = new Uri($"{todoAppUrl}/");
-            client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
-            client.RedirectUris.Add(new Uri($"{todoAppUrl}/auth/oidc/callback"));
-            client.PostLogoutRedirectUris.Add(new Uri($"{todoAppUrl}/"));
-            client.HomeUris.Add(new Uri($"{todoAppUrl}/"));
-        });
+                // An external sign-in whose (verified) email matches an existing confirmed local
+                // account is linked to it instead of starting a new sign-up.
+                ext.EnableAccountsLinking();
+            });
 
-        // Public SPA client for the Todo API's Scalar reference UI: its "Authorize" button runs
-        // authorization code + PKCE against this tenant so protected endpoints can be tried live.
-        tenant.AddSinglePageApplication("todo-api-docs", client =>
-        {
-            client.DisplayName = "Todo API docs (Scalar)";
-            client.ClientUri = new Uri($"{todoApiUrl}/scalar");
-            client.RedirectUris.Add(new Uri($"{todoApiUrl}/scalar"));
+            openId.AddServerSideWebApplication("todo-app", "todo-app-secret", client =>
+            {
+                client.DisplayName = "Todo";
+                client.ClientUri = new Uri($"{todoAppUrl}/");
+                client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
+                client.RedirectUris.Add(new Uri($"{todoAppUrl}/auth/oidc/callback"));
+                client.PostLogoutRedirectUris.Add(new Uri($"{todoAppUrl}/"));
+                client.HomeUris.Add(new Uri($"{todoAppUrl}/"));
+            });
+
+            // Public SPA client for the Todo API's Scalar reference UI: its "Authorize" button runs
+            // authorization code + PKCE against this tenant so protected endpoints can be tried live.
+            openId.AddSinglePageApplication("todo-api-docs", client =>
+            {
+                client.DisplayName = "Todo API docs (Scalar)";
+                client.ClientUri = new Uri($"{todoApiUrl}/scalar");
+                client.RedirectUris.Add(new Uri($"{todoApiUrl}/scalar"));
+            });
         });
     });
 
@@ -199,20 +216,24 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
                 p.SuccessfulLoginsPerWindow = 100;
                 p.SuccessfulLoginsPerDay = 1000;
             });
-            tenant.AddSinglePageApplication("e2e-spa", client =>
-                client.RedirectUris.Add(new Uri($"{issuer}/e2e/e2e-callback")));
-            tenant.AddMachineToMachineApplication("e2e-worker", "e2e-worker-secret");
 
-            // Confidential web client for the huia-nuxt playground. A short access-token
-            // lifetime so the module's transparent refresh is exercised on the next request.
-            tenant.AddServerSideWebApplication("huia-nuxt-playground", "huia-nuxt-playground-secret", client =>
+            tenant.AddHuiaOpenId(openId =>
             {
-                client.DisplayName = "huia-nuxt playground";
-                client.RedirectUris.Add(new Uri($"{playgroundUrl}/auth/oidc/callback"));
-                client.PostLogoutRedirectUris.Add(new Uri($"{playgroundUrl}/"));
-                client.HomeUris.Add(new Uri($"{playgroundUrl}/"));
-                client.Token.AccessToken = TimeSpan.FromSeconds(35);
-                client.Token.RefreshToken = TimeSpan.FromMinutes(30);
+                openId.AddSinglePageApplication("e2e-spa", client =>
+                    client.RedirectUris.Add(new Uri($"{issuer}/e2e/e2e-callback")));
+                openId.AddMachineToMachineApplication("e2e-worker", "e2e-worker-secret");
+
+                // Confidential web client for the huia-nuxt playground. A short access-token
+                // lifetime so the module's transparent refresh is exercised on the next request.
+                openId.AddServerSideWebApplication("huia-nuxt-playground", "huia-nuxt-playground-secret", client =>
+                {
+                    client.DisplayName = "huia-nuxt playground";
+                    client.RedirectUris.Add(new Uri($"{playgroundUrl}/auth/oidc/callback"));
+                    client.PostLogoutRedirectUris.Add(new Uri($"{playgroundUrl}/"));
+                    client.HomeUris.Add(new Uri($"{playgroundUrl}/"));
+                    client.Token.AccessToken = TimeSpan.FromSeconds(35);
+                    client.Token.RefreshToken = TimeSpan.FromMinutes(30);
+                });
             });
         });
 
@@ -223,7 +244,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = true);
         });
     }
-});
+}).AddHuiaOpenId();
 
 huiaBuilder.AddHuiaUi();
 huiaBuilder.AddHuiaSecurityHeaders();
@@ -234,27 +255,22 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<HuiaSampleSeeder>(
 if (builder.Environment.IsDevelopment() || enableE2E)
 {
     builder.Services.AddSingleton<CapturingSmsSender>();
-    builder.Services.AddScoped<Huia.AspNetCore.Services.ISmsSender>(sp => sp.GetRequiredService<CapturingSmsSender>());
+    builder.Services.AddScoped<ISmsSender>(sp => sp.GetRequiredService<CapturingSmsSender>());
 
     // With Mailpit (or any SMTP host) configured, keep the real MailKit sender — the E2E suite reads the
     // message back from Mailpit's REST API. Only fall back to the in-memory capturer when nothing is set.
     if (!smtpConfigured)
     {
         builder.Services.AddSingleton<CapturingEmailSender>();
-        builder.Services.AddScoped<Huia.AspNetCore.Emails.IHuiaEmailSender>(sp => sp.GetRequiredService<CapturingEmailSender>());
+        builder.Services.AddScoped<IHuiaEmailSender>(sp => sp.GetRequiredService<CapturingEmailSender>());
     }
 }
 
 var app = builder.Build();
 
-app.UseHuia();
+app.UseHuiaOpenId();
 
-app.MapHuiaEndpoints();
-
-app.MapHuiaAdminEndpoints()
-    .RequireAuthorization(policy => policy.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator));
-
-app.MapHuiaHome("master");
+app.MapHuiaOpenIdEndpoints();
 
 if (enableE2E)
 {

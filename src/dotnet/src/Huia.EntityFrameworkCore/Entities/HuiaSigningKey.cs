@@ -1,20 +1,6 @@
+using Huia.Keys;
+
 namespace Huia.EntityFrameworkCore.Entities;
-
-/// <summary>The lifecycle stage of a tenant signing key.</summary>
-public enum HuiaSigningKeyStatus
-{
-    /// <summary>Created and published in the JWKS, but not yet used for signing (propagation window).</summary>
-    Pending = 0,
-
-    /// <summary>The current signing key for its tenant. Exactly one key per tenant is active at a time.</summary>
-    Active = 1,
-
-    /// <summary>No longer signing, still published so previously issued tokens keep validating.</summary>
-    Rotated = 2,
-
-    /// <summary>Unpublished and awaiting permanent deletion after the grace period.</summary>
-    Retired = 3,
-}
 
 /// <summary>
 /// One RSA signing key for one tenant. The public half is stored as a JWK; the private half is stored

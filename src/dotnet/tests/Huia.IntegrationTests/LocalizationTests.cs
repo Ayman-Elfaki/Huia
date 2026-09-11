@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using Huia.AspNetCore;
+using Huia;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

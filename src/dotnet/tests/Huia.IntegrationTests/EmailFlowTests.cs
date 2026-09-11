@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using Huia.AspNetCore.Emails;
+using Huia.Emails;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,6 +1,7 @@
-using Huia.AspNetCore.Emails;
-using Huia.AspNetCore.Multitenancy;
-using Huia.EntityFrameworkCore.Entities;
+using Huia.Emails;
+using Huia.Identity;
+using Huia.Multitenancy;
+using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 
 namespace Huia.IdentityServer;
@@ -135,7 +136,7 @@ internal sealed class HuiaSampleSeeder(
 /// this sender only runs in Development / E2E — writes the plaintext code to the log so you can complete
 /// a phone sign-in without a real SMS provider.
 /// </summary>
-internal sealed partial class CapturingSmsSender(ILogger<CapturingSmsSender> logger) : Huia.AspNetCore.Services.ISmsSender
+internal sealed partial class CapturingSmsSender(ILogger<CapturingSmsSender> logger) : ISmsSender
 {
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _codes = new(StringComparer.Ordinal);
 

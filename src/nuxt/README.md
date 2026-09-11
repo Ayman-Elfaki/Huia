@@ -1,6 +1,6 @@
-# nuxt-huia
+# nuxt-huia-oidc
 
-**Nuxt 4** authentication module for the [Huia](https://github.com/Ayman-Elfaki/Huia)
+**Nuxt 4** OIDC authentication module for the [Huia](https://github.com/Ayman-Elfaki/Huia)
 identity provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
 transparent server-side token refresh, and a dual-layer session that keeps **every token on the
 server**.
@@ -12,13 +12,13 @@ server**.
 ## Install
 
 ```bash
-npm install huia-nuxt
+npm install nuxt-huia-oidc
 ```
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['huia-nuxt'],
+  modules: ['nuxt-huia-oidc'],
   huiaAuth: {
     huia: { baseUrl: 'https://id.example.com', tenant: 'acme' },
     clientId: 'acme-web',
