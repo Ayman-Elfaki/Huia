@@ -1,63 +1,76 @@
+using Huia.DependencyInjection;
 using Huia.OpenId.Configuration;
-using Huia.OpenId.DependencyInjection;
+using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.OpenId.Flows;
 using Huia.OpenId.HealthChecks;
 using Huia.OpenId.Identity;
 using Huia.OpenId.Keys;
-using Huia.OpenId.Localization;
 using Huia.OpenId.OpenIddict;
 using Huia.OpenId.Security;
 using Huia.OpenId.Services;
-using Huia.OpenId.EntityFrameworkCore;
-using Huia.Options;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
-/// <summary>Entry point for registering the Huia identity provider with the DI container.</summary>
-public static class HuiaServiceCollectionExtensions
+/// <summary>
+/// Adds the multi-tenant, OpenIddict-backed flavor of Huia on top of the common <c>AddHuia()</c> +
+/// <c>.AddEntityFrameworkCoreStores&lt;HuiaDbContext, HuiaUser, HuiaRole&gt;()</c> setup: Finbuckle
+/// multi-tenancy, per-tenant identity/passkey options, the flow-specific sign-in options, the OpenIddict
+/// server/client, the signing-key lifecycle, passwordless SMS + external login, and the readiness health
+/// check. Call <c>.AddHuiaUi()</c> and/or <c>.AddHuiaSecurityHeaders()</c> afterward for the Razor Pages
+/// account UI and the opt-in security-headers middleware.
+/// </summary>
+public static class HuiaOpenIdServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the Huia identity provider. The host must have already registered
-    /// <see cref="HuiaDbContext"/> with a concrete provider — Huia ships no provider and no migrations.
+    /// Registers the multi-tenant, OpenIddict-backed flavor of Huia. Call after <c>AddHuia()</c> and
+    /// <c>.AddEntityFrameworkCoreStores&lt;HuiaDbContext, HuiaUser, HuiaRole&gt;()</c>.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configure">Configures the options tree; validated before anything is registered.</param>
-    /// <returns>An <see cref="IHuiaBuilder"/> for feature opt-ins.</returns>
-    /// <exception cref="InvalidOperationException"><see cref="HuiaDbContext"/> was not registered first.</exception>
-    /// <exception cref="HuiaOptionsException">The configured options are invalid.</exception>
-    public static IHuiaBuilder AddHuia(this IServiceCollection services, Action<HuiaOptionsBuilder> configure)
+    /// <param name="builder">The Huia builder.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public static IHuiaBuilder AddHuiaOpenId(this IHuiaBuilder builder)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
+        ArgumentNullException.ThrowIfNull(builder);
 
-        var optionsBuilder = new HuiaOptionsBuilder();
-        configure(optionsBuilder);
-        var options = optionsBuilder.Build();
-
-        if (services.All(d => d.ServiceType != typeof(DbContextOptions<HuiaDbContext>)))
-        {
-            throw new InvalidOperationException(
-                "HuiaDbContext must be registered before AddHuia is called, for example " +
-                "services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(connectionString).UseOpenIddict()). " +
-                "Huia ships no Entity Framework Core provider.");
-        }
-
-        services.AddSingleton(options);
-        services.AddSingleton(Options.Options.Create(options));
+        var services = builder.Services;
+        var options = builder.Options;
 
         services.AddHuiaMultiTenancy(options);
-        services.AddHuiaIdentity();
-        services.AddHuiaCookieHardening(requireSecure: !options.DisableTransportSecurityRequirement);
+
+        // The cookie-based authentication scheme — AddEntityFrameworkCoreStores() deliberately stops short
+        // of this (AddIdentityCore, not AddIdentity), since the scheme choice is flavor-specific (cookies
+        // here; bearer tokens for Headless). Must run before AddHuiaPerTenantAuthentication(), which wraps
+        // the schemes AddIdentityCookies() just registered.
+        services.AddAuthentication(o =>
+        {
+            o.DefaultScheme = IdentityConstants.ApplicationScheme;
+            o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+        }).AddIdentityCookies();
+
+        new IdentityBuilder(typeof(HuiaUser), typeof(HuiaRole), services)
+            .AddUserManager<HuiaUserManager>()
+            .AddSignInManager<HuiaSignInManager>();
+
+        services.Configure<IdentityOptions>(identity =>
+        {
+            // Cross-tenant uniqueness is a composite index in HuiaDbContext; Identity's own check is
+            // opt-in per tenant, so the baseline stays off.
+            identity.User.RequireUniqueEmail = false;
+
+            // Confirmed-email / confirmed-phone gating varies per flow, so it is applied to the named
+            // per-flow options by AddHuiaFlowIdentity — never here, where one tenant's rule would leak
+            // onto every flow-agnostic sign-in.
+            identity.SignIn.RequireConfirmedEmail = false;
+            identity.SignIn.RequireConfirmedAccount = false;
+            identity.SignIn.RequireConfirmedPhoneNumber = false;
+        });
+
         services.AddHuiaPerTenantAuthentication();
         services.AddHuiaPerTenantIdentityOptions(options);
         services.AddHuiaPerTenantPasskeyOptions(options);
         services.AddHuiaFlowIdentity(options);
-        services.AddHuiaLocalization();
-        services.AddHuiaEventing();
         services.AddHuiaOpenIddict(options);
         services.AddHuiaKeyManagement(options);
 
@@ -78,7 +91,7 @@ public static class HuiaServiceCollectionExtensions
 
         services.AddScoped<HuiaCspNonce>();
         services.AddScoped<IHuiaCspNonce>(sp => sp.GetRequiredService<HuiaCspNonce>());
-        services.AddScoped<Huia.OpenId.Identity.HuiaPasskeyRegistrar>();
+        services.AddScoped<HuiaPasskeyRegistrar>();
         services.AddOptions<HuiaSecurityHeadersOptions>();
 
         // Passwordless SMS + shared flow services (always on; hosts replace the SMS / CAPTCHA senders).
@@ -93,25 +106,16 @@ public static class HuiaServiceCollectionExtensions
         services.TryAddScoped<ICaptchaVerifier, NullCaptchaVerifier>();
         services.TryAddScoped<IReturnUrlProtector, ReturnUrlProtector>();
 
-        services.AddDataProtection();
-        services.AddMemoryCache();
-        services.AddHybridCache();
-        services.AddRouting();
-        services.Configure<RouteOptions>(routing =>
-        {
-            routing.LowercaseUrls = true;
-            routing.LowercaseQueryStrings = false;
-        });
         services.AddHuiaAuthorization();
         services.AddHuiaHealthChecks();
 
-        return new HuiaBuilder(services, options);
+        return builder;
     }
 
     /// <summary>
     /// Opts into the security-headers layer: a per-tenant Content-Security-Policy with a per-request
     /// nonce, plus HSTS (HTTPS only), <c>X-Content-Type-Options</c>, <c>Referrer-Policy</c> and
-    /// <c>Permissions-Policy</c>. <c>UseHuia()</c> inserts the middleware right after tenant resolution.
+    /// <c>Permissions-Policy</c>. <c>UseHuiaOpenId()</c> inserts the middleware right after tenant resolution.
     /// </summary>
     /// <param name="builder">The Huia builder.</param>
     /// <param name="configure">Optional tuning of the emitted policy.</param>

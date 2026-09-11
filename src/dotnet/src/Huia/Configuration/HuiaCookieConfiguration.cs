@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Huia.OpenId.Configuration;
+namespace Huia.Configuration;
 
 /// <summary>
 /// Hardens every cookie Huia issues. Always on (independent of the security-headers opt-in), but the

@@ -1,4 +1,4 @@
-using Huia.OpenId.Eventing;
+using Huia.Eventing;
 using Huia.Events;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

@@ -4,11 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder;
 
-/// <summary>Middleware wiring for the Huia identity provider.</summary>
+/// <summary>Middleware wiring for the multi-tenant, OpenIddict-backed flavor of the Huia identity provider.</summary>
 public static class HuiaApplicationBuilderExtensions
 {
     /// <summary>
-    /// Inserts the Huia middleware in the one order that works:
+    /// Inserts the Huia OpenId middleware in the one order that works:
     /// exception handling &#8594; status-code pages &#8594; request localization &#8594;
     /// multi-tenant resolution &#8594; (security headers) &#8594; routing &#8594; authentication &#8594; authorization.
     /// </summary>
@@ -19,7 +19,7 @@ public static class HuiaApplicationBuilderExtensions
     /// </remarks>
     /// <param name="app">The application builder.</param>
     /// <returns>The same application builder, for chaining.</returns>
-    public static IApplicationBuilder UseHuia(this IApplicationBuilder app)
+    public static IApplicationBuilder UseHuiaOpenId(this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
 

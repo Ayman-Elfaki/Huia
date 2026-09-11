@@ -81,7 +81,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
     public static async Task<HuiaTestHost> StartAsync(
         Action<HuiaOptionsBuilder>? configureOptions = null,
         Action<IEndpointRouteBuilder>? configureEndpoints = null,
-        Action<Huia.OpenId.DependencyInjection.IHuiaBuilder>? configureBuilder = null,
+        Action<Huia.DependencyInjection.IHuiaBuilder>? configureBuilder = null,
         TimeProvider? timeProvider = null)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
@@ -151,7 +151,10 @@ public sealed class HuiaTestHost : IAsyncDisposable
                         });
                         configureOptions?.Invoke(huia);
                     });
-                    builder.AddHuiaUi();
+                    builder
+                        .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+                        .AddHuiaOpenId()
+                        .AddHuiaUi();
                     services.AddSingleton(sms);
                     services.AddScoped<Huia.OpenId.Services.ISmsSender>(_ => sms);
                     services.AddSingleton(email);
@@ -162,7 +165,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
                 });
                 web.Configure(app =>
                 {
-                    app.UseHuia();
+                    app.UseHuiaOpenId();
                     app.UseEndpoints(endpoints =>
                     {
                         endpoints.MapHuiaEndpoints();

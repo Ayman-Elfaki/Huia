@@ -2,7 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 
-namespace Huia.OpenId.Localization;
+namespace Huia.Localization;
 
 /// <summary>
 /// Resolves the request culture from the OpenID Connect <c>ui_locales</c> authorize parameter: a

@@ -1,11 +1,13 @@
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Huia.OpenId.DependencyInjection;
+namespace Huia.DependencyInjection;
 
 /// <summary>
-/// The result of <c>AddHuia</c>. Feature opt-ins (the account UI, security headers, …) hang off this
-/// builder as extension methods so <c>Program.cs</c> reads as one fluent chain.
+/// The result of <c>AddHuia</c>. Feature opt-ins — the flavor-specific wiring (<c>AddHuiaOpenId()</c>,
+/// <c>AddHuiaHeadless()</c>), EF Core store registration (<c>AddEntityFrameworkCoreStores()</c>), the
+/// account UI, security headers, … — hang off this builder as extension methods so <c>Program.cs</c>
+/// reads as one fluent chain.
 /// </summary>
 public interface IHuiaBuilder
 {

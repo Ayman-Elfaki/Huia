@@ -46,12 +46,15 @@ builder.Services.AddHuia(huia =>
             client.Scopes.Add("profile");
         });
     });
-}).AddHuiaUi();
+})
+    .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+    .AddHuiaOpenId()
+    .AddHuiaUi();
 
 builder.Services.AddHostedService<PartnerUserSeeder>();
 
 var app = builder.Build();
-app.UseHuia();
+app.UseHuiaOpenId();
 app.MapHuiaEndpoints();
 app.MapHuiaHome("partners");
 app.Run();

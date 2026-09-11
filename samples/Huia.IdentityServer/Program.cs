@@ -1,5 +1,6 @@
 using Huia;
 using Huia.OpenId.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.IdentityServer;
 using Huia.Options;
 using Microsoft.AspNetCore.Authorization;
@@ -225,8 +226,11 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
     }
 });
 
-huiaBuilder.AddHuiaUi();
-huiaBuilder.AddHuiaSecurityHeaders();
+huiaBuilder
+    .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+    .AddHuiaOpenId()
+    .AddHuiaUi()
+    .AddHuiaSecurityHeaders();
 
 builder.Services.AddSingleton<HuiaSampleSeeder>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<HuiaSampleSeeder>());
@@ -247,7 +251,7 @@ if (builder.Environment.IsDevelopment() || enableE2E)
 
 var app = builder.Build();
 
-app.UseHuia();
+app.UseHuiaOpenId();
 
 app.MapHuiaEndpoints();
 

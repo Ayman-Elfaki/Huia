@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Huia.OpenId.Localization;
+namespace Huia.Localization;
 
 /// <summary>Localization support for the account UI and emails. English and Arabic (right-to-left).</summary>
 public static class HuiaLocalization

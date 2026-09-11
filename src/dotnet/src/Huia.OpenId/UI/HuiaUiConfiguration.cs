@@ -1,6 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
-using Huia.OpenId.DependencyInjection;
+using Huia.DependencyInjection;
 using Huia.OpenId.Flows;
 using Huia.OpenId.UI;
 using Huia.OpenId.Emails;
