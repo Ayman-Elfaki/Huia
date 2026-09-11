@@ -121,3 +121,21 @@ jobs:
       - run: npm test
       # nuxi build of the playground — smoke test that openid-client v6 (ESM) bundles under Nitro.
       - run: npm run dev:build
+
+  nuxt-huia-headless-module:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/nuxt/nuxt-huia-headless
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/nuxt/nuxt-huia-headless/package-lock.json
+      - run: npm ci
+      - run: npm run dev:prepare
+      - run: npm run test:types
+      - run: npm test
+      - run: npm run dev:build
