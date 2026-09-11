@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Huia.Options;
 
-namespace Huia.OpenId.Services;
+namespace Huia.Services;
 
 /// <summary>Throttles <em>successful</em> phone sign-ins per number (distinct from code-request throttling).</summary>
 public interface IPhoneLoginRateLimiter

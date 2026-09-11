@@ -156,7 +156,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
                         .AddHuiaOpenId()
                         .AddHuiaUi();
                     services.AddSingleton(sms);
-                    services.AddScoped<Huia.OpenId.Services.ISmsSender>(_ => sms);
+                    services.AddScoped<Huia.Services.ISmsSender>(_ => sms);
                     services.AddSingleton(email);
                     services.AddScoped<Huia.OpenId.Emails.IHuiaEmailSender>(_ => email);
                     services.AddSingleton(eventCollector);

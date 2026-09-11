@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Huia.Options;
 
-namespace Huia.OpenId.Services;
+namespace Huia.Services;
 
 /// <summary>A number that has requested a code but has no account yet.</summary>
 /// <param name="Id">Opaque identifier carried in the flow token.</param>
@@ -11,8 +11,8 @@ public sealed record PendingPhoneSignupRecord(string Id, string TenantId, string
 
 /// <summary>
 /// Holds hashed one-time codes for numbers with no account, so auto-provisioning never writes a
-/// blank-name <see cref="EntityFrameworkCore.Entities.HuiaUser"/> at request time. The default
-/// implementation is in-process only; a multi-node deployment replaces it with a distributed store.
+/// blank-name <see cref="Entities.HuiaUser"/> at request time. The default implementation is
+/// in-process only; a multi-node deployment replaces it with a distributed store.
 /// </summary>
 public interface IPendingPhoneSignup
 {

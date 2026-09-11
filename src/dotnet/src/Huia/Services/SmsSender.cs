@@ -1,7 +1,7 @@
 using Huia.Options;
 using Microsoft.Extensions.Logging;
 
-namespace Huia.OpenId.Services;
+namespace Huia.Services;
 
 /// <summary>Delivers SMS messages for the passwordless flow.</summary>
 public interface ISmsSender

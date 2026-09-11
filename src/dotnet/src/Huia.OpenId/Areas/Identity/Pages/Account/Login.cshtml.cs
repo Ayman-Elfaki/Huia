@@ -10,6 +10,7 @@ using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Identity;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Huia.Options;
+using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,7 @@ public sealed class LoginModel(
     IHuiaEventPublisher events,
     ICountryCatalog countryCatalog,
     IPhoneNumberService phoneNumbers,
-    IOtpService otpService,
+    IOtpService<HuiaUser> otpService,
     IPendingPhoneSignup pendingSignups,
     IOtpRateLimiter rateLimiter,
     IPhoneLoginRateLimiter phoneLoginRateLimiter,

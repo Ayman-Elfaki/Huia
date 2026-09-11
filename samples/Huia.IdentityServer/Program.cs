@@ -238,7 +238,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<HuiaSampleSeeder>(
 if (builder.Environment.IsDevelopment() || enableE2E)
 {
     builder.Services.AddSingleton<CapturingSmsSender>();
-    builder.Services.AddScoped<Huia.OpenId.Services.ISmsSender>(sp => sp.GetRequiredService<CapturingSmsSender>());
+    builder.Services.AddScoped<Huia.Services.ISmsSender>(sp => sp.GetRequiredService<CapturingSmsSender>());
 
     // With Mailpit (or any SMTP host) configured, keep the real MailKit sender — the E2E suite reads the
     // message back from Mailpit's REST API. Only fall back to the in-memory capturer when nothing is set.

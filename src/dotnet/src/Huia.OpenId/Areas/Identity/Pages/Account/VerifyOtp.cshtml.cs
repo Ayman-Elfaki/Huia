@@ -2,13 +2,13 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Huia.OpenId.Flows;
 using Huia.OpenId.Identity;
-using Huia.OpenId.Services;
 using Huia.OpenId.UI;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Huia.Options;
+using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
@@ -17,7 +17,7 @@ namespace Huia.OpenId.Areas.Identity.Pages.Account;
 
 /// <summary>Step 2 of the passwordless SMS flow: verify the code and either sign in or complete the profile.</summary>
 public sealed class VerifyOtpModel(
-    IOtpService otpService,
+    IOtpService<HuiaUser> otpService,
     IPendingPhoneSignup pendingSignups,
     IOtpRateLimiter rateLimiter,
     IPhoneLoginRateLimiter phoneLoginRateLimiter,

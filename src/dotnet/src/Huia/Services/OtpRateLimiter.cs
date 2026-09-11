@@ -1,7 +1,7 @@
 using System.Threading.RateLimiting;
 using Huia.Options;
 
-namespace Huia.OpenId.Services;
+namespace Huia.Services;
 
 /// <summary>Throttles one-time-code requests per phone number.</summary>
 public interface IOtpRateLimiter

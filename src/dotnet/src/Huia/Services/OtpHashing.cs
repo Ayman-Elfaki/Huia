@@ -1,11 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Huia.OpenId.Services;
+namespace Huia.Services;
 
 /// <summary>
-/// One-time code hashing shared by <see cref="OtpService"/> (accounts) and the pending-signup store
-/// (numbers with no account). The stored form is <c>SHA-256(salt ‖ code)</c>; comparison is
+/// One-time code hashing shared by <see cref="OtpService{TUser}"/> (accounts) and the pending-signup
+/// store (numbers with no account). The stored form is <c>SHA-256(salt ‖ code)</c>; comparison is
 /// constant-time.
 /// </summary>
 internal static class OtpHashing

@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Huia.OpenId.Services;
+using Huia.Services;
 
 namespace Huia.IntegrationTests.Infrastructure;
 

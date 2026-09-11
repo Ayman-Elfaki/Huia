@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using PhoneNumbers;
 
-namespace Huia.OpenId.Services;
+namespace Huia.Services;
 
 /// <summary>Normalizes and masks phone numbers for the passwordless SMS flow.</summary>
 public interface IPhoneNumberService

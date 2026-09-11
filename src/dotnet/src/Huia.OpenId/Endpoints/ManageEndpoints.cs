@@ -3,12 +3,12 @@ using System.Text;
 using Huia.Identity;
 using Huia.OpenId.Emails;
 using Huia.OpenId.Identity;
-using Huia.OpenId.Services;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Huia.Options;
+using Huia.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -241,7 +241,7 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> StartPhoneChangeAsync(
-        HttpContext context, HuiaUserManager userManager, IOtpService otpService, ISmsSender smsSender,
+        HttpContext context, HuiaUserManager userManager, IOtpService<HuiaUser> otpService, ISmsSender smsSender,
         IPhoneNumberService phoneNumbers, IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions,
         IHuiaEventPublisher events, TimeProvider timeProvider, ChangePhoneRequest body)
     {
@@ -276,7 +276,7 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> ConfirmPhoneChangeAsync(
-        HttpContext context, HuiaUserManager userManager, IOtpService otpService, IPhoneNumberService phoneNumbers,
+        HttpContext context, HuiaUserManager userManager, IOtpService<HuiaUser> otpService, IPhoneNumberService phoneNumbers,
         IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions, IHuiaEventPublisher events, TimeProvider timeProvider,
         ConfirmPhoneRequest body)
     {

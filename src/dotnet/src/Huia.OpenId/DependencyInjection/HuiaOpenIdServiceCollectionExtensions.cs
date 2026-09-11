@@ -8,6 +8,7 @@ using Huia.OpenId.Keys;
 using Huia.OpenId.OpenIddict;
 using Huia.OpenId.Security;
 using Huia.OpenId.Services;
+using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
@@ -101,7 +102,7 @@ public static class HuiaOpenIdServiceCollectionExtensions
         services.TryAddSingleton<IOtpRateLimiter, InMemoryOtpRateLimiter>();
         services.TryAddSingleton<IPhoneLoginRateLimiter, InMemoryPhoneLoginRateLimiter>();
         services.TryAddSingleton<IPendingPhoneSignup, PendingPhoneSignup>();
-        services.TryAddScoped<IOtpService, OtpService>();
+        services.TryAddScoped<IOtpService<HuiaUser>, OtpService<HuiaUser>>();
         services.TryAddScoped<ISmsSender, HuiaSmsSender>();
         services.TryAddScoped<ICaptchaVerifier, NullCaptchaVerifier>();
         services.TryAddScoped<IReturnUrlProtector, ReturnUrlProtector>();
