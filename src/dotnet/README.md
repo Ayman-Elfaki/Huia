@@ -8,8 +8,8 @@ NuGet packages:
 | Package | Contents |
 |---|---|
 | `Huia` | Domain model, options tree, eventing abstractions, constants. **No** ASP.NET Core / EF Core dependency. |
-| `Huia.EntityFrameworkCore` | `HuiaDbContext`, `Huia*`-renamed entities, tenant-scoped Identity + OpenIddict stores. Provider-agnostic; ships no migrations. |
-| `Huia.AspNetCore` | `AddHuia()` / `UseHuia()`, OpenIddict server + client, the Razor Pages account UI, passwordless SMS, key lifecycle jobs, security headers. |
+| `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext`, `Huia*`-renamed entities, tenant-scoped Identity + OpenIddict stores. Provider-agnostic; ships no migrations. |
+| `Huia.OpenId` | `AddHuia()` / `UseHuia()`, OpenIddict server + client, the Razor Pages account UI, passwordless SMS, key lifecycle jobs, security headers. |
 
 ```csharp
 builder.Services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(cs).UseOpenIddict());
@@ -49,7 +49,7 @@ This project is `src/dotnet/` inside the Huia monorepo (see the repo-root `READM
 
 ```
 src/dotnet/
-  src/        Huia, Huia.EntityFrameworkCore, Huia.AspNetCore
+  src/        Huia, Huia.OpenId.EntityFrameworkCore, Huia.OpenId
   tests/      Huia.Tests, Huia.IntegrationTests, Huia.Tests.PenTest
 ../../samples/  Huia.AppHost (Aspire), Huia.IdentityServer, Huia.External, Todo.Api, Todo.App, Huia.AdminUI
 ../../tests/    Huia.E2ETests   (full-stack Playwright E2E)

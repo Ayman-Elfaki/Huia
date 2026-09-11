@@ -14,8 +14,8 @@ and external login via the OpenIddict client.
 src/
   dotnet/     The .NET solution (Huia.slnx) — three NuGet packages:
                 Huia                       domain model, options, eventing, constants (no ASP.NET / EF dep)
-                Huia.EntityFrameworkCore   HuiaDbContext, renamed entities, tenant-scoped stores
-                Huia.AspNetCore            AddHuia()/UseHuia(), OpenIddict server + client, Razor account UI,
+                Huia.OpenId.EntityFrameworkCore   HuiaDbContext, renamed entities, tenant-scoped stores
+                Huia.OpenId            AddHuia()/UseHuia(), OpenIddict server + client, Razor account UI,
                                           passwordless SMS, key-lifecycle jobs, security headers
               plus tests/ (unit, integration, pen-test).
   nuxt/       huia-nuxt — a Nuxt 4 module: OIDC Authorization Code + PKCE + PAR, transparent

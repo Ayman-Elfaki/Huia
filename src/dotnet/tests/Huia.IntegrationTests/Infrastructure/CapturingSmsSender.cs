@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Huia.AspNetCore.Services;
+using Huia.OpenId.Services;
 
 namespace Huia.IntegrationTests.Infrastructure;
 

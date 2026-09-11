@@ -5,8 +5,8 @@ Huia ships as three NuGet packages:
 | Package | Contents |
 |---|---|
 | `Huia` | Domain model, options tree, eventing, constants. No ASP.NET Core / EF Core dependency. |
-| `Huia.EntityFrameworkCore` | `HuiaDbContext`, `Huia*` entities, tenant-scoped stores. Provider-agnostic; ships no migrations. |
-| `Huia.AspNetCore` | `AddHuia()` / `UseHuia()`, OpenIddict, the Razor account UI, key jobs. |
+| `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext`, `Huia*` entities, tenant-scoped stores. Provider-agnostic; ships no migrations. |
+| `Huia.OpenId` | `AddHuia()` / `UseHuia()`, OpenIddict, the Razor account UI, key jobs. |
 
 ```csharp
 builder.Services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(connectionString).UseOpenIddict());

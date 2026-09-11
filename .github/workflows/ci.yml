@@ -99,8 +99,8 @@ jobs:
           node-version: 22
       # The BuildAccountUiAssets MSBuild target regenerates wwwroot/; -p:ForceAccountUiAssets=true
       # bypasses its incremental check so the drift guard always compares a fresh build.
-      - run: dotnet build src/Huia.AspNetCore/Huia.AspNetCore.csproj -c Release -p:ForceAccountUiAssets=true
-      - run: git diff --exit-code src/Huia.AspNetCore/wwwroot
+      - run: dotnet build src/Huia.OpenId/Huia.OpenId.csproj -c Release -p:ForceAccountUiAssets=true
+      - run: git diff --exit-code src/Huia.OpenId/wwwroot
 
   nuxt-module:
     runs-on: ubuntu-latest

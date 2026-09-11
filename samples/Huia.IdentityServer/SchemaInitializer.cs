@@ -1,4 +1,4 @@
-using Huia.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore;
 
 namespace Huia.IdentityServer;
 

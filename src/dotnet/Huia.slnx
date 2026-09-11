@@ -10,8 +10,8 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Huia/Huia.csproj" />
-    <Project Path="src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj" />
-    <Project Path="src/Huia.AspNetCore/Huia.AspNetCore.csproj" />
+    <Project Path="src/Huia.OpenId.EntityFrameworkCore/Huia.OpenId.EntityFrameworkCore.csproj" />
+    <Project Path="src/Huia.OpenId/Huia.OpenId.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="../../samples/Huia.AppHost/Huia.AppHost.csproj" />

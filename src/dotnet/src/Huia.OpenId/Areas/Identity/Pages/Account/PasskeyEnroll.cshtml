@@ -1,0 +1,29 @@
+@page
+@model Huia.OpenId.Areas.Identity.Pages.Account.PasskeyEnrollModel
+
+<div class="huia-passkey-hero">
+    <partial name="_PasskeyMark" />
+</div>
+
+<p class="huia-subtitle" data-testid="passkey-enroll-intro">@Localizer["Passkey.EnrollIntro"]</p>
+
+<section class="huia-passkey huia-passkey-enroll" data-huia-passkey data-mode="enroll"
+         data-return-url="@Model.ReturnUrl" data-endpoint="@(Model.PathBase)/identity/account/passkeyenroll">
+    @Html.AntiForgeryToken()
+
+    <button type="button" class="btn w-full" data-huia-passkey-enroll data-testid="passkey-enroll-setup">
+        @Localizer["Passkey.EnrollAction"]
+    </button>
+
+    <form method="post" asp-page-handler="Skip" data-huia-passkey-skip-form>
+        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        <button type="submit" class="huia-linkbtn" data-testid="passkey-enroll-skip">@Localizer["Passkey.EnrollSkip"]</button>
+    </form>
+
+    <p class="huia-muted">@Localizer["Passkey.EnrollReassure"]</p>
+    <p class="huia-muted huia-passkey-error" role="status" data-huia-passkey-error hidden>@Localizer["Passkey.EnrollLater"]</p>
+</section>
+
+@section Scripts {
+    <script src="@(Model.PathBase)/_content/Huia.OpenId/js/passkey.js" nonce="@CspNonce.Value" defer></script>
+}

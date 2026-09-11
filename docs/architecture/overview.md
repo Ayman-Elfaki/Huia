@@ -20,8 +20,8 @@ flowchart LR
 | Package | Role |
 |---|---|
 | `Huia` | domain model, the options tree, eventing, constants — **no** ASP.NET Core / EF Core dependency (a build target enforces it) |
-| `Huia.EntityFrameworkCore` | `HuiaDbContext : MultiTenantIdentityDbContext`, `Huia*` table renames, tenant-scoped composite indexes — ships no migrations |
-| `Huia.AspNetCore` | `AddHuia()` / `UseHuia()` / `MapHuiaEndpoints()`, OpenIddict server + client, the Razor account UI, passwordless SMS, key-lifecycle jobs, security headers |
+| `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext : MultiTenantIdentityDbContext`, `Huia*` table renames, tenant-scoped composite indexes — ships no migrations |
+| `Huia.OpenId` | `AddHuia()` / `UseHuia()` / `MapHuiaEndpoints()`, OpenIddict server + client, the Razor account UI, passwordless SMS, key-lifecycle jobs, security headers |
 
 ## Pipeline order
 

@@ -1,10 +1,10 @@
 using System.Net;
 using Finbuckle.MultiTenant.Abstractions;
-using Huia.AspNetCore.Identity;
-using Huia.AspNetCore.Multitenancy;
-using Huia.EntityFrameworkCore;
-using Huia.EntityFrameworkCore.Entities;
-using Huia.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Identity;
+using Huia.OpenId.Multitenancy;
+using Huia.OpenId.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -81,7 +81,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
     public static async Task<HuiaTestHost> StartAsync(
         Action<HuiaOptionsBuilder>? configureOptions = null,
         Action<IEndpointRouteBuilder>? configureEndpoints = null,
-        Action<Huia.AspNetCore.DependencyInjection.IHuiaBuilder>? configureBuilder = null,
+        Action<Huia.OpenId.DependencyInjection.IHuiaBuilder>? configureBuilder = null,
         TimeProvider? timeProvider = null)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
@@ -153,9 +153,9 @@ public sealed class HuiaTestHost : IAsyncDisposable
                     });
                     builder.AddHuiaUi();
                     services.AddSingleton(sms);
-                    services.AddScoped<Huia.AspNetCore.Services.ISmsSender>(_ => sms);
+                    services.AddScoped<Huia.OpenId.Services.ISmsSender>(_ => sms);
                     services.AddSingleton(email);
-                    services.AddScoped<Huia.AspNetCore.Emails.IHuiaEmailSender>(_ => email);
+                    services.AddScoped<Huia.OpenId.Emails.IHuiaEmailSender>(_ => email);
                     services.AddSingleton(eventCollector);
                     RegisterEventCollector(services, eventCollector);
                     configureBuilder?.Invoke(builder);

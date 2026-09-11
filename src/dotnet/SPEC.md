@@ -6,7 +6,7 @@
 > account UI.
 
 - **Target framework:** `net10.0` (C# 14, `LangVersion=latest`)
-- **Packages:** `Huia`, `Huia.EntityFrameworkCore`, `Huia.AspNetCore`
+- **Packages:** `Huia`, `Huia.OpenId.EntityFrameworkCore`, `Huia.OpenId`
 - **Core dependencies:** OpenIddict 7.x (server **and** client), Finbuckle.MultiTenant 10.x, EF Core /
   ASP.NET Core Identity 10.x, Quartz 3.x, `Microsoft.Extensions.Caching.Hybrid`
 - **Configuration section:** `Huia`
@@ -119,10 +119,10 @@ write, auto-stamps `TenantId` on insert).
 | Package | Contents | Depends on |
 |---|---|---|
 | **`Huia`** | Domain model (`HuiaSigningKey` and value objects), the **options tree** (`HuiaOptions` → `TenantOptions` → …), eventing abstractions (`IHuiaEventPublisher`, `HuiaEvents`), constants (`HuiaConstants`). | Nothing framework-specific. A build `Target` fails the compile if an ASP.NET Core / EF Core `PackageReference` is added. |
-| **`Huia.EntityFrameworkCore`** | `HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, string>`; `ModelBuilder.UseOpenIddict()`; every table renamed `Huia*` via `ToTable`; the named tenant-scoped composite indexes (`IX_HuiaUsers_Tenant_UserName` unique, `…_Tenant_Email`, `IX_HuiaRoles_Tenant_Name` unique) applied last in `OnModelCreating` (`ApplyTenantScopedIndexes`, superseding Finbuckle's `AdjustUniqueIndexes`); `IMultiTenantContextAccessor` extensions (`CurrentTenantId()` / `RequireCurrentTenantId()`); `HuiaTenantScope.Enter(...)` for seeding / admin. **Ships no migrations** — the consuming app owns the provider and the migration assembly. |
-| **`Huia.AspNetCore`** | `AddHuia()` / `UseHuia()` / `MapHuiaEndpoints()` / `MapHuiaAdminEndpoints()`; OpenIddict **server** + **client** config; the Razor Pages account UI (`Areas/Identity/Pages/Account/**`, en/ar, RTL, a committed JS bundle under `wwwroot/`); passwordless SMS (`IOtpService`, `IPhoneNumberService`, `IPendingPhoneSignup`, rate limiters); `HuiaUserManager`; the key-lifecycle Quartz jobs + `IHuiaKeyRing`; `AddHuiaSecurityHeaders()`; `IHuiaEmailSender` (MailKit) + Razor email rendering. |
+| **`Huia.OpenId.EntityFrameworkCore`** | `HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, string>`; `ModelBuilder.UseOpenIddict()`; every table renamed `Huia*` via `ToTable`; the named tenant-scoped composite indexes (`IX_HuiaUsers_Tenant_UserName` unique, `…_Tenant_Email`, `IX_HuiaRoles_Tenant_Name` unique) applied last in `OnModelCreating` (`ApplyTenantScopedIndexes`, superseding Finbuckle's `AdjustUniqueIndexes`); `IMultiTenantContextAccessor` extensions (`CurrentTenantId()` / `RequireCurrentTenantId()`); `HuiaTenantScope.Enter(...)` for seeding / admin. **Ships no migrations** — the consuming app owns the provider and the migration assembly. |
+| **`Huia.OpenId`** | `AddHuia()` / `UseHuia()` / `MapHuiaEndpoints()` / `MapHuiaAdminEndpoints()`; OpenIddict **server** + **client** config; the Razor Pages account UI (`Areas/Identity/Pages/Account/**`, en/ar, RTL, a committed JS bundle under `wwwroot/`); passwordless SMS (`IOtpService`, `IPhoneNumberService`, `IPendingPhoneSignup`, rate limiters); `HuiaUserManager`; the key-lifecycle Quartz jobs + `IHuiaKeyRing`; `AddHuiaSecurityHeaders()`; `IHuiaEmailSender` (MailKit) + Razor email rendering. |
 
-`Huia` and `Huia.EntityFrameworkCore` expose `internal` members to `Huia.AspNetCore` and the four test
+`Huia` and `Huia.OpenId.EntityFrameworkCore` expose `internal` members to `Huia.OpenId` and the four test
 projects via `InternalsVisibleTo` in `src/Directory.Build.props`.
 
 ---
@@ -203,7 +203,7 @@ tenant.Authentication.IsExternalLoginEnabled          // => at least one provide
 `Phone.AllowAutoProvisioning` (untouched — not created — when the phone flow was never enabled, so
 this can't implicitly flip `IsPhoneLoginEnabled`). `TenantOptions.DisableRegistration()` delegates to it.
 
-Framework code inside `Huia` / `Huia.AspNetCore` reads the full objects through the `internal`
+Framework code inside `Huia` / `Huia.OpenId` reads the full objects through the `internal`
 `Authentication.EmailAndPassword` / `Authentication.Phone` / `Authentication.External` accessors.
 
 ### 3.3 `HuiaClientDescriptor`
@@ -293,7 +293,7 @@ Only `EmailOptions` and `SmsOptions` have `MergedWith(tenant?)`:
 ### 5.1 Entities
 
 `HuiaUser : IdentityUser<string>` and `HuiaRole : IdentityRole<string>` (in
-`Huia.EntityFrameworkCore.Entities`) add `TenantId`, `FirstName`, `LastName`, and
+`Huia.OpenId.EntityFrameworkCore.Entities`) add `TenantId`, `FirstName`, `LastName`, and
 `HasCompleteProfile`. The confirmed-email vs confirmed-phone split is handled by per-flow
 `IdentityOptions` (§5.6) and the stock `DefaultUserConfirmation`, not a custom `IUserConfirmation`.
 
@@ -494,7 +494,7 @@ xUnit v2 + **Shouldly** (no `Assert.*`); snake_case sentence method names
 
 | Project | Scope | Notes |
 |---|---|---|
-| **`Huia.Tests`** (`src/dotnet/tests/`) | Pure unit — options-tree validation, `Email`/`Sms` merge semantics, `HuiaDbContext` model (table renames, indexes) + tenant query filter. | in-memory SQLite; refs `Huia` + `Huia.EntityFrameworkCore` only. |
+| **`Huia.Tests`** (`src/dotnet/tests/`) | Pure unit — options-tree validation, `Email`/`Sms` merge semantics, `HuiaDbContext` model (table renames, indexes) + tenant query filter. | in-memory SQLite; refs `Huia` + `Huia.OpenId.EntityFrameworkCore` only. |
 | **`Huia.IntegrationTests`** (`src/dotnet/tests/`) | In-process host (`HuiaTestHost`: `HostBuilder` + `UseTestServer` + shared open `SqliteConnection`, schema via `EnsureCreatedAsync` in a hosted service before `AddHuia`). Auth-code + PKCE through the real Razor UI (`AuthorizationCodeFlowTests`, cookie-forwarding handler), refresh, client credentials, device, passwordless SMS (`PhoneFlow`), external login, `/manage` contact rules, admin CRUD, per-tenant `IdentityOptions`, per-flow identity (§5.6 — `FlowIdentityOptionsTests`, `HuiaSignInManagerTests`, `HuiaUserManagerFlowTests`, `IdentityOptionsFlowTests`, mirroring the ASP.NET Core `SignInManagerTest` / `UserManagerTest` / `IdentityOptionsTest` scenarios), key lifecycle, `HuiaUserManagerTests` (§5.3). Testcontainers-PostgreSQL tests carry `[Trait("Category","Container")]`. | `HuiaTestHost` helpers: `SeedUserAsync`, `SeedPhoneUserAsync`, `SeedInteractiveClientAsync`, `WithUserManagerAsync` (tenant-scoped `HuiaUserManager`), `WithFlowIdentityAsync` (tenant-scoped `HuiaFlowIdentity`), `AddExternalLoginAsync`. |
 | **`Huia.Tests.PenTest`** (`src/dotnet/tests/`) | `[Trait("Category","PenTest")]` — cross-tenant token rejection, open-redirect, CSRF / state, privilege escalation, brute-force / rate-limit. Drives `samples/Huia.IdentityServer` out-of-process (port 5310) so the sample's rate limiter is really in the pipeline; a fresh cookie jar per sign-in. | |
 | **`tests/Huia.E2ETests`** (repo root) | `[Trait("Category","E2E")]`, `[SkippableFact]` + `Skip.IfNot(fixture.Started, …)`. `InteractiveSignInTests` / `MailFlowE2ETests` drive `samples/Huia.IdentityServer` via Playwright; `AdminUiE2ETests` drives the Aspire AppHost stack; `FrontEndAuthE2ETests` drives the Nuxt Todo.App through real OIDC (password / phone / external); `HuiaNuxtE2ETests` drives the `huia-nuxt` playground (see `../nuxt/SPEC.md` §10.5). Skip-tolerant — a missing build output or start-up failure skips, never fails. | `RepoRoot.Find()` (sentinel `src/dotnet/Huia.slnx`). |
@@ -502,4 +502,4 @@ xUnit v2 + **Shouldly** (no `Assert.*`); snake_case sentence method names
 **CI jobs** (`.github/workflows/ci.yml`, `.NET` jobs run in `src/dotnet`): `build` (build + the
 default-filter tests), `pen-test`, `integration` (`Category=Container`), `e2e` (builds both Nuxt
 samples + the `src/nuxt` playground, installs Playwright, runs `Category=E2E`), `web-assets`
-(rebuilds `Huia.AspNetCore/wwwroot` and `git diff --exit-code`), `docs`, `nuxt-module`.
+(rebuilds `Huia.OpenId/wwwroot` and `git diff --exit-code`), `docs`, `nuxt-module`.

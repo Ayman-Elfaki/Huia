@@ -1,5 +1,5 @@
-using Huia.AspNetCore.Multitenancy;
-using Huia.EntityFrameworkCore.Entities;
+using Huia.OpenId.Multitenancy;
+using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
