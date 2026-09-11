@@ -58,29 +58,41 @@ endpoints.MapGroup("identity").MapIdentityApi<HuiaUser>();   // register, login,
                                                               // resetPassword, 2FA, /manage/info
 endpoints.MapHuiaHeadlessMeEndpoints();                      // GET identity/me
 endpoints.MapHuiaHeadlessPasskeyEndpoints();                 // identity/passkey/*, identity/manage/passkeys/*
+endpoints.MapHuiaHeadlessPhoneEndpoints();                   // identity/phone/*
 ```
 
 The framework's own [`MapIdentityApi<TUser>()`](https://learn.microsoft.com/aspnet/core/security/authentication/identity-api-authorization)
 does the heavy lifting (this is the same `identity-api-authorization` pattern Microsoft documents for
-SPAs); `Huia.Headless` adds two things on top:
+SPAs); `Huia.Headless` adds three things on top:
 
 | Route | Auth | Purpose |
 |---|---|---|
 | `GET identity/me` | bearer | Richer claims than `MapIdentityApi`'s stock `/manage/info` (`email`/`isEmailConfirmed` only) — `sub`, `email`, `phoneNumber`, `firstName`, `lastName`, `roles`, so a client doesn't have to reverse-engineer claims out of an intentionally opaque token. |
 | `POST identity/passkey/assertion-options` / `assertion` | anonymous | Discoverable passkey sign-in — sets `signInManager.AuthenticationScheme = IdentityConstants.BearerScheme` before signing in, since the passkey ceremony otherwise assumes a cookie. |
 | `identity/manage/passkeys` (`GET`/`POST`), `{id}` (`PATCH`/`DELETE`) | bearer | Credential management, reusing `HuiaPasskeyRegistrar<TUser>` — the same registrar `Huia.OpenId` uses. |
+| `POST identity/phone/start` / `verify` / `complete-profile` | anonymous | Passwordless SMS one-time-code login — the JSON counterpart to `Huia.OpenId`'s `Login`/`VerifyOtp`/`CompleteProfile` Razor pages. `start` normalizes + rate-limits + sends a code and returns an opaque `flowId`; `verify` checks the code (returning a bearer token directly for an existing account with a complete profile, or `{ flowId, requiresProfile: true }` for a new phone signup or a blank-name existing account); `complete-profile` takes a first/last name and returns the bearer token. |
 
-Passkey routes 404 unless the tenant's `Authentication.UsePasskeyLogin()` is configured — same
-opt-in as `Huia.OpenId`.
+Passkey and phone-login routes 404 unless the tenant's `Authentication.UsePasskeyLogin()` /
+`Authentication.UsePhoneLogin()` is configured — same opt-in as `Huia.OpenId`. Phone login shares its
+implementation (`IPhoneNumberService`, `IOtpService<TUser>`, `IOtpRateLimiter`, `IPhoneLoginRateLimiter`,
+`IPendingPhoneSignup`, `ISmsSender`, `ICaptchaVerifier`) with `Huia.OpenId` — all of it lives in core
+`Huia.Services`, registered by both `AddHuiaOpenId()` and `AddHuiaHeadless()`. The one Headless-only
+piece is `IPhoneLoginFlowStore`, which correlates a `start` call with its later `verify`/`complete-profile`
+call — the role an encrypted flow token round-tripped through a hidden form field plays across
+`Huia.OpenId`'s page loads, played here by an opaque, server-held id instead (there is no page
+navigation to carry state across steps).
 
 ## What's implemented today
 
-Password login (via `MapIdentityApi`) and passkeys are wired up and covered by the
-[Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api) and its
-[e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests). Phone login and
-external login — both first-class flows in `Huia.OpenId` — have **not** been ported to `Huia.Headless`
-yet; there is no `identity/passkey`-style endpoint pair for either. If your app needs them today, use
-`Huia.OpenId` instead, or treat this as an open contribution area.
+Password login (via `MapIdentityApi`), passkeys, and phone login are wired up. Password and passkeys
+are covered by the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api) and
+its [e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests); phone login is
+covered by `HeadlessPhoneLoginTests` in `Huia.IntegrationTests` (not yet wired into the Shop sample's
+UI). External login — a first-class flow in `Huia.OpenId` — has **not** been ported: `Huia.OpenId`'s
+implementation is built entirely on the OpenIddict client, which `Huia.Headless` deliberately has zero
+dependency on, so it needs a materially different design (most likely a redirect to the provider
+followed by a short-lived one-time code exchanged via `POST` for the bearer token, keeping the token
+itself out of any URL). If your app needs external login today, use `Huia.OpenId` instead.
 
 ## First-party Nuxt client
 
