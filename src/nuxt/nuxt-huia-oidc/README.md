@@ -1,9 +1,13 @@
-# nuxt-huia
+# nuxt-huia-oidc
 
-**Nuxt 4** authentication module for the [Huia](https://github.com/Ayman-Elfaki/Huia)
+**Nuxt 4** authentication module for the [Huia.OpenId](https://github.com/Ayman-Elfaki/Huia)
 identity provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
 transparent server-side token refresh, and a dual-layer session that keeps **every token on the
 server**.
+
+Its sibling module, [`nuxt-huia-headless`](../nuxt-huia-headless), talks to `Huia.Headless` instead —
+a JSON register/login API with no OIDC redirect — for apps that own their own login form. Use this
+module when the app authenticates against a multi-tenant `Huia.OpenId` server via OIDC redirects.
 
 - Built on [`openid-client`](https://github.com/panva/openid-client) v6 (ESM, Web Crypto)
 - Requires Nuxt `>=4`, Nitro `>=2.10`, Node `>=20.11`
@@ -12,20 +16,21 @@ server**.
 ## Install
 
 ```bash
-npm install huia-nuxt
+npm install nuxt-huia-oidc
 ```
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['huia-nuxt'],
-  huiaAuth: {
-    huia: { baseUrl: 'https://id.example.com', tenant: 'acme' },
+  modules: ['nuxt-huia-oidc'],
+  huia: {
+    baseUrl: 'https://id.example.com',
+    tenant: 'acme',
     clientId: 'acme-web',
-    // clientSecret via NUXT_HUIA_AUTH_CLIENT_SECRET
+    // clientSecret via NUXT_HUIA_CLIENT_SECRET
     scopes: ['openid', 'profile', 'email', 'offline_access'],
     par: { enabled: true },
-    // session.password via NUXT_HUIA_AUTH_SESSION_PASSWORD (>= 32 chars)
+    // session.password via NUXT_HUIA_SESSION_PASSWORD (>= 32 chars)
   },
 })
 ```
@@ -35,7 +40,7 @@ export default defineNuxtConfig({
 ```vue
 <script setup lang="ts">
 const { user, loggedIn } = useUserSession()
-const { login, logout } = useAuth()
+const { login, logout } = useHuia()
 </script>
 ```
 

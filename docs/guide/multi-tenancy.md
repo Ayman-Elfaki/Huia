@@ -1,7 +1,7 @@
 # Multi-tenancy
 
 Tenants are resolved from the first path segment (`/{tenant}/...`) by Finbuckle's base-path
-strategy with `RebaseAspNetCorePathBase`. `UseHuia()` runs `UseMultiTenant()` before `UseRouting()`
+strategy with `RebaseAspNetCorePathBase`. `UseHuiaOpenId()` runs `UseMultiTenant()` before `UseRouting()`
 and `UseAuthentication()`.
 
 ## Data isolation

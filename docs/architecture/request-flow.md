@@ -46,5 +46,5 @@ accepts it with zero OpenIddict changes. The full flow is in [Passwordless SMS](
 
 ## Relying party (Nuxt)
 
-`huia-nuxt` runs the RP half of the diagram on the Nitro server and keeps every token
+`nuxt-huia-oidc` runs the RP half of the diagram on the Nitro server and keeps every token
 server-side — see [the Nuxt module docs](/nuxt/overview).

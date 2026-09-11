@@ -1,15 +1,16 @@
-# `huia-nuxt` — Technical Specification
+# `nuxt-huia-oidc` — Technical Specification
 
-> A first-party **Nuxt 4** authentication module for the [Huia](../dotnet/README.md) identity
+> A first-party **Nuxt 4** authentication module for the [Huia.OpenId](../dotnet/README.md) identity
 > provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
 > transparent server-side token refresh, and a dual-layer session that keeps **every token on the
-> server**.
+> server**. Its sibling module, `nuxt-huia-headless`, covers the JSON register/login flow against
+> `Huia.Headless` instead — see [its README](../nuxt-huia-headless/README.md).
 
-- **Package:** `huia-nuxt`
+- **Package:** `nuxt-huia-oidc`
 - **Target:** Nuxt `>=4.0.0`, Nitro `>=2.10`, Node `>=20.11` (Web Crypto, `globalThis.crypto`)
 - **Core library:** [`openid-client`](https://github.com/panva/openid-client) v6 (ESM-only, Web
   Crypto native, form-encoded token requests by design)
-- **Config key:** `huiaAuth`
+- **Config key:** `huia`
 
 ---
 
@@ -32,7 +33,7 @@
 
 ### 1.1 Summary
 
-`huia-nuxt` performs the OAuth 2.0 **Authorization Code flow with PKCE** against a Huia tenant's
+`nuxt-huia-oidc` performs the OAuth 2.0 **Authorization Code flow with PKCE** against a Huia tenant's
 OpenID Provider (OP), completes the code exchange on the **Nitro server**, and persists the result
 across two layers:
 
@@ -77,11 +78,11 @@ The module also:
                           │              │                        winner → refreshTokenGrant()  ┼──▶ Huia  POST /{tenant}/connect/token
                           │              │                        loser  → poll → reuse record  │
                           │              ▼                                                      │
-                          │   event.context.huiaAuth = { user, loggedIn: true, expiresAt }     │
+                          │   event.context.huia = { user, loggedIn: true, expiresAt }         │
                           │        │  (NO tokens)                                               │
                           │        ▼                                                           │
                           │   Nuxt server plugin (session.server.ts)                           │
-                          │     useState('huia-auth:session').value = event.context.huiaAuth   │
+                          │     useState('huia-auth:session').value = event.context.huia       │
                           │        │                                                           │
                           │        ▼                                                           │
                           │   render <App/>  ──  useUserSession() reads the same useState ref  │
@@ -91,7 +92,7 @@ The module also:
                           └────────────────────────────────┬───────────────────────────────────┘
                                                            │
   Browser  ◀──────────────────────────────────────────────┘
-   hydrate:  useState('huia-auth:session')  ← reads __NUXT__ payload  (NO /api/_auth/session fetch)
+   hydrate:  useState('huia-auth:session')  ← reads __NUXT__ payload  (NO /auth/session fetch)
              useUserSession().loggedIn.value === true  on the very first client render
              ⇒ no flash-of-unauthenticated-content, no hydration mismatch
 ```
@@ -130,19 +131,17 @@ The module also:
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['huia-nuxt'],
+  modules: ['nuxt-huia-oidc'],
 
-  huiaAuth: {
-    // ── Which Huia OP ────────────────────────────────────────────────────────────
-    huia: {
-      baseUrl: 'https://id.example.com',   // NUXT_HUIA_AUTH_HUIA_BASE_URL
-      tenant: 'acme',                      // NUXT_HUIA_AUTH_HUIA_TENANT
-      // issuer: 'https://id.example.com/acme',  // overrides baseUrl+tenant when set
-    },
+  huia: {
+    // ── Which Huia.OpenId tenant ────────────────────────────────────────────────
+    baseUrl: 'https://id.example.com',   // NUXT_HUIA_BASE_URL
+    tenant: 'acme',                      // NUXT_HUIA_TENANT
+    // issuer: 'https://id.example.com/acme',  // overrides baseUrl+tenant when set
 
     // ── Client credentials (confidential client) ─────────────────────────────────
     clientId: 'acme-web',
-    // clientSecret: env NUXT_HUIA_AUTH_CLIENT_SECRET  (never inline in prod)
+    // clientSecret: env NUXT_HUIA_CLIENT_SECRET  (never inline in prod)
     redirectUrl: '/auth/oidc/callback',    // path only; origin is resolved per-request
     scopes: ['openid', 'profile', 'email', 'offline_access'],   // 'roles' for admin apps
     // extraAuthParams: forwarded from ?…  — allowlist below
@@ -157,7 +156,7 @@ export default defineNuxtConfig({
     // ── Session (cookie + storage) ──────────────────────────────────────────────
     session: {
       name: '__Host-huia_sess',            // base cookie name; auto-downgrades over http (dev)
-      // password: env NUXT_HUIA_AUTH_SESSION_PASSWORD  (>= 32 chars, iron-webcrypto seal key)
+      // password: env NUXT_HUIA_SESSION_PASSWORD  (>= 32 chars, iron-webcrypto seal key)
       maxAge: 60 * 60 * 24 * 7,            // 7 days — cookie Max-Age and storage TTL
       cookie: { sameSite: 'lax', secure: undefined },   // secure defaults to isHttps(event)
       userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
@@ -179,6 +178,8 @@ export default defineNuxtConfig({
     cookie: { chunkSize: 3800, maxChunks: 8 },   // 8 × 3800 ≈ 30 KB sealed budget
 
     // ── Route middleware ───────────────────────────────────────────────────────
+    // exclude accepts glob patterns ('**' any depth, '*' one segment), matched via the
+    // module's own route-match.ts (no dependency on a router internals API).
     middleware: { global: false, exclude: [] },
 
     // ── Dev only ───────────────────────────────────────────────────────────────
@@ -203,14 +204,14 @@ export default defineNuxtConfig({
 
 | Variable | Required | Notes |
 |---|---|---|
-| `NUXT_HUIA_AUTH_CLIENT_SECRET` | yes (confidential client) | Maps to `runtimeConfig.huiaAuth.clientSecret`. |
-| `NUXT_HUIA_AUTH_SESSION_PASSWORD` | yes | ≥ 32 chars. `iron-webcrypto` seal/unseal key. Rotating it invalidates every existing cookie (users re-authenticate). |
-| `NUXT_HUIA_AUTH_HUIA_BASE_URL` | — | Overrides `huiaAuth.huia.baseUrl`. |
-| `NUXT_HUIA_AUTH_HUIA_TENANT` | — | Overrides `huiaAuth.huia.tenant`. |
+| `NUXT_HUIA_CLIENT_SECRET` | yes (confidential client) | Maps to `runtimeConfig.huia.clientSecret`. |
+| `NUXT_HUIA_SESSION_PASSWORD` | yes | ≥ 32 chars. `iron-webcrypto` seal/unseal key. Rotating it invalidates every existing cookie (users re-authenticate). |
+| `NUXT_HUIA_BASE_URL` | — | Overrides `huia.baseUrl`. |
+| `NUXT_HUIA_TENANT` | — | Overrides `huia.tenant`. |
 | `NODE_TLS_REJECT_UNAUTHORIZED=0` | dev only | Lets Node's undici accept the ASP.NET Core dev certificate. The module also honours `allowInsecureTls: true` (dev only) which installs a permissive `undici.Agent` as `openid-client`'s `customFetch`. **Never set either in production.** |
 
-`runtimeConfig.public.huiaAuth` contains **only** `{ loginPath, logoutPath, sessionPath }` — no
-issuer, client id, or secret is exposed to the browser (every protocol step is a server route).
+`runtimeConfig.public.huia` contains **only** `{ loginPath, logoutPath, sessionPath, middlewareExclude }`
+— no issuer, client id, or secret is exposed to the browser (every protocol step is a server route).
 
 ### 2.3 The Huia token endpoint is form-encoded
 
@@ -228,7 +229,7 @@ is called out only because the previous `nuxt-oidc-auth` integration needed an e
 
 ```
 your-app/
-├─ nuxt.config.ts                 modules: ['huia-nuxt'],  huiaAuth: { … }
+├─ nuxt.config.ts                 modules: ['nuxt-huia-oidc'],  huia: { … }
 ├─ app/
 │  ├─ pages/
 │  │  ├─ index.vue                public
@@ -243,15 +244,15 @@ your-app/
 ```
 
 The module contributes the routes `/auth/oidc/login`, `/auth/oidc/callback`, `/auth/oidc/logout`
-and `/api/_auth/session` (all configurable), the `auth` route middleware, the auto-imported
-composables `useUserSession` / `useAuth`, and the auto-imported server utilities
+and `/auth/session` (all configurable), the `auth` route middleware, the auto-imported
+composables `useUserSession` / `useHuia`, and the auto-imported server utilities
 `getUserSession` / `setUserSession` / `clearUserSession` / `requireUserSession` / `getAccessToken`.
 
 ### 3.2 Module internals (`src/runtime/`)
 
 ```
-src/nuxt/
-├─ package.json                   name: "huia-nuxt"  (@nuxt/module-builder)
+src/nuxt/nuxt-huia-oidc/
+├─ package.json                   name: "nuxt-huia-oidc"  (@nuxt/module-builder)
 ├─ build.config.ts
 ├─ tsconfig.json
 ├─ src/
@@ -261,14 +262,14 @@ src/nuxt/
 │     │  ├─ plugins/
 │     │  │  └─ oidc.discovery.ts      Nitro plugin: OIDC discovery + cache, PAR capability, dev-TLS fetch
 │     │  ├─ middleware/
-│     │  │  └─ session.context.ts     Nitro route middleware: resolves the session onto event.context.huiaAuth
+│     │  │  └─ session.context.ts     Nitro route middleware: resolves the session onto event.context.huia
 │     │  ├─ routes/
-│     │  │  └─ auth/oidc/
-│     │  │     ├─ login.get.ts        begin Authorization Code + PKCE (+ PAR)
-│     │  │     ├─ callback.get.ts     code exchange, create session, redirect to returnTo
-│     │  │     └─ logout.get.ts       clear session + RP-initiated end_session
-│     │  ├─ api/_auth/
-│     │  │  └─ session.get.ts         sanitised UserSession JSON, Cache-Control: no-store
+│     │  │  ├─ auth/oidc/
+│     │  │  │  ├─ login.get.ts        begin Authorization Code + PKCE (+ PAR)
+│     │  │  │  ├─ callback.get.ts     code exchange, create session, redirect to returnTo
+│     │  │  │  └─ logout.get.ts       clear session + RP-initiated end_session
+│     │  │  └─ auth/
+│     │  │     └─ session.get.ts      sanitised UserSession JSON, Cache-Control: no-store
 │     │  └─ utils/
 │     │     ├─ config.ts              resolveAuthConfig(event) — issuer, redirectUri, names, timings
 │     │     ├─ oidc.ts                client factory, beginAuthorization, completeAuthorization, buildLogoutUrl
@@ -280,19 +281,19 @@ src/nuxt/
 │     │     └─ internal-types.ts      TokenRecord, AuthStateRecord, LockRecord, ResolvedAuthConfig
 │     ├─ app/
 │     │  ├─ plugins/
-│     │  │  └─ session.server.ts      seed useState('huia-auth:session') from event.context.huiaAuth
+│     │  │  └─ session.server.ts      seed useState('huia-auth:session') from event.context.huia
 │     │  ├─ composables/
 │     │  │  ├─ useUserSession.ts
-│     │  │  └─ useAuth.ts
+│     │  │  └─ useHuia.ts
 │     │  ├─ middleware/
-│     │  │  └─ auth.ts                addRouteMiddleware('auth', …)
+│     │  │  └─ auth.ts                addRouteMiddleware('auth', …) — checks isExcluded() first (§6.1)
 │     │  └─ utils/
-│     │     └─ paths.ts
+│     │     └─ route-match.ts         matchesPattern / isExcluded — pure glob matcher ('**' / '*'), no router internals
 │     ├─ types.ts                     public: UserClaims / UserSession / UserSessionRequired / SecureSessionData
 │     └─ types.d.ts                   module augmentations (#huia-auth, h3, nitropack, @nuxt/schema)
 ├─ playground/                        a runnable consumer app (index + protected page, server/api/whoami)
 └─ test/
-   ├─ unit/                           cookie-chunking, seal-unseal, pkce-state, soft-lock, refresh-expired
+   ├─ unit/                           cookie-chunking, seal-unseal, pkce-state, soft-lock, refresh-expired, middleware-exclude
    ├─ integration/                    login-par, login-par-fallback, callback-state-mismatch, session-hydration, refresh
    └─ fixtures/mock-op/               an h3 app emulating Huia's discovery / authorize / token / par / userinfo / logout
 ```
@@ -338,27 +339,27 @@ export async function getOidcConfig(issuer: string): Promise<oidc.Configuration>
 }
 
 async function discoverInternal(issuer: string): Promise<oidc.Configuration> {
-  const { huiaAuth } = useRuntimeConfig()
+  const { huia } = useRuntimeConfig()
   const server = new URL(`${issuer}/.well-known/openid-configuration`)
 
   const execute: Array<(cfg: oidc.Configuration) => void> = []
   // Dev only: accept the ASP.NET Core self-signed certificate.
-  if (import.meta.dev && (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' || huiaAuth.allowInsecureTls)) {
+  if (import.meta.dev && (process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' || huia.allowInsecureTls)) {
     execute.push(oidc.allowInsecureRequests)
-  } else if (huiaAuth.allowInsecureTls) {
+  } else if (huia.allowInsecureTls) {
     throw new Error('[huia-auth] allowInsecureTls is only honoured when import.meta.dev is true')
   }
 
   const cfg = await oidc.discovery(
     server,
-    huiaAuth.clientId,
+    huia.clientId,
     { /* extra client metadata if ever needed */ },
-    oidc.ClientSecretPost(huiaAuth.clientSecret),
+    oidc.ClientSecretPost(huia.clientSecret),
     { execute, [oidc.customFetch]: oidcFetch() },
   )
 
   // Warm-start snapshot (best effort, short TTL).
-  await useStorage(huiaAuth.storage.base)
+  await useStorage(huia.storage.base)
     .setItem(discoveryCacheKey(issuer), cfg.serverMetadata(), { ttl: 3600 })
     .catch(() => {})
 
@@ -366,13 +367,13 @@ async function discoverInternal(issuer: string): Promise<oidc.Configuration> {
 }
 
 export default defineNitroPlugin(async () => {
-  const { huiaAuth } = useRuntimeConfig()
-  const issuer = resolveIssuer(huiaAuth)
+  const { huia } = useRuntimeConfig()
+  const issuer = resolveIssuer(huia)
   // Kick discovery off eagerly; do not block route handling if the OP is briefly unreachable.
   getOidcConfig(issuer).then(
     (cfg) => {
       const par = !!cfg.serverMetadata().pushed_authorization_request_endpoint
-      console.info(`[huia-auth] issuer=${issuer} PAR=${par ? 'yes' : 'no'} refresh=${huiaAuth.refresh.enabled}`)
+      console.info(`[huia-auth] issuer=${issuer} PAR=${par ? 'yes' : 'no'} refresh=${huia.refresh.enabled}`)
     },
     (err) => console.warn(`[huia-auth] discovery deferred for ${issuer}: ${(err as Error).message}`),
   )
@@ -640,7 +641,7 @@ import { pickUserClaims } from './tokens'
 import type { UserSession, UserSessionRequired } from '../../types'
 import type { TokenRecord } from './internal-types'
 
-const CTX = 'huiaAuth'
+const CTX = 'huia'
 
 export async function getUserSession(event: H3Event): Promise<UserSession> {
   const memo = event.context[CTX] as UserSession | undefined
@@ -825,7 +826,7 @@ export async function writeSessionCookie(event: H3Event, cfg: ResolvedAuthConfig
       statusCode: 500,
       statusMessage: 'session_cookie_too_large',
       message: `Sealed session is ${sealed.length}B (> ${cfg.cookie.maxChunks} × ${limit}). `
-             + 'Trim huiaAuth.session.userClaims or raise huiaAuth.cookie.maxChunks.',
+             + 'Trim huia.session.userClaims or raise huia.cookie.maxChunks.',
     })
   }
   parts.forEach((part, i) => setCookie(event, `${name}.${i}`, part, cookieOpts(cfg)))
@@ -1028,7 +1029,7 @@ function isInvalidGrant(err: unknown): boolean {
 | Winner process crashes holding the lock | Any later acquirer treats a lock older than `ttlMs` as free (`acquiredAt` check + driver `ttl` backstop). |
 | Non-atomic storage driver, two winners | Both call `refreshTokenGrant`; the loser's rotated refresh token 400s → handled as transient → falls to the poll path. Bounded to **one** wasted token call. For strict correctness at scale use the `redis` driver. |
 
-### 4.8 Session endpoint — `GET /api/_auth/session`
+### 4.8 Session endpoint — `GET /auth/session`
 
 The one endpoint the client may call directly (used by `useUserSession().fetch()` and, if a consumer
 opts into the `useAsyncData` pattern, by the hydration path).
@@ -1051,7 +1052,7 @@ export default defineEventHandler(async (event) => {
 
 Two pieces:
 
-**a) A Nitro route middleware** resolves the session onto `event.context.huiaAuth` for every
+**a) A Nitro route middleware** resolves the session onto `event.context.huia` for every
 request, so the value exists before the Nuxt server plugin runs.
 
 ```ts
@@ -1060,7 +1061,7 @@ import { defineEventHandler } from 'h3'
 import { getUserSession } from '../utils/session'
 
 export default defineEventHandler(async (event) => {
-  // Populate event.context.huiaAuth (memoised inside getUserSession); swallow to never 500 a request.
+  // Populate event.context.huia (memoised inside getUserSession); swallow to never 500 a request.
   await getUserSession(event).catch(() => {})
 })
 ```
@@ -1076,7 +1077,7 @@ import type { UserSession } from '../../types'
 export default defineNuxtPlugin(() => {
   const event = useRequestEvent()
   const state = useState<UserSession>('huia-auth:session', () => ({}))
-  state.value = (event?.context.huiaAuth as UserSession | undefined) ?? {}
+  state.value = (event?.context.huia as UserSession | undefined) ?? {}
 })
 ```
 
@@ -1088,18 +1089,18 @@ protected page is either fully rendered server-side or 302-redirected before any
 flash-of-unauthenticated-content.
 
 **Alternative — `useAsyncData` + `useRequestFetch`.** A consumer who prefers an explicit fetch can
-disable the plugin (`huiaAuth.hydration: 'asyncData'`) and use:
+disable the plugin (`huia.hydration: 'asyncData'`) and use:
 
 ```ts
 const { data: session } = await useAsyncData('huia-auth:session',
-  () => useRequestFetch()('/api/_auth/session'),
+  () => useRequestFetch()('/auth/session'),
   { default: () => ({}) as UserSession })
 ```
 
 FOUC-free **only if** all four hold: (1) the call is `await`ed so SSR blocks on it; (2) the key is
 stable so the client dedupes against the payload instead of refetching; (3) `default` fixes the
 shape before resolution; (4) no template branch is gated on a separate `pending` that flips on the
-client. `useRequestFetch()` forwards the incoming `Cookie` header to `/api/_auth/session` during
+client. `useRequestFetch()` forwards the incoming `Cookie` header to `/auth/session` during
 SSR. The trade-off vs. the default is one extra internal HTTP round-trip per SSR request.
 
 ### 5.2 `useUserSession()`
@@ -1121,7 +1122,7 @@ export function useUserSession() {
 
     /** Re-read the server session (after returning from login, on tab focus, …). */
     async fetch() {
-      session.value = await useRequestFetch()('/api/_auth/session')
+      session.value = await useRequestFetch()('/auth/session')
     },
     /** Full logout via the server route (clears storage + cookies, hits the OP end_session). */
     async clear() {
@@ -1135,31 +1136,35 @@ export function useUserSession() {
 }
 ```
 
-### 5.3 `useAuth()`
+### 5.3 `useHuia()`
 
 ```ts
-// src/runtime/app/composables/useAuth.ts
-import { navigateTo, useRoute } from '#imports'
+// src/runtime/app/composables/useHuia.ts
+import { navigateTo, useRoute, useRuntimeConfig } from '#imports'
 import { useUserSession } from './useUserSession'
 
-export function useAuth() {
-  const { user, loggedIn, session } = useUserSession()
+export function useHuia() {
+  const { user, loggedIn, session, hasRole, hasAnyRole } = useUserSession()
+  const paths = useRuntimeConfig().public.huia as { loginPath: string, logoutPath: string }
 
   return {
-    user, loggedIn, session,
+    user, loggedIn, session, hasRole, hasAnyRole,
 
     login(opts: { returnTo?: string, locale?: string, prompt?: string } = {}) {
       const query: Record<string, string> = { returnTo: opts.returnTo ?? useRoute().fullPath }
       if (opts.locale) query.ui_locales = opts.locale
       if (opts.prompt) query.prompt = opts.prompt
-      return navigateTo({ path: '/auth/oidc/login', query }, { external: true })
+      return navigateTo({ path: paths.loginPath, query }, { external: true })
     },
     logout(opts: { returnTo?: string } = {}) {
-      return navigateTo({ path: '/auth/oidc/logout', query: { returnTo: opts.returnTo ?? '/' } }, { external: true })
+      return navigateTo({ path: paths.logoutPath, query: { returnTo: opts.returnTo ?? '/' } }, { external: true })
     },
   }
 }
 ```
+
+`loginPath`/`logoutPath` come from `runtimeConfig.public.huia` rather than the routes being hardcoded,
+so a host that reconfigures `routes.login`/`routes.logout` doesn't have to also patch this composable.
 
 ---
 
@@ -1169,21 +1174,33 @@ export function useAuth() {
 
 ```ts
 // src/runtime/app/middleware/auth.ts
-import { defineNuxtRouteMiddleware, navigateTo } from '#imports'
+import { defineNuxtRouteMiddleware, navigateTo, useRuntimeConfig } from '#imports'
 import { useUserSession } from '../composables/useUserSession'
+import { isExcluded } from '../utils/route-match'
 
-export default defineNuxtRouteMiddleware((to) => {
+const middleware: RouteMiddleware = (to) => {
+  const { loginPath, middlewareExclude } = useRuntimeConfig().public.huia as {
+    loginPath: string
+    middlewareExclude: string[]
+  }
+
+  // Checked *before* the loggedIn check — an excluded route is public regardless of session
+  // state, which is what makes `middleware.global = true` safe to turn on at all.
+  if (isExcluded(to.path, middlewareExclude)) return
+
   const { loggedIn } = useUserSession()
   if (loggedIn.value) return
 
   // Runs on the server during SSR with the correct value → no protected-content flash,
-  // no client redirect bounce. `external` because /auth/oidc/login is a server route that
+  // no client redirect bounce. `external` because the login route is a server route that
   // 302s off-origin to the Huia authorize endpoint.
   return navigateTo(
-    { path: '/auth/oidc/login', query: { returnTo: to.fullPath } },
+    { path: loginPath, query: { returnTo: to.fullPath } },
     { external: true, replace: true },
   )
-})
+}
+
+export default defineNuxtRouteMiddleware(middleware)
 ```
 
 Registered `global: false` — pages opt in:
@@ -1194,8 +1211,16 @@ definePageMeta({ middleware: 'auth' })
 </script>
 ```
 
-Set `huiaAuth.middleware.global = true` to protect everything, with
-`huiaAuth.middleware.exclude = ['/', '/about', '/auth/**']` for the public routes.
+Set `huia.middleware.global = true` to protect everything, with
+`huia.middleware.exclude = ['/', '/about', '/auth/**']` for the public routes. `middlewareExclude` (the
+resolved runtime-config value the middleware actually reads) always includes the module's own login /
+callback / logout / session routes on top of whatever `exclude` lists, regardless of pattern content —
+protecting the routes that exist for the logged-out flow is never correct, and was the mechanism behind
+an infinite-redirect bug when `middleware.global: true` was turned on with no exclusions configured (the
+login route itself was "protected", so its own redirect target kept re-triggering the middleware). Glob
+matching (`route-match.ts`) is a small pure function — `**` matches any depth, `*` matches one path
+segment — with no dependency on Vue Router internals, so it's unit-testable in isolation
+(`middleware-exclude.test.ts`).
 
 ### 6.2 Server — API route protection
 
@@ -1236,7 +1261,9 @@ import { defineNuxtModule, createResolver, addServerHandler, addRouteMiddleware,
 import { defu } from 'defu'
 
 export interface ModuleOptions {
-  huia: { baseUrl?: string, tenant?: string, issuer?: string }
+  baseUrl?: string
+  tenant?: string
+  issuer?: string
   clientId: string
   clientSecret?: string
   redirectUrl?: string
@@ -1260,17 +1287,22 @@ export interface ModuleOptions {
   middleware?: { global?: boolean, exclude?: string[] }
   hydration?: 'useState' | 'asyncData'
   routes?: { login?: string, callback?: string, logout?: string, session?: string, error?: string }
+  logout?: { rpInitiated?: boolean }
   allowInsecureTls?: boolean
 }
 
 const defaults = {
-  huia: {},
+  baseUrl: '',
+  tenant: '',
+  issuer: '',
+  clientId: '',
   redirectUrl: '/auth/oidc/callback',
   scopes: ['openid', 'profile', 'email', 'offline_access'],
   allowedAuthParams: ['ui_locales', 'prompt', 'login_hint'],
   par: { enabled: true, required: false },
   session: {
     name: '__Host-huia_sess',
+    password: '',
     maxAge: 60 * 60 * 24 * 7,
     cookie: { sameSite: 'lax' as const },
     userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
@@ -1284,50 +1316,60 @@ const defaults = {
     login: '/auth/oidc/login',
     callback: '/auth/oidc/callback',
     logout: '/auth/oidc/logout',
-    session: '/api/_auth/session',
+    session: '/auth/session',
     error: '/',
   },
+  logout: { rpInitiated: true },
   allowInsecureTls: false,
-} satisfies Partial<ModuleOptions>
+} satisfies ModuleOptions
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
-    name: 'huia-nuxt',
-    configKey: 'huiaAuth',
+    name: 'nuxt-huia-oidc',
+    configKey: 'huia',
     compatibility: { nuxt: '>=4.0.0' },
   },
-  defaults: defaults as ModuleOptions,
+  defaults,
 
   setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url)
-    const opts = defu(options, defaults) as Required<ModuleOptions>
+    const opts = defu(options, defaults)
 
-    if (!opts.session.password && !process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD) {
-      console.warn('[huia-auth] no session password set — cookies cannot be sealed. '
-        + 'Set NUXT_HUIA_AUTH_SESSION_PASSWORD (>= 32 chars).')
+    if (!opts.session.password && !process.env.NUXT_HUIA_SESSION_PASSWORD) {
+      console.warn('[huia-auth] no session password set — set NUXT_HUIA_SESSION_PASSWORD (>= 32 chars)')
     }
 
     // ── runtime config ────────────────────────────────────────────────────────
-    nuxt.options.runtimeConfig.huiaAuth = defu(nuxt.options.runtimeConfig.huiaAuth, {
+    // baseUrl/tenant/issuer live at the root, not nested under a `huia: {}` sub-key — a flattened
+    // ModuleOptions was a deliberate simplification over the earlier nested shape.
+    nuxt.options.runtimeConfig.huia = defu(nuxt.options.runtimeConfig.huia, {
       clientId: opts.clientId,
-      clientSecret: opts.clientSecret ?? '',           // ← NUXT_HUIA_AUTH_CLIENT_SECRET
-      issuer: opts.huia.issuer ?? '',
-      huia: { baseUrl: opts.huia.baseUrl ?? '', tenant: opts.huia.tenant ?? '' },
+      clientSecret: opts.clientSecret ?? '',           // ← NUXT_HUIA_CLIENT_SECRET
+      issuer: opts.issuer ?? '',
+      baseUrl: opts.baseUrl ?? '',
+      tenant: opts.tenant ?? '',
       redirectUrl: opts.redirectUrl,
       scopes: opts.scopes,
       allowedAuthParams: opts.allowedAuthParams,
       par: opts.par,
-      session: { ...opts.session, password: opts.session.password ?? '' }, // ← NUXT_HUIA_AUTH_SESSION_PASSWORD
+      session: { ...opts.session, password: opts.session.password ?? '' }, // ← NUXT_HUIA_SESSION_PASSWORD
       storage: opts.storage,
       refresh: opts.refresh,
       cookie: opts.cookie,
       routes: opts.routes,
+      logout: opts.logout,
       allowInsecureTls: opts.allowInsecureTls,
     })
-    nuxt.options.runtimeConfig.public.huiaAuth = defu(nuxt.options.runtimeConfig.public.huiaAuth, {
+    nuxt.options.runtimeConfig.public.huia = defu(nuxt.options.runtimeConfig.public.huia, {
       loginPath: opts.routes.login,
       logoutPath: opts.routes.logout,
       sessionPath: opts.routes.session,
+      // Always includes the module's own routes on top of whatever `middleware.exclude` lists —
+      // see §6.1 for why (this is the fix for the infinite-redirect bug).
+      middlewareExclude: [
+        ...opts.middleware.exclude,
+        opts.routes.login, opts.routes.callback, opts.routes.logout, opts.routes.session,
+      ],
     })
 
     // ── virtual type alias ────────────────────────────────────────────────────
@@ -1335,7 +1377,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     // ── auto-imports ──────────────────────────────────────────────────────────
     addServerImportsDir(resolve('runtime/server/utils'))   // getUserSession, setUserSession, …
-    addImportsDir(resolve('runtime/app/composables'))       // useUserSession, useAuth
+    addImportsDir(resolve('runtime/app/composables'))       // useUserSession, useHuia
 
     // ── hydration ─────────────────────────────────────────────────────────────
     if (opts.hydration === 'useState') {
@@ -1353,8 +1395,8 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({ route: opts.routes.login, method: 'get', handler: resolve('runtime/server/routes/auth/oidc/login.get') })
     addServerHandler({ route: opts.routes.callback, method: 'get', handler: resolve('runtime/server/routes/auth/oidc/callback.get') })
     addServerHandler({ route: opts.routes.logout, method: 'get', handler: resolve('runtime/server/routes/auth/oidc/logout.get') })
-    addServerHandler({ route: opts.routes.session, method: 'get', handler: resolve('runtime/server/api/_auth/session.get') })
-    // Runs on every request: resolves event.context.huiaAuth for the hydration plugin.
+    addServerHandler({ route: opts.routes.session, method: 'get', handler: resolve('runtime/server/routes/auth/session.get') })
+    // Runs on every request: resolves event.context.huia for the hydration plugin.
     addServerHandler({ middleware: true, handler: resolve('runtime/server/middleware/session.context') })
 
     // ── Nitro plugin: OIDC discovery ──────────────────────────────────────────
@@ -1422,7 +1464,7 @@ declare module '#huia-auth' {
 declare module 'h3' {
   interface H3EventContext {
     /** Per-request memo of the resolved session (no tokens). */
-    huiaAuth?: UserSession
+    huia?: UserSession
   }
 }
 
@@ -1435,11 +1477,12 @@ declare module 'nitropack' {
 
 declare module '@nuxt/schema' {
   interface RuntimeConfig {
-    huiaAuth: {
+    huia: {
       clientId: string
       clientSecret: string
       issuer: string
-      huia: { baseUrl: string, tenant: string }
+      baseUrl: string
+      tenant: string
       redirectUrl: string
       scopes: string[]
       allowedAuthParams: string[]
@@ -1449,11 +1492,12 @@ declare module '@nuxt/schema' {
       refresh: { enabled: boolean, earlyRefreshSeconds: number, lock: { ttlMs: number, waitMs: number, pollMs: number } }
       cookie: { chunkSize: number, maxChunks: number }
       routes: { login: string, callback: string, logout: string, session: string, error: string }
+      logout: { rpInitiated: boolean }
       allowInsecureTls: boolean
     }
   }
   interface PublicRuntimeConfig {
-    huiaAuth: { loginPath: string, logoutPath: string, sessionPath: string }
+    huia: { loginPath: string, logoutPath: string, sessionPath: string, middlewareExclude: string[] }
   }
 }
 
@@ -1556,8 +1600,8 @@ by `openid-client`).
 | `login-par.test.ts` | `GET /auth/oidc/login` → 302 to `…/authorize?client_id=…&request_uri=urn:…`; the mock OP received a back-channel `POST /par` carrying `code_challenge` + `state` + `nonce` + client auth; the browser redirect contains **no** `code_challenge`. |
 | `login-par-fallback.test.ts` | discovery without a PAR endpoint → 302 to a full front-channel `…&code_challenge=…&state=…`; with `par.required: true` and PAR failing → redirect to `?auth_error=par_required`. |
 | `callback-state-mismatch.test.ts` | callback with a `state` absent from storage, or not matching the `__Host-huia_oauth` cookie → `?auth_error=state_mismatch`, **no** session cookie set; an `id_token` with a wrong `iss` → `?auth_error=issuer_mismatch`. |
-| `session-hydration.test.ts` | full login via the mock OP → `GET /api/_auth/session` returns `{ loggedIn: true, user: { sub, … } }` with **no** token fields; SSR-render `/` → the HTML shows the username (no FOUC) and `window.__NUXT__` carries `huia-auth:session` but no `access_token`; `/api/whoami` → 200 with the session, 401 without. |
-| `refresh.test.ts` | seed a `TokenRecord` with `accessTokenExpiresAt` in the past → one `GET /api/_auth/session` → the mock OP `/token` is hit once with `grant_type=refresh_token` and `expiresAt` advances; **five parallel** requests → `/token` hit **exactly once**. |
+| `session-hydration.test.ts` | full login via the mock OP → `GET /auth/session` returns `{ loggedIn: true, user: { sub, … } }` with **no** token fields; SSR-render `/` → the HTML shows the username (no FOUC) and `window.__NUXT__` carries `huia-auth:session` but no `access_token`; `/api/whoami` → 200 with the session, 401 without. |
+| `refresh.test.ts` | seed a `TokenRecord` with `accessTokenExpiresAt` in the past → one `GET /auth/session` → the mock OP `/token` is hit once with `grant_type=refresh_token` and `expiresAt` advances; **five parallel** requests → `/token` hit **exactly once**. |
 
 ### 10.4 Type tests
 
@@ -1569,7 +1613,7 @@ a consumer `declare module '#huia-auth'` augmentation merges into `UserClaims`.
 
 `HuiaNuxtPlaygroundFixture` boots `Huia.IdentityServer` (`Huia__EnableE2E=true` /
 `Huia__Database=Sqlite`, in-memory shared cache) on `http://localhost:5319` and runs the built
-playground (`node src/nuxt/playground/.output/server/index.mjs`) on `:3030` with `NUXT_HUIA_AUTH_*`
+playground (`node src/nuxt/nuxt-huia-oidc/playground/.output/server/index.mjs`) on `:3030` with `NUXT_HUIA_*`
 overrides. `Program.cs` seeds a `huia-nuxt-playground` confidential web client in the `e2e`
 tenant with a **35 s** access-token lifetime. Skip-tolerant like the other front-end fixtures.
 
@@ -1578,10 +1622,10 @@ tenant with a **35 s** access-token lifetime. Skip-tolerant like the other front
 - **Signs in, stores tokens server-side, serves a token-free session** — `/protected` bounces
   through the Huia authorize endpoint (PAR: only `request_uri` in the browser URL); after the Razor
   sign-in the page renders server-side with the user's claims; the browser holds a `huia_sess`
-  cookie and no cookie whose name contains `token`; `GET /api/_auth/session` returns
+  cookie and no cookie whose name contains `token`; `GET /auth/session` returns
   `{ loggedIn, user }` with no `accessToken` / `access_token` / `refresh*` anywhere in the body.
 - **Refreshes the access token transparently** — with the 35 s lifetime and
-  `earlyRefreshSeconds: 60`, two `/api/_auth/session` calls a second apart show `expiresAt`
+  `earlyRefreshSeconds: 60`, two `/auth/session` calls a second apart show `expiresAt`
   advancing (a real `grant_type=refresh_token` round-trip to Huia), and the page is still
   authenticated after.
 - **Sign-out clears the session and re-protects the route** — `/auth/oidc/logout` round-trips

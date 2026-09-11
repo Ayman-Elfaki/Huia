@@ -1,14 +1,21 @@
 # `HuiaUserManager` & user types
 
-`HuiaUserManager : UserManager<HuiaUser>` is registered by `AddHuia()` via
-`.AddUserManager<HuiaUserManager>()` (alongside `.AddSignInManager<HuiaSignInManager>()`), so
-`SignInManager<HuiaUser>` and every `UserManager<HuiaUser>` resolution in your code resolve to them.
-Inject `HuiaUserManager` directly to reach the extra members.
+This page covers the `Huia.OpenId` flavor. `HuiaUserManager<TUser>`/`HuiaSignInManager<TUser>`
+themselves live in core `Huia` (generic, so they're reusable by `Huia.Headless` too), but the
+flow-aware layer below and the `Huia.OpenId.HuiaUserManager : HuiaUserManager<HuiaUser>` concrete
+subclass are `Huia.OpenId`-specific — `Huia.Headless` registers its own concrete subclass without
+the per-flow `IdentityOptions` machinery.
+
+`Huia.OpenId.HuiaUserManager : Huia.Identity.HuiaUserManager<HuiaUser>` is registered by
+`AddHuiaOpenId()` via `new IdentityBuilder(...).AddUserManager<HuiaUserManager>()` (alongside
+`.AddSignInManager<HuiaSignInManager>()`, layered on top of `AddEntityFrameworkCoreStores<...>()`'s
+plain `AddIdentityCore<TUser>()`), so `SignInManager<HuiaUser>` and every `UserManager<HuiaUser>`
+resolution in your code resolve to them. Inject `HuiaUserManager` directly to reach the extra members.
 
 ## Flow-aware managers
 
-Confirmation policy differs per **authentication flow**, not just per tenant, so `AddHuia()` also
-registers a named `IdentityOptions` instance for each `HuiaAuthFlow`
+Confirmation policy differs per **authentication flow**, not just per tenant, so `AddHuiaOpenId()`
+also registers a named `IdentityOptions` instance for each `HuiaAuthFlow`
 (`Default` / `Password` / `PhoneLogin` / `ExternalLogin`) and an `IHuiaFlowIdentityFactory`:
 
 ```csharp

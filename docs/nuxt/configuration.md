@@ -1,29 +1,28 @@
-# `huia-nuxt` — configuration
+# `nuxt-huia-oidc` — configuration
 
 ## Install
 
 ```bash
-npm install huia-nuxt
+npm install nuxt-huia-oidc
 ```
 
 In the monorepo the sample apps reference the module from source instead
-(`modules: ['../../src/nuxt/src/module']`) plus the runtime deps (`openid-client`, `iron-webcrypto`,
-`uncrypto`).
+(`modules: ['../../src/nuxt/nuxt-huia-oidc/src/module']`) plus the runtime deps (`openid-client`,
+`iron-webcrypto`, `uncrypto`).
 
 ## `nuxt.config.ts`
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['huia-nuxt'],
+  modules: ['nuxt-huia-oidc'],
 
-  huiaAuth: {
-    huia: {
-      baseUrl: 'https://id.example.com',   // NUXT_HUIA_AUTH_HUIA_BASE_URL
-      tenant: 'acme',                      // NUXT_HUIA_AUTH_HUIA_TENANT
-      // issuer: 'https://id.example.com/acme',   // overrides baseUrl + tenant
-    },
+  huia: {
+    baseUrl: 'https://id.example.com',   // NUXT_HUIA_BASE_URL
+    tenant: 'acme',                      // NUXT_HUIA_TENANT
+    // issuer: 'https://id.example.com/acme',   // overrides baseUrl + tenant
+
     clientId: 'acme-web',
-    // clientSecret via NUXT_HUIA_AUTH_CLIENT_SECRET (confidential client)
+    // clientSecret via NUXT_HUIA_CLIENT_SECRET (confidential client)
     redirectUrl: '/auth/oidc/callback',
     scopes: ['openid', 'profile', 'email', 'offline_access'],   // + 'roles' for an admin app
     allowedAuthParams: ['ui_locales', 'prompt', 'login_hint'],
@@ -32,7 +31,7 @@ export default defineNuxtConfig({
 
     session: {
       name: '__Host-huia_sess',
-      // password via NUXT_HUIA_AUTH_SESSION_PASSWORD (>= 32 chars, iron-webcrypto seal key)
+      // password via NUXT_HUIA_SESSION_PASSWORD (>= 32 chars, iron-webcrypto seal key)
       maxAge: 60 * 60 * 24 * 7,
       userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
     },
@@ -46,6 +45,8 @@ export default defineNuxtConfig({
     },
 
     cookie: { chunkSize: 3800, maxChunks: 8 },
+    // `middlewareExclude` (what the `auth` middleware actually reads) always adds the module's own
+    // login/callback/logout/session routes on top of this list — see Route protection.
     middleware: { global: false, exclude: [] },
   },
 
@@ -64,14 +65,14 @@ export default defineNuxtConfig({
 
 | Variable | Required | Notes |
 |---|---|---|
-| `NUXT_HUIA_AUTH_CLIENT_SECRET` | yes | confidential client secret |
-| `NUXT_HUIA_AUTH_SESSION_PASSWORD` | yes | ≥ 32 chars; rotating it invalidates every cookie (users re-authenticate) |
-| `NUXT_HUIA_AUTH_HUIA_BASE_URL` | — | overrides `huiaAuth.huia.baseUrl` |
-| `NUXT_HUIA_AUTH_HUIA_TENANT` | — | overrides `huiaAuth.huia.tenant` |
+| `NUXT_HUIA_CLIENT_SECRET` | yes | confidential client secret |
+| `NUXT_HUIA_SESSION_PASSWORD` | yes | ≥ 32 chars; rotating it invalidates every cookie (users re-authenticate) |
+| `NUXT_HUIA_BASE_URL` | — | overrides `huia.baseUrl` |
+| `NUXT_HUIA_TENANT` | — | overrides `huia.tenant` |
 | `NODE_TLS_REJECT_UNAUTHORIZED=0` | dev only | lets Node accept the ASP.NET Core dev certificate; discovery also honours it for a plain-http issuer in any environment |
 
-`runtimeConfig.public.huiaAuth` contains **only** `{ loginPath, logoutPath, sessionPath }` — no
-issuer, client id or secret reaches the browser.
+`runtimeConfig.public.huia` contains **only** `{ loginPath, logoutPath, sessionPath,
+middlewareExclude }` — no issuer, client id or secret reaches the browser.
 
 ## The Huia token endpoint is form-encoded
 

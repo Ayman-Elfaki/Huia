@@ -76,7 +76,7 @@ string by hand (`[AsParameters]` 400s on minimal APIs).
 
 ## Pipeline
 
-`UseHuia()` fixes the order: `UseExceptionHandler` → `UseStatusCodePagesWithReExecute` →
+`UseHuiaOpenId()` fixes the order: `UseExceptionHandler` → `UseStatusCodePagesWithReExecute` →
 `UseRequestLocalization` → **`UseMultiTenant`** (before routing — the base-path strategy rebases
 `PathBase` to `/{tenant}`) → `HuiaSecurityHeadersMiddleware` (opt-in) → `UseStaticFiles` →
 `UseRouting` → `UseAuthentication` → `UseAuthorization`.
