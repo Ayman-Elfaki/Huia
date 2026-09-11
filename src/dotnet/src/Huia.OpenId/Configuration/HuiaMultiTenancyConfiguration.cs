@@ -1,7 +1,9 @@
 using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.AspNetCore.Extensions;
 using Finbuckle.MultiTenant.Extensions;
+using Huia.Multitenancy;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
@@ -33,6 +35,7 @@ internal static class HuiaMultiTenancyConfiguration
             });
 
         services.AddHttpContextAccessor();
+        services.AddScoped<IHuiaTenantContext, HuiaFinbuckleTenantContext>();
 
         return services;
     }

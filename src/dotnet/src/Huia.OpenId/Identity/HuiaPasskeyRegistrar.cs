@@ -1,7 +1,6 @@
-using Finbuckle.MultiTenant.Abstractions;
-using Huia.OpenId.EntityFrameworkCore.Entities;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Huia.Events;
+using Huia.Multitenancy;
+using Huia.OpenId.EntityFrameworkCore.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -42,7 +41,7 @@ public readonly record struct PasskeyRegistrationOutcome(PasskeyRegistrationStat
 public sealed class HuiaPasskeyRegistrar(
     HuiaSignInManager signInManager,
     HuiaUserManager userManager,
-    IMultiTenantContextAccessor tenantAccessor,
+    IHuiaTenantContext tenantContext,
     IHuiaEventPublisher events,
     TimeProvider timeProvider)
 {
@@ -80,7 +79,7 @@ public sealed class HuiaPasskeyRegistrar(
 
         var id = WebEncoders.Base64UrlEncode(passkeyInfo.CredentialId);
         await events.PublishAsync(new PasskeyRegisteredEvent(
-            tenantAccessor.RequireCurrentTenantId(), user.Id, id.Length <= 12 ? id : id[..12], timeProvider.GetUtcNow()));
+            tenantContext.CurrentTenantId, user.Id, id.Length <= 12 ? id : id[..12], timeProvider.GetUtcNow()));
 
         return new(PasskeyRegistrationStatus.Registered, id, null);
     }

@@ -1,4 +1,4 @@
-using Huia.OpenId.Multitenancy;
+using Huia.Multitenancy;
 using Huia.OpenId.EntityFrameworkCore;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Options;
@@ -36,9 +36,11 @@ internal sealed partial class HuiaRoleSeeder(
             }
 
             // A fresh scope per tenant, with the tenant entered BEFORE RoleManager (and hence
-            // HuiaDbContext) is resolved — HuiaDbContext snapshots its tenant at construction.
+            // HuiaDbContext) is resolved — HuiaDbContext snapshots its tenant at construction. The
+            // seeder is a singleton IHostedService, so IHuiaTenantContext (scoped) is resolved from
+            // the fresh scope rather than injected into the constructor — a captive-dependency trap.
             await using var scope = services.CreateAsyncScope();
-            using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
+            using (scope.ServiceProvider.GetRequiredService<IHuiaTenantContext>().EnterTenantScope(scope.ServiceProvider, tenantId))
             {
                 var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<HuiaRole>>();
                 foreach (var roleName in tenant.Roles)
@@ -68,9 +70,9 @@ internal sealed partial class HuiaRoleSeeder(
     /// single cross-tenant read (via <c>IgnoreQueryFilters</c>, the same technique
     /// <c>AdminEndpoints.Roles.cs</c> uses) so a role whose entire tenant was removed from the options
     /// tree is caught too, not just one whose tenant is still configured with a shorter role list. The
-    /// actual delete for each candidate re-enters that role's own <see cref="HuiaTenantScope"/> first —
-    /// Finbuckle's <c>MultiTenantIdentityDbContext</c> refuses to save any change with no ambient
-    /// tenant, even a delete found via <c>IgnoreQueryFilters</c>.
+    /// actual delete for each candidate re-enters that role's own tenant scope first — Finbuckle's
+    /// <c>MultiTenantIdentityDbContext</c> refuses to save any change with no ambient tenant, even a
+    /// delete found via <c>IgnoreQueryFilters</c>.
     /// </summary>
     private async Task PruneRemovedRolesAsync(CancellationToken cancellationToken)
     {
@@ -106,7 +108,7 @@ internal sealed partial class HuiaRoleSeeder(
             }
 
             await using var scope = services.CreateAsyncScope();
-            using (HuiaTenantScope.Enter(scope.ServiceProvider, role.TenantId))
+            using (scope.ServiceProvider.GetRequiredService<IHuiaTenantContext>().EnterTenantScope(scope.ServiceProvider, role.TenantId))
             {
                 var db = scope.ServiceProvider.GetRequiredService<HuiaDbContext>();
                 db.Remove(role);
