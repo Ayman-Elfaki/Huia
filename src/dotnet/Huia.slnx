@@ -22,6 +22,7 @@
     <Project Path="../../samples/Huia.External/Huia.External.csproj" />
     <Project Path="../../samples/Huia.Cli/Huia.Cli.csproj" />
     <Project Path="../../samples/Todo.Api/Todo.Api.csproj" />
+    <Project Path="../../samples/Shop.Api/Shop.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Huia.Tests/Huia.Tests.csproj" />

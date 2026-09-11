@@ -45,6 +45,7 @@ public static class HuiaHeadlessServiceCollectionExtensions
         // validates these directly; there is no interactive sign-in UI to protect with a cookie.
         services.AddAuthentication(IdentityConstants.BearerScheme)
             .AddBearerToken(IdentityConstants.BearerScheme);
+        services.AddAuthorization();
 
         new IdentityBuilder(typeof(HuiaUser), typeof(HuiaRole), services)
             .AddApiEndpoints()
