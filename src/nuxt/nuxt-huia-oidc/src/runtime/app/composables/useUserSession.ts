@@ -4,7 +4,7 @@ import type { UserSession, UserClaims } from '../../types'
 
 export function useUserSession() {
   const session = useState<UserSession>('huia-auth:session', () => ({}))
-  const paths = useRuntimeConfig().public.huiaAuth as { sessionPath: string, logoutPath: string }
+  const paths = useRuntimeConfig().public.huia as { sessionPath: string, logoutPath: string }
 
   return {
     session: readonly(session),

@@ -7,7 +7,7 @@ declare module '#huia-auth' {
 declare module 'h3' {
   interface H3EventContext {
     /** Per-request memo of the resolved session (no tokens). */
-    huiaAuth?: UserSession
+    huia?: UserSession
   }
 }
 
@@ -20,11 +20,12 @@ declare module 'nitropack' {
 
 declare module '@nuxt/schema' {
   interface RuntimeConfig {
-    huiaAuth: {
+    huia: {
       clientId: string
       clientSecret: string
       issuer: string
-      huia: { baseUrl: string, tenant: string }
+      baseUrl: string
+      tenant: string
       redirectUrl: string
       scopes: string[]
       allowedAuthParams: string[]
@@ -49,7 +50,7 @@ declare module '@nuxt/schema' {
     }
   }
   interface PublicRuntimeConfig {
-    huiaAuth: { loginPath: string, logoutPath: string, sessionPath: string }
+    huia: { loginPath: string, logoutPath: string, sessionPath: string, middlewareExclude: string[] }
   }
 }
 

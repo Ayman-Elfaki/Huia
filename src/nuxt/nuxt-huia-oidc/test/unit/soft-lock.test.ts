@@ -7,7 +7,7 @@ const storage = createStorage()
 
 vi.mock('nitropack/runtime', () => ({
   useStorage: () => storage,
-  useRuntimeConfig: () => ({ huiaAuth: {} }),
+  useRuntimeConfig: () => ({ huia: {} }),
 }))
 
 vi.mock('../../src/runtime/server/utils/config', () => ({

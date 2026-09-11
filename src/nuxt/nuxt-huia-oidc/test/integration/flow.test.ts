@@ -9,7 +9,7 @@ let raw: Record<string, unknown> = {}
 
 vi.mock('nitropack/runtime', () => ({
   useStorage: () => storage,
-  useRuntimeConfig: () => ({ huiaAuth: raw }),
+  useRuntimeConfig: () => ({ huia: raw }),
 }))
 
 function makeRaw(op: MockOp, over: Record<string, unknown> = {}) {
@@ -17,7 +17,8 @@ function makeRaw(op: MockOp, over: Record<string, unknown> = {}) {
     clientId: 'acme-web',
     clientSecret: 'shhh',
     issuer: '',
-    huia: { baseUrl: op.origin, tenant: 'acme' },
+    baseUrl: op.origin,
+    tenant: 'acme',
     redirectUrl: '/auth/oidc/callback',
     scopes: ['openid', 'profile', 'email', 'offline_access'],
     allowedAuthParams: ['ui_locales'],
@@ -32,7 +33,7 @@ function makeRaw(op: MockOp, over: Record<string, unknown> = {}) {
     storage: { base: 'huia-auth' },
     refresh: { enabled: true, earlyRefreshSeconds: 60, lock: { ttlMs: 5000, waitMs: 800, pollMs: 20 } },
     cookie: { chunkSize: 3800, maxChunks: 8 },
-    routes: { login: '/auth/oidc/login', callback: '/auth/oidc/callback', logout: '/auth/oidc/logout', session: '/api/_auth/session', error: '/' },
+    routes: { login: '/auth/oidc/login', callback: '/auth/oidc/callback', logout: '/auth/oidc/logout', session: '/auth/session', error: '/' },
     allowInsecureTls: true,
     logout: { rpInitiated: true },
     ...over,
@@ -43,7 +44,7 @@ async function buildHandler() {
   const app = createApp()
   app.use('/auth/oidc/login', (await import('../../src/runtime/server/routes/auth/oidc/login.get')).default)
   app.use('/auth/oidc/callback', (await import('../../src/runtime/server/routes/auth/oidc/callback.get')).default)
-  app.use('/api/_auth/session', (await import('../../src/runtime/server/api/_auth/session.get')).default)
+  app.use('/auth/session', (await import('../../src/runtime/server/routes/auth/session.get')).default)
   return toWebHandler(app)
 }
 
@@ -109,7 +110,7 @@ describe('OIDC flow (PAR)', () => {
     expect(rec.refreshToken).toMatch(/^rt-/)
 
     // 4. the session endpoint returns claims but NO tokens
-    const session = await handler(new Request('https://localhost/api/_auth/session', { headers: { ...H, cookie: sessCookie } }))
+    const session = await handler(new Request('https://localhost/auth/session', { headers: { ...H, cookie: sessCookie } }))
     const body = await session.json() as Record<string, unknown>
     expect(session.headers.get('cache-control')).toBe('no-store')
     expect(body).toMatchObject({ loggedIn: true, user: { sub: 'user-ada', name: 'Ada Lovelace', roles: ['admin', 'user'] } })

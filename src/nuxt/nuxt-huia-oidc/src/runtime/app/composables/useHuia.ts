@@ -1,9 +1,9 @@
 import { navigateTo, useRoute, useRuntimeConfig } from '#imports'
 import { useUserSession } from './useUserSession'
 
-export function useAuth() {
+export function useHuia() {
   const { user, loggedIn, session, hasRole, hasAnyRole } = useUserSession()
-  const paths = useRuntimeConfig().public.huiaAuth as { loginPath: string, logoutPath: string }
+  const paths = useRuntimeConfig().public.huia as { loginPath: string, logoutPath: string }
 
   return {
     user,

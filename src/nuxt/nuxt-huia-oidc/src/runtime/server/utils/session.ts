@@ -8,7 +8,7 @@ import type { UserSession, UserSessionRequired } from '../../types'
 import type { TokenRecord } from './internal-types'
 import type { TokenResponse } from './oidc'
 
-const CTX = 'huiaAuth' as const
+const CTX = 'huia' as const
 
 function memo(event: H3Event, session: UserSession): UserSession {
   ;(event.context as Record<string, unknown>)[CTX] = session

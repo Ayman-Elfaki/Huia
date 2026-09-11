@@ -85,7 +85,7 @@ export async function writeSessionCookie(event: H3Event, cfg: ResolvedAuthConfig
       statusCode: 500,
       statusMessage: 'session_cookie_too_large',
       message: `Sealed session is ${sealed.length}B (> ${cfg.cookie.maxChunks} x ${limit}). `
-        + 'Trim huiaAuth.session.userClaims or raise huiaAuth.cookie.maxChunks.',
+        + 'Trim huia.session.userClaims or raise huia.cookie.maxChunks.',
     })
   }
 

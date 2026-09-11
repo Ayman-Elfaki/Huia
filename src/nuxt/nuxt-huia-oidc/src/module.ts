@@ -11,7 +11,9 @@ import {
 import { defu } from 'defu'
 
 export interface ModuleOptions {
-  huia: { baseUrl?: string, tenant?: string, issuer?: string }
+  baseUrl?: string
+  tenant?: string
+  issuer?: string
   clientId: string
   clientSecret?: string
   redirectUrl?: string
@@ -40,7 +42,9 @@ export interface ModuleOptions {
 }
 
 const defaults = {
-  huia: {},
+  baseUrl: '',
+  tenant: '',
+  issuer: '',
   clientId: '',
   redirectUrl: '/auth/oidc/callback',
   scopes: ['openid', 'profile', 'email', 'offline_access'],
@@ -66,7 +70,7 @@ const defaults = {
     login: '/auth/oidc/login',
     callback: '/auth/oidc/callback',
     logout: '/auth/oidc/logout',
-    session: '/api/_auth/session',
+    session: '/auth/session',
     error: '/',
   },
   logout: { rpInitiated: true },
@@ -75,8 +79,8 @@ const defaults = {
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
-    name: 'huia-nuxt',
-    configKey: 'huiaAuth',
+    name: 'nuxt-huia-oidc',
+    configKey: 'huia',
     compatibility: { nuxt: '>=4.0.0' },
   },
   defaults,
@@ -85,18 +89,19 @@ export default defineNuxtModule<ModuleOptions>({
     const { resolve } = createResolver(import.meta.url)
     const opts = defu(options, defaults)
 
-    if (!opts.session.password && !process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD) {
-      console.warn('[huia-auth] no session password set — set NUXT_HUIA_AUTH_SESSION_PASSWORD (>= 32 chars)')
+    if (!opts.session.password && !process.env.NUXT_HUIA_SESSION_PASSWORD) {
+      console.warn('[huia-auth] no session password set — set NUXT_HUIA_SESSION_PASSWORD (>= 32 chars)')
     }
 
     // ── runtime config ────────────────────────────────────────────────────────
-    nuxt.options.runtimeConfig.huiaAuth = defu(
-      nuxt.options.runtimeConfig.huiaAuth as Record<string, unknown> | undefined,
+    nuxt.options.runtimeConfig.huia = defu(
+      nuxt.options.runtimeConfig.huia as Record<string, unknown> | undefined,
       {
         clientId: opts.clientId,
         clientSecret: opts.clientSecret ?? '',
-        issuer: opts.huia.issuer ?? '',
-        huia: { baseUrl: opts.huia.baseUrl ?? '', tenant: opts.huia.tenant ?? '' },
+        issuer: opts.issuer ?? '',
+        baseUrl: opts.baseUrl ?? '',
+        tenant: opts.tenant ?? '',
         redirectUrl: opts.redirectUrl,
         scopes: opts.scopes,
         allowedAuthParams: opts.allowedAuthParams,
@@ -109,16 +114,27 @@ export default defineNuxtModule<ModuleOptions>({
         logout: opts.logout,
         allowInsecureTls: opts.allowInsecureTls,
       },
-    ) as typeof nuxt.options.runtimeConfig.huiaAuth
+    ) as typeof nuxt.options.runtimeConfig.huia
 
-    nuxt.options.runtimeConfig.public.huiaAuth = defu(
-      nuxt.options.runtimeConfig.public.huiaAuth as Record<string, unknown> | undefined,
+    nuxt.options.runtimeConfig.public.huia = defu(
+      nuxt.options.runtimeConfig.public.huia as Record<string, unknown> | undefined,
       {
         loginPath: opts.routes.login,
         logoutPath: opts.routes.logout,
         sessionPath: opts.routes.session,
+        // The module's own auth routes are never protected by its own middleware, regardless of
+        // `middleware.exclude` — applying "must be logged in" to the routes that exist precisely for
+        // the logged-out flow is never correct, and was the mechanism behind the infinite-redirect
+        // risk of turning on `middleware.global` with no exclusions configured.
+        middlewareExclude: [
+          ...opts.middleware.exclude,
+          opts.routes.login,
+          opts.routes.callback,
+          opts.routes.logout,
+          opts.routes.session,
+        ],
       },
-    ) as typeof nuxt.options.runtimeConfig.public.huiaAuth
+    ) as typeof nuxt.options.runtimeConfig.public.huia
 
     // ── virtual type alias ────────────────────────────────────────────────────
     nuxt.options.alias['#huia-auth'] = resolve('runtime/types')
@@ -143,7 +159,7 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({ route: opts.routes.login, method: 'get', handler: resolve('runtime/server/routes/auth/oidc/login.get') })
     addServerHandler({ route: opts.routes.callback, method: 'get', handler: resolve('runtime/server/routes/auth/oidc/callback.get') })
     addServerHandler({ route: opts.routes.logout, method: 'get', handler: resolve('runtime/server/routes/auth/oidc/logout.get') })
-    addServerHandler({ route: opts.routes.session, method: 'get', handler: resolve('runtime/server/api/_auth/session.get') })
+    addServerHandler({ route: opts.routes.session, method: 'get', handler: resolve('runtime/server/routes/auth/session.get') })
     addServerHandler({ middleware: true, handler: resolve('runtime/server/middleware/session.context') })
 
     // ── Nitro plugin: OIDC discovery ──────────────────────────────────────────

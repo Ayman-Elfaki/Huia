@@ -6,7 +6,8 @@ interface RawHuiaAuth {
   clientId: string
   clientSecret: string
   issuer: string
-  huia: { baseUrl: string, tenant: string }
+  baseUrl: string
+  tenant: string
   redirectUrl: string
   scopes: string[]
   allowedAuthParams: string[]
@@ -21,10 +22,10 @@ interface RawHuiaAuth {
 }
 
 /** `{baseUrl}/{tenant}` (or an explicit `issuer`), with any trailing slash stripped. */
-export function resolveIssuer(raw: Pick<RawHuiaAuth, 'issuer' | 'huia'>): string {
+export function resolveIssuer(raw: Pick<RawHuiaAuth, 'issuer' | 'baseUrl' | 'tenant'>): string {
   if (raw.issuer) return raw.issuer.replace(/\/+$/, '')
-  const base = raw.huia.baseUrl.replace(/\/+$/, '')
-  const tenant = raw.huia.tenant.replace(/^\/+|\/+$/g, '')
+  const base = raw.baseUrl.replace(/\/+$/, '')
+  const tenant = raw.tenant.replace(/^\/+|\/+$/g, '')
   return tenant ? `${base}/${tenant}` : base
 }
 
@@ -35,7 +36,7 @@ export function discoveryCacheKey(issuer: string): string {
 let warnedNoPassword = false
 
 export function resolveAuthConfig(event: H3Event): ResolvedAuthConfig {
-  const raw = useRuntimeConfig(event).huiaAuth as unknown as RawHuiaAuth
+  const raw = useRuntimeConfig(event).huia as unknown as RawHuiaAuth
 
   const url = getRequestURL(event)
   const secure = raw.session.cookie?.secure ?? getRequestProtocol(event) === 'https'
@@ -43,7 +44,7 @@ export function resolveAuthConfig(event: H3Event): ResolvedAuthConfig {
 
   if (!raw.session.password && !warnedNoPassword) {
     warnedNoPassword = true
-    console.warn('[huia-auth] no session password — set NUXT_HUIA_AUTH_SESSION_PASSWORD (>= 32 chars)')
+    console.warn('[huia-auth] no session password — set NUXT_HUIA_SESSION_PASSWORD (>= 32 chars)')
   }
 
   const configuredName = raw.session.name || '__Host-huia_sess'

@@ -30,8 +30,8 @@ export function isDev(): boolean {
 }
 
 async function discover(issuer: string): Promise<oidc.Configuration> {
-  const { huiaAuth } = useRuntimeConfig()
-  const raw = huiaAuth as unknown as {
+  const { huia } = useRuntimeConfig()
+  const raw = huia as unknown as {
     clientId: string
     clientSecret: string
     storage: { base: string }
@@ -87,8 +87,8 @@ export async function getOidcConfig(issuer: string): Promise<oidc.Configuration>
 
 /** Warm discovery at boot without blocking route handling; used by the Nitro plugin. */
 export function warmDiscovery(): void {
-  const { huiaAuth } = useRuntimeConfig()
-  const issuer = resolveIssuer(huiaAuth as never)
+  const { huia } = useRuntimeConfig()
+  const issuer = resolveIssuer(huia as never)
   getOidcConfig(issuer).then(
     (cfg) => {
       const par = !!cfg.serverMetadata().pushed_authorization_request_endpoint

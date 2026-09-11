@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { user, loggedIn } = useUserSession()
-const { login, logout } = useAuth()
+const { login, logout } = useHuia()
 </script>
 
 <template>
