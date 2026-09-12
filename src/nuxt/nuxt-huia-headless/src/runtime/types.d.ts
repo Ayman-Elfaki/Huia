@@ -37,6 +37,7 @@ declare module '@nuxt/schema' {
       }
       cookie: { chunkSize: number, maxChunks: number }
       allowInsecureTls: boolean
+      externalCallbackPath: string
     }
   }
   interface PublicRuntimeConfig {
@@ -46,6 +47,13 @@ declare module '@nuxt/schema' {
       logoutPath: string
       sessionPath: string
       loginPage: string
+      phoneStartPath: string
+      phoneVerifyPath: string
+      phoneCompleteProfilePath: string
+      externalLoginPath: string
+      externalExchangePath: string
+      externalCompleteProfilePath: string
+      externalCallbackPage: string
       middlewareExclude: string[]
     }
   }

@@ -1,4 +1,11 @@
-import type { ResolvedAuthConfig, BackendTokenResponse, BackendMeResponse } from './internal-types'
+import type {
+  ResolvedAuthConfig,
+  BackendTokenResponse,
+  BackendMeResponse,
+  BackendPhoneStartResponse,
+  BackendPhoneVerifyResponse,
+  BackendExternalExchangeResponse,
+} from './internal-types'
 
 export function isDev(): boolean {
   return process.env.NODE_ENV !== 'production'
@@ -90,4 +97,33 @@ export function forgotPasswordAsync(cfg: ResolvedAuthConfig, email: string): Pro
 
 export function resetPasswordAsync(cfg: ResolvedAuthConfig, body: { email: string, resetCode: string, newPassword: string }): Promise<void> {
   return call(cfg, '/identity/resetPassword', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function phoneStartAsync(
+  cfg: ResolvedAuthConfig,
+  body: { phoneNumber: string, country?: string, captchaResponse?: string },
+): Promise<BackendPhoneStartResponse> {
+  return call<BackendPhoneStartResponse>(cfg, '/identity/phone/start', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function phoneVerifyAsync(cfg: ResolvedAuthConfig, body: { flowId: string, code: string }): Promise<BackendPhoneVerifyResponse> {
+  return call<BackendPhoneVerifyResponse>(cfg, '/identity/phone/verify', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function phoneCompleteProfileAsync(
+  cfg: ResolvedAuthConfig,
+  body: { flowId: string, firstName: string, lastName: string },
+): Promise<BackendTokenResponse> {
+  return call<BackendTokenResponse>(cfg, '/identity/phone/complete-profile', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function externalExchangeAsync(cfg: ResolvedAuthConfig, code: string): Promise<BackendExternalExchangeResponse> {
+  return call<BackendExternalExchangeResponse>(cfg, '/identity/account/external/exchange', { method: 'POST', body: JSON.stringify({ code }) })
+}
+
+export function externalCompleteProfileAsync(
+  cfg: ResolvedAuthConfig,
+  body: { code: string, firstName: string, lastName: string },
+): Promise<BackendTokenResponse> {
+  return call<BackendTokenResponse>(cfg, '/identity/account/external/complete-profile', { method: 'POST', body: JSON.stringify(body) })
 }

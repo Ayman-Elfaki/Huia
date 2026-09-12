@@ -9,6 +9,7 @@ interface RawHuiaHeadlessAuth {
   refresh: { enabled: boolean, earlyRefreshSeconds: number, lock: { ttlMs: number, waitMs: number, pollMs: number } }
   cookie: { chunkSize: number, maxChunks: number }
   allowInsecureTls: boolean
+  externalCallbackPath: string
 }
 
 let warnedNoPassword = false
@@ -52,5 +53,6 @@ export function resolveAuthConfig(event: H3Event): ResolvedAuthConfig {
       },
     },
     allowInsecureTls: raw.allowInsecureTls ?? false,
+    externalCallbackPath: raw.externalCallbackPath || '/auth/external/callback',
   }
 }

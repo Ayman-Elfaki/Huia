@@ -46,6 +46,8 @@ export interface ResolvedAuthConfig {
     lock: { ttlMs: number, waitMs: number, pollMs: number }
   }
   allowInsecureTls: boolean
+  /** The app's own page that reads `?code=` after the external-provider callback and calls `exchange`. */
+  externalCallbackPath: string
 }
 
 /** The bearer-token pair `Huia.Headless`'s `identity/login` / `identity/refresh` return. */
@@ -67,3 +69,18 @@ export interface BackendMeResponse {
   lastName: string
   roles: string[]
 }
+
+/** `POST identity/phone/start`'s response. */
+export interface BackendPhoneStartResponse {
+  flowId: string
+}
+
+/** `POST identity/phone/verify` or `.../complete-profile`'s response — either shape, never both. */
+export type BackendPhoneVerifyResponse =
+  | (BackendTokenResponse & { requiresProfile?: never })
+  | { flowId: string, requiresProfile: true }
+
+/** `POST identity/account/external/exchange` or `.../complete-profile`'s response — either shape. */
+export type BackendExternalExchangeResponse =
+  | (BackendTokenResponse & { requiresProfile?: never })
+  | { code: string, requiresProfile: true, email: string | null, firstName: string | null, lastName: string | null }

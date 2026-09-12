@@ -37,9 +37,21 @@ export interface ModuleOptions {
     resendConfirmation?: string
     forgotPassword?: string
     resetPassword?: string
+    phoneStart?: string
+    phoneVerify?: string
+    phoneCompleteProfile?: string
+    /** Prefix the external-login challenge redirects from; the provider name is appended (`{prefix}/{provider}`). */
+    externalLogin?: string
+    externalExchange?: string
+    externalCompleteProfile?: string
   }
   /** The app's own login page (Huia.Headless has no hosted login UI to redirect to). */
   loginPage?: string
+  /**
+   * The app's own page that reads `?code=` off the query string after an external-provider callback
+   * and calls `externalExchange` (Huia.Headless has no hosted "completing sign-in…" page either).
+   */
+  externalCallbackPage?: string
   allowInsecureTls?: boolean
 }
 
@@ -71,8 +83,15 @@ const defaults = {
     resendConfirmation: '/auth/resend-confirmation',
     forgotPassword: '/auth/forgot-password',
     resetPassword: '/auth/reset-password',
+    phoneStart: '/auth/phone/start',
+    phoneVerify: '/auth/phone/verify',
+    phoneCompleteProfile: '/auth/phone/complete-profile',
+    externalLogin: '/auth/external',
+    externalExchange: '/auth/external-exchange',
+    externalCompleteProfile: '/auth/external-complete-profile',
   },
   loginPage: '/login',
+  externalCallbackPage: '/auth/callback',
   allowInsecureTls: false,
 } satisfies ModuleOptions
 
@@ -102,6 +121,7 @@ export default defineNuxtModule<ModuleOptions>({
         refresh: opts.refresh,
         cookie: opts.cookie,
         allowInsecureTls: opts.allowInsecureTls,
+        externalCallbackPath: opts.externalCallbackPage,
       },
     ) as typeof nuxt.options.runtimeConfig.huiaHeadless
 
@@ -113,13 +133,21 @@ export default defineNuxtModule<ModuleOptions>({
         logoutPath: opts.routes.logout,
         sessionPath: opts.routes.session,
         loginPage: opts.loginPage,
+        phoneStartPath: opts.routes.phoneStart,
+        phoneVerifyPath: opts.routes.phoneVerify,
+        phoneCompleteProfilePath: opts.routes.phoneCompleteProfile,
+        externalLoginPath: opts.routes.externalLogin,
+        externalExchangePath: opts.routes.externalExchange,
+        externalCompleteProfilePath: opts.routes.externalCompleteProfile,
+        externalCallbackPage: opts.externalCallbackPage,
         // The module's own auth routes are never protected by its own middleware, regardless of
-        // `middleware.exclude`, plus the app's own login page — same rationale as nuxt-huia-oidc:
-        // applying "must be logged in" to the routes/page that exist for the logged-out flow is
-        // never correct.
+        // `middleware.exclude`, plus the app's own login/callback pages — same rationale as
+        // nuxt-huia-oidc: applying "must be logged in" to the routes/pages that exist for the
+        // logged-out flow is never correct.
         middlewareExclude: [
           ...opts.middleware.exclude,
           opts.loginPage,
+          opts.externalCallbackPage,
           opts.routes.register,
           opts.routes.login,
           opts.routes.logout,
@@ -129,6 +157,12 @@ export default defineNuxtModule<ModuleOptions>({
           opts.routes.resendConfirmation,
           opts.routes.forgotPassword,
           opts.routes.resetPassword,
+          opts.routes.phoneStart,
+          opts.routes.phoneVerify,
+          opts.routes.phoneCompleteProfile,
+          `${opts.routes.externalLogin}/**`,
+          opts.routes.externalExchange,
+          opts.routes.externalCompleteProfile,
         ],
       },
     ) as typeof nuxt.options.runtimeConfig.public.huiaHeadless
@@ -162,6 +196,12 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({ route: opts.routes.resendConfirmation, method: 'post', handler: resolve('runtime/server/routes/auth/resend-confirmation.post') })
     addServerHandler({ route: opts.routes.forgotPassword, method: 'post', handler: resolve('runtime/server/routes/auth/forgot-password.post') })
     addServerHandler({ route: opts.routes.resetPassword, method: 'post', handler: resolve('runtime/server/routes/auth/reset-password.post') })
+    addServerHandler({ route: opts.routes.phoneStart, method: 'post', handler: resolve('runtime/server/routes/auth/phone/start.post') })
+    addServerHandler({ route: opts.routes.phoneVerify, method: 'post', handler: resolve('runtime/server/routes/auth/phone/verify.post') })
+    addServerHandler({ route: opts.routes.phoneCompleteProfile, method: 'post', handler: resolve('runtime/server/routes/auth/phone/complete-profile.post') })
+    addServerHandler({ route: `${opts.routes.externalLogin}/:provider`, method: 'get', handler: resolve('runtime/server/routes/auth/external/[provider].get') })
+    addServerHandler({ route: opts.routes.externalExchange, method: 'post', handler: resolve('runtime/server/routes/auth/external/exchange.post') })
+    addServerHandler({ route: opts.routes.externalCompleteProfile, method: 'post', handler: resolve('runtime/server/routes/auth/external/complete-profile.post') })
     addServerHandler({ middleware: true, handler: resolve('runtime/server/middleware/session.context') })
 
     // ── type augmentation ─────────────────────────────────────────────────────

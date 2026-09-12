@@ -18,6 +18,7 @@ export function testConfig(overrides: Partial<ResolvedAuthConfig> = {}): Resolve
       lock: { ttlMs: 10_000, waitMs: 800, pollMs: 20 },
     },
     allowInsecureTls: false,
+    externalCallbackPath: '/auth/callback',
     ...overrides,
   }
 }
