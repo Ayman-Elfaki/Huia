@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Huia.Headless.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Shop.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,10 +31,19 @@ builder.Services
         {
             tenant.Branding.DisplayName = "Huia Shop";
             tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+            tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
         });
     })
     .AddEntityFrameworkCoreStores<HuiaDbContext>()
     .AddHuiaHeadless();
+
+if (builder.Environment.IsDevelopment() || enableE2E)
+{
+    // Captures rather than sends SMS codes, so e2e tests (and local dev) can read them back via
+    // /e2e-otp — the same pattern Huia.IdentityServer uses.
+    builder.Services.AddSingleton<CapturingSmsSender>();
+    builder.Services.AddScoped<Huia.Services.ISmsSender>(sp => sp.GetRequiredService<CapturingSmsSender>());
+}
 
 builder.Services.AddSingleton<CartStore>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
@@ -49,6 +59,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHuiaHeadlessEndpoints();
+
+if (enableE2E)
+{
+    app.MapGet("/e2e-otp", (string phone, CapturingSmsSender sms) =>
+        sms.LastCode(phone) is { } code ? Results.Ok(new { phone, code }) : Results.NotFound());
+}
 
 app.MapGet("/products", () => Catalog.Products);
 
@@ -169,5 +185,36 @@ namespace Shop.Api
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    /// <summary>Records the last OTP per number so <c>/e2e-otp</c> can hand it back to e2e tests, instead of sending a real SMS.</summary>
+    internal sealed partial class CapturingSmsSender(ILogger<CapturingSmsSender> logger) : Huia.Services.ISmsSender
+    {
+        private readonly Dictionary<string, string> _codes = [];
+        private readonly Lock _gate = new();
+
+        public bool IsConfigured => true;
+
+        public Task<bool> SendOtpAsync(string tenantId, string phoneNumber, string code, CancellationToken cancellationToken = default)
+        {
+            lock (_gate)
+            {
+                _codes[phoneNumber] = code;
+            }
+
+            LogCode(tenantId, phoneNumber, code);
+            return Task.FromResult(true);
+        }
+
+        public string? LastCode(string phoneNumber)
+        {
+            lock (_gate)
+            {
+                return _codes.TryGetValue(phoneNumber, out var code) ? code : null;
+            }
+        }
+
+        [LoggerMessage(LogLevel.Information, "[dev] SMS OTP for tenant {TenantId} to {PhoneNumber}: {Code}")]
+        private partial void LogCode(string tenantId, string phoneNumber, string code);
     }
 }

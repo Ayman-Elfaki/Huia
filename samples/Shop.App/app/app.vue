@@ -1,5 +1,10 @@
 <script setup lang="ts">
 const { user, loggedIn, logout } = useHuia()
+
+const displayName = computed(() => {
+  const name = [user.value?.firstName, user.value?.lastName].filter(Boolean).join(' ')
+  return user.value?.email ?? (name || user.value?.sub)
+})
 </script>
 
 <template>
@@ -7,7 +12,7 @@ const { user, loggedIn, logout } = useHuia()
     <header style="display: flex; justify-content: space-between; align-items: center;">
       <h1>Huia Shop</h1>
       <p v-if="loggedIn">
-        {{ user?.email ?? user?.sub }}
+        {{ displayName }}
         <button style="margin-left: 1rem" @click="logout()">
           Sign out
         </button>
