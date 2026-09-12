@@ -48,18 +48,43 @@ mechanics to `nuxt-huia-oidc`.
 | `POST /auth/refresh` | manual refresh (usually unnecessary — `getUserSession` refreshes transparently) |
 | `GET /auth/session` | the sanitised `{ user, loggedIn, expiresAt }` — never a token |
 | `GET /auth/confirm-email`, `POST /auth/resend-confirmation`, `/auth/forgot-password`, `/auth/reset-password` | thin proxies to the matching `Huia.Headless` endpoints |
+| `POST /auth/phone/start`, `/verify`, `/complete-profile` | passwordless SMS one-time-code login |
+| `GET /auth/external/{provider}` | starts an external-login redirect (a link, not a `fetch` call — see below) |
+| `POST /auth/external-exchange`, `/auth/external-complete-profile` | completes external login after the provider's callback |
 
 All paths are configurable via `routes`. Unlike `nuxt-huia-oidc`'s `login`/`callback`/`logout`
-(browser-navigated redirects), every one of these is a plain API call the app's own login form
-invokes with `$fetch`/`useRequestFetch`.
+(browser-navigated redirects), every route except the external-login challenge is a plain API call
+the app's own login form invokes with `$fetch`/`useRequestFetch`.
 
 ## Composables & server utilities
 
 - Client: `useUserSession()` (`user`, `loggedIn`, `session`, `hasRole()`, `hasAnyRole()`, `fetch()`,
-  `clear()`) and `useHuia()` (`register()`, `login()`, `logout`).
+  `clear()`) and `useHuia()` (`register()`, `login()`, `logout`, `startPhoneLogin()`,
+  `verifyPhoneLogin()`, `completePhoneProfile()`, `externalLoginHref()`, `exchangeExternalCode()`,
+  `completeExternalProfile()`).
 - Server (auto-imported in `server/**`): `getUserSession(event)`, `setUserSession`,
   `clearUserSession`, `requireUserSession(event)` (401s), `getAccessToken(event)` (server-only —
   forward the bearer to `Huia.Headless` or an upstream API).
+
+## External login
+
+Because a real provider redirect has to physically leave the app's origin, `externalLoginHref`
+returns a plain URL for an `<a>` tag, not something you `fetch`. The module's own `GET
+/auth/external/{provider}` route builds the *absolute* `returnUrl` `Huia.Headless`'s
+`AllowedReturnUrlPrefixes` allow-list expects — the app's own origin plus
+`huiaHeadless.externalCallbackPage` (default `/auth/callback`) — from a caller-supplied same-origin
+path, so the app never has to know its own deployed origin:
+
+```vue
+<a :href="useHuia().externalLoginHref('google', '/dashboard')">Sign in with Google</a>
+```
+
+The app owns the callback page itself (`huiaHeadless.externalCallbackPage` just names where it
+lives — Huia.Headless has no hosted "completing sign-in…" page to redirect to). That page reads
+`?code=` and `?returnTo=` off its own route, calls `exchangeExternalCode(code)` — which returns the
+bearer session directly for a linked/existing account, or `{ requiresProfile: true, flowId }` for a
+first-time sign-up — and, in the latter case, collects a name and calls
+`completeExternalProfile({ code: flowId, firstName, lastName })`.
 
 ## Reference integration
 

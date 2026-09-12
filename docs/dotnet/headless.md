@@ -139,13 +139,15 @@ account (`Huia.OpenId`'s "Scenario 1", from an account-settings page) is not.
 ## What's implemented today
 
 Password login (via `MapIdentityApi`), passkeys, phone login, and external login are all wired up.
-Password and passkeys are covered by the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api)
-and its [e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests); phone and
-external login are covered by `HeadlessPhoneLoginTests`/`HeadlessExternalLoginTests` in
-`Huia.IntegrationTests` (neither is wired into the Shop sample's UI yet — the external-login tests
-exercise the dispatch/exchange/complete-profile logic by signing directly into the intermediate
-`IdentityConstants.ExternalScheme`, standing in for a real provider's callback, since a live
-Google/GitHub/etc. account is needed for the actual challenge round trip).
+Password, passkeys, and phone login are demonstrated end to end by the
+[Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api) — `Shop.App`'s login
+page has a phone tab alongside email/password — and covered by its
+[e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests). External login is
+covered by `HeadlessExternalLoginTests` in `Huia.IntegrationTests` but not wired into the Shop
+sample's UI: those tests exercise the dispatch/exchange/complete-profile logic by signing directly
+into the intermediate `IdentityConstants.ExternalScheme`, standing in for a real provider's callback,
+since a live Google/GitHub/etc. account is needed for the actual challenge round trip — the same
+reason there's no live e2e coverage of it either.
 
 ## First-party Nuxt client
 

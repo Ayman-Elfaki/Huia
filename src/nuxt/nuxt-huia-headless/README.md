@@ -1,10 +1,10 @@
 # nuxt-huia-headless
 
 **Nuxt 4** authentication module for [`Huia.Headless`](https://github.com/Ayman-Elfaki/Huia) — a
-bearer-token identity API (register, login, refresh, passkeys) with no OAuth redirect dance. Same
-dual-layer session principle as [`nuxt-huia-oidc`](../nuxt-huia-oidc): the browser only ever holds a
-sealed, chunked session cookie; access/refresh tokens live server-side in Nitro Storage and are
-refreshed transparently.
+bearer-token identity API (register, login, refresh, passkeys, passwordless SMS, external providers)
+with no OAuth redirect dance for password/phone sign-in. Same dual-layer session principle as
+[`nuxt-huia-oidc`](../nuxt-huia-oidc): the browser only ever holds a sealed, chunked session cookie;
+access/refresh tokens live server-side in Nitro Storage and are refreshed transparently.
 
 - Requires Nuxt `>=4`, Nitro `>=2.10`, Node `>=20.11`
 - No `openid-client` dependency — this talks to Huia.Headless with plain `fetch`, since there is no
@@ -41,6 +41,42 @@ const result = await login({ email, password })
 ```vue
 <script setup lang="ts">
 const { user, loggedIn, logout } = useHuia()
+</script>
+```
+
+Passwordless SMS is a two- or three-step flow — `verifyPhoneLogin` returns the bearer session
+directly for a returning, complete-profile account, or `{ requiresProfile: true, flowId }` for a
+first-time number that still needs a name:
+
+```vue
+<script setup lang="ts">
+const { startPhoneLogin, verifyPhoneLogin, completePhoneProfile } = useHuia()
+
+const { flowId } = await startPhoneLogin({ phoneNumber: '+12025550123' })
+const result = await verifyPhoneLogin({ flowId, code })
+if (result.requiresProfile) {
+  await completePhoneProfile({ flowId: result.flowId, firstName, lastName })
+}
+</script>
+```
+
+External login (Google/GitHub/Microsoft/generic OIDC) is a real browser redirect through the
+provider, so it starts as a plain link, not a `fetch` call — `externalLoginHref` builds it:
+
+```vue
+<!-- app/pages/login.vue -->
+<a :href="useHuia().externalLoginHref('google', '/dashboard')">Sign in with Google</a>
+```
+
+```vue
+<!-- app/pages/auth/callback.vue — the page huiaHeadless.externalCallbackPage points at (default /auth/callback) -->
+<script setup lang="ts">
+const { code, returnTo } = useRoute().query
+const { exchangeExternalCode, completeExternalProfile } = useHuia()
+
+const result = await exchangeExternalCode(code as string)
+if (!result.requiresProfile) await navigateTo((returnTo as string) ?? '/')
+// else render a small first/last name form, then call completeExternalProfile({ code: result.flowId, firstName, lastName })
 </script>
 ```
 
