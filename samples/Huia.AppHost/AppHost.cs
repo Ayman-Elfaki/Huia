@@ -123,8 +123,16 @@ identityServer.WithEnvironment("Clients__TodoApi__BaseUrl", todoApi.GetEndpoint(
 var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
     .WithExternalHttpEndpoints()
     .WithEnvironment("Huia__EnableE2E", enableE2E ? "true" : "false")
-    .WithEnvironment("Shop__AppUrl", shopAppUrl);
+    .WithEnvironment("Shop__AppUrl", shopAppUrl)
+    .WithEnvironment("Huia__ExternalIssuer", external.GetEndpoint("https"))
+    .WithReference(external)
+    .WaitFor(external);
 shopApi.WithEnvironment("Huia__Issuer", shopApi.GetEndpoint("https"));
+
+// Huia.External needs Shop.Api's own base URL (it's the OIDC relying party for the "shop-api" client
+// registered there, not Shop.App — see samples/Huia.External/Program.cs) — set after shopApi exists,
+// same lazy-reference pattern as identityServer's email-host binding above.
+external.WithEnvironment("ShopConsumer__BaseUrl", shopApi.GetEndpoint("https"));
 
 // The admin CLI (device-authorization grant against the master tenant). It runs one command and exits,
 // so it does not start with the rest of the graph — press "Start" in the dashboard to open it in a

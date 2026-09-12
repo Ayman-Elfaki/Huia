@@ -23,21 +23,37 @@ async function addToCart(productId: string) {
 </script>
 
 <template>
-  <section>
-    <h2>Products</h2>
-    <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
-      <li v-for="product in products" :key="product.id" style="display: flex; justify-content: space-between; border: 1px solid #ddd; padding: 0.5rem 1rem; border-radius: 0.5rem;">
-        <span>{{ product.name }} — ${{ product.price.toFixed(2) }}</span>
-        <button v-if="loggedIn" :disabled="adding === product.id" @click="addToCart(product.id)">
-          {{ adding === product.id ? 'Adding…' : 'Add to cart' }}
-        </button>
-        <NuxtLink v-else to="/login">
-          Sign in to buy
-        </NuxtLink>
-      </li>
-    </ul>
-    <p v-if="message">
-      {{ message }}
-    </p>
-  </section>
+  <div class="space-y-4">
+    <h2 class="text-lg font-semibold text-highlighted">
+      Products
+    </h2>
+
+    <UAlert v-if="message" color="success" variant="subtle" :description="message" />
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <UCard v-for="product in products" :key="product.id">
+        <template #header>
+          <span class="font-medium text-highlighted">{{ product.name }}</span>
+        </template>
+
+        <p class="text-2xl font-semibold text-highlighted">
+          ${{ product.price.toFixed(2) }}
+        </p>
+
+        <template #footer>
+          <UButton
+            v-if="loggedIn"
+            block
+            :loading="adding === product.id"
+            @click="addToCart(product.id)"
+          >
+            Add to cart
+          </UButton>
+          <UButton v-else to="/login" block variant="soft">
+            Sign in to buy
+          </UButton>
+        </template>
+      </UCard>
+    </div>
+  </div>
 </template>

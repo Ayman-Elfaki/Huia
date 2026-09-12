@@ -9,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5340")!;
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
+var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
+var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "http://localhost:3040")!;
 
 // A single shared in-memory SQLite connection kept open for the process lifetime — same pattern
 // Huia.IdentityServer/Huia.External use, so the schema created at start-up survives every request.
@@ -32,6 +34,21 @@ builder.Services
             tenant.Branding.DisplayName = "Huia Shop";
             tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
             tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
+            // Huia.External is the same mock upstream IdP Todo.App uses via Huia.OpenId's OpenIddict
+            // client — here it's consumed through the classic OpenIdConnect handler instead, since
+            // Huia.Headless has no OpenIddict dependency. See samples/Huia.External/Program.cs for the
+            // "shop-api" client registration this must match (client id/secret, redirect URI).
+            tenant.Authentication.UseExternalLogin(ext =>
+            {
+                ext.AddOpenIdConnect("HuiaExternal", "shop-api", "shop-api-secret", $"{externalIssuer}/partners", p =>
+                {
+                    p.DisplayName = "Partner";
+                    p.Scopes.Add("profile");
+                    p.Scopes.Add("email");
+                });
+                ext.EnableAccountsLinking();
+                ext.AllowReturnUrlPrefix(shopAppUrl);
+            });
         });
     })
     .AddEntityFrameworkCoreStores<HuiaDbContext>()

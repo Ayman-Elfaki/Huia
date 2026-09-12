@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
-const { login, register, startPhoneLogin, verifyPhoneLogin, completePhoneProfile } = useHuia()
+const { login, register, startPhoneLogin, verifyPhoneLogin, completePhoneProfile, externalLoginHref } = useHuia()
 
 const tab = ref<'password' | 'phone'>('password')
 const mode = ref<'login' | 'register'>('login')
@@ -91,71 +91,99 @@ async function onPhoneCompleteProfile() {
 </script>
 
 <template>
-  <section>
-    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #ddd;">
-      <button
-        type="button"
-        :style="{ fontWeight: tab === 'password' ? 'bold' : 'normal', border: 'none', background: 'none', cursor: 'pointer', padding: '0.5rem 0' }"
-        @click="tab = 'password'"
-      >
-        Email &amp; password
-      </button>
-      <button
-        type="button"
-        :style="{ fontWeight: tab === 'phone' ? 'bold' : 'normal', border: 'none', background: 'none', cursor: 'pointer', padding: '0.5rem 0' }"
-        @click="tab = 'phone'"
-      >
-        Phone
-      </button>
-    </div>
+  <div class="max-w-sm mx-auto">
+    <UCard>
+      <div class="flex gap-1 mb-4 rounded-lg bg-elevated p-1">
+        <UButton
+          class="flex-1 justify-center"
+          :color="tab === 'password' ? 'primary' : 'neutral'"
+          :variant="tab === 'password' ? 'solid' : 'ghost'"
+          size="sm"
+          @click="tab = 'password'"
+        >
+          Email &amp; password
+        </UButton>
+        <UButton
+          class="flex-1 justify-center"
+          :color="tab === 'phone' ? 'primary' : 'neutral'"
+          :variant="tab === 'phone' ? 'solid' : 'ghost'"
+          size="sm"
+          @click="tab = 'phone'"
+        >
+          Phone
+        </UButton>
+      </div>
 
-    <template v-if="tab === 'password'">
-      <h2>{{ mode === 'login' ? 'Sign in' : 'Create an account' }}</h2>
-      <form style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 20rem;" @submit.prevent="onSubmit">
-        <input v-model="email" type="email" placeholder="Email" autocomplete="username" required>
-        <input v-model="password" type="password" placeholder="Password" autocomplete="current-password" required>
-        <button type="submit" :disabled="busy">
-          {{ busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account' }}
-        </button>
-        <button type="button" style="background: none; border: none; text-decoration: underline; cursor: pointer;" @click="mode = mode === 'login' ? 'register' : 'login'">
-          {{ mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign in' }}
-        </button>
-      </form>
-    </template>
+      <template v-if="tab === 'password'">
+        <h2 class="text-lg font-semibold text-highlighted mb-3">
+          {{ mode === 'login' ? 'Sign in' : 'Create an account' }}
+        </h2>
+        <form class="space-y-3" @submit.prevent="onSubmit">
+          <UFormField label="Email">
+            <UInput v-model="email" type="email" placeholder="Email" autocomplete="username" required class="w-full" />
+          </UFormField>
+          <UFormField label="Password">
+            <UInput v-model="password" type="password" placeholder="Password" autocomplete="current-password" required class="w-full" />
+          </UFormField>
+          <UButton type="submit" block :loading="busy">
+            {{ mode === 'login' ? 'Sign in' : 'Create account' }}
+          </UButton>
+          <UButton type="button" variant="link" color="neutral" block @click="mode = mode === 'login' ? 'register' : 'login'">
+            {{ mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign in' }}
+          </UButton>
+        </form>
+      </template>
 
-    <template v-else>
-      <h2>Sign in with your phone</h2>
+      <template v-else>
+        <h2 class="text-lg font-semibold text-highlighted mb-3">
+          Sign in with your phone
+        </h2>
 
-      <form v-if="phoneStep === 'number'" style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 20rem;" @submit.prevent="onPhoneStart">
-        <input v-model="phoneNumber" type="tel" placeholder="+1 202 555 0123" autocomplete="tel" required>
-        <button type="submit" :disabled="busy">
-          {{ busy ? 'Sending…' : 'Send code' }}
-        </button>
-      </form>
+        <form v-if="phoneStep === 'number'" class="space-y-3" @submit.prevent="onPhoneStart">
+          <UFormField label="Phone number">
+            <UInput v-model="phoneNumber" type="tel" placeholder="+1 202 555 0123" autocomplete="tel" required class="w-full" />
+          </UFormField>
+          <UButton type="submit" block :loading="busy">
+            Send code
+          </UButton>
+        </form>
 
-      <form v-else-if="phoneStep === 'code'" style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 20rem;" @submit.prevent="onPhoneVerify">
-        <p>We sent a code to {{ phoneNumber }}.</p>
-        <input v-model="code" type="text" inputmode="numeric" placeholder="123456" autocomplete="one-time-code" required>
-        <button type="submit" :disabled="busy">
-          {{ busy ? 'Verifying…' : 'Verify' }}
-        </button>
-      </form>
+        <form v-else-if="phoneStep === 'code'" class="space-y-3" @submit.prevent="onPhoneVerify">
+          <p class="text-sm text-muted">
+            We sent a code to {{ phoneNumber }}.
+          </p>
+          <UFormField label="Code">
+            <UInput v-model="code" type="text" inputmode="numeric" placeholder="123456" autocomplete="one-time-code" required class="w-full" />
+          </UFormField>
+          <UButton type="submit" block :loading="busy">
+            Verify
+          </UButton>
+        </form>
 
-      <form v-else style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 20rem;" @submit.prevent="onPhoneCompleteProfile">
-        <p>Almost done — what's your name?</p>
-        <input v-model="firstName" type="text" placeholder="First name" required>
-        <input v-model="lastName" type="text" placeholder="Last name" required>
-        <button type="submit" :disabled="busy">
-          {{ busy ? 'Creating…' : 'Finish' }}
-        </button>
-      </form>
-    </template>
+        <form v-else class="space-y-3" @submit.prevent="onPhoneCompleteProfile">
+          <p class="text-sm text-muted">
+            Almost done — what's your name?
+          </p>
+          <UFormField label="First name">
+            <UInput v-model="firstName" type="text" placeholder="First name" required class="w-full" />
+          </UFormField>
+          <UFormField label="Last name">
+            <UInput v-model="lastName" type="text" placeholder="Last name" required class="w-full" />
+          </UFormField>
+          <UButton type="submit" block :loading="busy">
+            Finish
+          </UButton>
+        </form>
+      </template>
 
-    <p v-if="error" style="color: crimson;">
-      {{ error }}
-    </p>
-    <p v-if="info" style="color: seagreen;">
-      {{ info }}
-    </p>
-  </section>
+      <UAlert v-if="error" color="error" variant="subtle" :description="error" class="mt-3" />
+      <UAlert v-if="info" color="success" variant="subtle" :description="info" class="mt-3" />
+
+      <template #footer>
+        <UButton :to="externalLoginHref('HuiaExternal', returnTo)" external variant="outline" color="neutral" block>
+          Sign in with Partner
+        </UButton>
+      </template>
+    </UCard>
+  </div>
 </template>

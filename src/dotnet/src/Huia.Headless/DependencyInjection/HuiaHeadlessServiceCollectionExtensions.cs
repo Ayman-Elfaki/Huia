@@ -79,7 +79,7 @@ public static class HuiaHeadlessServiceCollectionExtensions
 
             foreach (var provider in external.Providers)
             {
-                RegisterExternalProvider(authentication, provider);
+                RegisterExternalProvider(authentication, provider, options.DisableTransportSecurityRequirement);
             }
         }
 
@@ -122,7 +122,7 @@ public static class HuiaHeadlessServiceCollectionExtensions
     /// — the same intermediate hand-off <c>Huia.OpenId</c> gets from the OpenIddict client, just via the
     /// framework's own handlers instead (Headless has no OpenIddict dependency to reuse for this).
     /// </summary>
-    private static void RegisterExternalProvider(AuthenticationBuilder authentication, ExternalProviderRegistration provider)
+    private static void RegisterExternalProvider(AuthenticationBuilder authentication, ExternalProviderRegistration provider, bool allowInsecureTransport)
     {
         switch (provider.Kind)
         {
@@ -202,6 +202,14 @@ public static class HuiaHeadlessServiceCollectionExtensions
                     o.SignInScheme = IdentityConstants.ExternalScheme;
                     o.CallbackPath = $"/signin-{provider.Name}";
                     o.ResponseType = "code";
+                    // Not every OIDC provider puts profile/email claims in the id_token itself
+                    // (OpenIddict included — destination depends on server-side claim configuration);
+                    // the userinfo endpoint is the reliable source since `profile`/`email` scopes are
+                    // always honoured there.
+                    o.GetClaimsFromUserInfoEndpoint = true;
+                    // Same escape hatch as HuiaOptionsBuilder.DisableTransportSecurityRequirement() —
+                    // a plain-http authority (dev / E2E) would otherwise fail discovery outright.
+                    o.RequireHttpsMetadata = !allowInsecureTransport;
                     foreach (var scope in provider.Scopes)
                     {
                         o.Scope.Add(scope);

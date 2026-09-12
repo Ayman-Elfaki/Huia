@@ -6,8 +6,10 @@ namespace Huia.E2ETests;
 /// <summary>
 /// Boots the <c>Shop.Api</c>/<c>Shop.App</c> sample out-of-process on fixed HTTP ports so Playwright can
 /// drive the <c>nuxt-huia-headless</c> module end to end: register, login, browse, cart, checkout,
-/// logout, all against a real <c>Huia.Headless</c> bearer-token backend. Unlike the OIDC-based front-end
-/// stacks, this needs no identity server — <c>Shop.Api</c> is single-tenant and self-contained.
+/// logout, all against a real <c>Huia.Headless</c> bearer-token backend. Also boots its own
+/// <c>Huia.External</c> instance (a separate port from <see cref="FrontEndStackFixture"/>'s, since xUnit
+/// collections can run concurrently) so external login has a real upstream IdP to complete a genuine
+/// challenge/callback round trip against, not just a stand-in.
 ///
 /// Any missing build output or start-up failure leaves <see cref="Started"/> false and the specs skip.
 /// </summary>
@@ -18,6 +20,7 @@ public sealed class ShopStackFixture : IAsyncLifetime
 
     public string ShopApiUrl { get; } = "http://localhost:5341";
     public string ShopAppUrl { get; } = "http://localhost:3040";
+    public string ExternalIssuer { get; } = "http://localhost:5322";
 
     public bool Started { get; private set; }
     public string? SkipReason { get; private set; }
@@ -39,8 +42,12 @@ public sealed class ShopStackFixture : IAsyncLifetime
     {
         var shopApiDll = Path.Combine(_repoRoot, "samples", "Shop.Api", "bin", "Release", "net10.0", "Shop.Api.dll");
         var shopAppOutput = Path.Combine(_repoRoot, "samples", "Shop.App", ".output", "server", "index.mjs");
+        var externalDll = Path.Combine(_repoRoot, "samples", "Huia.External", "bin", "Release", "net10.0", "Huia.External.dll");
 
-        foreach (var (label, path) in new[] { ("Shop.Api", shopApiDll), ("Shop.App/.output", shopAppOutput) })
+        foreach (var (label, path) in new[]
+        {
+            ("Shop.Api", shopApiDll), ("Shop.App/.output", shopAppOutput), ("Huia.External", externalDll),
+        })
         {
             if (!File.Exists(path))
             {
@@ -49,11 +56,24 @@ public sealed class ShopStackFixture : IAsyncLifetime
             }
         }
 
+        StartDotnet(externalDll, new()
+        {
+            ["ASPNETCORE_URLS"] = ExternalIssuer,
+            ["ASPNETCORE_ENVIRONMENT"] = "Development",
+            ["Huia__Issuer"] = ExternalIssuer,
+            // Only the "shop-api" client (registered for ShopConsumer:BaseUrl) matters here — the
+            // "huia-idp" client's Consumer:BaseUrl is left at its own default since nothing in this
+            // fixture uses it.
+            ["ShopConsumer__BaseUrl"] = ShopApiUrl,
+            ["ConnectionStrings__huia"] = "DataSource=E2EShopExternal;Mode=Memory;Cache=Shared",
+        });
+
         StartDotnet(shopApiDll, new()
         {
             ["ASPNETCORE_URLS"] = ShopApiUrl,
             ["ASPNETCORE_ENVIRONMENT"] = "Development",
             ["Huia__Issuer"] = ShopApiUrl,
+            ["Huia__ExternalIssuer"] = ExternalIssuer,
             ["Huia__EnableE2E"] = "true",
             ["Shop__AppUrl"] = ShopAppUrl,
             ["ConnectionStrings__huia"] = "DataSource=E2EShop;Mode=Memory;Cache=Shared",
@@ -72,13 +92,14 @@ public sealed class ShopStackFixture : IAsyncLifetime
 
         using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var ready =
-            await WaitForAsync(probe, $"{ShopApiUrl}/products")
+            await WaitForAsync(probe, $"{ExternalIssuer}/partners/.well-known/openid-configuration")
+            && await WaitForAsync(probe, $"{ShopApiUrl}/products")
             && await WaitForAsync(probe, $"{ShopAppUrl}/");
 
         Started = ready && _processes.All(p => !p.HasExited);
         if (!Started && SkipReason is null)
         {
-            SkipReason = "Shop.Api or Shop.App did not become ready in time.";
+            SkipReason = "Shop.Api, Huia.External, or Shop.App did not become ready in time.";
         }
     }
 

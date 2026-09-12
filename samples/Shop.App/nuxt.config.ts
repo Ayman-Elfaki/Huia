@@ -4,9 +4,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: false },
   modules: [
+    '@nuxt/ui',
     // first-party auth module — referenced from source in the monorepo
     '../../src/nuxt/nuxt-huia-headless/src/module',
   ],
+
+  css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
     shopApiUrl,

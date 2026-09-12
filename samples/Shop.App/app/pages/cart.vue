@@ -26,24 +26,34 @@ async function checkout() {
 </script>
 
 <template>
-  <section>
-    <h2>Cart</h2>
-    <ul v-if="items?.length">
-      <li v-for="item in items" :key="item.productId">
-        {{ item.productId }} × {{ item.quantity }}
-      </li>
-    </ul>
-    <p v-else>
-      Your cart is empty.
-    </p>
-    <button :disabled="!items?.length || busy" @click="checkout">
-      {{ busy ? 'Placing order…' : 'Checkout' }}
-    </button>
-    <p v-if="order" style="color: seagreen;">
-      Order {{ order.orderId }} placed — total ${{ order.total.toFixed(2) }}.
-    </p>
-    <p v-if="error" style="color: crimson;">
-      {{ error }}
-    </p>
-  </section>
+  <div class="space-y-4 max-w-md">
+    <h2 class="text-lg font-semibold text-highlighted">
+      Cart
+    </h2>
+
+    <UCard>
+      <ul v-if="items?.length" class="divide-y divide-default">
+        <li v-for="item in items" :key="item.productId" class="py-2">
+          {{ item.productId }} × {{ item.quantity }}
+        </li>
+      </ul>
+      <p v-else class="text-muted">
+        Your cart is empty.
+      </p>
+
+      <template #footer>
+        <UButton block :disabled="!items?.length" :loading="busy" @click="checkout">
+          Checkout
+        </UButton>
+      </template>
+    </UCard>
+
+    <UAlert
+      v-if="order"
+      color="success"
+      variant="subtle"
+      :description="`Order ${order.orderId} placed — total $${order.total.toFixed(2)}`"
+    />
+    <UAlert v-if="error" color="error" variant="subtle" :description="error" />
+  </div>
 </template>

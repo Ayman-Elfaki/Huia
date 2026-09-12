@@ -138,16 +138,19 @@ account (`Huia.OpenId`'s "Scenario 1", from an account-settings page) is not.
 
 ## What's implemented today
 
-Password login (via `MapIdentityApi`), passkeys, phone login, and external login are all wired up.
-Password, passkeys, and phone login are demonstrated end to end by the
-[Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api) — `Shop.App`'s login
-page has a phone tab alongside email/password — and covered by its
-[e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests). External login is
-covered by `HeadlessExternalLoginTests` in `Huia.IntegrationTests` but not wired into the Shop
-sample's UI: those tests exercise the dispatch/exchange/complete-profile logic by signing directly
-into the intermediate `IdentityConstants.ExternalScheme`, standing in for a real provider's callback,
-since a live Google/GitHub/etc. account is needed for the actual challenge round trip — the same
-reason there's no live e2e coverage of it either.
+Password login (via `MapIdentityApi`), passkeys, phone login, and external login are all wired up and
+demonstrated end to end by the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api)
+— `Shop.App`'s login page has a phone tab and a "Sign in with Partner" external-login link alongside
+email/password — and covered by its [e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests).
+External login is additionally unit/integration-tested by `HeadlessExternalLoginTests` in
+`Huia.IntegrationTests`, which exercise the dispatch/exchange/complete-profile logic by signing
+directly into the intermediate `IdentityConstants.ExternalScheme`, standing in for a real provider's
+callback.
+
+`Shop.Api` registers [`Huia.External`](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Huia.External)
+— the same mock upstream OIDC IdP `Todo.App` uses via `Huia.OpenId` — as its `AddOpenIdConnect(...)`
+provider, so the Shop e2e suite exercises a real, live challenge/callback round trip (no
+Google/GitHub account needed) rather than only the stand-in scheme sign-in above.
 
 ## First-party Nuxt client
 

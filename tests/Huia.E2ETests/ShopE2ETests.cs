@@ -122,6 +122,29 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
     }
 
     [SkippableFact]
+    public async Task Signs_in_with_the_partner_external_provider()
+    {
+        Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");
+        await using var session = await BrowserSession.StartAsync();
+        var page = session.Page;
+
+        await page.GotoAsync($"{fx.ShopAppUrl}/login");
+        await page.GetByRole(AriaRole.Link, new() { Name = "Sign in with Partner" }).ClickAsync();
+
+        // Now on Huia.External's own Razor login page — the real upstream IdP, not a stand-in.
+        await page.WaitForURLAsync(u => u.Contains("/partners/identity/account/", StringComparison.Ordinal), new() { Timeout = 25_000 });
+        await FillPasswordAsync(page, "full@partners.test", "Partner1!Pass");
+
+        // First time this partner identity signs into Shop.Api's own (separate) tenant, so it needs a
+        // name before the account is created — same as Huia.OpenId's CompleteProfile step.
+        await Expect(page.Locator("body")).ToContainTextAsync("what's your name", new() { Timeout = 25_000 });
+        await page.GetByRole(AriaRole.Button, new() { Name = "Finish" }).ClickAsync();
+
+        await page.WaitForURLAsync(u => u.TrimEnd('/') == fx.ShopAppUrl.TrimEnd('/'), new() { Timeout = 15_000 });
+        await Expect(page.Locator("header")).ToContainTextAsync("full@partners.test", new() { Timeout = 15_000 });
+    }
+
+    [SkippableFact]
     public async Task Rejects_a_wrong_phone_code()
     {
         Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");

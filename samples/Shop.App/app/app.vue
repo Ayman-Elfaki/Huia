@@ -8,27 +8,38 @@ const displayName = computed(() => {
 </script>
 
 <template>
-  <div style="font-family: system-ui; max-width: 40rem; margin: 3rem auto;">
-    <header style="display: flex; justify-content: space-between; align-items: center;">
-      <h1>Huia Shop</h1>
-      <p v-if="loggedIn">
-        {{ displayName }}
-        <button style="margin-left: 1rem" @click="logout()">
-          Sign out
-        </button>
-      </p>
-      <NuxtLink v-else to="/login">
-        Sign in
-      </NuxtLink>
-    </header>
-    <nav style="display: flex; gap: 1rem; margin: 1rem 0;">
-      <NuxtLink to="/">
-        Products
-      </NuxtLink>
-      <NuxtLink to="/cart">
-        Cart
-      </NuxtLink>
-    </nav>
-    <NuxtPage />
-  </div>
+  <UApp>
+    <div class="min-h-screen bg-default">
+      <header class="border-b border-default">
+        <UContainer class="flex items-center justify-between py-4">
+          <NuxtLink to="/" class="text-xl font-bold text-highlighted no-underline">
+            Huia Shop
+          </NuxtLink>
+
+          <div v-if="loggedIn" class="flex items-center gap-3">
+            <span class="text-sm text-muted">{{ displayName }}</span>
+            <UButton color="neutral" variant="soft" size="sm" @click="logout()">
+              Sign out
+            </UButton>
+          </div>
+          <UButton v-else to="/login" size="sm">
+            Sign in
+          </UButton>
+        </UContainer>
+      </header>
+
+      <UContainer class="py-8">
+        <nav class="flex gap-4 mb-6">
+          <UButton to="/" variant="link" color="neutral" active-class="text-primary">
+            Products
+          </UButton>
+          <UButton to="/cart" variant="link" color="neutral" active-class="text-primary">
+            Cart
+          </UButton>
+        </nav>
+
+        <NuxtPage />
+      </UContainer>
+    </div>
+  </UApp>
 </template>
