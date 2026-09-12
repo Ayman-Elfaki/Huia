@@ -22,6 +22,7 @@ public static class HuiaHeadlessEndpointRouteBuilderExtensions
         endpoints.MapHuiaHeadlessMeEndpoints();
         endpoints.MapHuiaHeadlessPasskeyEndpoints();
         endpoints.MapHuiaHeadlessPhoneEndpoints();
+        endpoints.MapHuiaHeadlessExternalEndpoints();
 
         return endpoints;
     }

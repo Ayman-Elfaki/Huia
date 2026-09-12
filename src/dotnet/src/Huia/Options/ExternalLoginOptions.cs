@@ -1,16 +1,41 @@
 namespace Huia.Options;
 
 /// <summary>
-/// The external identity providers wired for a tenant. External login is implemented exclusively through
-/// the OpenIddict client (never the classic ASP.NET Core authentication handlers). Enabled via
+/// The external identity providers wired for a tenant. <c>Huia.OpenId</c> implements this exclusively
+/// through the OpenIddict client; <c>Huia.Headless</c> implements it through the classic ASP.NET Core
+/// authentication handlers (<c>AddGoogle</c>, <c>AddMicrosoftAccount</c>, a generic <c>AddOAuth</c> for
+/// GitHub, <c>AddOpenIdConnect</c>) instead, since it has no OpenIddict dependency — the registration
+/// data here (provider kind, client id/secret, authority, scopes) is shared by both. Enabled via
 /// <see cref="HuiaTenantAuthenticationOptions.UseExternalLogin"/>.
 /// </summary>
 public sealed class ExternalLoginOptions : IHuiaOptionsSection
 {
     private readonly List<ExternalProviderRegistration> _providers = [];
+    private readonly List<string> _allowedReturnUrlPrefixes = [];
 
     /// <summary>The registered providers, in declaration order.</summary>
     public IReadOnlyList<ExternalProviderRegistration> Providers => _providers;
+
+    /// <summary>
+    /// <c>Huia.Headless</c> only. The browser starts an external-login challenge on a different origin
+    /// than it ends on (the app's own frontend, not Huia itself), so the caller-supplied
+    /// <c>returnUrl</c> on a challenge request must be validated against a trusted allow-list rather
+    /// than the same-origin check <c>Huia.OpenId</c> uses — an unvalidated <c>returnUrl</c> here would be
+    /// an open redirect. Each entry is an absolute URL prefix (for example
+    /// <c>https://shop.example.com/</c>); <c>Huia.Headless</c> throws at start-up if external login is
+    /// enabled with this left empty. Ignored by <c>Huia.OpenId</c>.
+    /// </summary>
+    public IReadOnlyList<string> AllowedReturnUrlPrefixes => _allowedReturnUrlPrefixes;
+
+    /// <summary>Adds a trusted <c>returnUrl</c> prefix. See <see cref="AllowedReturnUrlPrefixes"/>.</summary>
+    /// <param name="prefix">An absolute URL prefix, for example <c>https://shop.example.com/</c>.</param>
+    /// <returns>This instance, for chaining.</returns>
+    public ExternalLoginOptions AllowReturnUrlPrefix(string prefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+        _allowedReturnUrlPrefixes.Add(prefix);
+        return this;
+    }
 
     /// <summary>
     /// Whether a logged-out external sign-in whose email matches an existing local account should be

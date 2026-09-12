@@ -11,6 +11,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- External login: Google/MicrosoftAccount/OpenIdConnect classic handlers are not part of the
+         shared framework (unlike Cookies/OAuth/JwtBearer). GitHub is a generic AddOAuth, no package. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Huia\Huia.csproj" />
     <ProjectReference Include="..\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
   </ItemGroup>
