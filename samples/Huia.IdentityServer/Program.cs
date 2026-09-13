@@ -13,6 +13,7 @@ var databaseProvider = builder.Configuration.GetValue("Huia:Database", "Sqlite")
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310");
 var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000");
+var todoNextUrl = builder.Configuration.GetValue("Clients:TodoNext:BaseUrl", "http://localhost:3050");
 var todoApiUrl = builder.Configuration.GetValue("Clients:TodoApi:BaseUrl", "http://localhost:5330");
 var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001");
 // The huia-nuxt module's own E2E playground (EnableE2E only).
@@ -44,7 +45,7 @@ builder.Services.AddHostedService<SchemaInitializer>();
 // MailKit sender is used and the in-memory CapturingEmailSender / /e2e-mail fallback is left out.
 var smtpConfigured = !string.IsNullOrWhiteSpace(builder.Configuration["Huia:Email:Host"]);
 
-var huiaBuilder = builder.Services.AddHuia(huia =>
+var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
 {
     huia.UseIssuer(issuer);
     huia.UsePublicUrl(issuer);
@@ -171,8 +172,21 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             client.ClientUri = new Uri($"{todoAppUrl}/");
             client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
             client.RedirectUris.Add(new Uri($"{todoAppUrl}/auth/oidc/callback"));
+            client.RedirectUris.Add(new Uri($"{todoNextUrl}/api/auth/callback"));
             client.PostLogoutRedirectUris.Add(new Uri($"{todoAppUrl}/"));
+            client.PostLogoutRedirectUris.Add(new Uri($"{todoNextUrl}/"));
             client.HomeUris.Add(new Uri($"{todoAppUrl}/"));
+            client.HomeUris.Add(new Uri($"{todoNextUrl}/"));
+        });
+
+        tenant.AddServerSideWebApplication("todo-next", "todo-next-secret", client =>
+        {
+            client.DisplayName = "Todo (Next.js)";
+            client.ClientUri = new Uri($"{todoNextUrl}/");
+            client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
+            client.RedirectUris.Add(new Uri($"{todoNextUrl}/api/auth/callback"));
+            client.PostLogoutRedirectUris.Add(new Uri($"{todoNextUrl}/"));
+            client.HomeUris.Add(new Uri($"{todoNextUrl}/"));
         });
 
         // Public SPA client for the Todo API's Scalar reference UI: its "Authorize" button runs
@@ -228,7 +242,6 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
 
 huiaBuilder
     .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
-    .AddHuiaOpenId()
     .AddHuiaUi()
     .AddHuiaSecurityHeaders();
 

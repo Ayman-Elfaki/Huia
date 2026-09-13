@@ -170,17 +170,16 @@ public sealed class HeadlessExternalLoginTests
                     services.AddDbContext<HuiaDbContext>(o => o.UseSqlite(connection));
 
                     services
-                        .AddHuia(huia =>
+                        .AddHuiaHeadless(huia =>
                         {
                             huia.UseIssuer("https://headless-external.test");
-                            huia.AddTenant("ext", tenant => tenant.Authentication.UseExternalLogin(ext =>
+                            huia.UseExternalLogin(ext =>
                             {
                                 ext.AddGoogle("test-client-id", "test-client-secret");
                                 ext.AllowReturnUrlPrefix("https://shop.example.com/");
-                            }));
+                            });
                         })
-                        .AddEntityFrameworkCoreStores<HuiaDbContext>()
-                        .AddHuiaHeadless();
+                        .AddEntityFrameworkCoreStores<HuiaDbContext>();
                 });
                 web.Configure(app =>
                 {

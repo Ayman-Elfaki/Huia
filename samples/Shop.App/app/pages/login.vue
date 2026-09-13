@@ -6,6 +6,10 @@ const tab = ref<'password' | 'phone'>('password')
 const mode = ref<'login' | 'register'>('login')
 const email = ref('')
 const password = ref('')
+// Shared with the phone tab's complete-profile step below — registration and phone sign-up are never
+// in progress at the same time, so reusing one pair of refs is simpler than duplicating them.
+const firstName = ref('')
+const lastName = ref('')
 const error = ref<string | null>(null)
 const info = ref<string | null>(null)
 const busy = ref(false)
@@ -18,7 +22,7 @@ async function onSubmit() {
   info.value = null
 
   if (mode.value === 'register') {
-    const result = await register({ email: email.value, password: password.value })
+    const result = await register({ email: email.value, password: password.value, firstName: firstName.value, lastName: lastName.value })
     busy.value = false
     if (!result.ok) {
       error.value = 'Registration failed. Check the password requirements.'
@@ -44,8 +48,6 @@ const phoneStep = ref<'number' | 'code' | 'profile'>('number')
 const phoneNumber = ref('')
 const code = ref('')
 const flowId = ref('')
-const firstName = ref('')
-const lastName = ref('')
 
 async function onPhoneStart() {
   busy.value = true
@@ -119,6 +121,14 @@ async function onPhoneCompleteProfile() {
           {{ mode === 'login' ? 'Sign in' : 'Create an account' }}
         </h2>
         <form class="space-y-3" @submit.prevent="onSubmit">
+          <template v-if="mode === 'register'">
+            <UFormField label="First name">
+              <UInput v-model="firstName" type="text" placeholder="First name" autocomplete="given-name" required class="w-full" />
+            </UFormField>
+            <UFormField label="Last name">
+              <UInput v-model="lastName" type="text" placeholder="Last name" autocomplete="family-name" required class="w-full" />
+            </UFormField>
+          </template>
           <UFormField label="Email">
             <UInput v-model="email" type="email" placeholder="Email" autocomplete="username" required class="w-full" />
           </UFormField>

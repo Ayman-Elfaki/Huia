@@ -42,10 +42,9 @@ internal static class PasskeyEndpoints
     // ---- anonymous: discoverable primary sign-in --------------------------------------------------
 
     private static async Task<IResult> AssertionOptionsAsync(
-        HttpContext context, HuiaSignInManager<HuiaUser> signInManager, IAntiforgery antiforgery,
-        IHuiaTenantContext tenantContext, HuiaOptions options)
+        HttpContext context, HuiaSignInManager<HuiaUser> signInManager, IAntiforgery antiforgery, TenantOptions tenant)
     {
-        if (!PasskeyEnabled(options, tenantContext))
+        if (!tenant.Authentication.IsPasskeyLoginEnabled)
         {
             return Results.NotFound();
         }
@@ -62,9 +61,9 @@ internal static class PasskeyEndpoints
     private static async Task<IResult> AssertionAsync(
         HttpContext context, HuiaSignInManager<HuiaUser> signInManager, IAntiforgery antiforgery,
         IHuiaTenantContext tenantContext, IHuiaEventPublisher events, TimeProvider timeProvider,
-        HuiaOptions options, PasskeyAssertionRequest body)
+        TenantOptions tenant, PasskeyAssertionRequest body)
     {
-        if (!PasskeyEnabled(options, tenantContext))
+        if (!tenant.Authentication.IsPasskeyLoginEnabled)
         {
             return Results.NotFound();
         }
@@ -103,10 +102,9 @@ internal static class PasskeyEndpoints
     // ---- bearer-protected: credential management ------------------------------------------------
 
     private static async Task<IResult> CreationOptionsAsync(
-        HttpContext context, HuiaSignInManager<HuiaUser> signInManager, HuiaUserManager userManager,
-        IHuiaTenantContext tenantContext, HuiaOptions options)
+        HttpContext context, HuiaSignInManager<HuiaUser> signInManager, HuiaUserManager userManager, TenantOptions tenant)
     {
-        if (!PasskeyEnabled(options, tenantContext))
+        if (!tenant.Authentication.IsPasskeyLoginEnabled)
         {
             return Results.NotFound();
         }
@@ -130,9 +128,9 @@ internal static class PasskeyEndpoints
 
     private static async Task<IResult> RegisterAsync(
         HttpContext context, HuiaUserManager userManager, HuiaPasskeyRegistrar<HuiaUser> registrar,
-        IHuiaTenantContext tenantContext, HuiaOptions options, PasskeyRegistrationRequest body)
+        TenantOptions tenant, PasskeyRegistrationRequest body)
     {
-        if (!PasskeyEnabled(options, tenantContext))
+        if (!tenant.Authentication.IsPasskeyLoginEnabled)
         {
             return Results.NotFound();
         }
@@ -224,11 +222,6 @@ internal static class PasskeyEndpoints
     }
 
     // ---- helpers -------------------------------------------------------------------------------
-
-    private static bool PasskeyEnabled(HuiaOptions options, IHuiaTenantContext tenantContext) =>
-        tenantContext.CurrentTenantIdOrDefault is { } tenantId
-        && options.Tenants.TryGetValue(tenantId, out var tenant)
-        && tenant.Authentication.IsPasskeyLoginEnabled;
 
     private static async Task<bool> ValidateAntiforgeryAsync(HttpContext context, IAntiforgery antiforgery)
     {

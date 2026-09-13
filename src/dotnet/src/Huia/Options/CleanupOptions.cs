@@ -34,7 +34,7 @@ public sealed class CleanupOptions : IHuiaOptionsSection
     void IHuiaOptionsSection.Validate(string path, List<string> errors)
     {
         // OpenIddict.Quartz's own SetMinimum*Lifespan throw below 10 minutes; validate up front for a
-        // clear HuiaOptionsException instead of a raw ArgumentOutOfRangeException from deep in AddHuia.
+        // clear HuiaOptionsException instead of a raw ArgumentOutOfRangeException from deep in AddHuiaOpenId.
         errors.Require(MinimumAuthorizationLifespan >= TimeSpan.FromMinutes(10),
             HuiaOptionsValidation.Combine(path, nameof(MinimumAuthorizationLifespan)), "must be at least 10 minutes.");
         errors.Require(MinimumTokenLifespan >= TimeSpan.FromMinutes(10),

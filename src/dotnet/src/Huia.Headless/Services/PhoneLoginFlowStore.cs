@@ -11,7 +11,6 @@ namespace Huia.Headless.Services;
 /// </summary>
 public sealed record PhoneLoginFlow(
     string Id,
-    string TenantId,
     string PhoneNumber,
     string? UserId,
     string? PendingSignupId,
@@ -21,12 +20,11 @@ public sealed record PhoneLoginFlow(
 public interface IPhoneLoginFlowStore
 {
     /// <summary>Starts a flow for a number, tied to either an existing account, a pending signup, or neither.</summary>
-    /// <param name="tenantId">The tenant.</param>
     /// <param name="phoneNumber">The E.164 number.</param>
     /// <param name="userId">The existing account id, when the number matched one.</param>
     /// <param name="pendingSignupId">The pending-signup id, when the number is new and auto-provisioning is on.</param>
     /// <returns>The new flow id.</returns>
-    string Create(string tenantId, string phoneNumber, string? userId, string? pendingSignupId);
+    string Create(string phoneNumber, string? userId, string? pendingSignupId);
 
     /// <summary>Gets a flow by id, or <see langword="null"/> when unknown or expired.</summary>
     /// <param name="id">The flow id.</param>
@@ -51,11 +49,11 @@ internal sealed class PhoneLoginFlowStore(TimeProvider timeProvider) : IPhoneLog
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(10);
     private readonly ConcurrentDictionary<string, Entry> _entries = new(StringComparer.Ordinal);
 
-    public string Create(string tenantId, string phoneNumber, string? userId, string? pendingSignupId)
+    public string Create(string phoneNumber, string? userId, string? pendingSignupId)
     {
         Sweep();
         var id = Guid.NewGuid().ToString("N");
-        _entries[id] = new Entry(tenantId, phoneNumber, userId, pendingSignupId, Verified: false, timeProvider.GetUtcNow().Add(Lifetime));
+        _entries[id] = new Entry(phoneNumber, userId, pendingSignupId, Verified: false, timeProvider.GetUtcNow().Add(Lifetime));
         return id;
     }
 
@@ -67,7 +65,7 @@ internal sealed class PhoneLoginFlowStore(TimeProvider timeProvider) : IPhoneLog
             return null;
         }
 
-        return new PhoneLoginFlow(id, entry.TenantId, entry.PhoneNumber, entry.UserId, entry.PendingSignupId, entry.Verified);
+        return new PhoneLoginFlow(id, entry.PhoneNumber, entry.UserId, entry.PendingSignupId, entry.Verified);
     }
 
     public void MarkVerified(string id)
@@ -93,7 +91,6 @@ internal sealed class PhoneLoginFlowStore(TimeProvider timeProvider) : IPhoneLog
     }
 
     private sealed record Entry(
-        string TenantId,
         string PhoneNumber,
         string? UserId,
         string? PendingSignupId,

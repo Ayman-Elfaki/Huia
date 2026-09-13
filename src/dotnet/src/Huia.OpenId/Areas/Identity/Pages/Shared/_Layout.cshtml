@@ -13,6 +13,9 @@
     var privacyUrl = ViewData["PrivacyUrl"] as string;
     var supportUrl = ViewData["SupportUrl"] as string;
     var hasFooter = !string.IsNullOrEmpty(termsUrl) || !string.IsNullOrEmpty(privacyUrl) || !string.IsNullOrEmpty(supportUrl);
+    var brand = ViewData["Brand"] as string ?? heading;
+    var pageTitle = ViewData["Title"] as string;
+    var title = string.IsNullOrWhiteSpace(pageTitle) ? brand : $"{brand} - {pageTitle}";
 }
 <!DOCTYPE html>
 <html lang="@culture.TwoLetterISOLanguageName" dir="@dir">
@@ -32,7 +35,7 @@
     {
         <script>@Html.Raw(featureDetect)</script>
     }
-    <title>@ViewData["Title"] · @heading</title>
+    <title>@title</title>
     <link rel="stylesheet" href="@(pathBase)/_content/Huia.OpenId/css/huia.css" />
     <link rel="stylesheet" href="@(pathBase)/_content/Huia.OpenId/css/flag-icons.css" />
     @if (!string.IsNullOrEmpty(faviconUrl))

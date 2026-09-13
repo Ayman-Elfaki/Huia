@@ -37,7 +37,7 @@ export function useHuia() {
     hasAnyRole,
 
     /** Creates an account. Does not sign in — call `login()` afterward (once any required email confirmation is done). */
-    async register(opts: { email: string, password: string }): Promise<{ ok: boolean, error?: unknown }> {
+    async register(opts: { email: string, password: string, firstName: string, lastName: string }): Promise<{ ok: boolean, error?: unknown }> {
       try {
         await useRequestFetch()(paths.registerPath, { method: 'POST', body: opts })
         return { ok: true }

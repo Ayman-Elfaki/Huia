@@ -2,7 +2,12 @@ name: release-npm
 
 on:
   push:
-    tags: ['nuxt-v*.*.*']
+    tags:
+      - 'nuxt-v*.*.*'
+      - 'nuxt-headless-v*.*.*'
+      - 'next-oidc-v*.*.*'
+      - 'next-headless-v*.*.*'
+      - 'core-v*.*.*'
   workflow_dispatch: {}
 
 permissions:
@@ -12,47 +17,74 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     environment: npm
-    defaults:
-      run:
-        working-directory: src/nuxt
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: src/nuxt/package-lock.json
           registry-url: https://registry.npmjs.org
 
-      # src/nuxt/.npmrc pins legacy-peer-deps (npm 10's arborist crashes on the nuxt peer graph).
-      - run: npm ci
+      - name: Determine target package directory and prefix
+        id: pkg
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ "$tag" == nuxt-v* ]]; then
+            echo "dir=src/nuxt/nuxt-huia-oidc" >> "$GITHUB_OUTPUT"
+            echo "prefix=nuxt-v" >> "$GITHUB_OUTPUT"
+          elif [[ "$tag" == nuxt-headless-v* ]]; then
+            echo "dir=src/nuxt/nuxt-huia-headless" >> "$GITHUB_OUTPUT"
+            echo "prefix=nuxt-headless-v" >> "$GITHUB_OUTPUT"
+          elif [[ "$tag" == next-oidc-v* ]]; then
+            echo "dir=src/next/next-huia-oidc" >> "$GITHUB_OUTPUT"
+            echo "prefix=next-oidc-v" >> "$GITHUB_OUTPUT"
+          elif [[ "$tag" == next-headless-v* ]]; then
+            echo "dir=src/next/next-huia-headless" >> "$GITHUB_OUTPUT"
+            echo "prefix=next-headless-v" >> "$GITHUB_OUTPUT"
+          elif [[ "$tag" == core-v* ]]; then
+            echo "dir=src/shared/huia-auth-core" >> "$GITHUB_OUTPUT"
+            echo "prefix=core-v" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Unknown tag format: $tag"
+            exit 1
+          fi
+
+      - name: Build Core Dependency if needed
+        if: steps.pkg.outputs.prefix != 'core-v'
+        run: |
+          npm --prefix src/shared/huia-auth-core install
+          npm --prefix src/shared/huia-auth-core run build
+
+      - name: Install dependencies
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: npm install
 
       - name: Verify tag matches package.json version
-        if: startsWith(github.ref, 'refs/tags/nuxt-v')
+        working-directory: ${{ steps.pkg.outputs.dir }}
         run: |
-          tag_version="${GITHUB_REF_NAME#nuxt-v}"
+          prefix="${{ steps.pkg.outputs.prefix }}"
+          tag_version="${GITHUB_REF_NAME#$prefix}"
           pkg_version="$(node -p "require('./package.json').version")"
           if [ "$tag_version" != "$pkg_version" ]; then
             echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version $pkg_version. Bump package.json and re-tag."
             exit 1
           fi
 
-      # Same proof-of-health steps as the ci.yml nuxt-module job, run once more before publishing.
-      - run: npm run dev:prepare
-      - run: npm run test:types
-      - run: npm test
+      - name: Test package
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: npm test
 
-      - name: Build
-        run: npm run prepack
+      - name: Build package
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: npm run build
 
       - name: Publish to npm
-        run: npm publish
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/nuxt-v')
         run: gh release create "${{ github.ref_name }}" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

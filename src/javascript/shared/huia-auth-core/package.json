@@ -1,0 +1,42 @@
+{
+  "name": "huia-auth-core",
+  "version": "1.0.0-alpha.1",
+  "description": "Shared authentication primitives for Huia client modules (Next.js & Nuxt 4)",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayman-Elfaki/Huia.git",
+    "directory": "src/javascript/shared/huia-auth-core"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest watch"
+  },
+  "dependencies": {
+    "iron-webcrypto": "^1.2.1",
+    "openid-client": "^6.1.0",
+    "uncrypto": "^0.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.2"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}

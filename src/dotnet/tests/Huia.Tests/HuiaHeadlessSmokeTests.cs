@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Huia.Tests;
 
 /// <summary>
-/// Proves the common core surface (AddHuia, AddEntityFrameworkCoreStores, the generic managers) is
+/// Proves the common core surface (AddHuiaHeadless, AddEntityFrameworkCoreStores, the generic managers) is
 /// actually consumable by a second, structurally different flavor — not just OpenId reflected back at
 /// itself. <see cref="ServiceProviderOptions.ValidateOnBuild"/> also catches captive-dependency mistakes
 /// (as it did for <c>HuiaRoleSeeder</c> during development) before anything tries to boot for real.
@@ -24,13 +24,12 @@ public sealed class HuiaHeadlessSmokeTests
         services.AddDbContext<HuiaDbContext>(o => o.UseSqlite("DataSource=:memory:"));
 
         services
-            .AddHuia(huia =>
+            .AddHuiaHeadless(huia =>
             {
                 huia.UseIssuer("https://headless.test");
-                huia.AddTenant("default", tenant => tenant.Authentication.UseEmailAndPasswordLogin());
+                huia.UseEmailAndPasswordLogin();
             })
-            .AddEntityFrameworkCoreStores<HuiaDbContext>()
-            .AddHuiaHeadless();
+            .AddEntityFrameworkCoreStores<HuiaDbContext>();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
@@ -61,43 +60,21 @@ public sealed class HuiaHeadlessSmokeTests
     }
 
     [Fact]
-    public void AddHuiaHeadless_rejects_anything_other_than_exactly_one_tenant()
-    {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddDbContext<HuiaDbContext>(o => o.UseSqlite("DataSource=:memory:"));
-
-        var builder = services
-            .AddHuia(huia =>
-            {
-                huia.UseIssuer("https://headless.test");
-                huia.AddTenant("one", tenant => tenant.Authentication.UseEmailAndPasswordLogin());
-                huia.AddTenant("two", tenant => tenant.Authentication.UseEmailAndPasswordLogin());
-            })
-            .AddEntityFrameworkCoreStores<HuiaDbContext>();
-
-        Should.Throw<InvalidOperationException>(() => builder.AddHuiaHeadless());
-    }
-
-    [Fact]
     public void AddHuiaHeadless_rejects_external_login_with_no_allowed_return_url_prefix()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<HuiaDbContext>(o => o.UseSqlite("DataSource=:memory:"));
 
-        var builder = services
-            .AddHuia(huia =>
-            {
-                huia.UseIssuer("https://headless.test");
-                huia.AddTenant("default", tenant => tenant.Authentication.UseExternalLogin(
-                    ext => ext.AddGoogle("client-id", "client-secret")));
-            })
-            .AddEntityFrameworkCoreStores<HuiaDbContext>();
-
         // An unvalidated returnUrl on the challenge would be an open redirect, so this is enforced —
         // not just documented — the moment external login is enabled with no allow-list configured.
-        Should.Throw<InvalidOperationException>(() => builder.AddHuiaHeadless());
+        Should.Throw<InvalidOperationException>(() => services
+            .AddHuiaHeadless(huia =>
+            {
+                huia.UseIssuer("https://headless.test");
+                huia.UseExternalLogin(ext => ext.AddGoogle("client-id", "client-secret"));
+            })
+            .AddEntityFrameworkCoreStores<HuiaDbContext>());
     }
 
     [Fact]
@@ -108,17 +85,16 @@ public sealed class HuiaHeadlessSmokeTests
         services.AddDbContext<HuiaDbContext>(o => o.UseSqlite("DataSource=:memory:"));
 
         services
-            .AddHuia(huia =>
+            .AddHuiaHeadless(huia =>
             {
                 huia.UseIssuer("https://headless.test");
-                huia.AddTenant("default", tenant => tenant.Authentication.UseExternalLogin(ext =>
+                huia.UseExternalLogin(ext =>
                 {
                     ext.AddGoogle("client-id", "client-secret");
                     ext.AllowReturnUrlPrefix("https://shop.example.com/");
-                }));
+                });
             })
-            .AddEntityFrameworkCoreStores<HuiaDbContext>()
-            .AddHuiaHeadless();
+            .AddEntityFrameworkCoreStores<HuiaDbContext>();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {

@@ -8,6 +8,7 @@ using Huia.OpenId.Keys;
 using Huia.OpenId.OpenIddict;
 using Huia.OpenId.Security;
 using Huia.OpenId.Services;
+using Huia.Options;
 using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -16,27 +17,32 @@ using Quartz;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Adds the multi-tenant, OpenIddict-backed flavor of Huia on top of the common <c>AddHuia()</c> +
-/// <c>.AddEntityFrameworkCoreStores&lt;HuiaDbContext, HuiaUser, HuiaRole&gt;()</c> setup: Finbuckle
-/// multi-tenancy, per-tenant identity/passkey options, the flow-specific sign-in options, the OpenIddict
-/// server/client, the signing-key lifecycle, passwordless SMS + external login, and the readiness health
-/// check. Call <c>.AddHuiaUi()</c> and/or <c>.AddHuiaSecurityHeaders()</c> afterward for the Razor Pages
+/// Adds the multi-tenant, OpenIddict-backed flavor of Huia: Finbuckle multi-tenancy, per-tenant
+/// identity/passkey options, the flow-specific sign-in options, the OpenIddict server/client, the
+/// signing-key lifecycle, passwordless SMS + external login, and the readiness health check. The sole
+/// entry point for an OpenId host — chain <c>.AddEntityFrameworkCoreStores&lt;HuiaDbContext, HuiaUser,
+/// HuiaRole&gt;()</c>, then <c>.AddHuiaUi()</c> and/or <c>.AddHuiaSecurityHeaders()</c> for the Razor Pages
 /// account UI and the opt-in security-headers middleware.
 /// </summary>
 public static class HuiaOpenIdServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the multi-tenant, OpenIddict-backed flavor of Huia. Call after <c>AddHuia()</c> and
-    /// <c>.AddEntityFrameworkCoreStores&lt;HuiaDbContext, HuiaUser, HuiaRole&gt;()</c>.
+    /// Registers the multi-tenant, OpenIddict-backed flavor of Huia.
     /// </summary>
-    /// <param name="builder">The Huia builder.</param>
-    /// <returns>The same builder, for chaining.</returns>
-    public static IHuiaBuilder AddHuiaOpenId(this IHuiaBuilder builder)
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Configures the options tree; validated before anything is registered.</param>
+    /// <returns>An <see cref="IHuiaBuilder"/> for feature opt-ins.</returns>
+    /// <exception cref="HuiaOptionsException">The configured options are invalid.</exception>
+    public static IHuiaBuilder AddHuiaOpenId(this IServiceCollection services, Action<HuiaOptionsBuilder> configure)
     {
-        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
 
-        var services = builder.Services;
-        var options = builder.Options;
+        var optionsBuilder = new HuiaOptionsBuilder();
+        configure(optionsBuilder);
+        var options = optionsBuilder.Build();
+
+        var builder = services.AddHuiaCore(options);
 
         services.AddHuiaMultiTenancy(options);
 

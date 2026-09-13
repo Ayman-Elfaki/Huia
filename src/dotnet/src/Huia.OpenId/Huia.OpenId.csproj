@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <Description>Huia ASP.NET Core integration: AddHuia() / UseHuia(), Finbuckle base-path multi-tenancy, the OpenIddict server and client, the Razor Pages account UI, passwordless SMS, the signing-key lifecycle jobs and opt-in security headers.</Description>
+    <Description>Huia ASP.NET Core integration: AddHuiaOpenId() / UseHuiaOpenId(), Finbuckle base-path multi-tenancy, the OpenIddict server and client, the Razor Pages account UI, passwordless SMS, the signing-key lifecycle jobs and opt-in security headers.</Description>
     <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;aspnetcore;openiddict;razor-pages</PackageTags>
     <RootNamespace>Huia.OpenId</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>

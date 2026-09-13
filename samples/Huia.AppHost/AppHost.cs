@@ -4,9 +4,16 @@ using Microsoft.Extensions.Configuration;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-const string todoAppUrl = "http://localhost:3000";
-const string adminAppUrl = "http://localhost:3001";
-const string shopAppUrl = "http://localhost:3002";
+const string todoAppUrl = "http://todo-app.dev.localhost:3000";
+const string adminAppUrl = "http://admin-app.dev.localhost:3001";
+const string shopAppUrl = "http://shop-app.dev.localhost:3002";
+const string todoNextUrl = "http://todo-next.dev.localhost:3050";
+const string shopNextUrl = "http://shop-next.dev.localhost:3060";
+// Shop.Api's own fixed dev port (Properties/launchSettings.json pins the same value) — referenced as a
+// plain literal, not shopApi.GetEndpoint(...), because huia-external needs it (ShopConsumer__BaseUrl,
+// below) and shop-api itself WaitFor()s huia-external: an endpoint-reference here in both directions
+// is a genuine circular dependency that leaves huia-external stuck (never even reaches DCP).
+const string shopApiUrl = "https://shop-api.dev.localhost:5341";
 
 // E2E toggle and Postgres-volume toggle are configuration-driven so the Aspire.Hosting.Testing
 // fixture can flip them (E2E on, ephemeral database) without editing this file.
@@ -32,6 +39,7 @@ if (usePostgresVolume)
 
 var postgres = postgresServer.AddDatabase("huia");
 var todoPostgres = postgresServer.AddDatabase("todo");
+var shopPostgres = postgresServer.AddDatabase("shop");
 
 // Shared Redis. The Nuxt sample apps (todo-app, admin-app) mount their server-side session/token
 // store on it via Nitro's `redis` storage driver, so sign-in state survives an app restart and is
@@ -72,10 +80,34 @@ if (!enableE2E)
 // Aspire polls /health/ready, so a resource only turns "healthy" — and anything that WaitFor()s it only
 // starts — once the identity provider is actually ready to serve.
 var external = builder.AddProject<Projects.Huia_External>("huia-external")
+    .WithEndpoint("https", endpoint => endpoint.TargetHost = "external.dev.localhost")
     .WithHttpHealthCheck("/health/ready")
-    .WithEnvironment("Huia__Database", "Sqlite");
+    .WithEnvironment("Huia__Database", "Sqlite")
+    .WithEnvironment("ShopConsumer__BaseUrl", shopApiUrl);
+
+// Huia.Headless is single-tenant and entirely self-contained — its bearer tokens are only valid
+// against the app that minted them, so unlike todoApi/identityServer it never shares a database with
+// another service; it still gets its own dedicated "shop" Postgres database below.
+var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
+    .WithEndpoint("https", endpoint => endpoint.TargetHost = "shop-api.dev.localhost")
+    .WithExternalHttpEndpoints()
+    .WithEnvironment("Huia__EnableE2E", enableE2E ? "true" : "false")
+    .WithEnvironment("Shop__AppUrl", shopAppUrl)
+    .WithEnvironment("Shop__NextAppUrl", shopNextUrl)
+    .WithEnvironment("Huia__ExternalIssuer", external.GetEndpoint("https"))
+    .WithReference(shopPostgres)
+    .WaitFor(shopPostgres)
+    .WithReference(external)
+    .WaitFor(external);
+
+shopApi.WithEnvironment("Huia__Issuer", shopApiUrl);
+
+// Huia.External needs Shop.Api's own base URL (it's the OIDC relying party for the "shop-api" client
+// registered there, not Shop.App — see samples/Huia.External/Program.cs). Passed as the shopApiUrl
+// literal above (not shopApi.GetEndpoint("https")) to avoid the circular reference explained there.
 
 var identityServer = builder.AddProject<Projects.Huia_IdentityServer>("huia-identityserver")
+    .WithEndpoint("https", endpoint => endpoint.TargetHost = "identityserver.dev.localhost")
     .WithReference(postgres)
     .WaitFor(postgres)
     .WithReference(mailpit.GetEndpoint("smtp"))
@@ -83,6 +115,7 @@ var identityServer = builder.AddProject<Projects.Huia_IdentityServer>("huia-iden
     .WithEnvironment("Huia__Database", "Postgres")
     .WithEnvironment("Huia__EnableE2E", enableE2E ? "true" : "false")
     .WithEnvironment("Clients__TodoApp__BaseUrl", todoAppUrl)
+    .WithEnvironment("Clients__TodoNext__BaseUrl", todoNextUrl)
     .WithEnvironment("Clients__AdminApp__BaseUrl", adminAppUrl)
     .WithEnvironment("Huia__ExternalIssuer", external.GetEndpoint("https"))
     .WithEnvironment(context =>
@@ -99,7 +132,9 @@ var identityServer = builder.AddProject<Projects.Huia_IdentityServer>("huia-iden
     .WaitFor(external);
 
 var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
+    .WithEndpoint("http", endpoint => endpoint.TargetHost = "todo-api.dev.localhost")
     .WithExternalHttpEndpoints()
+
     .WithUrlForEndpoint("http", url =>
     {
         url.DisplayText = "Scalar UI";
@@ -117,22 +152,7 @@ var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
 todoApi.WithEnvironment("Todo__PublicUrl", todoApi.GetEndpoint("http"));
 identityServer.WithEnvironment("Clients__TodoApi__BaseUrl", todoApi.GetEndpoint("http"));
 
-// Huia.Headless is single-tenant and entirely self-contained — its bearer tokens are only valid
-// against the app that minted them, so unlike todoApi/identityServer this never shares a database or
-// waits on the OIDC identity server.
-var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
-    .WithExternalHttpEndpoints()
-    .WithEnvironment("Huia__EnableE2E", enableE2E ? "true" : "false")
-    .WithEnvironment("Shop__AppUrl", shopAppUrl)
-    .WithEnvironment("Huia__ExternalIssuer", external.GetEndpoint("https"))
-    .WithReference(external)
-    .WaitFor(external);
-shopApi.WithEnvironment("Huia__Issuer", shopApi.GetEndpoint("https"));
 
-// Huia.External needs Shop.Api's own base URL (it's the OIDC relying party for the "shop-api" client
-// registered there, not Shop.App — see samples/Huia.External/Program.cs) — set after shopApi exists,
-// same lazy-reference pattern as identityServer's email-host binding above.
-external.WithEnvironment("ShopConsumer__BaseUrl", shopApi.GetEndpoint("https"));
 
 // The admin CLI (device-authorization grant against the master tenant). It runs one command and exits,
 // so it does not start with the rest of the graph — press "Start" in the dashboard to open it in a
@@ -146,6 +166,7 @@ builder.AddProject<Projects.Huia_Cli>("huia-cli")
 
 builder.AddViteApp("todo-app", "../Todo.App")
     .WithHttpEndpoint(port: 3000, env: "PORT")
+    .WithEndpoint("http", endpoint => endpoint.TargetHost = "todo-app.dev.localhost")
     .WaitFor(identityServer)
     .WaitFor(todoApi)
     .WithReference(redis)
@@ -167,6 +188,7 @@ builder.AddViteApp("admin-app", "../Huia.AdminUI")
     // Unproxied on a fixed port so the app's origin matches its registered OIDC redirect URI
     // (http://localhost:3001/...) under both `aspire run` and Aspire.Hosting.Testing.
     .WithHttpEndpoint(port: 3001, targetPort: 3001, env: "PORT", isProxied: false)
+    .WithEndpoint("http", endpoint => endpoint.TargetHost = "admin-app.dev.localhost")
     .WaitFor(identityServer)
     .WithReference(redis)
     .WaitFor(redis)
@@ -183,6 +205,7 @@ builder.AddViteApp("admin-app", "../Huia.AdminUI")
 
 builder.AddViteApp("shop-app", "../Shop.App")
     .WithHttpEndpoint(port: 3002, env: "PORT")
+    .WithEndpoint("http", endpoint => endpoint.TargetHost = "shop-app.dev.localhost")
     .WaitFor(shopApi)
     .WithEnvironment("NUXT_PUBLIC_SHOP_API_URL", shopApi.GetEndpoint("https"))
     .WithEnvironment("NUXT_HUIA_HEADLESS_SESSION_PASSWORD", GenerateRandomUrlSafeString())
@@ -191,6 +214,33 @@ builder.AddViteApp("shop-app", "../Shop.App")
     .WithExternalHttpEndpoints()
     .WithNpm()
     ;
+
+builder.AddNextJsApp("todo-next", "../Todo.Next")
+    .WithHttpEndpoint(port: 3050, env: "PORT")
+    .WithEndpoint("http", endpoint => endpoint.TargetHost = "todo-next.dev.localhost")
+    .WaitFor(identityServer)
+    .WaitFor(todoApi)
+    .WithEnvironment("PORT", "3050")
+    .WithEnvironment("HUIA_BASE_URL", identityServer.GetEndpoint("https"))
+    .WithEnvironment("TODO_API_URL", todoApi.GetEndpoint("http"))
+    .WithEnvironment("HUIA_SESSION_PASSWORD", GenerateRandomUrlSafeString())
+    .WithEnvironment("HUIA_CLIENT_ID", "todo-next")
+    .WithEnvironment("HUIA_CLIENT_SECRET", "todo-next-secret")
+    .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
+    .WithExternalHttpEndpoints()
+    ;
+
+builder.AddNextJsApp("shop-next", "../Shop.Next")
+    .WithHttpEndpoint(port: 3060, env: "PORT")
+    .WithEndpoint("http", endpoint => endpoint.TargetHost = "shop-next.dev.localhost")
+    .WaitFor(shopApi)
+    .WithEnvironment("PORT", "3060")
+    .WithEnvironment("SHOP_API_URL", shopApi.GetEndpoint("https"))
+    .WithEnvironment("HUIA_SESSION_PASSWORD", GenerateRandomUrlSafeString())
+    .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
+    .WithExternalHttpEndpoints()
+    ;
+
 
 builder.Build().Run();
 

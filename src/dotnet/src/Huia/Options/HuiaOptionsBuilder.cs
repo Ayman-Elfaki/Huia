@@ -2,7 +2,7 @@ namespace Huia.Options;
 
 /// <summary>
 /// Fluent surface for configuring <see cref="HuiaOptions"/> in code. Wraps a single options instance so
-/// the same builder can be used from <c>AddHuia</c> and from unit tests without a DI container.
+/// the same builder can be used from <c>AddHuiaOpenId</c> and from unit tests without a DI container.
 /// </summary>
 public sealed class HuiaOptionsBuilder
 {

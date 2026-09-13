@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Huia core: domain model, options tree, eventing abstractions, constants, and the shared AddHuia() entry point and endpoint/service surface common to every Huia flavor (multi-tenant OpenId, single-tenant Headless). Uses the ASP.NET Core shared framework for lightweight HTTP/cookie/routing abstractions, but never Entity Framework Core directly, and never OpenIddict or Finbuckle.</Description>
+    <Description>Huia core: domain model, options tree, eventing abstractions, constants, and the shared plumbing and endpoint/service surface common to every Huia flavor (multi-tenant OpenId, single-tenant Headless) — consumed via each flavor's own AddHuiaOpenId()/AddHuiaHeadless() entry point. Uses the ASP.NET Core shared framework for lightweight HTTP/cookie/routing abstractions, but never Entity Framework Core directly, and never OpenIddict or Finbuckle.</Description>
     <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;oidc</PackageTags>
     <RootNamespace>Huia</RootNamespace>
   </PropertyGroup>

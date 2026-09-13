@@ -72,6 +72,19 @@ jobs:
       # Build Shop.App's .output for ShopStackFixture.
       - working-directory: samples/Shop.App
         run: npm ci && npm run build
+      # Build Todo.Next and Shop.Next production outputs for NextFrontEndFixture.
+      - name: Build Shared Core & Next.js libraries
+        run: |
+          npm --prefix src/shared/huia-auth-core install
+          npm --prefix src/shared/huia-auth-core run build
+          npm --prefix src/next/next-huia-oidc install
+          npm --prefix src/next/next-huia-oidc run build
+          npm --prefix src/next/next-huia-headless install
+          npm --prefix src/next/next-huia-headless run build
+      - working-directory: samples/Todo.Next
+        run: npm install && npm run build
+      - working-directory: samples/Shop.Next
+        run: npm install && npm run build
       - run: pwsh tests/Huia.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       # Warm the images the AppHost-backed mail E2E fixture needs (Docker is preinstalled on the runner).
       - run: docker pull axllent/mailpit:v1.21 || true
@@ -105,40 +118,80 @@ jobs:
       - run: dotnet build src/Huia.OpenId/Huia.OpenId.csproj -c Release -p:ForceAccountUiAssets=true
       - run: git diff --exit-code src/Huia.OpenId/wwwroot
 
-  nuxt-module:
+  huia-auth-core:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: src/nuxt/nuxt-huia-oidc
+        working-directory: src/shared/huia-auth-core
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: src/nuxt/nuxt-huia-oidc/package-lock.json
-      # src/nuxt/nuxt-huia-oidc/.npmrc pins legacy-peer-deps (npm 10's arborist crashes on the nuxt peer graph).
-      - run: npm ci
-      - run: npm run dev:prepare
-      - run: npm run test:types
+      - run: npm install
       - run: npm test
-      # nuxi build of the playground — smoke test that openid-client v6 (ESM) bundles under Nitro.
-      - run: npm run dev:build
+      - run: npm run build
+
+  next-huia-oidc:
+    runs-on: ubuntu-latest
+    needs: huia-auth-core
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
+      - working-directory: src/next/next-huia-oidc
+        run: |
+          npm install
+          npm test
+          npm run build
+
+  next-huia-headless:
+    runs-on: ubuntu-latest
+    needs: huia-auth-core
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
+      - working-directory: src/next/next-huia-headless
+        run: |
+          npm install
+          npm test
+          npm run build
+
+  nuxt-module:
+    runs-on: ubuntu-latest
+    needs: huia-auth-core
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
+      - working-directory: src/nuxt/nuxt-huia-oidc
+        run: |
+          npm install
+          npm run dev:prepare
+          npm run test:types
+          npm test
+          npm run dev:build
 
   nuxt-huia-headless-module:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/nuxt/nuxt-huia-headless
+    needs: huia-auth-core
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: src/nuxt/nuxt-huia-headless/package-lock.json
-      - run: npm ci
-      - run: npm run dev:prepare
-      - run: npm run test:types
-      - run: npm test
-      - run: npm run dev:build
+      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
+      - working-directory: src/nuxt/nuxt-huia-headless
+        run: |
+          npm install
+          npm run dev:prepare
+          npm run test:types
+          npm test
+          npm run dev:build

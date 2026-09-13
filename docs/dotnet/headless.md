@@ -15,16 +15,13 @@ Package split: `Huia.Headless.EntityFrameworkCore` provides a plain
 ```csharp
 builder.Services.AddDbContext<HuiaDbContext>(o => o.UseSqlite(connectionString));
 
-builder.Services.AddHuia(huia =>
-{
-    huia.UseIssuer("https://api.example.com");
-    huia.AddTenant("shop", tenant =>
+builder.Services
+    .AddHuiaHeadless(huia =>
     {
-        tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-    });
-})
-    .AddEntityFrameworkCoreStores<HuiaDbContext>()
-    .AddHuiaHeadless();
+        huia.UseIssuer("https://api.example.com");
+        huia.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+    })
+    .AddEntityFrameworkCoreStores<HuiaDbContext>();
 
 var app = builder.Build();
 app.UseAuthentication();
@@ -32,8 +29,12 @@ app.UseAuthorization();
 app.MapHuiaHeadlessEndpoints();
 ```
 
-`AddHuiaHeadless()` throws `InvalidOperationException` if the options tree configures anything other
-than **exactly one** tenant — this is enforced, not just a convention. There is no `UseHuiaHeadless()`
+`AddHuiaHeadless(...)` is the single entry point — unlike `Huia.OpenId`'s `AddTenant("id", tenant => ...)`,
+its options builder has no tenant wrapper, no branding (nothing in Headless's JSON API ever reads it), and
+no OAuth-client/scope/role seeding (OpenIddict concepts Headless never uses) — `UseEmailAndPasswordLogin`,
+`UsePhoneLogin`, `UseExternalLogin` and `UsePasskeyLogin` sit directly on the root builder. Internally it
+still builds exactly one tenant, so the multi-tenancy seam shared with `Huia.OpenId` keeps working
+unchanged — but that's an implementation detail a Headless host never sees. There is no `UseHuiaHeadless()`
 middleware helper and no `AddHuiaOpenId()`-style multi-tenancy wiring; a Headless host is a normal
 single-tenant ASP.NET Core app, so it calls the framework's own `UseAuthentication()`/`UseAuthorization()`
 directly.
@@ -53,7 +54,8 @@ Core Identity's stock bearer tokens (Data-Protection-wrapped, **opaque**, not JW
 ## Endpoints — `MapHuiaHeadlessEndpoints()`
 
 ```
-endpoints.MapGroup("identity").MapIdentityApi<HuiaUser>();   // register, login, refresh, confirmEmail,
+endpoints.MapHuiaHeadlessRegisterEndpoint();                 // POST identity/register — Huia's own
+endpoints.MapGroup("identity").MapIdentityApi<HuiaUser>();   // login, refresh, confirmEmail,
                                                               // resendConfirmationEmail, forgotPassword,
                                                               // resetPassword, 2FA, /manage/info
 endpoints.MapHuiaHeadlessMeEndpoints();                      // GET identity/me
@@ -64,10 +66,11 @@ endpoints.MapHuiaHeadlessExternalEndpoints();                // identity/account
 
 The framework's own [`MapIdentityApi<TUser>()`](https://learn.microsoft.com/aspnet/core/security/authentication/identity-api-authorization)
 does the heavy lifting (this is the same `identity-api-authorization` pattern Microsoft documents for
-SPAs); `Huia.Headless` adds four things on top:
+SPAs) for everything except registration; `Huia.Headless` adds five things on top:
 
 | Route | Auth | Purpose |
 |---|---|---|
+| `POST identity/register` | anonymous | Huia's own — requires and persists `firstName`/`lastName` alongside `email`/`password`, unlike `MapIdentityApi`'s stock `RegisterRequest` (email + password only, so a first/last name in the body would otherwise be silently discarded). Mapped with a lower route order than `MapIdentityApi`'s own `/register`, so this one always wins the match. |
 | `GET identity/me` | bearer | Richer claims than `MapIdentityApi`'s stock `/manage/info` (`email`/`isEmailConfirmed` only) — `sub`, `email`, `phoneNumber`, `firstName`, `lastName`, `roles`, so a client doesn't have to reverse-engineer claims out of an intentionally opaque token. |
 | `POST identity/passkey/assertion-options` / `assertion` | anonymous | Discoverable passkey sign-in — sets `signInManager.AuthenticationScheme = IdentityConstants.BearerScheme` before signing in, since the passkey ceremony otherwise assumes a cookie. |
 | `identity/manage/passkeys` (`GET`/`POST`), `{id}` (`PATCH`/`DELETE`) | bearer | Credential management, reusing `HuiaPasskeyRegistrar<TUser>` — the same registrar `Huia.OpenId` uses. |
@@ -123,7 +126,7 @@ unvalidated cross-origin `returnUrl` here would be a textbook open redirect. So 
 explicit allow-list instead:
 
 ```csharp
-tenant.Authentication.UseExternalLogin(ext =>
+huia.UseExternalLogin(ext =>
 {
     ext.AddGoogle(clientId, clientSecret);
     ext.AllowReturnUrlPrefix("https://shop.example.com/");   // required — AddHuiaHeadless() throws without it

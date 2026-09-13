@@ -12,20 +12,34 @@ and external login via the OpenIddict client.
 
 ```
 src/
-  dotnet/     The .NET solution (Huia.slnx) — three NuGet packages:
-                Huia                       domain model, options, eventing, constants (no ASP.NET / EF dep)
-                Huia.OpenId.EntityFrameworkCore   HuiaDbContext, renamed entities, tenant-scoped stores
-                Huia.OpenId            AddHuia()/UseHuia(), OpenIddict server + client, Razor account UI,
-                                          passwordless SMS, key-lifecycle jobs, security headers
+  dotnet/     The .NET solution (Huia.slnx) — NuGet packages:
+                Huia                               domain model, options, eventing, constants (no ASP.NET / EF dep)
+                Huia.EntityFrameworkCore           base EF Core abstractions
+                Huia.OpenId                        OpenIddict server + client, Razor account UI, PAR, SMS, passkeys
+                Huia.OpenId.EntityFrameworkCore    HuiaDbContext, tenant-scoped stores
+                Huia.Headless                      pure JSON authentication endpoints & bearer tokens
+                Huia.Headless.EntityFrameworkCore  headless store implementations
               plus tests/ (unit, integration, pen-test).
-  nuxt/       huia-nuxt — a Nuxt 4 module: OIDC Authorization Code + PKCE + PAR, transparent
-              server-side token refresh, dual-layer session (Nitro Storage for tokens; encrypted,
-              chunked cookies for the session id + minimal claims). Tokens never reach the browser.
-              See src/nuxt/SPEC.md for the full technical specification.
 
-samples/      Huia.AppHost (Aspire), Huia.IdentityServer, Huia.External, Todo.Api,
-              Todo.App (Nuxt), Huia.AdminUI (Nuxt)
-tests/        Huia.E2ETests — full-stack Playwright E2E across the .NET hosts and the Nuxt apps
+  shared/
+    huia-auth-core/   Platform-agnostic TypeScript core engine: iron-webcrypto session sealing,
+                      cookie chunking, token refresh mutex, HuiaOidcHelper (PAR + PKCE), and
+                      HuiaHeadlessClient. Shared by all Next.js and Nuxt packages.
+
+  next/
+    next-huia-oidc/       Next.js 14/15 library for Huia.OpenId (Route Handlers, Server Components,
+                          iron-webcrypto dual-layer session, HuiaOidcProvider, useUserSession).
+    next-huia-headless/   Next.js 14/15 library for Huia.Headless (Route Handlers, password auth,
+                          SMS OTP, external login, HuiaHeadlessProvider, useHuia).
+
+  nuxt/
+    nuxt-huia-oidc/       Nuxt 4 module for Huia.OpenId (built on huia-auth-core).
+    nuxt-huia-headless/   Nuxt 4 module for Huia.Headless (built on huia-auth-core).
+
+samples/      Huia.AppHost (Aspire), Huia.IdentityServer, Huia.External,
+              Todo.Api, Todo.App (Nuxt), Todo.Next (Next.js),
+              Shop.Api, Shop.App (Nuxt), Shop.Next (Next.js), Huia.AdminUI (Nuxt)
+tests/        Huia.E2ETests — full-stack Playwright E2E across .NET hosts, Nuxt, and Next.js apps
 docs/         VitePress documentation site
 ```
 
@@ -45,17 +59,26 @@ dotnet build Huia.slnx -c Release
 dotnet test  Huia.slnx -c Release --filter "Category!=Container&Category!=E2E&Category!=PenTest"
 ```
 
-`Container` tests need Docker (Testcontainers PostgreSQL). `PenTest` runs the sample host
-out-of-process. `E2E` (repo-root `tests/`) needs the sample builds plus Playwright browsers.
-
-### Nuxt auth module
+### TypeScript Packages & Modules
 
 ```bash
-cd src/nuxt
-npm install
-npm run dev:prepare
-npm test          # Vitest unit + integration (mocked OP)
-npm run dev       # playground on http://localhost:3000
+# Shared Core
+cd src/shared/huia-auth-core
+npm install && npm test && npm run build
+
+# Next.js Libraries
+cd src/next/next-huia-oidc
+npm install && npm test && npm run build
+
+cd src/next/next-huia-headless
+npm install && npm test && npm run build
+
+# Nuxt Modules
+cd src/nuxt/nuxt-huia-oidc
+npm install && npm test && npm run build
+
+cd src/nuxt/nuxt-huia-headless
+npm install && npm test && npm run build
 ```
 
 ### Docs

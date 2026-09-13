@@ -1,7 +1,8 @@
 # Options reference
 
 The Huia configuration tree is rooted at `HuiaOptions` and bound from the `Huia` configuration
-section, configured in code via the `AddHuia(huia => …)` callback, or both. The full tree and its
+section, configured in code via the `AddHuiaOpenId(huia => …)` callback (or, for the flat Headless
+options shape, `AddHuiaHeadless(huia => …)`), or both. The full tree and its
 one-pass validation are specified in [`src/dotnet/SPEC.md` §3](https://github.com/Ayman-Elfaki/Huia/blob/main/src/dotnet/SPEC.md); this page is the practical reference.
 
 ## The tree

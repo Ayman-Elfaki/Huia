@@ -2,6 +2,7 @@ using Huia.DependencyInjection;
 using Huia.Entities;
 using Huia.Headless.Identity;
 using Huia.Headless.Multitenancy;
+using Huia.Headless.Options;
 using Huia.Headless.Services;
 using Huia.Identity;
 using Huia.Multitenancy;
@@ -23,34 +24,31 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// password reset, 2FA, profile) plus passkeys and passwordless SMS phone login, on the shared
 /// <see cref="HuiaUserManager{TUser}"/> / <see cref="HuiaSignInManager{TUser}"/> /
 /// <see cref="HuiaPasskeyRegistrar{TUser}"/> core. No multi-tenancy, no OpenIddict — call
-/// <c>.AddHuiaOpenId()</c> from <c>Huia.OpenId</c> instead for that.
+/// <c>.AddHuiaOpenId(...)</c> from <c>Huia.OpenId</c> instead for that.
 /// </summary>
 public static class HuiaHeadlessServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the single-tenant flavor of Huia. Call after <c>AddHuia()</c> and
-    /// <c>.AddEntityFrameworkCoreStores&lt;TContext&gt;()</c>.
+    /// Registers the single-tenant, bearer-token flavor of Huia. The sole entry point for a Headless
+    /// host — chain <c>.AddEntityFrameworkCoreStores&lt;TContext&gt;()</c> afterward.
     /// </summary>
-    /// <param name="builder">The Huia builder.</param>
-    /// <returns>The same builder, for chaining.</returns>
-    /// <exception cref="InvalidOperationException">The host configured anything other than exactly one tenant.</exception>
-    public static IHuiaBuilder AddHuiaHeadless(this IHuiaBuilder builder)
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Configures the options tree; validated before anything is registered.</param>
+    /// <returns>An <see cref="IHuiaBuilder"/> for feature opt-ins.</returns>
+    /// <exception cref="HuiaOptionsException">The configured options are invalid.</exception>
+    public static IHuiaBuilder AddHuiaHeadless(this IServiceCollection services, Action<HuiaHeadlessOptionsBuilder> configure)
     {
-        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
 
-        var services = builder.Services;
-        var options = builder.Options;
+        var optionsBuilder = new HuiaHeadlessOptionsBuilder();
+        configure(optionsBuilder);
+        var (options, tenant) = optionsBuilder.Build();
 
-        if (options.Tenants.Count != 1)
-        {
-            throw new InvalidOperationException(
-                "Huia.Headless is single-tenant: configure exactly one tenant with AddTenant(...). " +
-                $"{options.Tenants.Count} were configured.");
-        }
+        var builder = services.AddHuiaCore(options);
 
-        var tenantId = options.Tenants.Keys.Single();
-        var tenant = options.Tenants[tenantId];
-        services.AddSingleton<IHuiaTenantContext>(new HuiaSingleTenantContext(tenantId));
+        services.AddSingleton(tenant);
+        services.AddSingleton<IHuiaTenantContext>(new HuiaSingleTenantContext(HuiaHeadlessOptionsBuilder.TenantId));
         services.AddHttpContextAccessor();
 
         // Bearer tokens (ASP.NET Core Identity's own scheme), not cookies — MapIdentityApi issues and

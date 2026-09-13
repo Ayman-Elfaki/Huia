@@ -43,7 +43,7 @@ Three wiring calls:
 ```csharp
 builder.Services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(cs).UseOpenIddict());
 
-builder.Services.AddHuia(huia =>
+builder.Services.AddHuiaOpenId(huia =>
     {
         huia.UseIssuer("https://id.example.com");
         huia.AddTenant("acme", tenant =>
@@ -280,7 +280,7 @@ Only `EmailOptions` and `SmsOptions` have `MergedWith(tenant?)`:
   `OnValidatePrincipal` to reject a ticket whose `__tenant__` property ≠ the request's resolved
   tenant. Per-tenant cookie names via `ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>`
   → `huia.auth.{tenant}` / `huia.2fa.{tenant}` (a browser can hold several tenants' sessions).
-  Wiring order in `AddHuia`: `AddHuiaMultiTenancy` → `AddHuiaIdentity` → `AddHuiaCookieHardening` →
+  Wiring order in `AddHuiaOpenId`: `AddHuiaMultiTenancy` → `AddHuiaIdentity` → `AddHuiaCookieHardening` →
   `AddHuiaPerTenantAuthentication`. Cookie hardening is always-on (`huia.auth` `Secure` gated on
   `!DisableTransportSecurityRequirement`, `SameSite=Lax` deliberately so the RP→IdP top-level nav
   keeps the session); `huia.flow` (return-URL protector) `SameSite=Strict`; `huia.csrf` antiforgery

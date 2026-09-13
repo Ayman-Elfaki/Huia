@@ -11,17 +11,27 @@ var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:53
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
 var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "http://localhost:3040")!;
+var shopNextAppUrl = builder.Configuration.GetValue("Shop:NextAppUrl", "http://localhost:3060")!;
+var databaseProvider = builder.Configuration.GetValue("Huia:Database", (string?)null);
 
-// A single shared in-memory SQLite connection kept open for the process lifetime — same pattern
-// Huia.IdentityServer/Huia.External use, so the schema created at start-up survives every request.
-var connection = new SqliteConnection(builder.Configuration.GetConnectionString("huia") ?? "DataSource=:memory:");
-connection.Open();
-builder.Services.AddSingleton(connection);
-builder.Services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(connection));
+var rawConnectionString = builder.Configuration.GetConnectionString("shop") ?? builder.Configuration.GetConnectionString("huia");
+if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase)
+    || (rawConnectionString != null && rawConnectionString.Contains("DataSource", StringComparison.OrdinalIgnoreCase))
+    || rawConnectionString == null)
+{
+    var sqliteConnection = new SqliteConnection(rawConnectionString ?? "DataSource=:memory:");
+    sqliteConnection.Open();
+    builder.Services.AddSingleton(sqliteConnection);
+    builder.Services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(sqliteConnection));
+}
+else
+{
+    builder.Services.AddDbContext<HuiaDbContext>(options => options.UseNpgsql(rawConnectionString));
+}
 builder.Services.AddHostedService<SchemaInitializer>();
 
 builder.Services
-    .AddHuia(huia =>
+    .AddHuiaHeadless(huia =>
     {
         huia.UseIssuer(issuer);
         if (builder.Environment.IsDevelopment() || enableE2E)
@@ -29,30 +39,36 @@ builder.Services
             huia.DisableTransportSecurityRequirement();
         }
 
-        huia.AddTenant("shop", tenant =>
+        huia.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+        huia.UsePhoneLogin(phone =>
         {
-            tenant.Branding.DisplayName = "Huia Shop";
-            tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-            tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
-            // Huia.External is the same mock upstream IdP Todo.App uses via Huia.OpenId's OpenIddict
-            // client — here it's consumed through the classic OpenIdConnect handler instead, since
-            // Huia.Headless has no OpenIddict dependency. See samples/Huia.External/Program.cs for the
-            // "shop-api" client registration this must match (client id/secret, redirect URI).
-            tenant.Authentication.UseExternalLogin(ext =>
+            phone.AllowAutoProvisioning = true;
+
+            // The default throttle (1 successful sign-in per 2 minutes) is right for a production
+            // IdP but makes this sample unusable for its own purpose — people (and the e2e suite)
+            // repeatedly signing in and out with the same test number. Same fix Huia.IdentityServer's
+            // own "e2e" tenant already applies for the identical reason.
+            phone.SuccessfulLoginsPerWindow = 100;
+            phone.SuccessfulLoginsPerDay = 1000;
+        });
+        // Huia.External is the same mock upstream IdP Todo.App uses via Huia.OpenId's OpenIddict
+        // client — here it's consumed through the classic OpenIdConnect handler instead, since
+        // Huia.Headless has no OpenIddict dependency. See samples/Huia.External/Program.cs for the
+        // "shop-api" client registration this must match (client id/secret, redirect URI).
+        huia.UseExternalLogin(ext =>
+        {
+            ext.AddOpenIdConnect("HuiaExternal", "shop-api", "shop-api-secret", $"{externalIssuer}/partners", p =>
             {
-                ext.AddOpenIdConnect("HuiaExternal", "shop-api", "shop-api-secret", $"{externalIssuer}/partners", p =>
-                {
-                    p.DisplayName = "Partner";
-                    p.Scopes.Add("profile");
-                    p.Scopes.Add("email");
-                });
-                ext.EnableAccountsLinking();
-                ext.AllowReturnUrlPrefix(shopAppUrl);
+                p.DisplayName = "Partner";
+                p.Scopes.Add("profile");
+                p.Scopes.Add("email");
             });
+            ext.EnableAccountsLinking();
+            ext.AllowReturnUrlPrefix(shopAppUrl);
+            ext.AllowReturnUrlPrefix(shopNextAppUrl);
         });
     })
-    .AddEntityFrameworkCoreStores<HuiaDbContext>()
-    .AddHuiaHeadless();
+    .AddEntityFrameworkCoreStores<HuiaDbContext>();
 
 if (builder.Environment.IsDevelopment() || enableE2E)
 {
@@ -64,7 +80,15 @@ if (builder.Environment.IsDevelopment() || enableE2E)
 
 builder.Services.AddSingleton<CartStore>();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
-    .WithOrigins(builder.Configuration.GetValue("Shop:AppUrl", "http://localhost:3040")!)
+    .SetIsOriginAllowed(origin =>
+    {
+        if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+        {
+            return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    })
     .AllowAnyHeader()
     .AllowAnyMethod()
     .AllowCredentials()));
@@ -76,6 +100,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHuiaHeadlessEndpoints();
+app.MapHuiaHeadlessAdminEndpoints().RequireAuthorization();
 
 if (enableE2E)
 {

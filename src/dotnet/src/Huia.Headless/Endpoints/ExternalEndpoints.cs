@@ -41,11 +41,9 @@ internal static class ExternalEndpoints
         group.MapPost("complete-profile", CompleteProfileAsync).WithName("huia.headless.external.complete-profile");
     }
 
-    private static IResult ChallengeAsync(
-        HttpContext context, string provider, string returnUrl, IHuiaTenantContext tenantContext, HuiaOptions options)
+    private static IResult ChallengeAsync(HttpContext context, string provider, string returnUrl, TenantOptions tenant)
     {
-        var tenantId = tenantContext.CurrentTenantId;
-        if (!TryFindProvider(options, tenantId, provider, out var registered, out var external))
+        if (!TryFindProvider(tenant, provider, out var registered, out var external))
         {
             return Results.NotFound();
         }
@@ -77,7 +75,7 @@ internal static class ExternalEndpoints
     /// </summary>
     private static async Task<IResult> DispatchAsync(
         HttpContext context, HuiaUserManager userManager, HuiaSignInManager<HuiaUser> signInManager,
-        IExternalLoginFlowStore flows, IHuiaTenantContext tenantContext, HuiaOptions options)
+        IExternalLoginFlowStore flows, TenantOptions tenant)
     {
         var info = await signInManager.GetExternalLoginInfoAsync();
         if (info is null)
@@ -89,8 +87,7 @@ internal static class ExternalEndpoints
 
         var items = info.AuthenticationProperties?.Items ?? new Dictionary<string, string?>();
         var returnUrl = items.TryGetValue("huia:return", out var r) ? r : null;
-        var tenantId = tenantContext.CurrentTenantId;
-        if (!options.Tenants.TryGetValue(tenantId, out var tenant) || tenant.Authentication.External is not { } external
+        if (tenant.Authentication.External is not { } external
             || returnUrl is null || !IsAllowedReturnUrl(returnUrl, external.AllowedReturnUrlPrefixes))
         {
             return Results.BadRequest(new { error = "invalid_return_url" });
@@ -217,11 +214,11 @@ internal static class ExternalEndpoints
     }
 
     private static bool TryFindProvider(
-        HuiaOptions options, string tenantId, string providerName, out ExternalProviderRegistration provider, out ExternalLoginOptions external)
+        TenantOptions tenant, string providerName, out ExternalProviderRegistration provider, out ExternalLoginOptions external)
     {
         provider = null!;
         external = null!;
-        if (!options.Tenants.TryGetValue(tenantId, out var tenant) || tenant.Authentication.External is not { } ext)
+        if (tenant.Authentication.External is not { } ext)
         {
             return false;
         }

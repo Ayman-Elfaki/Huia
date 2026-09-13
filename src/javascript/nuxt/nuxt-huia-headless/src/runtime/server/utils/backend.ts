@@ -63,7 +63,10 @@ function tryParseJson(text: string): unknown {
   }
 }
 
-export function registerAsync(cfg: ResolvedAuthConfig, body: { email: string, password: string }): Promise<void> {
+export function registerAsync(
+  cfg: ResolvedAuthConfig,
+  body: { email: string, password: string, firstName: string, lastName: string },
+): Promise<void> {
   return call(cfg, '/identity/register', { method: 'POST', body: JSON.stringify(body) })
 }
 

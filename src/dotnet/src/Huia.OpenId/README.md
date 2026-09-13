@@ -3,7 +3,7 @@
 The ASP.NET Core integration for the Huia identity provider.
 
 ```csharp
-builder.Services.AddHuia(huia =>
+builder.Services.AddHuiaOpenId(huia =>
 {
     huia.UseIssuer("https://id.example.com");
     huia.AddTenant("acme", tenant => { /* ... */ });

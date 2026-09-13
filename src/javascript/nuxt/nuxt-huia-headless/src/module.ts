@@ -44,6 +44,7 @@ export interface ModuleOptions {
     externalLogin?: string
     externalExchange?: string
     externalCompleteProfile?: string
+    admin?: string
   }
   /** The app's own login page (Huia.Headless has no hosted login UI to redirect to). */
   loginPage?: string
@@ -89,6 +90,7 @@ const defaults = {
     externalLogin: '/auth/external',
     externalExchange: '/auth/external-exchange',
     externalCompleteProfile: '/auth/external-complete-profile',
+    admin: '/auth/admin',
   },
   loginPage: '/login',
   externalCallbackPage: '/auth/callback',
@@ -140,6 +142,7 @@ export default defineNuxtModule<ModuleOptions>({
         externalExchangePath: opts.routes.externalExchange,
         externalCompleteProfilePath: opts.routes.externalCompleteProfile,
         externalCallbackPage: opts.externalCallbackPage,
+        adminPath: opts.routes.admin,
         // The module's own auth routes are never protected by its own middleware, regardless of
         // `middleware.exclude`, plus the app's own login/callback pages — same rationale as
         // nuxt-huia-oidc: applying "must be logged in" to the routes/pages that exist for the
@@ -163,6 +166,7 @@ export default defineNuxtModule<ModuleOptions>({
           `${opts.routes.externalLogin}/**`,
           opts.routes.externalExchange,
           opts.routes.externalCompleteProfile,
+          `${opts.routes.admin}/**`,
         ],
       },
     ) as typeof nuxt.options.runtimeConfig.public.huiaHeadless
@@ -202,6 +206,7 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({ route: `${opts.routes.externalLogin}/:provider`, method: 'get', handler: resolve('runtime/server/routes/auth/external/[provider].get') })
     addServerHandler({ route: opts.routes.externalExchange, method: 'post', handler: resolve('runtime/server/routes/auth/external/exchange.post') })
     addServerHandler({ route: opts.routes.externalCompleteProfile, method: 'post', handler: resolve('runtime/server/routes/auth/external/complete-profile.post') })
+    addServerHandler({ route: `${opts.routes.admin}/**`, handler: resolve('runtime/server/routes/auth/admin') })
     addServerHandler({ middleware: true, handler: resolve('runtime/server/middleware/session.context') })
 
     // ── type augmentation ─────────────────────────────────────────────────────

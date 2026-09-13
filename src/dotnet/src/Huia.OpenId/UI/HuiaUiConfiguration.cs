@@ -16,8 +16,8 @@ public static class HuiaUiConfiguration
 {
     /// <summary>
     /// Adds the account UI: the Razor Pages class library, view localization, the flow-token protector and
-    /// the cookie login paths. Without this, <c>AddHuia</c> still serves the protocol endpoints but has no
-    /// interactive sign-in surface.
+    /// the cookie login paths. Without this, <c>AddHuiaOpenId</c> still serves the protocol endpoints but
+    /// has no interactive sign-in surface.
     /// </summary>
     /// <param name="builder">The Huia builder.</param>
     /// <returns>The same builder, for chaining.</returns>

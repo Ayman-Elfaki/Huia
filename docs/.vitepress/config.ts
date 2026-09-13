@@ -9,8 +9,21 @@ export default withMermaid(defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: '.NET reference', link: '/dotnet/options' },
-      { text: 'Nuxt: OIDC', link: '/nuxt/overview' },
-      { text: 'Nuxt: Headless', link: '/nuxt-headless/overview' },
+      {
+        text: 'Next.js',
+        items: [
+          { text: 'OIDC (next-huia-oidc)', link: '/next/overview' },
+          { text: 'Headless (next-huia-headless)', link: '/next-headless/overview' },
+        ],
+      },
+      {
+        text: 'Nuxt',
+        items: [
+          { text: 'OIDC (nuxt-huia-oidc)', link: '/nuxt/overview' },
+          { text: 'Headless (nuxt-huia-headless)', link: '/nuxt-headless/overview' },
+        ],
+      },
+      { text: 'Core', link: '/core/overview' },
       { text: 'Architecture', link: '/architecture/overview' },
       { text: 'Security', link: '/security/index' },
     ],
@@ -42,6 +55,26 @@ export default withMermaid(defineConfig({
         text: '.NET reference — Huia.Headless',
         items: [
           { text: 'Huia.Headless', link: '/dotnet/headless' },
+        ],
+      },
+      {
+        text: 'Shared Core (huia-auth-core)',
+        items: [
+          { text: 'Overview', link: '/core/overview' },
+        ],
+      },
+      {
+        text: 'Next.js library — OIDC (next-huia-oidc)',
+        items: [
+          { text: 'Overview', link: '/next/overview' },
+          { text: 'Configuration', link: '/next/configuration' },
+        ],
+      },
+      {
+        text: 'Next.js library — Headless (next-huia-headless)',
+        items: [
+          { text: 'Overview', link: '/next-headless/overview' },
+          { text: 'Configuration', link: '/next-headless/configuration' },
         ],
       },
       {

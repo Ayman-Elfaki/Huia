@@ -8,31 +8,25 @@ using Microsoft.Extensions.Caching.Hybrid;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Entry point for registering the Huia identity provider with the DI container. Registers only what
-/// every Huia flavor needs regardless of auth mode: the validated options tree, cookie hardening,
-/// localization, the in-process event pipeline and generic ASP.NET Core infrastructure (data protection,
-/// caching, routing). A host also needs <c>.AddEntityFrameworkCoreStores&lt;...&gt;()</c> (from
-/// <c>Huia.EntityFrameworkCore</c>) and a flavor-specific extension — <c>.AddHuiaOpenId()</c> from
-/// <c>Huia.OpenId</c>, or <c>.AddHuiaHeadless()</c> from <c>Huia.Headless</c>.
+/// Shared plumbing behind both Huia flavors. Registers only what every flavor needs regardless of auth
+/// mode: the validated options tree, cookie hardening, localization, the in-process event pipeline and
+/// generic ASP.NET Core infrastructure (data protection, caching, routing). Not part of the public API —
+/// a host calls <c>.AddHuiaOpenId(...)</c> (from <c>Huia.OpenId</c>) or <c>.AddHuiaHeadless(...)</c> (from
+/// <c>Huia.Headless</c>) instead, each of which builds its own <see cref="HuiaOptions"/> tree and calls
+/// into this internally.
 /// </summary>
-public static class HuiaServiceCollectionExtensions
+internal static class HuiaServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the Huia identity provider. Chain <c>.AddEntityFrameworkCoreStores&lt;...&gt;()</c> and a
-    /// flavor extension (<c>.AddHuiaOpenId()</c> / <c>.AddHuiaHeadless()</c>) afterward to complete setup.
+    /// Registers the shared Huia plumbing against an already-built, already-validated options tree.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="configure">Configures the options tree; validated before anything is registered.</param>
+    /// <param name="options">The validated options tree, built by the calling flavor's own builder.</param>
     /// <returns>An <see cref="IHuiaBuilder"/> for feature opt-ins.</returns>
-    /// <exception cref="HuiaOptionsException">The configured options are invalid.</exception>
-    public static IHuiaBuilder AddHuia(this IServiceCollection services, Action<HuiaOptionsBuilder> configure)
+    internal static IHuiaBuilder AddHuiaCore(this IServiceCollection services, HuiaOptions options)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
-
-        var optionsBuilder = new HuiaOptionsBuilder();
-        configure(optionsBuilder);
-        var options = optionsBuilder.Build();
+        ArgumentNullException.ThrowIfNull(options);
 
         services.AddSingleton(options);
         services.AddSingleton(Options.Options.Create(options));

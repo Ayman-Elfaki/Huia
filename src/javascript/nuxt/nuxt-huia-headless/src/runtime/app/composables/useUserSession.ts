@@ -12,8 +12,18 @@ export function useUserSession() {
     loggedIn: computed(() => !!session.value.user),
     expiresAt: computed(() => session.value.expiresAt),
 
-    /** Re-read the server session (after login, on tab focus, …). */
+    /**
+     * Re-read the server session (after login, on tab focus, …). Client-only: called as the second
+     * nested `await` inside a login/exchange flow (e.g. `useHuia().login()` → `fetch()` →
+     * `useRequestFetch()`), which during SSR is one level deeper than Vue's `withAsyncContext` — set up
+     * only for a page's own top-level `await` — keeps the Nuxt app context alive for; `useRequestFetch()`
+     * then throws `NUXT_E1001` instead of refreshing anything. Skipping server-side is safe: the session
+     * cookie a login/exchange call sets is already on the response by the time `fetch()` runs, so a
+     * follow-up navigation (the usual next step) picks up the fresh session on its own next request
+     * regardless of whether this reactive `session` ref got updated first.
+     */
     async fetch(): Promise<void> {
+      if (import.meta.server) return
       session.value = await useRequestFetch()(paths.sessionPath) as UserSession
     },
 

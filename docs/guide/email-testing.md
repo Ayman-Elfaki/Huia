@@ -34,7 +34,7 @@ with `Huia:EnableE2E=true`, which skips the data volume so every run starts with
 
 ## Config binding
 
-The library only reads `HuiaOptions.Email` from the `AddHuia(...)` delegate, so the sample binds the
+The library only reads `HuiaOptions.Email` from the `AddHuiaOpenId(...)` delegate, so the sample binds the
 `Huia:Email` section itself:
 
 ```csharp

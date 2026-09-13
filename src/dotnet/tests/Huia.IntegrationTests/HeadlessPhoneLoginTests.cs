@@ -124,17 +124,13 @@ public sealed class HeadlessPhoneLoginTests
                     services.AddSingleton<Huia.Services.ISmsSender>(sms);
 
                     services
-                        .AddHuia(huia =>
+                        .AddHuiaHeadless(huia =>
                         {
                             huia.UseIssuer("https://headless-phone.test");
-                            huia.AddTenant("phone", tenant =>
-                            {
-                                tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
-                                tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
-                            });
+                            huia.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
+                            huia.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
                         })
-                        .AddEntityFrameworkCoreStores<HuiaDbContext>()
-                        .AddHuiaHeadless();
+                        .AddEntityFrameworkCoreStores<HuiaDbContext>();
                 });
                 web.Configure(app =>
                 {

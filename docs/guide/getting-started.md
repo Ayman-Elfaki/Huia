@@ -20,7 +20,7 @@ module it pairs with.
 ```csharp
 builder.Services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(connectionString).UseOpenIddict());
 
-builder.Services.AddHuia(huia =>
+builder.Services.AddHuiaOpenId(huia =>
 {
     huia.UseIssuer("https://id.example.com");
     huia.AddTenant("acme", tenant =>
@@ -31,7 +31,6 @@ builder.Services.AddHuia(huia =>
     });
 })
     .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
-    .AddHuiaOpenId()
     .AddHuiaUi();
 
 var app = builder.Build();

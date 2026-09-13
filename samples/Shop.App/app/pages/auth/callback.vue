@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// This page is CSR-only (see the `/auth/callback` entry in nuxt.config.ts's `routeRules` for why —
+// server-rendering the exchange call breaks it two different ways).
+
 const route = useRoute()
 const { exchangeExternalCode, completeExternalProfile } = useHuia()
 

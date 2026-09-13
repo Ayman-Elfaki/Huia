@@ -4,7 +4,7 @@ import { registerAsync, BackendError } from '../../utils/backend'
 
 export default defineEventHandler(async (event) => {
   const cfg = resolveAuthConfig(event)
-  const body = await readBody<{ email: string, password: string }>(event)
+  const body = await readBody<{ email: string, password: string, firstName: string, lastName: string }>(event)
 
   try {
     await registerAsync(cfg, body)

@@ -27,14 +27,13 @@ fits and links only that flavor's packages:
 | `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext : MultiTenantIdentityDbContext`, layers OpenIddict + tenant-scoped composite indexes on top of the common schema — ships no migrations |
 | `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()` / `MapHuiaEndpoints()` — multi-tenant, OpenIddict server + client, the Razor account UI, passwordless SMS, key-lifecycle jobs, security headers |
 | `Huia.Headless.EntityFrameworkCore` | `HuiaDbContext : IdentityDbContext<HuiaUser,HuiaRole,string>` — single-tenant, no multi-tenant schema additions |
-| `Huia.Headless` | `AddHuiaHeadless()` / `MapHuiaHeadlessEndpoints()` — single-tenant only (throws otherwise), ASP.NET Core Identity bearer tokens via `MapIdentityApi`, no OpenIddict, no Finbuckle. See the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api) |
+| `Huia.Headless` | `AddHuiaHeadless(...)` / `MapHuiaHeadlessEndpoints()` — a flat, tenant-free, branding-free options builder (single-tenant internally, but that's never exposed), ASP.NET Core Identity bearer tokens via `MapIdentityApi`, no OpenIddict, no Finbuckle. See the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api) |
 
-A host wires one flavor via:
+A host wires one flavor via a single root call:
 
 ```csharp
-services.AddHuia(huia => { /* options */ })
-    .AddEntityFrameworkCoreStores<HuiaDbContext>()   // Huia.EntityFrameworkCore
-    .AddHuiaOpenId();                                // or .AddHuiaHeadless()
+services.AddHuiaOpenId(huia => { /* options */ })       // or .AddHuiaHeadless(huia => { /* options */ })
+    .AddEntityFrameworkCoreStores<HuiaDbContext>();      // Huia.EntityFrameworkCore
 ```
 
 ## Pipeline order

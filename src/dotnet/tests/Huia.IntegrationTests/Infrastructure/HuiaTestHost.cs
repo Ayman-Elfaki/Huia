@@ -25,7 +25,7 @@ namespace Huia.IntegrationTests.Infrastructure;
 /// <summary>
 /// An in-process Huia host: a bare <see cref="HostBuilder"/> with the test server, a SQLite database on a
 /// single shared open connection, and the schema created by a hosted service that is registered
-/// <em>before</em> <c>AddHuia</c> so it runs first.
+/// <em>before</em> <c>AddHuiaOpenId</c> so it runs first.
 /// </summary>
 public sealed class HuiaTestHost : IAsyncDisposable
 {
@@ -75,8 +75,8 @@ public sealed class HuiaTestHost : IAsyncDisposable
     /// <summary>Starts a host. <paramref name="configureOptions"/> runs after the two default tenants are added.</summary>
     /// <param name="configureOptions">Extra options configuration.</param>
     /// <param name="configureEndpoints">Extra endpoints to map alongside the built-in probe.</param>
-    /// <param name="configureBuilder">Runs against the <c>IHuiaBuilder</c> returned by <c>AddHuia</c> (feature opt-ins).</param>
-    /// <param name="timeProvider">A clock to install before <c>AddHuia</c>.</param>
+    /// <param name="configureBuilder">Runs against the <c>IHuiaBuilder</c> returned by <c>AddHuiaOpenId</c> (feature opt-ins).</param>
+    /// <param name="timeProvider">A clock to install before <c>AddHuiaOpenId</c>.</param>
     /// <returns>The started host.</returns>
     public static async Task<HuiaTestHost> StartAsync(
         Action<HuiaOptionsBuilder>? configureOptions = null,
@@ -104,7 +104,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
                     services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(connection));
                     services.AddSingleton<IHostedService, SchemaInitializer>();
 
-                    var builder = services.AddHuia(huia =>
+                    var builder = services.AddHuiaOpenId(huia =>
                     {
                         huia.UseIssuer("https://id.huia.test");
                         huia.DisableTransportSecurityRequirement();
@@ -153,7 +153,6 @@ public sealed class HuiaTestHost : IAsyncDisposable
                     });
                     builder
                         .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
-                        .AddHuiaOpenId()
                         .AddHuiaUi();
                     services.AddSingleton(sms);
                     services.AddScoped<Huia.Services.ISmsSender>(_ => sms);

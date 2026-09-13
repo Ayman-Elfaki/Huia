@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/ui',
     // first-party auth module — referenced from source in the monorepo
-    '../../src/nuxt/nuxt-huia-headless/src/module',
+    '../../src/javascript/nuxt/nuxt-huia-headless/src/module',
   ],
 
   css: ['~/assets/css/main.css'],
@@ -22,6 +22,16 @@ export default defineNuxtConfig({
     head: {
       title: 'Huia Shop',
     },
+  },
+
+  // /auth/callback exchanges a one-time code and redirects — no SEO value, transient URL — and
+  // server-rendering it actively breaks the exchange: the composables it calls need Nuxt's app
+  // context one level deeper than SSR's `withAsyncContext` keeps alive, and even a successful
+  // server-side call doesn't propagate the backend's Set-Cookie back to the real response, so the
+  // session cookie silently never reaches the browser. CSR-only sidesteps both. (`definePageMeta({
+  // ssr: false })` on the page itself was not reliably honoured here — this route-rule form is.)
+  routeRules: {
+    '/auth/callback': { ssr: false },
   },
 
   huiaHeadless: {

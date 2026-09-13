@@ -36,11 +36,11 @@ internal static class PhoneEndpoints
         HttpContext context, HuiaUserManager userManager, IPhoneNumberService phoneNumbers,
         IOtpRateLimiter rateLimiter, IPhoneLoginRateLimiter phoneLoginRateLimiter, IOtpService<HuiaUser> otpService,
         IPendingPhoneSignup pendingSignups, IPhoneLoginFlowStore flows, ISmsSender smsSender,
-        ICaptchaVerifier captcha, IHuiaTenantContext tenantContext, HuiaOptions options,
+        ICaptchaVerifier captcha, IHuiaTenantContext tenantContext, TenantOptions tenant,
         IHuiaEventPublisher events, TimeProvider timeProvider, StartPhoneLoginRequest body)
     {
         var tenantId = tenantContext.CurrentTenantId;
-        var phoneOptions = PhoneOptionsFor(options, tenantId);
+        var phoneOptions = tenant.Authentication.Phone;
         if (phoneOptions is null)
         {
             return Results.NotFound();
@@ -77,7 +77,7 @@ internal static class PhoneEndpoints
         {
             var code = await otpService.IssueAsync(user, phoneOptions);
             delivered = await smsSender.SendOtpAsync(tenantId, e164, code, context.RequestAborted);
-            flowId = flows.Create(tenantId, e164, user.Id, null);
+            flowId = flows.Create(e164, user.Id, null);
             await events.PublishAsync(new OtpRequestedEvent(tenantId, user.Id, maskedForEvent, delivered, timeProvider.GetUtcNow()));
         }
         else if (phoneOptions.AllowAutoProvisioning)
@@ -85,14 +85,14 @@ internal static class PhoneEndpoints
             var code = otpService.GenerateCode(phoneOptions);
             var pendingId = pendingSignups.Create(tenantId, e164, code, phoneOptions);
             delivered = await smsSender.SendOtpAsync(tenantId, e164, code, context.RequestAborted);
-            flowId = flows.Create(tenantId, e164, null, pendingId);
+            flowId = flows.Create(e164, null, pendingId);
             await events.PublishAsync(new OtpRequestedEvent(tenantId, null, maskedForEvent, delivered, timeProvider.GetUtcNow()));
         }
         else
         {
             // Unknown number, auto-provisioning off: still hand back a flow id and behave identically on
             // verify, to avoid letting a client distinguish "no such number" from "code sent".
-            flowId = flows.Create(tenantId, e164, null, null);
+            flowId = flows.Create(e164, null, null);
             await events.PublishAsync(new OtpRequestedEvent(tenantId, null, maskedForEvent, false, timeProvider.GetUtcNow()));
         }
 
@@ -102,11 +102,11 @@ internal static class PhoneEndpoints
     private static async Task<IResult> VerifyAsync(
         HttpContext context, HuiaUserManager userManager, HuiaSignInManager<HuiaUser> signInManager,
         IPhoneLoginFlowStore flows, IPendingPhoneSignup pendingSignups, IOtpService<HuiaUser> otpService,
-        IPhoneLoginRateLimiter phoneLoginRateLimiter, IHuiaTenantContext tenantContext, HuiaOptions options,
+        IPhoneLoginRateLimiter phoneLoginRateLimiter, IHuiaTenantContext tenantContext, TenantOptions tenant,
         IHuiaEventPublisher events, TimeProvider timeProvider, VerifyPhoneLoginRequest body)
     {
         var tenantId = tenantContext.CurrentTenantId;
-        var phoneOptions = PhoneOptionsFor(options, tenantId);
+        var phoneOptions = tenant.Authentication.Phone;
         if (phoneOptions is null)
         {
             return Results.NotFound();
@@ -255,9 +255,6 @@ internal static class PhoneEndpoints
             [new Claim(HuiaConstants.ClaimTypes.AuthenticationMethod, HuiaConstants.AuthenticationMethods.Sms)]);
         await events.PublishAsync(new UserLoggedInEvent(tenantId, user.Id, HuiaConstants.AuthenticationMethods.Sms, null, timeProvider.GetUtcNow()));
     }
-
-    private static PhoneOptions? PhoneOptionsFor(HuiaOptions options, string tenantId) =>
-        options.Tenants.TryGetValue(tenantId, out var tenant) ? tenant.Authentication.Phone : null;
 
     private static string MaskOf(string e164) =>
         e164.Length <= 4 ? "••••" : "••••" + e164[^4..];

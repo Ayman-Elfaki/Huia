@@ -20,7 +20,7 @@ public static class HuiaEntityFrameworkCoreServiceCollectionExtensions
     /// <typeparam name="TContext">The host's concrete <c>DbContext</c>.</typeparam>
     /// <typeparam name="TUser">The concrete user entity, at least as derived as <see cref="HuiaUser"/>.</typeparam>
     /// <typeparam name="TRole">The concrete role entity, at least as derived as <see cref="HuiaRole"/>.</typeparam>
-    /// <param name="builder">The Huia builder, from <c>AddHuia()</c>.</param>
+    /// <param name="builder">The Huia builder, from <c>AddHuiaOpenId(...)</c> or <c>AddHuiaHeadless(...)</c>.</param>
     /// <returns>The same builder, for chaining.</returns>
     /// <exception cref="InvalidOperationException"><typeparamref name="TContext"/> was not registered first.</exception>
     public static IHuiaBuilder AddEntityFrameworkCoreStores<TContext, TUser, TRole>(this IHuiaBuilder builder)
@@ -60,7 +60,7 @@ public static class HuiaEntityFrameworkCoreServiceCollectionExtensions
 
     /// <summary>Convenience overload for a host using the plain common <see cref="HuiaUser"/> / <see cref="HuiaRole"/> entities directly.</summary>
     /// <typeparam name="TContext">The host's concrete <c>DbContext</c>.</typeparam>
-    /// <param name="builder">The Huia builder, from <c>AddHuia()</c>.</param>
+    /// <param name="builder">The Huia builder, from <c>AddHuiaOpenId(...)</c> or <c>AddHuiaHeadless(...)</c>.</param>
     /// <returns>The same builder, for chaining.</returns>
     public static IHuiaBuilder AddEntityFrameworkCoreStores<TContext>(this IHuiaBuilder builder)
         where TContext : IdentityDbContext<HuiaUser, HuiaRole, string>
