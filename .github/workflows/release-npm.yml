@@ -8,7 +8,11 @@ on:
       - 'next-oidc-v*.*.*'
       - 'next-headless-v*.*.*'
       - 'core-v*.*.*'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing package tag to publish (for example next-headless-v1.0.0-alpha.1)'
+        required: true
 
 permissions:
   contents: write
@@ -19,6 +23,8 @@ jobs:
     environment: npm
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
 
       - uses: actions/setup-node@v7
         with:
@@ -28,21 +34,21 @@ jobs:
       - name: Determine target package directory and prefix
         id: pkg
         run: |
-          tag="${GITHUB_REF_NAME}"
+          tag="${{ inputs.tag || github.ref_name }}"
           if [[ "$tag" == nuxt-v* ]]; then
-            echo "dir=src/nuxt/nuxt-huia-oidc" >> "$GITHUB_OUTPUT"
+            echo "dir=src/javascript/nuxt/nuxt-huia-oidc" >> "$GITHUB_OUTPUT"
             echo "prefix=nuxt-v" >> "$GITHUB_OUTPUT"
           elif [[ "$tag" == nuxt-headless-v* ]]; then
-            echo "dir=src/nuxt/nuxt-huia-headless" >> "$GITHUB_OUTPUT"
+            echo "dir=src/javascript/nuxt/nuxt-huia-headless" >> "$GITHUB_OUTPUT"
             echo "prefix=nuxt-headless-v" >> "$GITHUB_OUTPUT"
           elif [[ "$tag" == next-oidc-v* ]]; then
-            echo "dir=src/next/next-huia-oidc" >> "$GITHUB_OUTPUT"
+            echo "dir=src/javascript/next/next-huia-oidc" >> "$GITHUB_OUTPUT"
             echo "prefix=next-oidc-v" >> "$GITHUB_OUTPUT"
           elif [[ "$tag" == next-headless-v* ]]; then
-            echo "dir=src/next/next-huia-headless" >> "$GITHUB_OUTPUT"
+            echo "dir=src/javascript/next/next-huia-headless" >> "$GITHUB_OUTPUT"
             echo "prefix=next-headless-v" >> "$GITHUB_OUTPUT"
           elif [[ "$tag" == core-v* ]]; then
-            echo "dir=src/shared/huia-auth-core" >> "$GITHUB_OUTPUT"
+            echo "dir=src/javascript/shared/huia-auth-core" >> "$GITHUB_OUTPUT"
             echo "prefix=core-v" >> "$GITHUB_OUTPUT"
           else
             echo "::error::Unknown tag format: $tag"
@@ -52,8 +58,8 @@ jobs:
       - name: Build Core Dependency if needed
         if: steps.pkg.outputs.prefix != 'core-v'
         run: |
-          npm --prefix src/shared/huia-auth-core install
-          npm --prefix src/shared/huia-auth-core run build
+          npm --prefix src/javascript/shared/huia-auth-core install
+          npm --prefix src/javascript/shared/huia-auth-core run build
 
       - name: Install dependencies
         working-directory: ${{ steps.pkg.outputs.dir }}
@@ -63,10 +69,11 @@ jobs:
         working-directory: ${{ steps.pkg.outputs.dir }}
         run: |
           prefix="${{ steps.pkg.outputs.prefix }}"
-          tag_version="${GITHUB_REF_NAME#$prefix}"
+          tag_version="${{ inputs.tag || github.ref_name }}"
+          tag_version="${tag_version#$prefix}"
           pkg_version="$(node -p "require('./package.json').version")"
           if [ "$tag_version" != "$pkg_version" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version $pkg_version. Bump package.json and re-tag."
+            echo "::error::Tag ${{ inputs.tag || github.ref_name }} does not match package.json version $pkg_version. Bump package.json and re-tag."
             exit 1
           fi
 
@@ -85,6 +92,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
-        run: gh release create "${{ github.ref_name }}" --generate-notes
+        run: gh release create "${{ inputs.tag || github.ref_name }}" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
