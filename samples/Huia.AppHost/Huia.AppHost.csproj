@@ -6,7 +6,8 @@
     <UserSecretsId>huia-apphost</UserSecretsId>
     <AspireUseCliBundle>false</AspireUseCliBundle>
     <!-- ASPIRETERMINAL001: WithTerminal() is still marked [Experimental] in Aspire 13.5. -->
-    <NoWarn>$(NoWarn);ASPIRE010;ASPIRETERMINAL001</NoWarn>
+    <!-- ASPIREJAVASCRIPT001: AddNextJsApp is marked experimental in Aspire 13.5. -->
+    <NoWarn>$(NoWarn);ASPIRE010;ASPIRETERMINAL001;ASPIREJAVASCRIPT001</NoWarn>
     <MSBuildWarningsAsMessages>ASPIRE010</MSBuildWarningsAsMessages>
   </PropertyGroup>
 
@@ -27,6 +28,7 @@
     <ProjectReference Include="..\Huia.External\Huia.External.csproj" />
     <ProjectReference Include="..\Huia.Cli\Huia.Cli.csproj" />
     <ProjectReference Include="..\Todo.Api\Todo.Api.csproj" />
+    <ProjectReference Include="..\Shop.Api\Shop.Api.csproj" />
   </ItemGroup>
 
 </Project>

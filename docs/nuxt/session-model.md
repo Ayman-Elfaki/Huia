@@ -1,4 +1,4 @@
-# `huia-nuxt` — session model & security
+# `nuxt-huia-oidc` — session model & security
 
 ## Dual-layer persistence
 
@@ -28,7 +28,7 @@ flowchart TD
   B --> C[getTokenRecord sess:sid from useStorage]
   C --> D{near expiry?}
   D -->|yes| E[ensureFreshTokens<br/>single-flight + soft lock]
-  D -->|no| F[event.context.huiaAuth = { user, loggedIn, expiresAt }]
+  D -->|no| F[event.context.huia = { user, loggedIn, expiresAt }]
   E --> F
   F --> G[Nuxt server plugin<br/>seeds useState 'huia-auth:session']
   G --> H[SSR HTML + __NUXT__ payload]
@@ -37,7 +37,7 @@ flowchart TD
 
 `useUserSession()` on the client is just `useState('huia-auth:session')` — the value came from the
 SSR payload, so `loggedIn` is correct on the very first render. A `useAsyncData` +
-`useRequestFetch('/api/_auth/session')` alternative is documented in the SPEC.
+`useRequestFetch('/auth/session')` alternative is documented in the SPEC.
 
 ## Transparent refresh
 

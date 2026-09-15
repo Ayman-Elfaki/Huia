@@ -1,5 +1,6 @@
 using Huia;
-using Huia.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.IdentityServer;
 using Huia.Options;
 using Microsoft.AspNetCore.Authorization;
@@ -10,10 +11,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 var databaseProvider = builder.Configuration.GetValue("Huia:Database", "Sqlite");
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
+
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310");
-var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000");
 var todoApiUrl = builder.Configuration.GetValue("Clients:TodoApi:BaseUrl", "http://localhost:5330");
-var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001");
+
+var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://todo-app.dev.localhost:3000");
+var todoNextUrl = builder.Configuration.GetValue("Clients:TodoNext:BaseUrl", "http://todo-next.dev.localhost:3050");
+var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://admin-app.dev.localhost:3001");
+
+
 // The huia-nuxt module's own E2E playground (EnableE2E only).
 var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUrl", "http://localhost:3030");
 // Huia.External is the mock upstream IdP the "todo" tenant's external-login button federates to.
@@ -43,7 +49,7 @@ builder.Services.AddHostedService<SchemaInitializer>();
 // MailKit sender is used and the in-memory CapturingEmailSender / /e2e-mail fallback is left out.
 var smtpConfigured = !string.IsNullOrWhiteSpace(builder.Configuration["Huia:Email:Host"]);
 
-var huiaBuilder = builder.Services.AddHuia(huia =>
+var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
 {
     huia.UseIssuer(issuer);
     huia.UsePublicUrl(issuer);
@@ -67,6 +73,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         tenant.Branding.TermsUrl = new Uri($"{issuer}/legal/terms.html");
         tenant.Branding.PrivacyUrl = new Uri($"{issuer}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
+
         tenant.Authentication.UseEmailAndPasswordLogin(password =>
         {
             password.RequireConfirmedEmail = false;
@@ -152,7 +159,7 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
         tenant.Authentication.UseExternalLogin(ext =>
         {
             ext.AddOpenIdConnect(
-                "HuiaExternal", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
+                "huia", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
                 {
                     p.DisplayName = "Partner";
                     p.Scopes.Add("profile");
@@ -172,6 +179,16 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
             client.RedirectUris.Add(new Uri($"{todoAppUrl}/auth/oidc/callback"));
             client.PostLogoutRedirectUris.Add(new Uri($"{todoAppUrl}/"));
             client.HomeUris.Add(new Uri($"{todoAppUrl}/"));
+        });
+
+        tenant.AddServerSideWebApplication("todo-next", "todo-next-secret", client =>
+        {
+            client.DisplayName = "Todo (Next.js)";
+            client.ClientUri = new Uri($"{todoNextUrl}/");
+            client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
+            client.RedirectUris.Add(new Uri($"{todoNextUrl}/api/auth/callback"));
+            client.PostLogoutRedirectUris.Add(new Uri($"{todoNextUrl}/"));
+            client.HomeUris.Add(new Uri($"{todoNextUrl}/"));
         });
 
         // Public SPA client for the Todo API's Scalar reference UI: its "Authorize" button runs
@@ -225,8 +242,10 @@ var huiaBuilder = builder.Services.AddHuia(huia =>
     }
 });
 
-huiaBuilder.AddHuiaUi();
-huiaBuilder.AddHuiaSecurityHeaders();
+huiaBuilder
+    .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+    .AddHuiaUi()
+    .AddHuiaSecurityHeaders();
 
 builder.Services.AddSingleton<HuiaSampleSeeder>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<HuiaSampleSeeder>());
@@ -234,20 +253,20 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<HuiaSampleSeeder>(
 if (builder.Environment.IsDevelopment() || enableE2E)
 {
     builder.Services.AddSingleton<CapturingSmsSender>();
-    builder.Services.AddScoped<Huia.AspNetCore.Services.ISmsSender>(sp => sp.GetRequiredService<CapturingSmsSender>());
+    builder.Services.AddScoped<Huia.Services.ISmsSender>(sp => sp.GetRequiredService<CapturingSmsSender>());
 
     // With Mailpit (or any SMTP host) configured, keep the real MailKit sender — the E2E suite reads the
     // message back from Mailpit's REST API. Only fall back to the in-memory capturer when nothing is set.
     if (!smtpConfigured)
     {
         builder.Services.AddSingleton<CapturingEmailSender>();
-        builder.Services.AddScoped<Huia.AspNetCore.Emails.IHuiaEmailSender>(sp => sp.GetRequiredService<CapturingEmailSender>());
+        builder.Services.AddScoped<Huia.OpenId.Emails.IHuiaEmailSender>(sp => sp.GetRequiredService<CapturingEmailSender>());
     }
 }
 
 var app = builder.Build();
 
-app.UseHuia();
+app.UseHuiaOpenId();
 
 app.MapHuiaEndpoints();
 

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using Huia.AspNetCore.Multitenancy;
-using Huia.AspNetCore.OpenIddict;
+using Huia.OpenId.Multitenancy;
+using Huia.OpenId.OpenIddict;
 using Huia.IntegrationTests.Infrastructure;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;

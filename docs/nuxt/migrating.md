@@ -1,7 +1,7 @@
 # Migrating from `nuxt-oidc-auth`
 
 Both sample apps (`samples/Todo.App`, `samples/Huia.AdminUI`) were moved from the third-party
-`nuxt-oidc-auth` beta to `huia-nuxt`. The full diff is commit `f363cec`; the shape of the change:
+`nuxt-oidc-auth` beta to `nuxt-huia-oidc`. The full diff is commit `f363cec`; the shape of the change:
 
 ## `package.json`
 
@@ -22,7 +22,7 @@ sidesteps an npm 10 arborist crash on the nuxt peer graph.
    modules: [
      '@nuxtjs/tailwindcss', '@nuxtjs/color-mode', 'shadcn-nuxt', 'nuxt-api-party',
 -    'nuxt-oidc-auth',
-+    '../../src/nuxt/src/module',   // from source in the monorepo; or 'huia-nuxt' when installed
++    '../../src/nuxt/nuxt-huia-oidc/src/module',   // from source in the monorepo; or 'nuxt-huia-oidc' when installed
    ],
 
 -  oidc: {
@@ -42,13 +42,14 @@ sidesteps an npm 10 arborist crash on the nuxt peer graph.
 -      additionalLogoutParameters: { idTokenHint: '' },
 -    } },
 -  },
-+  huiaAuth: {
-+    huia: { baseUrl: huiaBaseUrl, tenant: 'master' },
-+    clientId: process.env.NUXT_HUIA_AUTH_CLIENT_ID ?? 'huia-admin-ui',
-+    clientSecret: process.env.NUXT_HUIA_AUTH_CLIENT_SECRET ?? 'huia-admin-ui-secret',
++  huia: {
++    baseUrl: huiaBaseUrl,
++    tenant: 'master',
++    clientId: process.env.NUXT_HUIA_CLIENT_ID ?? 'huia-admin-ui',
++    clientSecret: process.env.NUXT_HUIA_CLIENT_SECRET ?? 'huia-admin-ui-secret',
 +    scopes: ['openid', 'profile', 'email', 'roles', 'offline_access'],
 +    par: { enabled: true },
-+    session: { password: process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD ?? 'dev-only-32-chars-minimum-…' },
++    session: { password: process.env.NUXT_HUIA_SESSION_PASSWORD ?? 'dev-only-32-chars-minimum-…' },
 +  },
 ```
 
@@ -58,9 +59,9 @@ registered for the old integration needs no change).
 
 ## Components & middleware
 
-| `nuxt-oidc-auth` | `huia-nuxt` |
+| `nuxt-oidc-auth` | `nuxt-huia-oidc` |
 |---|---|
-| `const { loggedIn, user, login, logout } = useOidcAuth()` | `const { loggedIn, user } = useUserSession()` + `const { login, logout } = useAuth()` |
+| `const { loggedIn, user, login, logout } = useOidcAuth()` | `const { loggedIn, user } = useUserSession()` + `const { login, logout } = useHuia()` |
 | `user.value?.userInfo?.name` | `user.value?.name` (flat claims) |
 | `login('oidc')` / `logout('oidc')` | `login()` / `logout()` |
 | `login('oidc', { ui_locales })` | `login({ locale })` |
@@ -68,12 +69,12 @@ registered for the old integration needs no change).
 
 ## Environment (E2E / AppHost)
 
-`NUXT_OIDC_*` → `NUXT_HUIA_AUTH_*`:
+`NUXT_OIDC_*` → `NUXT_HUIA_*`:
 
 | old | new |
 |---|---|
-| `NUXT_OIDC_SESSION_SECRET` / `NUXT_OIDC_AUTH_SESSION_SECRET` / `NUXT_OIDC_TOKEN_KEY` | `NUXT_HUIA_AUTH_SESSION_PASSWORD` (single value, ≥ 32 chars) |
-| `NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET` | `NUXT_HUIA_AUTH_CLIENT_SECRET` |
-| the four `NUXT_OIDC_PROVIDERS_OIDC_*_URL` vars | `NUXT_HUIA_AUTH_HUIA_BASE_URL` + `NUXT_HUIA_AUTH_HUIA_TENANT` |
+| `NUXT_OIDC_SESSION_SECRET` / `NUXT_OIDC_AUTH_SESSION_SECRET` / `NUXT_OIDC_TOKEN_KEY` | `NUXT_HUIA_SESSION_PASSWORD` (single value, ≥ 32 chars) |
+| `NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET` | `NUXT_HUIA_CLIENT_SECRET` |
+| the four `NUXT_OIDC_PROVIDERS_OIDC_*_URL` vars | `NUXT_HUIA_BASE_URL` + `NUXT_HUIA_TENANT` |
 
 `NUXT_API_PARTY_ENDPOINTS_*` and `NODE_TLS_REJECT_UNAUTHORIZED=0` are unchanged.

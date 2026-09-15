@@ -35,7 +35,7 @@ interface ExternalLogins {
 }
 
 const { t } = useI18n()
-const { user } = useAuth()
+const { user } = useHuia()
 const { data: profile, refresh } = await useHuiaData<Profile>('manage/profile')
 const { data: emailInfo } = await useHuiaData<Email>('manage/email')
 const { data: phone, refresh: refreshPhone } = await useHuiaData<Phone>('manage/phone')

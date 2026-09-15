@@ -1,17 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Huia core: multi-tenant OpenID Connect / OAuth 2.0 Identity Provider domain model, options tree, eventing abstractions and constants. Free of ASP.NET Core and Entity Framework Core dependencies.</Description>
+    <Description>Huia core: domain model, options tree, eventing abstractions, constants, and the shared plumbing and endpoint/service surface common to every Huia flavor (multi-tenant OpenId, single-tenant Headless) — consumed via each flavor's own AddHuiaOpenId()/AddHuiaHeadless() entry point. Uses the ASP.NET Core shared framework for lightweight HTTP/cookie/routing abstractions, but never Entity Framework Core directly, and never OpenIddict or Finbuckle.</Description>
     <PackageTags>openid-connect;oauth2;identity-provider;multi-tenant;oidc</PackageTags>
     <RootNamespace>Huia</RootNamespace>
   </PropertyGroup>
 
-  <!-- Guard: the core package must stay free of ASP.NET Core and EF Core dependencies. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="libphonenumber-csharp" />
+  </ItemGroup>
+
+  <!-- Guard: the core package must stay free of Entity Framework Core, OpenIddict and Finbuckle
+       dependencies — the ASP.NET Core shared framework (HTTP/cookie/routing abstractions) is fine. -->
   <Target Name="_HuiaCoreDependencyGuard" BeforeTargets="CollectPackageReferences">
     <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('Microsoft.EntityFrameworkCore'))"
            Text="Huia core must not reference Entity Framework Core (%(PackageReference.Identity))." />
-    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('Microsoft.AspNetCore'))"
-           Text="Huia core must not reference ASP.NET Core (%(PackageReference.Identity))." />
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('OpenIddict'))"
+           Text="Huia core must not reference OpenIddict (%(PackageReference.Identity))." />
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').StartsWith('Finbuckle'))"
+           Text="Huia core must not reference Finbuckle (%(PackageReference.Identity))." />
   </Target>
 
 </Project>

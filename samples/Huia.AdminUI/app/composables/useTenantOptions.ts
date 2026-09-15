@@ -1,5 +1,5 @@
 // Tenant list for the `<Select>` filters and the scope-create form. Mirrors `TenantDto` from
-// `src/Huia.AspNetCore/Endpoints/AdminEndpoints.cs`.
+// `src/Huia.OpenId/Endpoints/AdminEndpoints.cs`.
 
 export interface TenantRow {
   tenantId: string

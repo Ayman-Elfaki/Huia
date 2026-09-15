@@ -58,18 +58,24 @@ public enum PasskeyAuthenticatorAttachment
     CrossPlatform = 2,
 }
 
-/// <summary>The upstream protocol / vendor an external login provider speaks.</summary>
+/// <summary>
+/// The upstream protocol / vendor an external login provider speaks. <c>Huia.OpenId</c> implements
+/// every kind through the OpenIddict client's web-integration providers; <c>Huia.Headless</c>
+/// implements them through the matching classic ASP.NET Core authentication handler instead
+/// (<c>AddGoogle</c>, a generic <c>AddOAuth</c> for GitHub, <c>AddMicrosoftAccount</c>,
+/// <c>AddOpenIdConnect</c>).
+/// </summary>
 public enum ExternalProviderKind
 {
     /// <summary>Generic OpenID Connect provider configured by authority URL.</summary>
     OpenIdConnect = 0,
 
-    /// <summary>Google (via the OpenIddict web-integration provider).</summary>
+    /// <summary>Google.</summary>
     Google = 1,
 
-    /// <summary>GitHub (via the OpenIddict web-integration provider).</summary>
+    /// <summary>GitHub.</summary>
     GitHub = 2,
 
-    /// <summary>Microsoft account (via the OpenIddict web-integration provider).</summary>
+    /// <summary>Microsoft account.</summary>
     MicrosoftAccount = 3,
 }

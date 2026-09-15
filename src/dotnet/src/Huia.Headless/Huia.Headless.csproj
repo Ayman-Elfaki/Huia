@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Huia headless: single-tenant, ASP.NET Core Identity bearer-token authentication (built on the framework's own identity-api-authorization / MapIdentityApi) extended with passkeys. No multi-tenancy, no OpenIddict.</Description>
+    <PackageTags>identity-provider;passkeys</PackageTags>
+    <RootNamespace>Huia.Headless</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- External login: Google/MicrosoftAccount/OpenIdConnect classic handlers are not part of the
+         shared framework (unlike Cookies/OAuth/JwtBearer). GitHub is a generic AddOAuth, no package. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huia\Huia.csproj" />
+    <ProjectReference Include="..\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -63,7 +63,7 @@ signing keys (`/admin/keys`, `POST /admin/keys/{id}/revoke`). Anything created t
 
 ## Account UI error pages
 
-`UseHuia()` installs `UseStatusCodePagesWithReExecute`, so a bare `404` / `401` / `403` / `500` (for
+`UseHuiaOpenId()` installs `UseStatusCodePagesWithReExecute`, so a bare `404` / `401` / `403` / `500` (for
 example following a link into a disabled tenant, or clicking *Register* where
 `DisableRegistration()` was called) renders a branded page that reuses the tenant's card layout and
 localised strings. Requests under `/connect`, `/manage`, `/admin`, `/.well-known` and anything that

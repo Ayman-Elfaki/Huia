@@ -1,4 +1,5 @@
-using Huia.AspNetCore.Identity;
+using Huia.Identity;
+using Huia.OpenId.Identity;
 using Huia.IntegrationTests.Infrastructure;
 
 namespace Huia.IntegrationTests;

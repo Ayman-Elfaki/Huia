@@ -6,7 +6,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Huia\Huia.csproj" />
-    <ProjectReference Include="..\..\src\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Huia.Headless\Huia.Headless.csproj" />
+    <ProjectReference Include="..\..\src\Huia.Headless.EntityFrameworkCore\Huia.Headless.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Huia.OpenId.EntityFrameworkCore\Huia.OpenId.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

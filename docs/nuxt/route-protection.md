@@ -1,4 +1,4 @@
-# `huia-nuxt` — route protection
+# `nuxt-huia-oidc` — route protection
 
 ## Client — pages
 
@@ -14,10 +14,13 @@ It reads `useUserSession().loggedIn` — which is correct during SSR — so an u
 redirected to `/auth/oidc/login?returnTo=<path>` before any protected HTML is sent: no flash, no
 client-side bounce.
 
-Set `huiaAuth.middleware.global = true` to protect everything, with
-`huiaAuth.middleware.exclude = ['/', '/about', '/auth/**']` for the public routes. To keep the old
-"bounce to the landing page" UX instead of going straight to Huia, add an app `middleware/auth.ts`
-that re-implements the check with `navigateTo('/')` (the sample apps do this).
+Set `huia.middleware.global = true` to protect everything, with
+`huia.middleware.exclude = ['/', '/about', '/auth/**']` for the public routes (glob: `**` any depth,
+`*` one segment). The module's own login/callback/logout/session routes are always excluded on top of
+this list, regardless of what you configure — protecting the routes that exist for the logged-out
+flow would only cause a redirect loop. To keep the old "bounce to the landing page" UX instead of
+going straight to Huia, add an app `middleware/auth.ts` that re-implements the check with
+`navigateTo('/')` (the sample apps do this).
 
 ## Server — API routes
 
@@ -64,10 +67,10 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-## `useAuth()`
+## `useHuia()`
 
 ```ts
-const { login, logout, user, loggedIn } = useAuth()
+const { login, logout, user, loggedIn } = useHuia()
 
 login({ returnTo: '/dashboard', locale: 'ar' })   // → /auth/oidc/login?returnTo=…&ui_locales=ar
 logout({ returnTo: '/' })                          // → /auth/oidc/logout?returnTo=/

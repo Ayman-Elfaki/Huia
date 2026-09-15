@@ -1,12 +1,16 @@
-# `huia-nuxt` — overview
+# `nuxt-huia-oidc` — overview
 
-`huia-nuxt` is the first-party **Nuxt 4** module for signing a relying-party app into a Huia
-tenant. It runs the OAuth 2.0 Authorization Code flow with PKCE (and RFC 9126 PAR) on the **Nitro
-server**, and keeps every token server-side.
+`nuxt-huia-oidc` is the first-party **Nuxt 4** module for signing a relying-party app into a
+`Huia.OpenId` tenant. It runs the OAuth 2.0 Authorization Code flow with PKCE (and RFC 9126 PAR) on
+the **Nitro server**, and keeps every token server-side.
 
-- Package: `huia-nuxt` · config key `huiaAuth`
+Its sibling module, [`nuxt-huia-headless`](/nuxt-headless/overview), talks to `Huia.Headless`
+instead — a plain JSON register/login API, no OIDC redirect — for apps that own their own login
+form and don't need multi-tenancy.
+
+- Package: `nuxt-huia-oidc` · config key `huia`
 - Built on [`openid-client`](https://github.com/panva/openid-client) v6 (ESM, Web Crypto)
-- Full build-to spec: [`src/nuxt/SPEC.md`](https://github.com/Ayman-Elfaki/Huia/blob/main/src/nuxt/SPEC.md)
+- Full build-to spec: [`src/nuxt/nuxt-huia-oidc/SPEC.md`](https://github.com/Ayman-Elfaki/Huia/blob/main/src/nuxt/nuxt-huia-oidc/SPEC.md)
 
 ## Why not a generic OIDC module
 
@@ -42,15 +46,15 @@ The cookie is `iron-webcrypto`-sealed, `HttpOnly`, `Secure`, `SameSite=Lax`, `__
 | `GET /auth/oidc/login` | begin the flow (PKCE, state/nonce, PAR push) |
 | `GET /auth/oidc/callback` | code exchange, create the session, redirect to `returnTo` |
 | `GET /auth/oidc/logout` | clear the session + RP-initiated `end_session` |
-| `GET /api/_auth/session` | the sanitised `{ user, loggedIn, expiresAt }` — never a token |
+| `GET /auth/session` | the sanitised `{ user, loggedIn, expiresAt }` — never a token |
 
 All four paths are configurable. The default `/auth/oidc/callback` matches Huia's historical redirect
 URI so no client re-registration is needed.
 
 ## Composables & server utilities
 
-- Client: `useUserSession()` (`user`, `loggedIn`, `session`, `expiresAt`, `fetch()`, `clear()`) and
-  `useAuth()` (`login()`, `logout()`).
+- Client: `useUserSession()` (`user`, `loggedIn`, `session`, `hasRole()`, `hasAnyRole()`, `fetch()`,
+  `clear()`) and `useHuia()` (`login()`, `logout()`).
 - Server (auto-imported in `server/**`): `getUserSession(event)`, `setUserSession`,
   `clearUserSession`, `requireUserSession(event)` (401s), `getAccessToken(event)` (server-only —
   forward the bearer to your upstream APIs).

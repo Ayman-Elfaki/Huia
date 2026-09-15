@@ -7,7 +7,7 @@ import { AppWindow, Building2, KeyRound, LayoutDashboard, ShieldCheck, UserCog, 
 const ADMINISTRATOR = 'huia.administrator'
 
 const route = useRoute()
-const { hasRole } = useAuth()
+const { hasRole } = useHuia()
 
 const items = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, testid: 'nav-dashboard' },

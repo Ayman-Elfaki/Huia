@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TenantRow } from '~/composables/useTenantOptions'
 
-const { loggedIn, login } = useAuth()
+const { loggedIn, login } = useHuia()
 
 // The admin API 401s when signed out; the landing branch below doesn't render this data anyway.
 const { data: tenants } = useHuiaData<TenantRow[]>('admin/tenants', { default: () => [] })

@@ -11,7 +11,7 @@ export default defineNuxtConfig({
     'shadcn-nuxt',
     'nuxt-api-party',
     // first-party auth module — referenced from source in the monorepo
-    '../../src/nuxt/src/module',
+    '../../src/javascript/nuxt/nuxt-huia-oidc/src/module',
   ],
   css: ['~/assets/css/main.css'],
 
@@ -71,16 +71,17 @@ export default defineNuxtConfig({
     },
   },
 
-  huiaAuth: {
-    huia: { baseUrl: huiaBaseUrl, tenant: 'todo' },
-    clientId: process.env.NUXT_HUIA_AUTH_CLIENT_ID ?? 'todo-app',
-    clientSecret: process.env.NUXT_HUIA_AUTH_CLIENT_SECRET ?? 'todo-app-secret',
+  huia: {
+    baseUrl: huiaBaseUrl,
+    tenant: 'todo',
+    clientId: process.env.NUXT_HUIA_CLIENT_ID ?? 'todo-app',
+    clientSecret: process.env.NUXT_HUIA_CLIENT_SECRET ?? 'todo-app-secret',
     scopes: ['openid', 'profile', 'email', 'roles', 'offline_access'],
     // forward ?ui_locales=<locale> to /connect/authorize so the Huia account UI matches the app locale
     allowedAuthParams: ['ui_locales'],
     par: { enabled: true },
     session: {
-      password: process.env.NUXT_HUIA_AUTH_SESSION_PASSWORD
+      password: process.env.NUXT_HUIA_SESSION_PASSWORD
         ?? 'dev-only-todo-session-password-change-me-01234567890',
       userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
     },

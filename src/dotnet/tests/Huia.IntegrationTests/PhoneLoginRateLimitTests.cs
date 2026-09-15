@@ -1,5 +1,5 @@
 using System.Net;
-using Huia.AspNetCore.Services;
+using Huia.Services;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 

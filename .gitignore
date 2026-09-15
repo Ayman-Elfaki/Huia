@@ -17,6 +17,7 @@ coverage*.xml
 ## Node
 node_modules/
 .nuxt/
+.next/
 .output/
 .nitro/
 .data/

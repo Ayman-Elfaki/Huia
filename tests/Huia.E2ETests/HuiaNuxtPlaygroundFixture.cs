@@ -36,7 +36,7 @@ public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
     private async Task StartAsync()
     {
         var idpDll = Path.Combine(_repoRoot, "samples", "Huia.IdentityServer", "bin", "Release", "net10.0", "Huia.IdentityServer.dll");
-        var playgroundEntry = Path.Combine(_repoRoot, "src", "nuxt", "playground", ".output", "server", "index.mjs");
+        var playgroundEntry = Path.Combine(_repoRoot, "src", "javascript", "nuxt", "nuxt-huia-oidc", "playground", ".output", "server", "index.mjs");
 
         if (!File.Exists(idpDll))
         {
@@ -45,7 +45,7 @@ public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
         }
         if (!File.Exists(playgroundEntry))
         {
-            SkipReason = $"Missing {playgroundEntry}. Run `npm --prefix src/nuxt run dev:build`.";
+            SkipReason = $"Missing {playgroundEntry}. Run `npm --prefix src/javascript/nuxt/nuxt-huia-oidc run dev:build`.";
             return;
         }
 
@@ -65,11 +65,11 @@ public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
         {
             ["PORT"] = new Uri(PlaygroundUrl).Port.ToString(),
             ["NITRO_PORT"] = new Uri(PlaygroundUrl).Port.ToString(),
-            ["NUXT_HUIA_AUTH_HUIA_BASE_URL"] = Issuer,
-            ["NUXT_HUIA_AUTH_HUIA_TENANT"] = "e2e",
-            ["NUXT_HUIA_AUTH_CLIENT_ID"] = "huia-nuxt-playground",
-            ["NUXT_HUIA_AUTH_CLIENT_SECRET"] = "huia-nuxt-playground-secret",
-            ["NUXT_HUIA_AUTH_SESSION_PASSWORD"] = "e2e-only-huia-nuxt-session-password-0123456789",
+            ["NUXT_HUIA_BASE_URL"] = Issuer,
+            ["NUXT_HUIA_TENANT"] = "e2e",
+            ["NUXT_HUIA_CLIENT_ID"] = "huia-nuxt-playground",
+            ["NUXT_HUIA_CLIENT_SECRET"] = "huia-nuxt-playground-secret",
+            ["NUXT_HUIA_SESSION_PASSWORD"] = "e2e-only-huia-nuxt-session-password-0123456789",
         });
 
         using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };

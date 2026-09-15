@@ -1,10 +1,10 @@
 using System.Net;
 using Finbuckle.MultiTenant.Abstractions;
-using Huia.AspNetCore.Identity;
-using Huia.AspNetCore.Multitenancy;
-using Huia.EntityFrameworkCore;
-using Huia.EntityFrameworkCore.Entities;
-using Huia.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Identity;
+using Huia.OpenId.Multitenancy;
+using Huia.OpenId.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -25,7 +25,7 @@ namespace Huia.IntegrationTests.Infrastructure;
 /// <summary>
 /// An in-process Huia host: a bare <see cref="HostBuilder"/> with the test server, a SQLite database on a
 /// single shared open connection, and the schema created by a hosted service that is registered
-/// <em>before</em> <c>AddHuia</c> so it runs first.
+/// <em>before</em> <c>AddHuiaOpenId</c> so it runs first.
 /// </summary>
 public sealed class HuiaTestHost : IAsyncDisposable
 {
@@ -75,13 +75,13 @@ public sealed class HuiaTestHost : IAsyncDisposable
     /// <summary>Starts a host. <paramref name="configureOptions"/> runs after the two default tenants are added.</summary>
     /// <param name="configureOptions">Extra options configuration.</param>
     /// <param name="configureEndpoints">Extra endpoints to map alongside the built-in probe.</param>
-    /// <param name="configureBuilder">Runs against the <c>IHuiaBuilder</c> returned by <c>AddHuia</c> (feature opt-ins).</param>
-    /// <param name="timeProvider">A clock to install before <c>AddHuia</c>.</param>
+    /// <param name="configureBuilder">Runs against the <c>IHuiaBuilder</c> returned by <c>AddHuiaOpenId</c> (feature opt-ins).</param>
+    /// <param name="timeProvider">A clock to install before <c>AddHuiaOpenId</c>.</param>
     /// <returns>The started host.</returns>
     public static async Task<HuiaTestHost> StartAsync(
         Action<HuiaOptionsBuilder>? configureOptions = null,
         Action<IEndpointRouteBuilder>? configureEndpoints = null,
-        Action<Huia.AspNetCore.DependencyInjection.IHuiaBuilder>? configureBuilder = null,
+        Action<Huia.DependencyInjection.IHuiaBuilder>? configureBuilder = null,
         TimeProvider? timeProvider = null)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
@@ -104,7 +104,7 @@ public sealed class HuiaTestHost : IAsyncDisposable
                     services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(connection));
                     services.AddSingleton<IHostedService, SchemaInitializer>();
 
-                    var builder = services.AddHuia(huia =>
+                    var builder = services.AddHuiaOpenId(huia =>
                     {
                         huia.UseIssuer("https://id.huia.test");
                         huia.DisableTransportSecurityRequirement();
@@ -151,18 +151,20 @@ public sealed class HuiaTestHost : IAsyncDisposable
                         });
                         configureOptions?.Invoke(huia);
                     });
-                    builder.AddHuiaUi();
+                    builder
+                        .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+                        .AddHuiaUi();
                     services.AddSingleton(sms);
-                    services.AddScoped<Huia.AspNetCore.Services.ISmsSender>(_ => sms);
+                    services.AddScoped<Huia.Services.ISmsSender>(_ => sms);
                     services.AddSingleton(email);
-                    services.AddScoped<Huia.AspNetCore.Emails.IHuiaEmailSender>(_ => email);
+                    services.AddScoped<Huia.OpenId.Emails.IHuiaEmailSender>(_ => email);
                     services.AddSingleton(eventCollector);
                     RegisterEventCollector(services, eventCollector);
                     configureBuilder?.Invoke(builder);
                 });
                 web.Configure(app =>
                 {
-                    app.UseHuia();
+                    app.UseHuiaOpenId();
                     app.UseEndpoints(endpoints =>
                     {
                         endpoints.MapHuiaEndpoints();

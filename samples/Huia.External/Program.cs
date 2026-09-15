@@ -1,6 +1,6 @@
-using Huia.AspNetCore.Multitenancy;
-using Huia.EntityFrameworkCore;
-using Huia.EntityFrameworkCore.Entities;
+using Huia.OpenId.Multitenancy;
+using Huia.OpenId.EntityFrameworkCore;
+using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
@@ -8,8 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5320")!;
-var consumerBaseUrl = builder.Configuration.GetValue("Consumer:BaseUrl", "https://localhost:5310")!;
+var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5320");
+var consumerBaseUrl = builder.Configuration.GetValue("Consumer:BaseUrl", "https://localhost:5310");
+var shopConsumerBaseUrl = builder.Configuration.GetValue("ShopConsumer:BaseUrl", "https://localhost:5341");
 
 var connection = new SqliteConnection(builder.Configuration.GetConnectionString("huia") ?? "DataSource=:memory:");
 connection.Open();
@@ -17,7 +18,7 @@ builder.Services.AddSingleton(connection);
 builder.Services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(connection).UseOpenIddict());
 builder.Services.AddHostedService<SchemaInitializer>();
 
-builder.Services.AddHuia(huia =>
+builder.Services.AddHuiaOpenId(huia =>
 {
     huia.UseIssuer(issuer);
     huia.DisableTransportSecurityRequirement();
@@ -37,21 +38,36 @@ builder.Services.AddHuia(huia =>
         {
             client.DisplayName = "Todo (via partner sign-in)";
             client.ClientUri = new Uri($"{consumerBaseUrl}/todo/");
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternal"));
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternalpartial"));
+            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huia"));
+            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiapartial"));
             // The downstream Huia's OpenIddict-client post-logout callback, so signing out of the Todo
             // app also ends this partner session.
             client.PostLogoutRedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signout-callback-oidc"));
             client.Scopes.Add("email");
             client.Scopes.Add("profile");
         });
+
+        tenant.AddServerSideWebApplication("shop-api", "shop-api-secret", client =>
+        {
+            client.DisplayName = "Shop (via partner sign-in)";
+            client.ClientUri = new Uri($"{shopConsumerBaseUrl}/");
+            // Huia.Headless's classic OpenIdConnect handler callback path is "/signin-{provider}"
+            // verbatim (no tenant segment, no lower-casing — unlike the OpenIddict-client shape above),
+            // so this must match the provider name Shop.Api registers exactly: "huia".
+            client.RedirectUris.Add(new Uri($"{shopConsumerBaseUrl}/signin-huia"));
+
+            client.Scopes.Add("email");
+            client.Scopes.Add("profile");
+        });
     });
-}).AddHuiaUi();
+})
+    .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+    .AddHuiaUi();
 
 builder.Services.AddHostedService<PartnerUserSeeder>();
 
 var app = builder.Build();
-app.UseHuia();
+app.UseHuiaOpenId();
 app.MapHuiaEndpoints();
 app.MapHuiaHome("partners");
 app.Run();
