@@ -88,8 +88,8 @@ first-time sign-up — and, in the latter case, collects a name and calls
 
 ## Reference integration
 
-`samples/Shop.Api` + `samples/Shop.App` puts this module through a full register → login → cart →
+`samples/Shop/Shop.Api` + `samples/Shop/Shop.Nuxt` puts this module through a full register → login → cart →
 checkout → logout round trip, plus phone login and external login against a real upstream IdP
-([`Huia.External`](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Huia.External), the same
-mock provider `Todo.App` uses) — all covered end to end by
+([`Huia.External`](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shared/Huia.External), the same
+mock provider `Todo.Nuxt` uses) — all covered end to end by
 [`ShopE2ETests`](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests/ShopE2ETests.cs).

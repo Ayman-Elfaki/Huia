@@ -65,6 +65,6 @@ CSP `form-action` directive so the challenge POST is not blocked.
 
 ## The `Huia.External` sample
 
-`samples/Huia.External` is a second Huia instance acting as the upstream "partner" IdP for the `todo`
+`samples/Shared/Huia.External` is a second Huia instance acting as the upstream "partner" IdP for the `todo`
 tenant's external-login button. `tests/Huia.E2ETests/FrontEndAuthE2ETests.cs` drives the full
-round-trip (including the `EnableAccountsLinking()` path) through the Nuxt Todo.App.
+round-trip (including the `EnableAccountsLinking()` path) through the Nuxt Todo.Nuxt.

@@ -6,7 +6,7 @@
 npm install nuxt-huia-headless
 ```
 
-In the monorepo the `Shop.App` sample references the module from source instead
+In the monorepo the `Shop.Nuxt` sample references the module from source instead
 (`modules: ['../../src/nuxt/nuxt-huia-headless/src/module']`).
 
 ## `nuxt.config.ts`

@@ -3,7 +3,7 @@ using Microsoft.Playwright;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Playwright helpers shared by the front-end sign-in specs (Todo.App on the out-of-process stack,
+/// Playwright helpers shared by the front-end sign-in specs (Todo.Nuxt on the out-of-process stack,
 /// the admin console on the Aspire AppHost). They drive the identity server's own Razor login page and
 /// the RP's post-callback landing.
 /// </summary>

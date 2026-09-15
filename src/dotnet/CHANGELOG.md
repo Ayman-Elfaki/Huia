@@ -164,7 +164,7 @@ All notable changes to Huia are documented here. The format is based on
 - **`Huia.OpenId`** — account-UI alerts (`.alert` / `.alert-destructive`) no longer wrap one word
   per line: Basecoat's alert grid placed the bare message text in its zero-width icon column, so it is
   now rendered as a normal block.
-- **`Todo.App` / `Huia.IdentityServer` samples** — in Development the stub SMS sender writes the
+- **`Todo.Nuxt` / `Todo.IdentityServer` samples** — in Development the stub SMS sender writes the
   plaintext one-time code to the log, so a phone sign-in can be completed without an SMS provider.
 - **`Huia`** — `TenantFeatureOptions` (`tenant.Features`) is removed; its members move onto the flow
   they belong to. `RequireConfirmedEmail`, `RequireUniqueEmail` and `AllowSelfServiceRegistration`
@@ -181,7 +181,7 @@ All notable changes to Huia are documented here. The format is based on
   `DELETE /admin/keys/{id}` for signing keys. Admin-created clients are stamped `huia:origin = dynamic`;
   `PUT`/`DELETE` on a code-seeded ("static") client returns `409`. The `HuiaClientDescriptor` →
   `OpenIddictApplicationDescriptor` translation moved to a shared `HuiaApplicationDescriptorMapper`
-  used by both the seeder and the admin API. `samples/Huia.AdminUI` gains create / edit / delete
+  used by both the seeder and the admin API. `samples/Todo/Todo.Admin` gains create / edit / delete
   forms on the Users, Clients and Keys pages.
 - **`Huia.OpenId`** — the `/manage/*` self-service API now enforces contact rules by account
   type (new `HuiaUserType` classifier): a password or external account cannot set a phone number
@@ -202,13 +202,13 @@ All notable changes to Huia are documented here. The format is based on
 
 - **`Huia.OpenId`** — the `/admin/*` API gains per-tenant roles: `GET/POST/PUT/DELETE /admin/roles`
   (a role with members can't be deleted) and `GET/POST/DELETE /admin/users/{id}/roles`. The user list
-  and detail now include a `roles` array. `samples/Huia.AdminUI` adds a Roles page and inline role
+  and detail now include a `roles` array. `samples/Todo/Todo.Admin` adds a Roles page and inline role
   assignment on the Users page.
 - **`Huia` / `Huia.OpenId`** — a signed-in user can link and unlink external sign-in providers.
   The external callback now goes through the standard `IdentityConstants.ExternalScheme` +
   `GetExternalLoginInfoAsync` dispatcher; there is a new `identity/account/externallogins` Razor page
   and `GET` / `DELETE /manage/external-logins` endpoints (the only sign-in method can't be removed).
-  A `Huia.External` "partner" is listed on the `Todo.App` profile page.
+  A `Huia.External` "partner" is listed on the `Todo.Nuxt` profile page.
 - **`Huia`** — `ExternalLoginOptions.LinkExistingAccountsByEmail()` (default off): a logged-out
   external sign-in whose verified email matches a confirmed local account is linked to it instead of
   creating a new account. When it is off or the account is ineligible, an email collision is refused
@@ -230,7 +230,7 @@ All notable changes to Huia are documented here. The format is based on
   (seeded into the OpenIddict application `Properties` as `huia:client_uri` / `huia:logo_uri`).
 - **`Huia.AppHost` sample** — the `Huia.Cli` admin tool is registered as an on-demand resource
   (`WithExplicitStart()` + `WithTerminal()`), pre-wired with `--issuer` / `--tenant master`.
-- **`Huia.IdentityServer` / `Huia.External` samples** — every branding option is set for the seeded
+- **`Todo.IdentityServer` / `Huia.External` samples** — every branding option is set for the seeded
   tenants (logo, favicon, accent, terms / privacy / support), with placeholder legal pages served
   from `wwwroot/`.
 - **`Huia.AppHost` sample** — Mailpit is wired as an SMTP sink container; the identity server binds
@@ -249,7 +249,7 @@ All notable changes to Huia are documented here. The format is based on
 - **`Huia.OpenId`** — `UiLocalesRequestCultureProvider` resolves the account-UI culture from the
   OpenID Connect `ui_locales` authorize parameter and persists it in the culture cookie, so a relying
   party can carry its user's language selection into the Huia sign-in pages.
-- **`Todo.App` sample** — `@nuxtjs/i18n` (English + Arabic/RTL) with a header language switcher; the
+- **`Todo.Nuxt` sample** — `@nuxtjs/i18n` (English + Arabic/RTL) with a header language switcher; the
   selected locale is forwarded to Huia via `ui_locales` on the OIDC authorize request.
 - **`Huia`** — options tree (root → tenant → password / passwordless umbrella → phone / external /
   email / SMS / token-lifetime / branding / feature / key-management), a dependency-free aggregating
@@ -285,13 +285,13 @@ All notable changes to Huia are documented here. The format is based on
   country flags (`flag-icons`) on the phone country picker, FontAwesome brand marks on the
   external-login buttons, and `libphonenumber-js` client-side phone validation. Every JS
   enhancement degrades to a working plain-HTML form.
-- **Samples** — `Huia.IdentityServer` (real host, Sqlite / Npgsql; the `todo` tenant now also
+- **Samples** — `Todo.IdentityServer` (real host, Sqlite / Npgsql; the `todo` tenant now also
   federates to `Huia.External` via an `HuiaExternal` OIDC provider, and `master` seeds an
   `huia-cli` device client), `Huia.External` (mock OIDC provider), `Todo.Api` (JwtBearer resource
   server), a .NET Aspire `Huia.AppHost`, `Huia.Cli` (a `System.CommandLine` admin tool that signs in
   with the device-authorization grant — `login` / `logout` / `whoami` / `token` / `scopes list`),
-  and two Nuxt 4 front-ends: `Todo.App` (landing + `/tasks` CRUD + `/profile`, with
-  `libphonenumber-js` client-side validation on the phone widget) and `Huia.AdminUI` — a sidebar
+  and two Nuxt 4 front-ends: `Todo.Nuxt` (landing + `/tasks` CRUD + `/profile`, with
+  `libphonenumber-js` client-side validation on the phone widget) and `Todo.Admin` — a sidebar
   admin console covering every `/admin` endpoint: a dashboard, the tenants / users / clients /
   signing-keys lists (keyset pagination, tenant filters, static/dynamic origin badges) and full
   per-tenant scope CRUD (create / edit / delete, with code-defined scopes shown read-only), plus
@@ -303,6 +303,6 @@ All notable changes to Huia are documented here. The format is based on
   (`Huia.IntegrationTests`, including health-check, scope-seeding, admin scope CRUD and device-flow
   coverage), Playwright E2E (`Huia.E2ETests`) covering the Razor UI, the `Huia.Cli` device flow, and
   both Nuxt front-ends end to end (password / phone / external sign-in and sign-out, forgot-password,
-  confirm-email — the fixture boots the whole sample stack out-of-process), the `Huia.AdminUI` console
+  confirm-email — the fixture boots the whole sample stack out-of-process), the `Todo.Admin` console
   driven through `Aspire.Hosting.Testing` (`AdminUiE2ETests` — sign-in, every admin section, and the
   scope create / edit / delete round-trip), and HTTP security assertions (`Huia.Tests.PenTest`).

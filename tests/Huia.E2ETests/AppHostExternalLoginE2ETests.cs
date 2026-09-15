@@ -10,7 +10,7 @@ namespace Huia.E2ETests;
 /// End-to-end specs for external login (partner IdP federation) running against the full
 /// <c>Huia.AppHost</c> stack booted via <c>Aspire.Hosting.Testing</c>.
 ///
-/// Verifies that both <c>Huia.IdentityServer</c> (OpenIddict client) and <c>Shop.Api</c>
+/// Verifies that both <c>Todo.IdentityServer</c> (OpenIddict client) and <c>Shop.Api</c>
 /// (Huia.Headless OpenIdConnect handler) successfully discover, challenge, authenticate, and
 /// exchange tokens with <c>Huia.External</c> in the Aspire environment.
 /// </summary>
@@ -119,7 +119,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
             await page.ClickAsync("[data-testid=complete-profile-submit]");
         }
 
-        // Successfully redirected back to Todo.App and signed in
+        // Successfully redirected back to Todo.Nuxt and signed in
         await page.WaitForURLAsync(u => u.TrimEnd('/') == todoUrl.TrimEnd('/') || u.Contains("localhost:3000"), new() { Timeout = 25_000 });
         await Expect(page.Locator("[data-testid=user-name]")).ToBeVisibleAsync(new() { Timeout = 25_000 });
     }

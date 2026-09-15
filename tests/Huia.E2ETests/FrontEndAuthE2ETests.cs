@@ -6,7 +6,7 @@ using static Huia.E2ETests.FrontEndFlows;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Browser-drives the Todo.App Nuxt front-end through real OIDC sign-in / sign-out (password, phone and
+/// Browser-drives the Todo.Nuxt front-end through real OIDC sign-in / sign-out (password, phone and
 /// external provider). The admin console has its own Aspire-hosted spec (<see cref="AdminUiE2ETests"/>).
 /// </summary>
 [Trait("Category", "E2E")]

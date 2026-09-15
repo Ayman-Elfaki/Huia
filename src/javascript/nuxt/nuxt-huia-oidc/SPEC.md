@@ -1611,7 +1611,7 @@ a consumer `declare module '#huia-auth'` augmentation merges into `UserClaims`.
 
 ### 10.5 E2E (`tests/Huia.E2ETests/HuiaNuxt*`, `[Trait("Category","E2E")]`)
 
-`HuiaNuxtPlaygroundFixture` boots `Huia.IdentityServer` (`Huia__EnableE2E=true` /
+`HuiaNuxtPlaygroundFixture` boots `Todo.IdentityServer` (`Huia__EnableE2E=true` /
 `Huia__Database=Sqlite`, in-memory shared cache) on `http://localhost:5319` and runs the built
 playground (`node src/nuxt/nuxt-huia-oidc/playground/.output/server/index.mjs`) on `:3030` with `NUXT_HUIA_*`
 overrides. `Program.cs` seeds a `huia-nuxt-playground` confidential web client in the `e2e`

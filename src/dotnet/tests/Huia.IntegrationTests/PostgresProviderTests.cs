@@ -6,7 +6,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 namespace Huia.IntegrationTests;
 
 /// <summary>
-/// Exercises the real <c>Huia.IdentityServer</c> host against a PostgreSQL container — PostgreSQL is the
+/// Exercises the real <c>Todo.IdentityServer</c> host against a PostgreSQL container — PostgreSQL is the
 /// only tested provider, so this is where the schema DDL and query translation are proven.
 /// </summary>
 [Trait("Category", "Container")]

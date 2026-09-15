@@ -51,7 +51,7 @@ export default defineNuxtConfig({
   },
 
   // The token store must be SHARED across instances in a multi-node deployment, or the soft lock
-  // and the token record are per-worker and sessions "flap". The `Todo.App` and `Huia.AdminUI`
+  // and the token record are per-worker and sessions "flap". The `Todo.Nuxt` and `Todo.Admin`
   // samples wire this up: the AppHost runs a Redis container and passes `NUXT_REDIS_URL`, and each
   // `nuxt.config.ts` mounts `huia-auth` on the `redis` driver when that variable is present.
   nitro: {

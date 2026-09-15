@@ -8,7 +8,7 @@
     <ProjectReference Include="..\..\src\Huia.OpenId\Huia.OpenId.csproj" />
     <ProjectReference Include="..\..\src\Huia.Headless\Huia.Headless.csproj" />
     <ProjectReference Include="..\..\src\Huia.Headless.EntityFrameworkCore\Huia.Headless.EntityFrameworkCore.csproj" />
-    <ProjectReference Include="..\..\..\..\samples\Huia.IdentityServer\Huia.IdentityServer.csproj" />
+    <ProjectReference Include="..\..\..\..\samples\Todo\Todo.IdentityServer\Todo.IdentityServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

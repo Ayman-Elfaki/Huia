@@ -4,7 +4,7 @@ using System.Net.Http;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Runs the real <c>Huia.IdentityServer</c> as an out-of-process HTTP server (SQLite, E2E surface on) so
+/// Runs the real <c>Todo.IdentityServer</c> as an out-of-process HTTP server (SQLite, E2E surface on) so
 /// Playwright can drive it through a browser. Any failure here leaves <see cref="Started"/> false and the
 /// browser tests skip rather than fail the run.
 /// </summary>
@@ -33,7 +33,7 @@ public sealed class SampleHostFixture : IAsyncLifetime
     private async Task StartAsync()
     {
         var repoRoot = RepoRoot.Find();
-        var dllPath = Path.Combine(repoRoot, "samples", "Huia.IdentityServer", "bin", "Release", "net10.0", "Huia.IdentityServer.dll");
+        var dllPath = Path.Combine(repoRoot, "samples", "Todo", "Todo.IdentityServer", "bin", "Release", "net10.0", "Todo.IdentityServer.dll");
         if (!File.Exists(dllPath))
         {
             return;

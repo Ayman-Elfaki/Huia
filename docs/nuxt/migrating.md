@@ -1,6 +1,6 @@
 # Migrating from `nuxt-oidc-auth`
 
-Both sample apps (`samples/Todo.App`, `samples/Huia.AdminUI`) were moved from the third-party
+Both sample apps (`samples/Todo/Todo.Nuxt`, `samples/Todo/Todo.Admin`) were moved from the third-party
 `nuxt-oidc-auth` beta to `nuxt-huia-oidc`. The full diff is commit `f363cec`; the shape of the change:
 
 ## `package.json`
@@ -45,8 +45,8 @@ sidesteps an npm 10 arborist crash on the nuxt peer graph.
 +  huia: {
 +    baseUrl: huiaBaseUrl,
 +    tenant: 'master',
-+    clientId: process.env.NUXT_HUIA_CLIENT_ID ?? 'huia-admin-ui',
-+    clientSecret: process.env.NUXT_HUIA_CLIENT_SECRET ?? 'huia-admin-ui-secret',
++    clientId: process.env.NUXT_HUIA_CLIENT_ID ?? 'todo-admin',
++    clientSecret: process.env.NUXT_HUIA_CLIENT_SECRET ?? 'todo-admin-secret',
 +    scopes: ['openid', 'profile', 'email', 'roles', 'offline_access'],
 +    par: { enabled: true },
 +    session: { password: process.env.NUXT_HUIA_SESSION_PASSWORD ?? 'dev-only-32-chars-minimum-…' },

@@ -7,7 +7,7 @@ locally and in CI without a real provider.
 
 ## AppHost wiring
 
-`samples/Huia.AppHost/AppHost.cs` uses the `CommunityToolkit.Aspire.Hosting.MailPit` integration and
+`samples/Shared/Huia.AppHost/AppHost.cs` uses the `CommunityToolkit.Aspire.Hosting.MailPit` integration and
 points the identity server at it:
 
 ```csharp

@@ -4,7 +4,7 @@ using System.Net.Http;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Boots the <c>Shop.Api</c>/<c>Shop.App</c> sample out-of-process on fixed HTTP ports so Playwright can
+/// Boots the <c>Shop.Api</c>/<c>Shop.Nuxt</c> sample out-of-process on fixed HTTP ports so Playwright can
 /// drive the <c>nuxt-huia-headless</c> module end to end: register, login, browse, cart, checkout,
 /// logout, all against a real <c>Huia.Headless</c> bearer-token backend. Also boots its own
 /// <c>Huia.External</c> instance (a separate port from <see cref="FrontEndStackFixture"/>'s, since xUnit
@@ -40,18 +40,18 @@ public sealed class ShopStackFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
-        var shopApiDll = Path.Combine(_repoRoot, "samples", "Shop.Api", "bin", "Release", "net10.0", "Shop.Api.dll");
-        var shopAppOutput = Path.Combine(_repoRoot, "samples", "Shop.App", ".output", "server", "index.mjs");
-        var externalDll = Path.Combine(_repoRoot, "samples", "Huia.External", "bin", "Release", "net10.0", "Huia.External.dll");
+        var shopApiDll = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Api", "bin", "Release", "net10.0", "Shop.Api.dll");
+        var shopAppOutput = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Nuxt", ".output", "server", "index.mjs");
+        var externalDll = Path.Combine(_repoRoot, "samples", "Shared", "Huia.External", "bin", "Release", "net10.0", "Huia.External.dll");
 
         foreach (var (label, path) in new[]
         {
-            ("Shop.Api", shopApiDll), ("Shop.App/.output", shopAppOutput), ("Huia.External", externalDll),
+            ("Shop.Api", shopApiDll), ("Shop.Nuxt/.output", shopAppOutput), ("Huia.External", externalDll),
         })
         {
             if (!File.Exists(path))
             {
-                SkipReason = $"Missing build output for {label} ({path}). Build the Release .NET output and `npm run build` Shop.App.";
+                SkipReason = $"Missing build output for {label} ({path}). Build the Release .NET output and `npm run build` Shop.Nuxt.";
                 return;
             }
         }
@@ -99,7 +99,7 @@ public sealed class ShopStackFixture : IAsyncLifetime
         Started = ready && _processes.All(p => !p.HasExited);
         if (!Started && SkipReason is null)
         {
-            SkipReason = "Shop.Api, Huia.External, or Shop.App did not become ready in time.";
+            SkipReason = "Shop.Api, Huia.External, or Shop.Nuxt did not become ready in time.";
         }
     }
 

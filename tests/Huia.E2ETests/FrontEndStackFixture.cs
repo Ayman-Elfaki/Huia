@@ -5,9 +5,9 @@ namespace Huia.E2ETests;
 
 /// <summary>
 /// Boots the whole sample stack out-of-process on fixed HTTP ports so Playwright can drive the two Nuxt
-/// front-ends through a real OIDC round-trip: <c>Huia.IdentityServer</c> (E2E surface on),
+/// front-ends through a real OIDC round-trip: <c>Todo.IdentityServer</c> (E2E surface on),
 /// <c>Huia.External</c> (upstream provider for the external-login flow), <c>Todo.Api</c> (resource
-/// server), and <c>npm run preview</c> for <c>Todo.App</c> and <c>Huia.AdminUI</c>.
+/// server), and <c>npm run preview</c> for <c>Todo.Nuxt</c> and <c>Todo.Admin</c>.
 ///
 /// Any missing build output or start-up failure leaves <see cref="Started"/> false and the specs skip.
 /// </summary>
@@ -40,16 +40,16 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
-        var idpDll = DllPath("samples", "Huia.IdentityServer");
-        var externalDll = DllPath("samples", "Huia.External");
-        var todoApiDll = DllPath("samples", "Todo.Api");
-        var todoAppOutput = Path.Combine(_repoRoot, "samples", "Todo.App", ".output", "server", "index.mjs");
-        var adminAppOutput = Path.Combine(_repoRoot, "samples", "Huia.AdminUI", ".output", "server", "index.mjs");
+        var idpDll = DllPath("samples", "Todo", "Todo.IdentityServer");
+        var externalDll = DllPath("samples", "Shared", "Huia.External");
+        var todoApiDll = DllPath("samples", "Todo", "Todo.Api");
+        var todoAppOutput = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Nuxt", ".output", "server", "index.mjs");
+        var adminAppOutput = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Admin", ".output", "server", "index.mjs");
 
         foreach (var (label, path) in new[]
         {
-            ("Huia.IdentityServer", idpDll), ("Huia.External", externalDll), ("Todo.Api", todoApiDll),
-            ("Todo.App/.output", todoAppOutput), ("Huia.AdminUI/.output", adminAppOutput),
+            ("Todo.IdentityServer", idpDll), ("Huia.External", externalDll), ("Todo.Api", todoApiDll),
+            ("Todo.Nuxt/.output", todoAppOutput), ("Todo.Admin/.output", adminAppOutput),
         })
         {
             if (!File.Exists(path))
@@ -111,7 +111,7 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
         StartNode(adminAppOutput, new(commonNuxt)
         {
             ["PORT"] = new Uri(AdminAppUrl).Port.ToString(),
-            ["NUXT_HUIA_CLIENT_SECRET"] = "huia-admin-ui-secret",
+            ["NUXT_HUIA_CLIENT_SECRET"] = "todo-admin-secret",
             ["NUXT_HUIA_BASE_URL"] = Issuer,
             ["NUXT_HUIA_TENANT"] = "master",
             ["NUXT_API_PARTY_ENDPOINTS_HUIA_URL"] = $"{Issuer}/master",

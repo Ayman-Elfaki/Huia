@@ -4,7 +4,7 @@ using static Huia.E2ETests.FrontEndFlows;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Browser-drives the <c>Huia.AdminUI</c> console end to end against the real <c>Huia.AppHost</c> stack
+/// Browser-drives the <c>Todo.Admin</c> console end to end against the real <c>Huia.AppHost</c> stack
 /// (Postgres + identity server + the Nuxt admin app), signing in through OpenIddict as the seeded
 /// administrator. Covers every admin surface: the dashboard, the tenants / users / clients / keys lists,
 /// and the full per-tenant scope CRUD, including that code-defined scopes are read-only.
@@ -43,7 +43,7 @@ public sealed class AdminUiE2ETests(AppHostFixture host)
             await page.ClickAsync("[data-testid=nav-clients]");
             await Expect(page.Locator("[data-testid=client-table]")).ToBeVisibleAsync(new() { Timeout = 15_000 });
             // The seeded admin console client is defined in code.
-            await Expect(page.GetByTestId("client-huia-admin-ui")).ToContainTextAsync("static");
+            await Expect(page.GetByTestId("client-todo-admin")).ToContainTextAsync("static");
 
             await page.ClickAsync("[data-testid=nav-keys]");
             await Expect(page.Locator("[data-testid=key-table]")).ToBeVisibleAsync(new() { Timeout = 15_000 });

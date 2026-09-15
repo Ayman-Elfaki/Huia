@@ -6,7 +6,7 @@ using static Huia.E2ETests.FrontEndFlows;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Drives the <c>Shop.App</c>/<c>Shop.Api</c> sample end to end: the first real consumer of
+/// Drives the <c>Shop.Nuxt</c>/<c>Shop.Api</c> sample end to end: the first real consumer of
 /// <c>nuxt-huia-headless</c> and <c>Huia.Headless</c> together. Covers anonymous browsing, the
 /// register/login JSON flow (no hosted account UI — the app owns its own form), the protected cart page's
 /// local (non-OIDC) redirect-to-login, and a full add-to-cart/checkout round trip against the real API.

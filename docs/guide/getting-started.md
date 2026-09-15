@@ -13,7 +13,7 @@ provider (`Huia.OpenId`) and a single-tenant bearer-token API (`Huia.Headless`) 
 | `Huia.Headless` | `AddHuiaHeadless()` / `MapHuiaHeadlessEndpoints()` — bearer tokens via `MapIdentityApi`, no OpenIddict, no multi-tenancy. |
 
 This page covers `Huia.OpenId`. For the headless flavor, see the
-[Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api) and the
+[Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api) and the
 [`nuxt-huia-headless`](https://github.com/Ayman-Elfaki/Huia/tree/main/src/nuxt/nuxt-huia-headless)
 module it pairs with.
 

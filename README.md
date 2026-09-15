@@ -20,25 +20,26 @@ src/
                 Huia.Headless                      pure JSON authentication endpoints & bearer tokens
                 Huia.Headless.EntityFrameworkCore  headless store implementations
               plus tests/ (unit, integration, pen-test).
+  javascript/
+    shared/
+      huia-auth-core/   Platform-agnostic TypeScript core engine: iron-webcrypto session sealing,
+                        cookie chunking, token refresh mutex, HuiaOidcHelper (PAR + PKCE), and
+                        HuiaHeadlessClient. Shared by all Next.js and Nuxt packages.
 
-  shared/
-    huia-auth-core/   Platform-agnostic TypeScript core engine: iron-webcrypto session sealing,
-                      cookie chunking, token refresh mutex, HuiaOidcHelper (PAR + PKCE), and
-                      HuiaHeadlessClient. Shared by all Next.js and Nuxt packages.
+    next/
+      next-huia-oidc/       Next.js 14/15 library for Huia.OpenId (Route Handlers, Server Components,
+                            iron-webcrypto dual-layer session, HuiaOidcProvider, useUserSession).
+      next-huia-headless/   Next.js 14/15 library for Huia.Headless (Route Handlers, password auth,
+                            SMS OTP, external login, HuiaHeadlessProvider, useHuia).
 
-  next/
-    next-huia-oidc/       Next.js 14/15 library for Huia.OpenId (Route Handlers, Server Components,
-                          iron-webcrypto dual-layer session, HuiaOidcProvider, useUserSession).
-    next-huia-headless/   Next.js 14/15 library for Huia.Headless (Route Handlers, password auth,
-                          SMS OTP, external login, HuiaHeadlessProvider, useHuia).
+    nuxt/
+      nuxt-huia-oidc/       Nuxt 4 module for Huia.OpenId (built on huia-auth-core).
+      nuxt-huia-headless/   Nuxt 4 module for Huia.Headless (built on huia-auth-core).
 
-  nuxt/
-    nuxt-huia-oidc/       Nuxt 4 module for Huia.OpenId (built on huia-auth-core).
-    nuxt-huia-headless/   Nuxt 4 module for Huia.Headless (built on huia-auth-core).
-
-samples/      Huia.AppHost (Aspire), Huia.IdentityServer, Huia.External,
-              Todo.Api, Todo.App (Nuxt), Todo.Next (Next.js),
-              Shop.Api, Shop.App (Nuxt), Shop.Next (Next.js), Huia.AdminUI (Nuxt)
+samples/
+  Shared/     Huia.AppHost (Aspire), Huia.Cli, Huia.External
+  Todo/       Todo.Api, Todo.Nuxt (Nuxt), Todo.Next (Next.js), Todo.Admin (Nuxt), Todo.IdentityServer
+  Shop/       Shop.Api, Shop.Nuxt (Nuxt), Shop.Next (Next.js)
 tests/        Huia.E2ETests — full-stack Playwright E2E across .NET hosts, Nuxt, and Next.js apps
 docs/         VitePress documentation site
 ```

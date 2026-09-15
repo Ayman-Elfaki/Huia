@@ -6,7 +6,7 @@ using Testcontainers.PostgreSql;
 namespace Huia.IntegrationTests.Infrastructure;
 
 /// <summary>
-/// Boots the real <c>Huia.IdentityServer</c> host against a throw-away PostgreSQL container — PostgreSQL
+/// Boots the real <c>Todo.IdentityServer</c> host against a throw-away PostgreSQL container — PostgreSQL
 /// is the only tested provider, so this is where the schema and query translation are exercised for real.
 /// </summary>
 public sealed class ContainerHostFixture : WebApplicationFactory<Program>, IAsyncLifetime

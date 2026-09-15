@@ -4,7 +4,7 @@ using System.Net.Http;
 namespace Huia.E2ETests;
 
 /// <summary>
-/// Boots <c>Huia.IdentityServer</c> (SQLite, E2E surface on) plus the built <c>huia-nuxt</c>
+/// Boots <c>Todo.IdentityServer</c> (SQLite, E2E surface on) plus the built <c>huia-nuxt</c>
 /// playground (<c>node .output/server/index.mjs</c>) so Playwright can drive a real OIDC round-trip
 /// through the first-party module. Any missing build output or start-up failure leaves
 /// <see cref="Started"/> false and the specs skip.
@@ -35,7 +35,7 @@ public sealed class HuiaNuxtPlaygroundFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
-        var idpDll = Path.Combine(_repoRoot, "samples", "Huia.IdentityServer", "bin", "Release", "net10.0", "Huia.IdentityServer.dll");
+        var idpDll = Path.Combine(_repoRoot, "samples", "Todo", "Todo.IdentityServer", "bin", "Release", "net10.0", "Todo.IdentityServer.dll");
         var playgroundEntry = Path.Combine(_repoRoot, "src", "javascript", "nuxt", "nuxt-huia-oidc", "playground", ".output", "server", "index.mjs");
 
         if (!File.Exists(idpDll))

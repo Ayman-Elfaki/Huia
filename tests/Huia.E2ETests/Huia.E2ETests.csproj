@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\samples\Huia.AppHost\Huia.AppHost.csproj" />
-    <ProjectReference Include="..\..\samples\Huia.IdentityServer\Huia.IdentityServer.csproj" />
+    <ProjectReference Include="..\..\samples\Shared\Huia.AppHost\Huia.AppHost.csproj" />
+    <ProjectReference Include="..\..\samples\Todo\Todo.IdentityServer\Todo.IdentityServer.csproj" />
   </ItemGroup>
 
 </Project>

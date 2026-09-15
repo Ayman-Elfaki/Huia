@@ -5,7 +5,7 @@ namespace Huia.E2ETests;
 
 /// <summary>
 /// Boots the Next.js sample stack out-of-process on fixed HTTP ports so Playwright can
-/// test <c>Todo.Next</c> (via <c>next-huia-oidc</c>) against <c>Huia.IdentityServer</c> and <c>Todo.Api</c>,
+/// test <c>Todo.Next</c> (via <c>next-huia-oidc</c>) against <c>Todo.IdentityServer</c> and <c>Todo.Api</c>,
 /// and <c>Shop.Next</c> (via <c>next-huia-headless</c>) against <c>Shop.Api</c>.
 ///
 /// Any missing build output or start-up failure leaves <see cref="Started"/> false and the specs skip.
@@ -43,12 +43,12 @@ public sealed class NextFrontEndFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
-        var idpDll = Path.Combine(_repoRoot, "samples", "Huia.IdentityServer", "bin", "Release", "net10.0", "Huia.IdentityServer.dll");
-        var externalDll = Path.Combine(_repoRoot, "samples", "Huia.External", "bin", "Release", "net10.0", "Huia.External.dll");
-        var todoApiDll = Path.Combine(_repoRoot, "samples", "Todo.Api", "bin", "Release", "net10.0", "Todo.Api.dll");
-        var shopApiDll = Path.Combine(_repoRoot, "samples", "Shop.Api", "bin", "Release", "net10.0", "Shop.Api.dll");
-        var todoNextDir = Path.Combine(_repoRoot, "samples", "Todo.Next");
-        var shopNextDir = Path.Combine(_repoRoot, "samples", "Shop.Next");
+        var idpDll = Path.Combine(_repoRoot, "samples", "Todo", "Todo.IdentityServer", "bin", "Release", "net10.0", "Todo.IdentityServer.dll");
+        var externalDll = Path.Combine(_repoRoot, "samples", "Shared", "Huia.External", "bin", "Release", "net10.0", "Huia.External.dll");
+        var todoApiDll = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Api", "bin", "Release", "net10.0", "Todo.Api.dll");
+        var shopApiDll = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Api", "bin", "Release", "net10.0", "Shop.Api.dll");
+        var todoNextDir = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Next");
+        var shopNextDir = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Next");
 
         if (!File.Exists(idpDll))
         {

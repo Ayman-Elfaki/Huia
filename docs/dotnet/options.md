@@ -214,7 +214,7 @@ control *what* it prunes and its own safety guards.
 
 `Cleanup.EnableBackgroundJobs` and `Keys.EnableBackgroundJobs` are independent toggles — turning off key
 background jobs does not implicitly turn off cleanup, or vice versa. The `Huia:EnableBackgroundJobs`
-config key in `Huia.IdentityServer`'s `Program.cs` is wired to both for convenience; define your own
+config key in `Todo.IdentityServer`'s `Program.cs` is wired to both for convenience; define your own
 separate config keys if you need independent control in your own host.
 
 ## Validation

@@ -1,6 +1,6 @@
-# Admin console (`Huia.AdminUI`)
+# Admin console (`Todo.Admin`)
 
-`samples/Huia.AdminUI` is a Nuxt 4 admin console that puts a UI on every `/admin/*` endpoint the
+`samples/Todo/Todo.Admin` is a Nuxt 4 admin console that puts a UI on every `/admin/*` endpoint the
 library exposes. It is a **confidential** client built on the first-party
 [`nuxt-huia-oidc`](/nuxt/overview) module and signs in against the `master` tenant;
 [`nuxt-api-party`](https://nuxt-api-party.byjohann.dev/) proxies each call to
@@ -58,10 +58,10 @@ hard-deletes a key, and only a *retired* one.
 
 ## Running it
 
-`Huia.AdminUI` is wired into `samples/Huia.AppHost` as `admin-app` on port 3001:
+`Todo.Admin` is wired into `samples/Shared/Huia.AppHost` as `admin-app` on port 3001:
 
 ```bash
-dotnet run --project samples/Huia.AppHost
+dotnet run --project samples/Shared/Huia.AppHost
 # then open http://localhost:3001 and sign in as admin@huia.local / Admin1!Pass
 ```
 

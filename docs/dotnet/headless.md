@@ -142,16 +142,16 @@ account (`Huia.OpenId`'s "Scenario 1", from an account-settings page) is not.
 ## What's implemented today
 
 Password login (via `MapIdentityApi`), passkeys, phone login, and external login are all wired up and
-demonstrated end to end by the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop.Api)
-— `Shop.App`'s login page has a phone tab and a "Sign in with Partner" external-login link alongside
+demonstrated end to end by the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api)
+— `Shop.Nuxt`'s login page has a phone tab and a "Sign in with Partner" external-login link alongside
 email/password — and covered by its [e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests).
 External login is additionally unit/integration-tested by `HeadlessExternalLoginTests` in
 `Huia.IntegrationTests`, which exercise the dispatch/exchange/complete-profile logic by signing
 directly into the intermediate `IdentityConstants.ExternalScheme`, standing in for a real provider's
 callback.
 
-`Shop.Api` registers [`Huia.External`](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Huia.External)
-— the same mock upstream OIDC IdP `Todo.App` uses via `Huia.OpenId` — as its `AddOpenIdConnect(...)`
+`Shop.Api` registers [`Huia.External`](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shared/Huia.External)
+— the same mock upstream OIDC IdP `Todo.Nuxt` uses via `Huia.OpenId` — as its `AddOpenIdConnect(...)`
 provider, so the Shop e2e suite exercises a real, live challenge/callback round trip (no
 Google/GitHub account needed) rather than only the stand-in scheme sign-in above.
 
@@ -163,7 +163,7 @@ as `nuxt-huia-oidc`: the browser only ever holds a sealed session cookie, tokens
 
 ## Sample
 
-`samples/Shop.Api` + `samples/Shop.App` is the reference integration: a single combined app (identity
+`samples/Shop/Shop.Api` + `samples/Shop/Shop.Nuxt` is the reference integration: a single combined app (identity
 + resource endpoints, since Headless tokens are only valid against the app that minted them) wired
 through `Huia.AppHost`, with a Nuxt front end using `nuxt-huia-headless` for register/login, a cart,
 and checkout.

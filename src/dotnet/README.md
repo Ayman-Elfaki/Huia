@@ -51,7 +51,9 @@ This project is `src/dotnet/` inside the Huia monorepo (see the repo-root `READM
 src/dotnet/
   src/        Huia, Huia.OpenId.EntityFrameworkCore, Huia.OpenId
   tests/      Huia.Tests, Huia.IntegrationTests, Huia.Tests.PenTest
-../../samples/  Huia.AppHost (Aspire), Huia.IdentityServer, Huia.External, Todo.Api, Todo.App, Huia.AdminUI
+../../samples/  Shared/Huia.AppHost (Aspire), Shared/Huia.External, Shared/Huia.Cli,
+                Todo/Todo.Api, Todo/Todo.Nuxt, Todo/Todo.Next, Todo/Todo.Admin, Todo/Todo.IdentityServer,
+                Shop/Shop.Api, Shop/Shop.Nuxt, Shop/Shop.Next
 ../../tests/    Huia.E2ETests   (full-stack Playwright E2E)
 ../../docs/     VitePress documentation site
 ```

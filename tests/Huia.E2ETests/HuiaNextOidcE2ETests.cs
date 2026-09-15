@@ -6,7 +6,7 @@ namespace Huia.E2ETests;
 
 /// <summary>
 /// Drives the Next.js sample stack (<c>Todo.Next</c> via <c>next-huia-oidc</c>) against
-/// <c>Huia.IdentityServer</c> and <c>Todo.Api</c>.
+/// <c>Todo.IdentityServer</c> and <c>Todo.Api</c>.
 /// Asserts the dual-layer session (browser only receives sealed cookie, tokens held on server),
 /// transparent session retrieval, authenticated API calls against Todo.Api, and RP logout.
 /// </summary>
