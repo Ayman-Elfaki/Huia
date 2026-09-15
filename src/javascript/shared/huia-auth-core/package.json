@@ -27,6 +27,7 @@
     "test:watch": "vitest watch"
   },
   "dependencies": {
+    "ioredis": "^5.4.1",
     "iron-webcrypto": "^1.2.1",
     "openid-client": "^6.1.0",
     "uncrypto": "^0.1.3"

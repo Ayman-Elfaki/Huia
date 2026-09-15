@@ -17,14 +17,18 @@ export const huiaOidcConfig: HuiaOidcConfig = {
   issuer: process.env.HUIA_BASE_URL || 'http://localhost:5325',
   clientId: 'todo-app',
   clientSecret: process.env.HUIA_CLIENT_SECRET, // required if client authentication is needed
-  redirectUri: process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback` : 'http://localhost:3050/api/auth/callback',
-  postLogoutRedirectUri: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3050',
-  scope: 'openid profile email offline_access todos:read todos:write',
+  // This app's own canonical origin — used to build the OAuth redirect_uri, plus the post-login,
+  // post-logout and error redirects the handler issues on its own behalf. Required whenever the app is
+  // reached under a hostname the Next.js server itself doesn't know about (a *.localhost alias, a
+  // reverse proxy, a container's service name): NextRequest.url reflects how the server was started
+  // (next dev/next start default to "localhost"), never the incoming request's actual Host header, so
+  // without this the handler would silently redirect to the wrong origin. Omit it only when the app's
+  // configured listen address and its externally-reachable hostname are guaranteed to match.
+  appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://todo-next.dev.localhost:3050',
+  scopes: ['openid', 'profile', 'email', 'offline_access', 'todos:read', 'todos:write'],
   session: {
-    cookiePassword: process.env.HUIA_SESSION_PASSWORD || 'at-least-32-characters-long-secret-key-1234',
-    cookieName: 'huia_sess',
+    password: process.env.HUIA_SESSION_PASSWORD || 'at-least-32-characters-long-secret-key-1234',
     maxAge: 86400 * 7,
-    secure: process.env.NODE_ENV === 'production',
   },
 }
 ```

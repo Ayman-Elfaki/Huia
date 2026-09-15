@@ -27,6 +27,7 @@ export function resolveOidcConfig(config: HuiaOidcConfig | ResolvedHuiaOidcConfi
     clientId: raw.clientId,
     clientSecret: raw.clientSecret,
     redirectUri: raw.redirectUri ?? '/api/auth/callback',
+    appUrl: raw.appUrl?.replace(/\/+$/, ''),
     scopes: raw.scopes ?? ['openid', 'profile', 'email', 'roles', 'offline_access'],
     par: {
       enabled: raw.par?.enabled ?? true,

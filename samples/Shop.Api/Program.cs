@@ -10,8 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5340")!;
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
-var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "http://localhost:3040")!;
-var shopNextAppUrl = builder.Configuration.GetValue("Shop:NextAppUrl", "http://localhost:3060")!;
+var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "http://shop-app.dev.localhost:3040")!;
+var shopNextAppUrl = builder.Configuration.GetValue("Shop:NextAppUrl", "http://shop-next.dev.localhost:3060")!;
 var databaseProvider = builder.Configuration.GetValue("Huia:Database", (string?)null);
 
 var rawConnectionString = builder.Configuration.GetConnectionString("shop") ?? builder.Configuration.GetConnectionString("huia");
@@ -57,7 +57,7 @@ builder.Services
         // "shop-api" client registration this must match (client id/secret, redirect URI).
         huia.UseExternalLogin(ext =>
         {
-            ext.AddOpenIdConnect("HuiaExternal", "shop-api", "shop-api-secret", $"{externalIssuer}/partners", p =>
+            ext.AddOpenIdConnect("huia", "shop-api", "shop-api-secret", $"{externalIssuer}/partners", p =>
             {
                 p.DisplayName = "Partner";
                 p.Scopes.Add("profile");
@@ -66,6 +66,7 @@ builder.Services
             ext.EnableAccountsLinking();
             ext.AllowReturnUrlPrefix(shopAppUrl);
             ext.AllowReturnUrlPrefix(shopNextAppUrl);
+            ext.AllowReturnUrlPrefix(issuer);
         });
     })
     .AddEntityFrameworkCoreStores<HuiaDbContext>();

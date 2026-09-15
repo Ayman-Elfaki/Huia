@@ -11,11 +11,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 var databaseProvider = builder.Configuration.GetValue("Huia:Database", "Sqlite");
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
+
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310");
-var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://localhost:3000");
-var todoNextUrl = builder.Configuration.GetValue("Clients:TodoNext:BaseUrl", "http://localhost:3050");
 var todoApiUrl = builder.Configuration.GetValue("Clients:TodoApi:BaseUrl", "http://localhost:5330");
-var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://localhost:3001");
+
+var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://todo-app.dev.localhost:3000");
+var todoNextUrl = builder.Configuration.GetValue("Clients:TodoNext:BaseUrl", "http://todo-next.dev.localhost:3050");
+var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://admin-app.dev.localhost:3001");
+
+
 // The huia-nuxt module's own E2E playground (EnableE2E only).
 var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUrl", "http://localhost:3030");
 // Huia.External is the mock upstream IdP the "todo" tenant's external-login button federates to.
@@ -69,6 +73,7 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
         tenant.Branding.TermsUrl = new Uri($"{issuer}/legal/terms.html");
         tenant.Branding.PrivacyUrl = new Uri($"{issuer}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
+
         tenant.Authentication.UseEmailAndPasswordLogin(password =>
         {
             password.RequireConfirmedEmail = false;
@@ -154,7 +159,7 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
         tenant.Authentication.UseExternalLogin(ext =>
         {
             ext.AddOpenIdConnect(
-                "HuiaExternal", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
+                "huia", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
                 {
                     p.DisplayName = "Partner";
                     p.Scopes.Add("profile");
@@ -172,11 +177,8 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
             client.ClientUri = new Uri($"{todoAppUrl}/");
             client.LogoUri = new Uri($"{issuer}/brand/huia-logo.svg");
             client.RedirectUris.Add(new Uri($"{todoAppUrl}/auth/oidc/callback"));
-            client.RedirectUris.Add(new Uri($"{todoNextUrl}/api/auth/callback"));
             client.PostLogoutRedirectUris.Add(new Uri($"{todoAppUrl}/"));
-            client.PostLogoutRedirectUris.Add(new Uri($"{todoNextUrl}/"));
             client.HomeUris.Add(new Uri($"{todoAppUrl}/"));
-            client.HomeUris.Add(new Uri($"{todoNextUrl}/"));
         });
 
         tenant.AddServerSideWebApplication("todo-next", "todo-next-secret", client =>

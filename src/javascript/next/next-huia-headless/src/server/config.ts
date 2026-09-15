@@ -16,6 +16,7 @@ export function resolveHeadlessConfig(config: HuiaHeadlessConfig | ResolvedHuiaH
 
   return {
     baseUrl: raw.baseUrl.replace(/\/+$/, ''),
+    appUrl: raw.appUrl?.replace(/\/+$/, ''),
     session: {
       name: raw.session.name ?? (secure ? '__Host-huia_headless_sess' : 'huia_headless_sess'),
       password: raw.session.password,

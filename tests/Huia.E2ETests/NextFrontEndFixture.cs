@@ -18,10 +18,10 @@ public sealed class NextFrontEndFixture : IAsyncLifetime
     public string Issuer { get; } = "http://localhost:5325";
     public string ExternalIssuer { get; } = "http://localhost:5328";
     public string TodoApiUrl { get; } = "http://localhost:5335";
-    public string TodoNextUrl { get; } = "http://localhost:3050";
+    public string TodoNextUrl { get; } = "http://todo-next.dev.localhost:3050";
 
     public string ShopApiUrl { get; } = "http://localhost:5345";
-    public string ShopNextUrl { get; } = "http://localhost:3060";
+    public string ShopNextUrl { get; } = "http://shop-next.dev.localhost:3060";
 
     public bool Started { get; private set; }
     public string? SkipReason { get; private set; }
@@ -120,6 +120,10 @@ public sealed class NextFrontEndFixture : IAsyncLifetime
         StartNext(todoNextDir, 3050, new()
         {
             ["PORT"] = "3050",
+            // next-huia-oidc's appUrl: Next.js's own request.url doesn't reflect the actual Host header
+            // (it reflects how the server was started), so without this the OAuth redirect_uri it builds
+            // silently points at "localhost:3050" instead of TodoNextUrl.
+            ["NEXT_PUBLIC_APP_URL"] = TodoNextUrl,
             ["HUIA_BASE_URL"] = Issuer,
             ["TODO_API_URL"] = TodoApiUrl,
             ["HUIA_CLIENT_ID"] = "todo-next",
@@ -130,6 +134,8 @@ public sealed class NextFrontEndFixture : IAsyncLifetime
         StartNext(shopNextDir, 3060, new()
         {
             ["PORT"] = "3060",
+            // next-huia-headless's appUrl — same reason as todo-next's NEXT_PUBLIC_APP_URL above.
+            ["NEXT_PUBLIC_APP_URL"] = ShopNextUrl,
             ["SHOP_API_URL"] = ShopApiUrl,
             ["NODE_TLS_REJECT_UNAUTHORIZED"] = "0",
         }, "shop-next");

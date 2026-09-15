@@ -26,6 +26,16 @@ export interface HuiaHeadlessRoutes {
 export interface HuiaHeadlessConfig {
   /** Base URL of the Huia.Headless identity API (e.g. https://localhost:5341) */
   baseUrl: string
+  /**
+   * This app's own canonical origin, e.g. `http://shop-next.dev.localhost:3060`. Used to build the
+   * external-login callback URL instead of the incoming request's `url.origin`. Next.js's
+   * `NextRequest.url` is derived from how the server was started (`next dev`/`next start`, defaulting
+   * to "localhost"), not from the request's actual `Host` header, so `url.origin` is wrong whenever the
+   * app is reached under a different hostname (a reverse proxy, a `*.localhost` alias, a container's
+   * service name). Falls back to `url.origin` when unset, which is correct only when the app's
+   * configured listen address and its externally-reachable hostname happen to match.
+   */
+  appUrl?: string
   /** Session configuration (cookie encryption) */
   session: SessionOptions
   /** Cookie options */
@@ -40,6 +50,7 @@ export interface HuiaHeadlessConfig {
 
 export interface ResolvedHuiaHeadlessConfig {
   baseUrl: string
+  appUrl?: string
   session: {
     name: string
     password: string

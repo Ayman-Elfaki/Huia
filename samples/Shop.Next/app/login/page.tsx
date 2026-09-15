@@ -36,7 +36,7 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.SubmitEvent) => {
     e.preventDefault()
     setError(null)
     setSubmitting(true)
@@ -58,7 +58,7 @@ function LoginContent() {
     }
   }
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.SubmitEvent) => {
     e.preventDefault()
     setError(null)
     setSuccess(null)
@@ -82,7 +82,7 @@ function LoginContent() {
     }
   }
 
-  const handlePhoneStart = async (e: React.FormEvent) => {
+  const handlePhoneStart = async (e: React.SubmitEvent) => {
     e.preventDefault()
     setError(null)
     setSubmitting(true)
@@ -106,7 +106,7 @@ function LoginContent() {
     }
   }
 
-  const handlePhoneVerify = async (e: React.FormEvent) => {
+  const handlePhoneVerify = async (e: React.SubmitEvent) => {
     e.preventDefault()
     if (!flowId) return
     setError(null)
@@ -135,7 +135,7 @@ function LoginContent() {
     }
   }
 
-  const handlePhoneComplete = async (e: React.FormEvent) => {
+  const handlePhoneComplete = async (e: React.SubmitEvent) => {
     e.preventDefault()
     if (!flowId) return
     setError(null)
@@ -430,7 +430,7 @@ function LoginContent() {
         {/* External Provider Footer */}
         <div className="mt-6 pt-6 border-t border-gray-800/80">
           <a
-            href={externalLoginHref('HuiaExternal', returnTo)}
+            href={externalLoginHref('huia', returnTo)}
             className="w-full py-2.5 px-4 rounded-xl border border-gray-800 hover:bg-gray-800/60 text-gray-300 font-medium text-xs transition flex items-center justify-center gap-2"
           >
             Sign in with Partner

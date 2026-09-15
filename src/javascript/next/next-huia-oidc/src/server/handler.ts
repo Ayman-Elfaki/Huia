@@ -22,6 +22,11 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
   const cfg = resolveOidcConfig(configInput)
   const oauthCookieName = `${cfg.session.name}_oauth`
 
+  // Next.js's NextRequest.url reflects how the server was started (next dev/next start default to
+  // "localhost"), not the request's actual Host header — see the appUrl doc comment in types.ts. Every
+  // absolute URL the handler builds on its own behalf goes through this instead of url.origin directly.
+  const origin = (url: URL): string => cfg.appUrl ?? url.origin
+
   return async function handler(req: NextRequest): Promise<NextResponse> {
     const url = new URL(req.url)
     const pathname = url.pathname
@@ -49,7 +54,7 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
     catch (err) {
       const message = err instanceof Error ? err.message : 'auth_error'
       console.error('[next-huia-oidc] handler error:', err)
-      return NextResponse.redirect(new URL(`${cfg.routes.error}?error=${encodeURIComponent(message)}`, url.origin))
+      return NextResponse.redirect(new URL(`${cfg.routes.error}?error=${encodeURIComponent(message)}`, origin(url)))
     }
   }
 
@@ -63,10 +68,10 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
       if (val) extraParams[key] = val
     }
 
-    // Determine redirectUri: if relative, make absolute with request origin
+    // Determine redirectUri: if relative, make absolute with the app's own origin
     const redirectUri = cfg.redirectUri.startsWith('http')
       ? cfg.redirectUri
-      : `${url.origin}${cfg.redirectUri}`
+      : `${origin(url)}${cfg.redirectUri}`
 
     const { redirectTo, stateRecord } = await defaultOidcHelper.beginAuthorization(oidcConfig, {
       clientId: cfg.clientId,
@@ -114,9 +119,16 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
     }
 
     const oidcConfig = await defaultOidcHelper.getConfiguration(cfg)
+    // openid-client derives the redirect_uri it sends to the token endpoint from this URL's own origin
+    // (stripping only the query string) — not from a stored value — so it must carry the same origin
+    // handleLogin used to build the redirect_uri the authorization code was issued for, or the token
+    // exchange fails with "redirect_uri parameter doesn't match". Swap in origin(url) for exactly that
+    // reason (see the appUrl doc comment in types.ts); everything else about the request — path, and
+    // critically the query string carrying `code`/`state`/`iss` — stays as-is.
+    const callbackUrl = new URL(`${url.pathname}${url.search}`, origin(url))
     const { tokens, claims, returnTo } = await defaultOidcHelper.completeAuthorization(
       oidcConfig,
-      url,
+      callbackUrl,
       stateRecord,
       cfg.issuer,
     )
@@ -151,7 +163,7 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
     }
 
     const redirectTarget = returnTo && returnTo.startsWith('/') ? returnTo : '/'
-    const res = NextResponse.redirect(new URL(redirectTarget, url.origin))
+    const res = NextResponse.redirect(new URL(redirectTarget, origin(url)))
     await writeSessionToResponse(res, cfg, payload)
     res.cookies.delete(oauthCookieName)
 
@@ -172,8 +184,8 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
       await cfg.storage.deleteTokenRecord(payload.sid).catch(() => {})
     }
 
-    const postLogoutRedirectUri = `${url.origin}/`
-    let logoutUrl = `${url.origin}/`
+    const postLogoutRedirectUri = `${origin(url)}/`
+    let logoutUrl = `${origin(url)}/`
 
     try {
       const oidcConfig = await defaultOidcHelper.getConfiguration(cfg)

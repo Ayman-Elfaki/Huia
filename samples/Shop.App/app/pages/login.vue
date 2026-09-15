@@ -190,7 +190,7 @@ async function onPhoneCompleteProfile() {
       <UAlert v-if="info" color="success" variant="subtle" :description="info" class="mt-3" />
 
       <template #footer>
-        <UButton :to="externalLoginHref('HuiaExternal', returnTo)" external variant="outline" color="neutral" block>
+        <UButton :to="externalLoginHref('huia', returnTo)" external variant="outline" color="neutral" block>
           Sign in with Partner
         </UButton>
       </template>

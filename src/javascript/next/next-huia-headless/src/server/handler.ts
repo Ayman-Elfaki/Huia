@@ -190,7 +190,10 @@ export function createHuiaHeadlessHandler(configInput: HuiaHeadlessConfig) {
 
   function handleExternalLogin(url: URL, provider: string): NextResponse {
     const returnTo = url.searchParams.get('returnUrl') ?? '/'
-    const callbackUrl = `${url.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
+    // cfg.appUrl, not url.origin: Next.js's NextRequest.url reflects how the server was started (next
+    // dev/next start default to "localhost"), not the request's actual Host header — see the appUrl doc
+    // comment in types.ts.
+    const callbackUrl = `${cfg.appUrl ?? url.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
     const redirectUrl = client.externalLoginUrl(provider, callbackUrl)
     return NextResponse.redirect(redirectUrl)
   }

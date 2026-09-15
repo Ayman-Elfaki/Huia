@@ -31,6 +31,17 @@ export interface HuiaOidcConfig {
   clientSecret?: string
   /** OAuth Redirect URI (defaults to /api/auth/callback) */
   redirectUri?: string
+  /**
+   * This app's own canonical origin, e.g. `http://todo-next.dev.localhost:3050`. Used to build every
+   * absolute URL the handler issues on its own behalf — a relative `redirectUri`, the post-login
+   * redirect, and the post-logout/error redirects — instead of the incoming request's `url.origin`.
+   * Next.js's `NextRequest.url` is derived from how the server was started (`next dev`/`next start`,
+   * defaulting to "localhost"), not from the request's actual `Host` header, so `url.origin` is wrong
+   * whenever the app is reached under a different hostname (a reverse proxy, a `*.localhost` alias, a
+   * container's service name). Falls back to `url.origin` when unset, which is correct only when the
+   * app's configured listen address and its externally-reachable hostname happen to match.
+   */
+  appUrl?: string
   /** Requested OAuth scopes */
   scopes?: string[]
   /** Pushed Authorization Requests (RFC 9126) configuration */
@@ -57,6 +68,7 @@ export interface ResolvedHuiaOidcConfig {
   clientId: string
   clientSecret?: string
   redirectUri: string
+  appUrl?: string
   scopes: string[]
   par: {
     enabled: boolean

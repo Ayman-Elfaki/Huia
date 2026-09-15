@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "huia-auth-core": "file:../../src/javascript/shared/huia-auth-core",
+    "ioredis": "^5.4.1",
     "lucide-react": "^1.16.0",
     "next": "^15.2.0",
     "next-huia-oidc": "file:../../src/javascript/next/next-huia-oidc",

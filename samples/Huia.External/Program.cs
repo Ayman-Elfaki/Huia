@@ -8,16 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5320")!;
-var consumerBaseUrl = builder.Configuration.GetValue("Consumer:BaseUrl", "https://localhost:5310")!;
-var consumerAltBaseUrl = builder.Configuration.GetValue("Consumer:AltBaseUrl", "https://identityserver.dev.localhost:5310");
-// Huia.Headless consumers (Shop.Api) register their own client, separately from the Huia.OpenId
-// ("todo") one above — the two flavors need different redirect URI shapes (see the Shop.Api client
-// below) and there is no reason to force them to share one base URL. This is Shop.Api's OWN base
-// URL, not Shop.App's — Shop.Api is the OIDC relying party here (it hosts the callback), the same
-// way Huia.IdentityServer (not Todo.App) is the relying party for the "todo" client above.
-var shopConsumerBaseUrl = builder.Configuration.GetValue("ShopConsumer:BaseUrl", "https://localhost:5341")!;
-var shopConsumerAltBaseUrl = builder.Configuration.GetValue("ShopConsumer:AltBaseUrl", "https://shop-api.dev.localhost:5341");
+var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5320");
+var consumerBaseUrl = builder.Configuration.GetValue("Consumer:BaseUrl", "https://localhost:5310");
+var shopConsumerBaseUrl = builder.Configuration.GetValue("ShopConsumer:BaseUrl", "https://localhost:5341");
 
 var connection = new SqliteConnection(builder.Configuration.GetConnectionString("huia") ?? "DataSource=:memory:");
 connection.Open();
@@ -45,32 +38,24 @@ builder.Services.AddHuiaOpenId(huia =>
         {
             client.DisplayName = "Todo (via partner sign-in)";
             client.ClientUri = new Uri($"{consumerBaseUrl}/todo/");
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternal"));
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiaexternalpartial"));
+            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huia"));
+            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiapartial"));
             // The downstream Huia's OpenIddict-client post-logout callback, so signing out of the Todo
             // app also ends this partner session.
             client.PostLogoutRedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signout-callback-oidc"));
-            if (!string.IsNullOrEmpty(consumerAltBaseUrl) && Uri.TryCreate(consumerAltBaseUrl, UriKind.Absolute, out _))
-            {
-                client.RedirectUris.Add(new Uri($"{consumerAltBaseUrl}/todo/signin-huiaexternal"));
-                client.RedirectUris.Add(new Uri($"{consumerAltBaseUrl}/todo/signin-huiaexternalpartial"));
-                client.PostLogoutRedirectUris.Add(new Uri($"{consumerAltBaseUrl}/todo/signout-callback-oidc"));
-            }
             client.Scopes.Add("email");
             client.Scopes.Add("profile");
         });
+
         tenant.AddServerSideWebApplication("shop-api", "shop-api-secret", client =>
         {
             client.DisplayName = "Shop (via partner sign-in)";
             client.ClientUri = new Uri($"{shopConsumerBaseUrl}/");
             // Huia.Headless's classic OpenIdConnect handler callback path is "/signin-{provider}"
             // verbatim (no tenant segment, no lower-casing — unlike the OpenIddict-client shape above),
-            // so this must match the provider name Shop.Api registers exactly: "HuiaExternal".
-            client.RedirectUris.Add(new Uri($"{shopConsumerBaseUrl}/signin-HuiaExternal"));
-            if (!string.IsNullOrEmpty(shopConsumerAltBaseUrl) && Uri.TryCreate(shopConsumerAltBaseUrl, UriKind.Absolute, out _))
-            {
-                client.RedirectUris.Add(new Uri($"{shopConsumerAltBaseUrl}/signin-HuiaExternal"));
-            }
+            // so this must match the provider name Shop.Api registers exactly: "huia".
+            client.RedirectUris.Add(new Uri($"{shopConsumerBaseUrl}/signin-huia"));
+
             client.Scopes.Add("email");
             client.Scopes.Add("profile");
         });

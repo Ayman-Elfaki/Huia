@@ -52,8 +52,24 @@ internal static class ConnectEndpoints
 
         var authenticate = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         var forceLogin = request.HasPromptValue(PromptValues.Login);
+        var signedIn = authenticate.Succeeded && authenticate.Principal is not null;
 
-        if (!authenticate.Succeeded || authenticate.Principal is null || forceLogin)
+        // A cookie can authenticate (right signature, right tenant) yet no longer name a real user —
+        // most commonly a dev database reset (or a deleted account) outliving a browser session that
+        // predates it. Clear the stale cookie so this doesn't loop, then fall through to the same
+        // "not signed in" handling below instead of a 500.
+        HuiaUser? user = null;
+        if (signedIn && !forceLogin)
+        {
+            user = await userManager.GetUserAsync(authenticate.Principal!);
+            if (user is null)
+            {
+                await context.SignOutAsync(IdentityConstants.ApplicationScheme);
+                signedIn = false;
+            }
+        }
+
+        if (!signedIn || forceLogin)
         {
             if (request.HasPromptValue(PromptValues.None))
             {
@@ -72,8 +88,9 @@ internal static class ConnectEndpoints
                 [IdentityConstants.ApplicationScheme]);
         }
 
-        var user = await userManager.GetUserAsync(authenticate.Principal)
-            ?? throw new InvalidOperationException("The signed-in user could not be resolved.");
+        // Reachable only when signedIn && !forceLogin, the sole branch above that assigns user — and it
+        // returns above if that assignment came back null.
+        ArgumentNullException.ThrowIfNull(user);
 
         var tenantId = tenantAccessor.RequireCurrentTenantId();
         var identity = new ClaimsIdentity(
@@ -89,7 +106,7 @@ internal static class ConnectEndpoints
         identity.SetClaim(Claims.FamilyName, user.LastName);
         identity.SetClaim(HuiaConstants.ClaimTypes.Tenant, tenantId);
 
-        foreach (var amr in authenticate.Principal.FindAll(HuiaConstants.ClaimTypes.AuthenticationMethod))
+        foreach (var amr in authenticate.Principal!.FindAll(HuiaConstants.ClaimTypes.AuthenticationMethod))
         {
             identity.AddClaim(new Claim(HuiaConstants.ClaimTypes.AuthenticationMethod, amr.Value));
         }
@@ -153,8 +170,19 @@ internal static class ConnectEndpoints
         var codeAuth = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         var scopes = codeAuth.Principal?.GetScopes() ?? request.GetScopes();
 
-        var user = await userManager.GetUserAsync(authenticate.Principal)
-            ?? throw new InvalidOperationException("The signed-in user could not be resolved.");
+        var user = await userManager.GetUserAsync(authenticate.Principal);
+        if (user is null)
+        {
+            // Same stale-cookie case as AuthorizeAsync above: the cookie is valid but no longer names a
+            // real user (most commonly a dev database reset outliving a browser session that predates
+            // it). Clear it and send the browser back to sign in instead of a 500.
+            await context.SignOutAsync(IdentityConstants.ApplicationScheme);
+            var returnUrl = context.Request.PathBase + context.Request.Path + context.Request.QueryString;
+            return Results.Challenge(
+                new AuthenticationProperties { RedirectUri = returnUrl },
+                [IdentityConstants.ApplicationScheme]);
+        }
+
         var tenantId = tenantAccessor.RequireCurrentTenantId();
 
         var identity = new ClaimsIdentity(
