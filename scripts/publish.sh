@@ -14,6 +14,24 @@ declare -A prefixes=(
   [core]='core-v'
 )
 
+declare -A packages=(
+  [dotnet]=''
+  [nuxt-oidc]='src/javascript/nuxt/nuxt-huia-oidc/package.json'
+  [nuxt-headless]='src/javascript/nuxt/nuxt-huia-headless/package.json'
+  [next-oidc]='src/javascript/next/next-huia-oidc/package.json'
+  [next-headless]='src/javascript/next/next-huia-headless/package.json'
+  [core]='src/javascript/shared/huia-auth-core/package.json'
+)
+
+declare -A locks=(
+  [dotnet]=''
+  [nuxt-oidc]='src/javascript/nuxt/nuxt-huia-oidc/package-lock.json'
+  [nuxt-headless]='src/javascript/nuxt/nuxt-huia-headless/package-lock.json'
+  [next-oidc]='src/javascript/next/next-huia-oidc/package-lock.json'
+  [next-headless]='src/javascript/next/next-huia-headless/package-lock.json'
+  [core]='src/javascript/shared/huia-auth-core/package-lock.json'
+)
+
 if [[ -z "$target" ]]; then
   printf '%s\n' 'Select the package to publish:'
   select choice in dotnet nuxt-oidc nuxt-headless next-oidc next-headless core; do
@@ -53,6 +71,40 @@ fi
 if git ls-remote --exit-code --tags "$remote" "refs/tags/$tag" >/dev/null; then
   printf "Tag '%s' already exists on '%s'.\n" "$tag" "$remote" >&2
   exit 1
+fi
+
+package_path="${packages[$target]}"
+if [[ -n "$package_path" ]]; then
+  lock_path="${locks[$target]}"
+  VERSION="$version" PACKAGE_PATH="$package_path" LOCK_PATH="$lock_path" node <<'NODE'
+const fs = require('fs');
+const packagePath = process.env.PACKAGE_PATH;
+const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+packageJson.version = process.env.VERSION;
+fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+const lockPath = process.env.LOCK_PATH;
+const lockJson = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+lockJson.version = process.env.VERSION;
+lockJson.packages[''].version = process.env.VERSION;
+fs.writeFileSync(lockPath, `${JSON.stringify(lockJson, null, 2)}\n`);
+NODE
+
+  git add "$package_path" "$lock_path"
+  mapfile -t staged_files < <(git diff --cached --name-only)
+  if (( ${#staged_files[@]} != 2 )) || [[ " ${staged_files[*]} " != *" $package_path "* ]] || [[ " ${staged_files[*]} " != *" $lock_path "* ]]; then
+    git reset "$package_path" "$lock_path" >/dev/null
+    printf '%s\n' 'Unrelated files are already staged; refusing to create a mixed release commit.' >&2
+    exit 1
+  fi
+  if git diff --cached --quiet; then
+    printf "Package version is already '%s' in '%s'.\n" "$version" "$package_path" >&2
+    exit 1
+  fi
+  git commit -m "chore($target): bump version to $version"
+  if ! git push "$remote" HEAD; then
+    printf "Failed to push the version bump to '%s'; the tag was not created.\n" "$remote" >&2
+    exit 1
+  fi
 fi
 
 git tag -a "$tag" -m "Release $tag"

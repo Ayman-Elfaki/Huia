@@ -7,12 +7,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $targets = [ordered]@{
-    'dotnet' = 'v'
-    'nuxt-oidc' = 'nuxt-v'
-    'nuxt-headless' = 'nuxt-headless-v'
-    'next-oidc' = 'next-oidc-v'
-    'next-headless' = 'next-headless-v'
-    'core' = 'core-v'
+    'dotnet' = @{ Prefix = 'v'; Package = $null }
+    'nuxt-oidc' = @{ Prefix = 'nuxt-v'; Package = 'src/javascript/nuxt/nuxt-huia-oidc/package.json'; Lock = 'src/javascript/nuxt/nuxt-huia-oidc/package-lock.json' }
+    'nuxt-headless' = @{ Prefix = 'nuxt-headless-v'; Package = 'src/javascript/nuxt/nuxt-huia-headless/package.json'; Lock = 'src/javascript/nuxt/nuxt-huia-headless/package-lock.json' }
+    'next-oidc' = @{ Prefix = 'next-oidc-v'; Package = 'src/javascript/next/next-huia-oidc/package.json'; Lock = 'src/javascript/next/next-huia-oidc/package-lock.json' }
+    'next-headless' = @{ Prefix = 'next-headless-v'; Package = 'src/javascript/next/next-huia-headless/package.json'; Lock = 'src/javascript/next/next-huia-headless/package-lock.json' }
+    'core' = @{ Prefix = 'core-v'; Package = 'src/javascript/shared/huia-auth-core/package.json'; Lock = 'src/javascript/shared/huia-auth-core/package-lock.json' }
 }
 
 if (-not $Target) {
@@ -55,7 +55,8 @@ try {
         throw "Git remote '$Remote' was not found or is not reachable."
     }
 
-    $tag = "$($targets[$Target])$Version"
+    $targetInfo = $targets[$Target]
+    $tag = "$($targetInfo.Prefix)$Version"
     git rev-parse --verify --quiet "refs/tags/$tag" | Out-Null
     if ($LASTEXITCODE -eq 0) {
         throw "Tag '$tag' already exists locally."
@@ -64,6 +65,36 @@ try {
     git ls-remote --exit-code --tags $Remote "refs/tags/$tag" | Out-Null
     if ($LASTEXITCODE -eq 0) {
         throw "Tag '$tag' already exists on '$Remote'."
+    }
+
+    if ($targetInfo.Package) {
+        $packagePath = Join-Path $repoRoot $targetInfo.Package
+        $packageJson = Get-Content $packagePath -Raw | ConvertFrom-Json
+        $packageJson.version = $Version
+        $packageJson | ConvertTo-Json -Depth 100 | Set-Content $packagePath
+
+        $lockPath = Join-Path $repoRoot $targetInfo.Lock
+        $lockJson = Get-Content $lockPath -Raw | ConvertFrom-Json
+        $lockJson.version = $Version
+        $lockJson.packages.''.version = $Version
+        $lockJson | ConvertTo-Json -Depth 100 | Set-Content $lockPath
+
+        git add $targetInfo.Package $targetInfo.Lock
+        $stagedFiles = @(git diff --cached --name-only)
+        if ($stagedFiles | Where-Object { $_ -notin @($targetInfo.Package, $targetInfo.Lock) }) {
+            git reset $targetInfo.Package $targetInfo.Lock | Out-Null
+            throw 'Unrelated files are already staged; refusing to create a mixed release commit.'
+        }
+        git diff --cached --quiet
+        if ($LASTEXITCODE -eq 0) {
+            throw "Package version is already '$Version' in '$($targetInfo.Package)'."
+        }
+
+        git commit -m "chore($Target): bump version to $Version"
+        git push $Remote HEAD
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to push the version bump to '$Remote'; the tag was not created."
+        }
     }
 
     git tag -a $tag -m "Release $tag"
