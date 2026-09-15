@@ -70,13 +70,14 @@ try {
     if ($targetInfo.Package) {
         $packagePath = Join-Path $repoRoot $targetInfo.Package
         $packageJson = Get-Content $packagePath -Raw | ConvertFrom-Json
-        $packageJson.version = $Version
-        $packageJson | ConvertTo-Json -Depth 100 | Set-Content $packagePath
-
         $lockPath = Join-Path $repoRoot $targetInfo.Lock
-        $lockJson = Get-Content $lockPath -Raw | ConvertFrom-Json
-        $lockJson.version = $Version
-        $lockJson.packages.''.version = $Version
+        $lockJson = Get-Content $lockPath -Raw | ConvertFrom-Json -AsHashtable
+
+        $packageJson.version = $Version
+        $lockJson['version'] = $Version
+        $lockJson['packages']['']['version'] = $Version
+
+        $packageJson | ConvertTo-Json -Depth 100 | Set-Content $packagePath
         $lockJson | ConvertTo-Json -Depth 100 | Set-Content $lockPath
 
         git add $targetInfo.Package $targetInfo.Lock
