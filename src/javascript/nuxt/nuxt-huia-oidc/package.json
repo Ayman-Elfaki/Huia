@@ -25,8 +25,8 @@
     "dev": "npm run dev:prepare && nuxi dev playground",
     "dev:build": "npm run dev:prepare && nuxi build playground",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
-    "test": "node ../../../../scripts/run-vitest.mjs",
-    "test:watch": "node ../../../../scripts/run-vitest.mjs watch",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
     "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
   },
   "dependencies": {

@@ -31,8 +31,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "node ../../../../scripts/run-vitest.mjs",
-    "test:watch": "node ../../../../scripts/run-vitest.mjs watch"
+    "test": "vitest run",
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
     "huia-auth-core": "file:../../shared/huia-auth-core"
