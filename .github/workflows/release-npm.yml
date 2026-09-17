@@ -58,12 +58,12 @@ jobs:
       - name: Build Core Dependency if needed
         if: steps.pkg.outputs.prefix != 'core-v'
         run: |
-          npm --prefix src/javascript/shared/huia-auth-core install
+          npm --prefix src/javascript/shared/huia-auth-core ci
           npm --prefix src/javascript/shared/huia-auth-core run build
 
       - name: Install dependencies
         working-directory: ${{ steps.pkg.outputs.dir }}
-        run: npm install
+        run: npm ci
 
       - name: Verify tag matches package.json version
         working-directory: ${{ steps.pkg.outputs.dir }}
