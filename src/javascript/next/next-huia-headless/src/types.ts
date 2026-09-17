@@ -2,12 +2,29 @@ import type {
   UserClaims,
   UserSession,
   TokenRecord,
+  CookiePayload,
   HuiaStorageAdapter,
+  HeadlessAdminUser,
+  HeadlessAdminRole,
+  HeadlessAdminUsersPage,
+  CreateHeadlessAdminUserRequest,
+  UpdateHeadlessAdminUserRequest,
   SessionOptions,
   CookieOptions,
 } from 'huia-auth-core'
 
-export type { UserClaims, UserSession, TokenRecord, HuiaStorageAdapter }
+export type {
+  UserClaims,
+  UserSession,
+  TokenRecord,
+  CookiePayload,
+  HuiaStorageAdapter,
+  HeadlessAdminUser,
+  HeadlessAdminRole,
+  HeadlessAdminUsersPage,
+  CreateHeadlessAdminUserRequest,
+  UpdateHeadlessAdminUserRequest,
+}
 
 export interface HuiaHeadlessRoutes {
   login: string

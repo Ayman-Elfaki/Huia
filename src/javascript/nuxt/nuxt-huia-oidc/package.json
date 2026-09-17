@@ -34,7 +34,6 @@
     "@nuxt/kit": "^4.0.0",
     "defu": "^6.1.4",
     "h3": "^1.13.0",
-    "huia-auth-core": "file:../../shared/huia-auth-core",
     "iron-webcrypto": "^1.2.1",
     "openid-client": "^6.1.0",
     "uncrypto": "^0.1.3"
@@ -44,6 +43,7 @@
     "@nuxt/schema": "^4.0.0",
     "@nuxt/test-utils": "^4.2.0",
     "@types/node": "^22.10.0",
+    "huia-auth-core": "file:../../shared/huia-auth-core",
     "jose": "^5.10.0",
     "nuxt": "^4.0.0",
     "typescript": "~5.9.3",

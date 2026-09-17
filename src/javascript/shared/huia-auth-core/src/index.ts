@@ -1,4 +1,24 @@
-export * from './types.js'
+export type {
+	UserClaims,
+	UserSession,
+	TokenRecord,
+	AuthStateRecord,
+	LockRecord,
+	CookiePayload,
+	SessionOptions,
+	CookieOptions,
+	HuiaStorageAdapter,
+	BackendTokenResponse,
+	BackendMeResponse,
+	BackendPhoneStartResponse,
+	BackendPhoneVerifyResponse,
+	BackendExternalExchangeResponse,
+	HeadlessAdminUser,
+	HeadlessAdminRole,
+	HeadlessAdminUsersPage,
+	CreateHeadlessAdminUserRequest,
+	UpdateHeadlessAdminUserRequest,
+} from './types.js'
 export * from './cookie.js'
 export * from './tokens.js'
 export * from './storage.js'

@@ -3,12 +3,13 @@ import type {
   UserSession,
   TokenRecord,
   AuthStateRecord,
+  CookiePayload,
   HuiaStorageAdapter,
   SessionOptions,
   CookieOptions,
 } from 'huia-auth-core'
 
-export type { UserClaims, UserSession, TokenRecord, AuthStateRecord, HuiaStorageAdapter }
+export type { UserClaims, UserSession, TokenRecord, AuthStateRecord, CookiePayload, HuiaStorageAdapter }
 
 export interface HuiaOidcRoutes {
   login: string
