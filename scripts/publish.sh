@@ -4,6 +4,21 @@ set -euo pipefail
 target="${1:-}"
 version="${2:-}"
 remote="${3:-origin}"
+force=false
+
+if [[ "$target" == '--force' || "$target" == '-f' ]]; then
+  force=true
+  target="${2:-}"
+  version="${3:-}"
+  remote="${4:-origin}"
+elif [[ "$version" == '--force' || "$version" == '-f' ]]; then
+  force=true
+  version="${3:-}"
+  remote="${4:-origin}"
+elif [[ "$remote" == '--force' || "$remote" == '-f' ]]; then
+  force=true
+  remote="${4:-origin}"
+fi
 
 declare -A prefixes=(
   [dotnet]='v'
@@ -64,13 +79,22 @@ git rev-parse --show-toplevel >/dev/null
 git ls-remote --exit-code "$remote" >/dev/null
 
 tag="${prefixes[$target]}$version"
-if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
-  printf "Tag '%s' already exists locally.\n" "$tag" >&2
-  exit 1
-fi
-if git ls-remote --exit-code --tags "$remote" "refs/tags/$tag" >/dev/null; then
-  printf "Tag '%s' already exists on '%s'.\n" "$tag" "$remote" >&2
-  exit 1
+if [[ "$force" == true ]]; then
+  if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+    git tag -d "$tag" >/dev/null
+  fi
+  if git ls-remote --exit-code --tags "$remote" "refs/tags/$tag" >/dev/null; then
+    git push "$remote" ":refs/tags/$tag"
+  fi
+else
+  if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+    printf "Tag '%s' already exists locally.\n" "$tag" >&2
+    exit 1
+  fi
+  if git ls-remote --exit-code --tags "$remote" "refs/tags/$tag" >/dev/null; then
+    printf "Tag '%s' already exists on '%s'.\n" "$tag" "$remote" >&2
+    exit 1
+  fi
 fi
 
 package_path="${packages[$target]}"
@@ -97,13 +121,17 @@ NODE
     exit 1
   fi
   if git diff --cached --quiet; then
-    printf "Package version is already '%s' in '%s'.\n" "$version" "$package_path" >&2
-    exit 1
-  fi
-  git commit -m "chore($target): bump version to $version"
-  if ! git push "$remote" HEAD; then
-    printf "Failed to push the version bump to '%s'; the tag was not created.\n" "$remote" >&2
-    exit 1
+    git reset "$package_path" "$lock_path" >/dev/null
+    if [[ "$force" != true ]]; then
+      printf "Package version is already '%s' in '%s'.\n" "$version" "$package_path" >&2
+      exit 1
+    fi
+  else
+    git commit -m "chore($target): bump version to $version"
+    if ! git push "$remote" HEAD; then
+      printf "Failed to push the version bump to '%s'; the tag was not created.\n" "$remote" >&2
+      exit 1
+    fi
   fi
 fi
 

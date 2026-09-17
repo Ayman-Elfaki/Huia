@@ -1,7 +1,8 @@
 param(
     [string]$Target,
     [string]$Version,
-    [string]$Remote = 'origin'
+    [string]$Remote = 'origin',
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -57,14 +58,32 @@ try {
 
     $targetInfo = $targets[$Target]
     $tag = "$($targetInfo.Prefix)$Version"
-    git rev-parse --verify --quiet "refs/tags/$tag" | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        throw "Tag '$tag' already exists locally."
-    }
+    if ($Force) {
+        git rev-parse --verify --quiet "refs/tags/$tag" | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            git tag -d $tag | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to remove local tag '$tag'."
+            }
+        }
 
-    git ls-remote --exit-code --tags $Remote "refs/tags/$tag" | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        throw "Tag '$tag' already exists on '$Remote'."
+        git ls-remote --exit-code --tags $Remote "refs/tags/$tag" | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            git push $Remote ":refs/tags/$tag"
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to remove remote tag '$tag' from '$Remote'."
+            }
+        }
+    } else {
+        git rev-parse --verify --quiet "refs/tags/$tag" | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            throw "Tag '$tag' already exists locally."
+        }
+
+        git ls-remote --exit-code --tags $Remote "refs/tags/$tag" | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            throw "Tag '$tag' already exists on '$Remote'."
+        }
     }
 
     if ($targetInfo.Package) {
@@ -88,13 +107,16 @@ try {
         }
         git diff --cached --quiet
         if ($LASTEXITCODE -eq 0) {
-            throw "Package version is already '$Version' in '$($targetInfo.Package)'."
-        }
-
-        git commit -m "chore($Target): bump version to $Version"
-        git push $Remote HEAD
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to push the version bump to '$Remote'; the tag was not created."
+            git reset $targetInfo.Package $targetInfo.Lock | Out-Null
+            if (-not $Force) {
+                throw "Package version is already '$Version' in '$($targetInfo.Package)'."
+            }
+        } else {
+            git commit -m "chore($Target): bump version to $Version"
+            git push $Remote HEAD
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to push the version bump to '$Remote'; the tag was not created."
+            }
         }
     }
 
