@@ -1,6 +1,6 @@
 {
   "name": "huia-auth-core",
-  "version": "1.0.0-alpha.5",
+  "version": "1.0.0-alpha.7",
   "description": "Shared authentication primitives for Huia client modules (Next.js & Nuxt 4)",
   "license": "MIT",
   "type": "module",
