@@ -3,6 +3,7 @@ using Huia.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +36,8 @@ public static class HuiaEntityFrameworkCoreServiceCollectionExtensions
             builder.Services.AddDbContext<TContext>();
         }
 
+        ForwardHuiaBaseContexts(builder.Services, typeof(TContext));
+
         // AddIdentityCore + AddRoles (not the full AddIdentity) — that's the base UserManager/RoleManager
         // registration without pulling in a specific authentication scheme, since that choice (cookies for
         // OpenId, bearer tokens for Headless) belongs to the flavor-specific extension that runs next.
@@ -53,6 +56,22 @@ public static class HuiaEntityFrameworkCoreServiceCollectionExtensions
         builder.Services.Configure<IdentityPasskeyOptions>(o => o.ResidentKeyRequirement = "required");
 
         return builder;
+    }
+
+    // Huia's internal services (key ring, admin endpoints, OpenIddict stores…) resolve Huia's own base
+    // context (e.g. HuiaDbContext<HuiaUser, HuiaRole, string>). When the host registers a derived context,
+    // forward each Huia base type to it so the same scoped instance serves both.
+    private static void ForwardHuiaBaseContexts(IServiceCollection services, Type contextType)
+    {
+        for (var baseType = contextType.BaseType; baseType is not null && baseType != typeof(DbContext); baseType = baseType.BaseType)
+        {
+            if (baseType.Namespace?.StartsWith("Huia", StringComparison.Ordinal) != true)
+            {
+                continue;
+            }
+
+            services.TryAddScoped(baseType, sp => sp.GetRequiredService(contextType));
+        }
     }
 
     /// <summary>Convenience overload for a host using the plain common <see cref="HuiaUser"/> / <see cref="HuiaRole"/> entities directly.</summary>
