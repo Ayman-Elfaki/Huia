@@ -204,10 +204,17 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await page.WaitForURLAsync(u => u.Contains("/partners/identity/account/", StringComparison.Ordinal), new() { Timeout = 25_000 });
         await FrontEndFlows.FillPasswordAsync(page, "full@partners.test", "Partner1!Pass");
 
-        // If this partner user was not previously provisioned, complete the name form
-        if (await page.Locator("[data-testid=finish-profile-btn], button:has-text('Finish')").IsVisibleAsync())
+        // If this partner user was not previously provisioned, complete the name form. The callback page
+        // renders client-side after exchanging the code, so wait for the form rather than sampling it.
+        var finish = page.GetByRole(AriaRole.Button, new() { Name = "Finish" });
+        try
         {
-            await page.GetByRole(AriaRole.Button, new() { Name = "Finish" }).ClickAsync();
+            await finish.WaitForAsync(new() { Timeout = 10_000 });
+            await finish.ClickAsync();
+        }
+        catch (TimeoutException)
+        {
+            // Already provisioned: the callback went straight to the app.
         }
 
         await page.WaitForURLAsync(u => u.TrimEnd('/') == shopNextUrl.TrimEnd('/'), new() { Timeout = 25_000 });
