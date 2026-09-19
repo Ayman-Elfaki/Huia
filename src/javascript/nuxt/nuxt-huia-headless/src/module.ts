@@ -101,7 +101,7 @@ export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: 'nuxt-huia-headless',
     configKey: 'huiaHeadless',
-    compatibility: { nuxt: '>=4.0.0' },
+    compatibility: { nuxt: '>=3.0.0' },
   },
   defaults,
 

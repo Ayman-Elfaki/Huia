@@ -8,14 +8,15 @@ namespace Huia.Tests.Persistence;
 
 public sealed class HuiaDbContextModelTests : IDisposable
 {
-    private readonly HuiaDbContext _context;
+    private readonly HuiaDbContext<HuiaUser, HuiaRole, string> _context;
 
     public HuiaDbContextModelTests()
     {
-        var options = new DbContextOptionsBuilder<HuiaDbContext>()
+        var options = new DbContextOptionsBuilder<HuiaDbContext<HuiaUser, HuiaRole, string>>()
             .UseSqlite("DataSource=:memory:")
             .Options;
-        _context = new HuiaDbContext(new StaticMultiTenantContextAccessor<HuiaTenantInfo>(null), options);
+        _context = new HuiaDbContext<HuiaUser, HuiaRole, string>(
+            new StaticMultiTenantContextAccessor<HuiaTenantInfo>(null), options);
     }
 
     public void Dispose() => _context.Dispose();

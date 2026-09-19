@@ -1,12 +1,12 @@
 # nuxt-huia-headless
 
-**Nuxt 4** authentication module for [`Huia.Headless`](https://github.com/Ayman-Elfaki/Huia) — a
+**Nuxt 3+** authentication module for [`Huia.Headless`](https://github.com/Ayman-Elfaki/Huia) — a
 bearer-token identity API (register, login, refresh, passkeys, passwordless SMS, external providers)
 with no OAuth redirect dance for password/phone sign-in. Same dual-layer session principle as
 [`nuxt-huia-oidc`](../nuxt-huia-oidc): the browser only ever holds a sealed, chunked session cookie;
 access/refresh tokens live server-side in Nitro Storage and are refreshed transparently.
 
-- Requires Nuxt `>=4`, Nitro `>=2.10`, Node `>=20.11`
+- Requires Nuxt `>=3`, Nitro `>=2.10`, Node `>=20.11`
 - No `openid-client` dependency — this talks to Huia.Headless with plain `fetch`, since there is no
   authorization-code redirect or discovery document to negotiate.
 - Docs: <https://github.com/Ayman-Elfaki/Huia/tree/main/docs/nuxt-headless>

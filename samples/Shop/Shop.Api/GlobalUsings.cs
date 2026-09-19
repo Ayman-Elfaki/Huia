@@ -1,0 +1,1 @@
+global using HuiaDbContext = Huia.Headless.EntityFrameworkCore.HuiaDbContext<Huia.Entities.HuiaUser, Huia.Entities.HuiaRole, string>;

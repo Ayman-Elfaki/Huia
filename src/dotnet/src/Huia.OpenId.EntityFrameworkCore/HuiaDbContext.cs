@@ -30,12 +30,18 @@ namespace Huia.OpenId.EntityFrameworkCore;
 /// constructed: during a request it is the routing tenant; for seeding / background work set it first
 /// with <c>HuiaTenantScope.Enter(...)</c>.
 /// </remarks>
-public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, string>
+/// <typeparam name="TUser">The tenant-aware Huia user entity.</typeparam>
+/// <typeparam name="TRole">The tenant-aware Huia role entity.</typeparam>
+/// <typeparam name="TId">The Identity key marker; Huia's built-in entities use <see cref="string"/> keys.</typeparam>
+public class HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUser, TRole, string>
+    where TUser : HuiaUser
+    where TRole : HuiaRole
+    where TId : notnull
 {
     /// <summary>Creates the context bound to the ambient tenant.</summary>
     /// <param name="multiTenantContextAccessor">Supplies the tenant the instance is bound to.</param>
     /// <param name="options">The context options, configured by the host with a concrete provider.</param>
-    public HuiaDbContext(IMultiTenantContextAccessor multiTenantContextAccessor, DbContextOptions<HuiaDbContext> options)
+    public HuiaDbContext(IMultiTenantContextAccessor multiTenantContextAccessor, DbContextOptions options)
         : base(multiTenantContextAccessor, options)
     {
     }
@@ -50,7 +56,7 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
         base.OnModelCreating(builder);
         builder.UseOpenIddict();
 
-        builder.ConfigureHuiaIdentitySchema<HuiaUser, HuiaRole>();
+        builder.ConfigureHuiaIdentitySchema<TUser, TRole>();
         RenameOpenIddictTables(builder);
         ApplyTenantScopedIndexes(builder);
         MakePasskeysMultiTenant(builder);
@@ -90,26 +96,26 @@ public class HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, st
 
     private static void ApplyTenantScopedIndexes(ModelBuilder builder)
     {
-        var user = builder.Entity<HuiaUser>().Metadata;
+        var user = builder.Entity<TUser>().Metadata;
         foreach (var index in user.GetIndexes().ToList())
         {
             user.RemoveIndex(index);
         }
 
-        var role = builder.Entity<HuiaRole>().Metadata;
+        var role = builder.Entity<TRole>().Metadata;
         foreach (var index in role.GetIndexes().ToList())
         {
             role.RemoveIndex(index);
         }
 
-        builder.Entity<HuiaUser>(b =>
+        builder.Entity<TUser>(b =>
         {
             b.Property(u => u.TenantId).HasMaxLength(64).IsRequired();
             b.HasIndex(u => new { u.TenantId, u.NormalizedUserName }, "IX_HuiaUsers_Tenant_UserName").IsUnique();
             b.HasIndex(u => new { u.TenantId, u.NormalizedEmail }, "IX_HuiaUsers_Tenant_Email");
         });
 
-        builder.Entity<HuiaRole>(b =>
+        builder.Entity<TRole>(b =>
         {
             b.Property(r => r.TenantId).HasMaxLength(64).IsRequired();
             b.HasIndex(r => new { r.TenantId, r.NormalizedName }, "IX_HuiaRoles_Tenant_Name").IsUnique();

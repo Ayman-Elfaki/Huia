@@ -1,7 +1,7 @@
 {
   "name": "nuxt-huia-headless",
   "version": "1.0.0-alpha.5",
-  "description": "Nuxt 4 bearer-token authentication module for the Huia.Headless identity API",
+  "description": "Nuxt 3+ bearer-token authentication module for the Huia.Headless identity API",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -31,7 +31,7 @@
     "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
   },
   "dependencies": {
-    "@nuxt/kit": "^4.0.0",
+    "@nuxt/kit": "^3.0.0 || ^4.0.0",
     "defu": "^6.1.4",
     "h3": "^1.13.0",
     "iron-webcrypto": "^1.2.1",
@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@nuxt/module-builder": "^1.0.3",
-    "@nuxt/schema": "^4.0.0",
+    "@nuxt/schema": "^3.0.0 || ^4.0.0",
     "@nuxt/test-utils": "^4.2.0",
     "@types/node": "^22.10.0",
     "huia-auth-core": "file:../../shared/huia-auth-core",
@@ -50,7 +50,7 @@
     "vue-tsc": "^2.2.0"
   },
   "peerDependencies": {
-    "nuxt": "^4.0.0"
+    "nuxt": "^3.0.0 || ^4.0.0"
   },
   "engines": {
     "node": ">=20.11.0"

@@ -1,6 +1,6 @@
 # `nuxt-huia-oidc` — Technical Specification
 
-> A first-party **Nuxt 4** authentication module for the [Huia.OpenId](../dotnet/README.md) identity
+> A first-party **Nuxt 3+** authentication module for the [Huia.OpenId](../dotnet/README.md) identity
 > provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
 > transparent server-side token refresh, and a dual-layer session that keeps **every token on the
 > server**. Its sibling module, `nuxt-huia-headless`, covers the JSON register/login flow against

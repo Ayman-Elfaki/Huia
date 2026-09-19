@@ -2,9 +2,11 @@
 
 Entity Framework Core persistence for the Huia identity provider:
 
-- `HuiaDbContext` derives from **Finbuckle's `MultiTenantIdentityDbContext<HuiaUser, HuiaRole,
-  string>`** and calls `builder.UseOpenIddict()`. Its constructor takes
-  `(IMultiTenantContextAccessor accessor, DbContextOptions<HuiaDbContext> options)` and snapshots the
+- `HuiaDbContext<TUser, TRole, TId>` derives from **Finbuckle's
+  `MultiTenantIdentityDbContext<TUser, TRole, string>`** and calls `builder.UseOpenIddict()`. The
+  third generic parameter is `TId` (Huia's built-in entities use `string`). Derive a custom context
+  with `DbContextOptions<YourContext>` when adding host-specific entities. The
+  constructor takes `(IMultiTenantContextAccessor accessor, DbContextOptions options)` and snapshots the
   resolved `TenantInfo` **at construction** — seeding / background code must set the ambient tenant
   (`HuiaTenantScope.Enter(...)`) *before* resolving the context or `UserManager`.
 - Tenant isolation is a **global query filter** (`TenantId == TenantInfo.Id`) on every user / role /

@@ -13,16 +13,16 @@ public static class HuiaEntityFrameworkCoreServiceCollectionExtensions
     /// Registers ASP.NET Core Identity's EF Core stores for <typeparamref name="TUser"/> /
     /// <typeparamref name="TRole"/> against <typeparamref name="TContext"/>, plus the schema version
     /// (<see cref="IdentitySchemaVersions.Version3"/>, required for the built-in passkey entity) and the
-    /// discoverable-passkey default every Huia flavor shares. The host must register
-    /// <typeparamref name="TContext"/> with a concrete provider before calling this — Huia ships no
-    /// Entity Framework Core provider and no migrations.
+    /// discoverable-passkey default every Huia flavor shares. If the host has not already registered
+    /// <typeparamref name="TContext"/>, this method registers its standard EF Core DI services without
+    /// selecting a provider. The host must still configure a concrete provider and migrations — Huia
+    /// ships neither.
     /// </summary>
     /// <typeparam name="TContext">The host's concrete <c>DbContext</c>.</typeparam>
     /// <typeparam name="TUser">The concrete user entity, at least as derived as <see cref="HuiaUser"/>.</typeparam>
     /// <typeparam name="TRole">The concrete role entity, at least as derived as <see cref="HuiaRole"/>.</typeparam>
     /// <param name="builder">The Huia builder, from <c>AddHuiaOpenId(...)</c> or <c>AddHuiaHeadless(...)</c>.</param>
     /// <returns>The same builder, for chaining.</returns>
-    /// <exception cref="InvalidOperationException"><typeparamref name="TContext"/> was not registered first.</exception>
     public static IHuiaBuilder AddEntityFrameworkCoreStores<TContext, TUser, TRole>(this IHuiaBuilder builder)
         where TContext : DbContext
         where TUser : HuiaUser, new()
@@ -32,10 +32,7 @@ public static class HuiaEntityFrameworkCoreServiceCollectionExtensions
 
         if (builder.Services.All(d => d.ServiceType != typeof(DbContextOptions<TContext>)))
         {
-            throw new InvalidOperationException(
-                $"{typeof(TContext).Name} must be registered before AddEntityFrameworkCoreStores is called, " +
-                $"for example services.AddDbContext<{typeof(TContext).Name}>(o => o.UseNpgsql(connectionString)). " +
-                "Huia ships no Entity Framework Core provider.");
+            builder.Services.AddDbContext<TContext>();
         }
 
         // AddIdentityCore + AddRoles (not the full AddIdentity) — that's the base UserManager/RoleManager

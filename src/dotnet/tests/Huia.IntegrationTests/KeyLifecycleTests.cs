@@ -4,6 +4,7 @@ using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using HuiaDbContext = Huia.OpenId.EntityFrameworkCore.HuiaDbContext<Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser, Huia.OpenId.EntityFrameworkCore.Entities.HuiaRole, string>;
 
 namespace Huia.IntegrationTests;
 

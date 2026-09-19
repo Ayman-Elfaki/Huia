@@ -1,6 +1,6 @@
 # `nuxt-huia-oidc` — overview
 
-`nuxt-huia-oidc` is the first-party **Nuxt 4** module for signing a relying-party app into a
+`nuxt-huia-oidc` is the first-party **Nuxt 3+** module for signing a relying-party app into a
 `Huia.OpenId` tenant. It runs the OAuth 2.0 Authorization Code flow with PKCE (and RFC 9126 PAR) on
 the **Nitro server**, and keeps every token server-side.
 

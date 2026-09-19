@@ -8,11 +8,11 @@ NuGet packages:
 | Package | Contents |
 |---|---|
 | `Huia` | Domain model, options tree, eventing abstractions, constants. **No** ASP.NET Core / EF Core dependency. |
-| `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext`, `Huia*`-renamed entities, tenant-scoped Identity + OpenIddict stores. Provider-agnostic; ships no migrations. |
+| `Huia.OpenId.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId>`, `Huia*`-renamed entities, tenant-scoped Identity + OpenIddict stores. Provider-agnostic; ships no migrations. |
 | `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()`, OpenIddict server + client, the Razor Pages account UI, passwordless SMS, key lifecycle jobs, security headers. |
 
 ```csharp
-builder.Services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(cs).UseOpenIddict());
+builder.Services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseNpgsql(cs).UseOpenIddict());
 
 builder.Services.AddHuiaOpenId(huia =>
 {

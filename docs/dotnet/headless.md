@@ -6,14 +6,15 @@ same core `Huia` building blocks as `Huia.OpenId` (`HuiaUserManager<TUser>`, `Hu
 `HuiaPasskeyRegistrar<TUser>`) but has no dependency on OpenIddict or Finbuckle, and no Razor account
 UI — every route returns JSON.
 
-Package split: `Huia.Headless.EntityFrameworkCore` provides a plain
-`HuiaDbContext : IdentityDbContext<HuiaUser, HuiaRole, string>` (no multi-tenant schema additions);
+Package split: `Huia.Headless.EntityFrameworkCore` provides
+`HuiaDbContext<TUser, TRole, TId> : IdentityDbContext<TUser, TRole, string>` (no multi-tenant schema
+additions);
 `Huia.Headless` provides `AddHuiaHeadless()` and `MapHuiaHeadlessEndpoints()`.
 
 ## Wiring it up
 
 ```csharp
-builder.Services.AddDbContext<HuiaDbContext>(o => o.UseSqlite(connectionString));
+builder.Services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseSqlite(connectionString));
 
 builder.Services
     .AddHuiaHeadless(huia =>
@@ -21,7 +22,11 @@ builder.Services
         huia.UseIssuer("https://api.example.com");
         huia.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
     })
-    .AddEntityFrameworkCoreStores<HuiaDbContext>();
+    .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>();
+
+// A host-specific context can derive from HuiaDbContext<HuiaUser, HuiaRole, string>
+// and use DbContextOptions<MyCustomDbContext>. AddEntityFrameworkCoreStores registers
+// the context if it was not already registered, but the host still chooses the provider.
 
 var app = builder.Build();
 app.UseAuthentication();

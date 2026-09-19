@@ -48,6 +48,18 @@ async function discover(issuer: string): Promise<oidc.Configuration> {
   }
   const insecure = process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' || (isDev() && raw.allowInsecureTls)
 
+  // `oidc.allowInsecureRequests` only lifts openid-client's HTTPS-only restriction (i.e. it
+  // permits plain http:// issuers) — it does NOT skip TLS certificate verification. A dev issuer
+  // served over https with a self-signed / locally-trusted-but-not-CA-issued certificate (e.g.
+  // `dotnet dev-certs https`) still fails discovery with "unable to verify the first certificate"
+  // even with allowInsecureRequests set. NODE_TLS_REJECT_UNAUTHORIZED=0 is the actual mechanism
+  // that disables certificate verification (for undici under Node, and natively under Bun) — set
+  // it defensively here so it's guaranteed to apply in whichever process actually performs the
+  // fetch, rather than relying on it already being set in the parent/shell environment.
+  if (insecure) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+  }
+
   const config = await oidc.discovery(
     server,
     raw.clientId,

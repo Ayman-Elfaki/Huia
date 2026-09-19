@@ -21,7 +21,7 @@ public sealed class HuiaHeadlessSmokeTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<HuiaDbContext>(o => o.UseSqlite("DataSource=:memory:"));
+        services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseSqlite("DataSource=:memory:"));
 
         services
             .AddHuiaHeadless(huia =>
@@ -29,7 +29,7 @@ public sealed class HuiaHeadlessSmokeTests
                 huia.UseIssuer("https://headless.test");
                 huia.UseEmailAndPasswordLogin();
             })
-            .AddEntityFrameworkCoreStores<HuiaDbContext>();
+            .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
@@ -64,7 +64,7 @@ public sealed class HuiaHeadlessSmokeTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<HuiaDbContext>(o => o.UseSqlite("DataSource=:memory:"));
+        services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseSqlite("DataSource=:memory:"));
 
         // An unvalidated returnUrl on the challenge would be an open redirect, so this is enforced —
         // not just documented — the moment external login is enabled with no allow-list configured.
@@ -74,7 +74,7 @@ public sealed class HuiaHeadlessSmokeTests
                 huia.UseIssuer("https://headless.test");
                 huia.UseExternalLogin(ext => ext.AddGoogle("client-id", "client-secret"));
             })
-            .AddEntityFrameworkCoreStores<HuiaDbContext>());
+            .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>());
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public sealed class HuiaHeadlessSmokeTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<HuiaDbContext>(o => o.UseSqlite("DataSource=:memory:"));
+        services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseSqlite("DataSource=:memory:"));
 
         services
             .AddHuiaHeadless(huia =>
@@ -94,7 +94,7 @@ public sealed class HuiaHeadlessSmokeTests
                     ext.AllowReturnUrlPrefix("https://shop.example.com/");
                 });
             })
-            .AddEntityFrameworkCoreStores<HuiaDbContext>();
+            .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {

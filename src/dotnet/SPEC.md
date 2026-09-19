@@ -41,7 +41,7 @@ per-tenant Identity + sign-in policy.
 Three wiring calls:
 
 ```csharp
-builder.Services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(cs).UseOpenIddict());
+builder.Services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseNpgsql(cs).UseOpenIddict());
 
 builder.Services.AddHuiaOpenId(huia =>
     {
@@ -107,7 +107,7 @@ UseExceptionHandler("/identity/account/status/500")
                                                         published keys
 ```
 
-`HuiaDbContext` derives from Finbuckle's `MultiTenantIdentityDbContext<HuiaUser, HuiaRole, string>`:
+`HuiaDbContext<TUser, TRole, TId>` derives from Finbuckle's `MultiTenantIdentityDbContext<TUser, TRole, string>`:
 a **global query filter** (`TenantId == TenantInfo.Id`) scopes every read of a user/role/claim/login/
 token entity, and `SaveChanges` runs `EnforceMultiTenant()` (throws on a tenant-less or cross-tenant
 write, auto-stamps `TenantId` on insert).
@@ -119,7 +119,7 @@ write, auto-stamps `TenantId` on insert).
 | Package | Contents | Depends on |
 |---|---|---|
 | **`Huia`** | Domain model (`HuiaSigningKey` and value objects), the **options tree** (`HuiaOptions` → `TenantOptions` → …), eventing abstractions (`IHuiaEventPublisher`, `HuiaEvents`), constants (`HuiaConstants`). | Nothing framework-specific. A build `Target` fails the compile if an ASP.NET Core / EF Core `PackageReference` is added. |
-| **`Huia.OpenId.EntityFrameworkCore`** | `HuiaDbContext : MultiTenantIdentityDbContext<HuiaUser, HuiaRole, string>`; `ModelBuilder.UseOpenIddict()`; every table renamed `Huia*` via `ToTable`; the named tenant-scoped composite indexes (`IX_HuiaUsers_Tenant_UserName` unique, `…_Tenant_Email`, `IX_HuiaRoles_Tenant_Name` unique) applied last in `OnModelCreating` (`ApplyTenantScopedIndexes`, superseding Finbuckle's `AdjustUniqueIndexes`); `IMultiTenantContextAccessor` extensions (`CurrentTenantId()` / `RequireCurrentTenantId()`); `HuiaTenantScope.Enter(...)` for seeding / admin. **Ships no migrations** — the consuming app owns the provider and the migration assembly. |
+| **`Huia.OpenId.EntityFrameworkCore`** | Generic `HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUser, TRole, string>`; `ModelBuilder.UseOpenIddict()`; every table renamed `Huia*` via `ToTable`; the named tenant-scoped composite indexes (`IX_HuiaUsers_Tenant_UserName` unique, `…_Tenant_Email`, `IX_HuiaRoles_Tenant_Name` unique) applied last in `OnModelCreating` (`ApplyTenantScopedIndexes`, superseding Finbuckle's `AdjustUniqueIndexes`); `IMultiTenantContextAccessor` extensions (`CurrentTenantId()` / `RequireCurrentTenantId()`); `HuiaTenantScope.Enter(...)` for seeding / admin. **Ships no migrations** — the consuming app owns the provider and the migration assembly. |
 | **`Huia.OpenId`** | `AddHuia()` / `UseHuia()` / `MapHuiaEndpoints()` / `MapHuiaAdminEndpoints()`; OpenIddict **server** + **client** config; the Razor Pages account UI (`Areas/Identity/Pages/Account/**`, en/ar, RTL, a committed JS bundle under `wwwroot/`); passwordless SMS (`IOtpService`, `IPhoneNumberService`, `IPendingPhoneSignup`, rate limiters); `HuiaUserManager`; the key-lifecycle Quartz jobs + `IHuiaKeyRing`; `AddHuiaSecurityHeaders()`; `IHuiaEmailSender` (MailKit) + Razor email rendering. |
 
 `Huia` and `Huia.OpenId.EntityFrameworkCore` expose `internal` members to `Huia.OpenId` and the four test

@@ -81,7 +81,7 @@ export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: 'nuxt-huia-oidc',
     configKey: 'huia',
-    compatibility: { nuxt: '>=4.0.0' },
+    compatibility: { nuxt: '>=3.0.0' },
   },
   defaults,
 

@@ -1,6 +1,6 @@
 # nuxt-huia-oidc
 
-**Nuxt 4** authentication module for the [Huia.OpenId](https://github.com/Ayman-Elfaki/Huia)
+**Nuxt 3+** authentication module for the [Huia.OpenId](https://github.com/Ayman-Elfaki/Huia)
 identity provider. OIDC Authorization Code flow with PKCE, RFC 9126 Pushed Authorization Requests,
 transparent server-side token refresh, and a dual-layer session that keeps **every token on the
 server**.
@@ -10,7 +10,7 @@ a JSON register/login API with no OIDC redirect — for apps that own their own 
 module when the app authenticates against a multi-tenant `Huia.OpenId` server via OIDC redirects.
 
 - Built on [`openid-client`](https://github.com/panva/openid-client) v6 (ESM, Web Crypto)
-- Requires Nuxt `>=4`, Nitro `>=2.10`, Node `>=20.11`
+- Requires Nuxt `>=3`, Nitro `>=2.10`, Node `>=20.11`
 - Full spec: [`SPEC.md`](./SPEC.md) · docs: <https://github.com/Ayman-Elfaki/Huia/tree/main/docs/nuxt>
 
 ## Install

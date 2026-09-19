@@ -87,11 +87,13 @@ public sealed class HuiaDbContextTenantFilterTests : IAsyncLifetime
         (await context.SaveChangesAsync()).ShouldBe(1);
     }
 
-    private HuiaDbContext ContextFor(string? tenantId)
+    private HuiaDbContext<HuiaUser, HuiaRole, string> ContextFor(string? tenantId)
     {
         var accessor = new StaticMultiTenantContextAccessor<HuiaTenantInfo>(
             tenantId is null ? null : new HuiaTenantInfo(tenantId));
-        var options = new DbContextOptionsBuilder<HuiaDbContext>().UseSqlite(_connection).Options;
-        return new HuiaDbContext(accessor, options);
+        var options = new DbContextOptionsBuilder<HuiaDbContext<HuiaUser, HuiaRole, string>>()
+            .UseSqlite(_connection)
+            .Options;
+        return new HuiaDbContext<HuiaUser, HuiaRole, string>(accessor, options);
     }
 }
