@@ -33,13 +33,13 @@ if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase
     sqliteConnection = new SqliteConnection(connectionString);
     sqliteConnection.Open();
     builder.Services.AddSingleton(sqliteConnection);
-    builder.Services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(sqliteConnection).UseOpenIddict());
+    builder.Services.AddDbContext<IdentityHuiaDbContext>(options => options.UseSqlite(sqliteConnection).UseOpenIddict());
 }
 else
 {
     var connectionString = builder.Configuration.GetConnectionString("huia")
         ?? throw new InvalidOperationException("A 'huia' connection string is required for the Postgres provider.");
-    builder.Services.AddDbContext<HuiaDbContext>(options => options.UseNpgsql(connectionString).UseOpenIddict());
+    builder.Services.AddDbContext<IdentityHuiaDbContext>(options => options.UseNpgsql(connectionString).UseOpenIddict());
 }
 
 // The schema initializer runs before any Huia hosted service (registration order).
@@ -243,7 +243,7 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
 });
 
 huiaBuilder
-    .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+    .AddEntityFrameworkCoreStores<IdentityHuiaDbContext, HuiaUser, HuiaRole>()
     .AddHuiaUi()
     .AddHuiaSecurityHeaders();
 
