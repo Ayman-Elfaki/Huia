@@ -1,6 +1,6 @@
 {
   "name": "nuxt-huia-oidc",
-  "version": "1.0.0-alpha.6",
+  "version": "1.0.0-alpha.7",
   "description": "Nuxt 3+ OIDC/OAuth2 (PKCE + PAR) authentication module for the Huia.OpenId identity provider",
   "license": "MIT",
   "type": "module",
