@@ -1,6 +1,6 @@
 {
   "name": "next-huia-oidc",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.7",
   "description": "Next.js OIDC / OAuth2 (PKCE + PAR) authentication library for Huia.OpenId identity provider",
   "license": "MIT",
   "type": "module",
