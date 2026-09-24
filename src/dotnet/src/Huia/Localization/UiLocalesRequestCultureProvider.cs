@@ -86,4 +86,36 @@ public sealed class UiLocalesRequestCultureProvider : RequestCultureProvider
                 MaxAge = TimeSpan.FromDays(30),
             });
     }
+
+    /// <summary>
+    /// Applies the culture resolved from the specified <c>ui_locales</c> hint to the current request and persists it to the culture cookie.
+    /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="uiLocales">The space-delimited list of BCP-47 language tags.</param>
+    public static void ApplyUiLocales(HttpContext httpContext, string uiLocales)
+    {
+        if (string.IsNullOrWhiteSpace(uiLocales)) return;
+
+        var supported = HuiaLocalization.SupportedCultures;
+        var tags = uiLocales.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var tag in tags)
+        {
+            if (Match(tag, supported) is not { } culture)
+            {
+                continue;
+            }
+
+            PersistCultureCookie(httpContext, culture);
+            try
+            {
+                var cultureInfo = CultureInfo.GetCultureInfo(culture);
+                CultureInfo.CurrentCulture = cultureInfo;
+                CultureInfo.CurrentUICulture = cultureInfo;
+            }
+            catch (CultureNotFoundException) { }
+            break;
+        }
+    }
 }
+

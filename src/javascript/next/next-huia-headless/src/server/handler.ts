@@ -95,12 +95,15 @@ export function createHuiaHeadlessHandler(configInput: HuiaHeadlessConfig) {
       updatedAt: now,
     }
 
-    await cfg.storage.setTokenRecord(sid, tokenRecord, cfg.session.maxAge)
+    if (!cfg.session.stateless) {
+      await cfg.storage.setTokenRecord(sid, tokenRecord, cfg.session.maxAge)
+    }
 
     const payload: CookiePayload = {
       sid,
       user,
       expiresAt: tokenRecord.accessTokenExpiresAt,
+      ...(cfg.session.stateless ? { tokens: tokenRecord, stateless: true } : {}),
     }
 
     return { payload, user }
@@ -124,7 +127,7 @@ export function createHuiaHeadlessHandler(configInput: HuiaHeadlessConfig) {
 
   async function handleLogout(req: NextRequest): Promise<NextResponse> {
     const payload = await readSessionFromCookies(name => req.cookies.get(name)?.value, cfg)
-    if (payload?.sid) {
+    if (!cfg.session.stateless && !payload?.stateless && payload?.sid) {
       await cfg.storage.deleteTokenRecord(payload.sid).catch(() => {})
     }
 

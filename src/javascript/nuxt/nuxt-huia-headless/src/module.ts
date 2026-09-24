@@ -175,6 +175,15 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.alias['#huia-headless-auth'] = resolve('runtime/types')
 
     // ── auto-imports ──────────────────────────────────────────────────────────
+    nuxt.options.imports = nuxt.options.imports || {}
+    nuxt.options.imports.exclude = [...(nuxt.options.imports.exclude || []), /[\\/]huia-auth-core[\\/]/]
+
+    nuxt.hook('nitro:config', (nitroConfig) => {
+      nitroConfig.imports = nitroConfig.imports || {}
+      nitroConfig.imports.exclude = nitroConfig.imports.exclude || []
+      nitroConfig.imports.exclude.push(/[\\/]huia-auth-core[\\/]/)
+    })
+
     addServerImportsDir(resolve('runtime/server/utils'))
     addImportsDir(resolve('runtime/app/composables'))
 

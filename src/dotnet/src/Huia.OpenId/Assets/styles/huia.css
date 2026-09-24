@@ -645,18 +645,14 @@ html:not([data-webauthn]) [data-huia-passkey-enroll] {
     min-height: 2.75rem;
   }
 
-  /* Country picker wraps above the number so neither is cramped on a narrow screen. */
+  /* Country picker always remains next to the phone picker, even on mobile devices. */
   .huia-phone-row {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .huia-phone-row > .input {
-    flex-basis: 100%;
-  }
-
-  .huia-phone-row > .huia-country-native {
-    max-width: none;
     flex: 1;
+    min-width: 0;
   }
 
   .huia-footer {

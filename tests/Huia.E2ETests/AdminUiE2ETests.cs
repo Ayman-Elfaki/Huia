@@ -16,10 +16,9 @@ public sealed class AdminUiE2ETests(AppHostFixture host)
     private const string AdminEmail = "admin@huia.local";
     private const string AdminPassword = "Admin1!Pass";
 
-    [SkippableFact]
+    [Fact]
     public async Task Signs_in_walks_every_section_and_signs_out()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
         var console = CaptureConsole(page);
@@ -56,10 +55,9 @@ public sealed class AdminUiE2ETests(AppHostFixture host)
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Creates_edits_and_deletes_a_scope_and_leaves_code_defined_scopes_locked()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
         var console = CaptureConsole(page);

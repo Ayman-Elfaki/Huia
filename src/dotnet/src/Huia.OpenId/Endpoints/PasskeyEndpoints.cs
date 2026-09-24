@@ -42,11 +42,11 @@ internal static class PasskeyEndpoints
     {
         var group = manage.MapGroup("passkeys");
 
-        group.MapPost("creation-options", CreationOptionsAsync);
-        group.MapGet("", ListAsync);
-        group.MapPost("", RegisterAsync);
-        group.MapPatch("{id}", RenameAsync);
-        group.MapDelete("{id}", RemoveAsync);
+        group.MapPost("creation-options", CreationOptionsAsync).WithName("huia.passkey.creation-options");
+        group.MapGet("", ListAsync).WithName("huia.passkey.list");
+        group.MapPost("", RegisterAsync).WithName("huia.passkey.register");
+        group.MapPatch("{id}", RenameAsync).WithName("huia.passkey.rename");
+        group.MapDelete("{id}", RemoveAsync).WithName("huia.passkey.remove");
     }
 
     // ---- anonymous: discoverable primary sign-in --------------------------------------------------

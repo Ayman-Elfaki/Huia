@@ -17,10 +17,9 @@ public sealed class HuiaNextOidcE2ETests(NextFrontEndFixture fx)
     private const string UserEmail = "alice@todo.test";
     private const string UserPassword = "Password1!2345";
 
-    [SkippableFact]
+    [Fact]
     public async Task Signs_in_stores_tokens_server_side_and_serves_a_token_free_session()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "next-frontend stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -50,10 +49,9 @@ public sealed class HuiaNextOidcE2ETests(NextFrontEndFixture fx)
         Assert.DoesNotContain("refreshToken", body, StringComparison.OrdinalIgnoreCase);
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Performs_authenticated_crud_operations_against_todo_api()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "next-frontend stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -73,10 +71,9 @@ public sealed class HuiaNextOidcE2ETests(NextFrontEndFixture fx)
         await SignOutAsync(page, fx.TodoNextUrl);
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Sign_out_clears_the_session()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "next-frontend stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -94,10 +91,9 @@ public sealed class HuiaNextOidcE2ETests(NextFrontEndFixture fx)
         await Expect(page.Locator("[data-testid=user-name]")).Not.ToBeVisibleAsync();
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Signs_in_through_the_external_partner_provider()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "next-frontend stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 

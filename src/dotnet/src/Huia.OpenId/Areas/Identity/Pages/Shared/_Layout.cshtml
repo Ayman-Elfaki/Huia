@@ -44,13 +44,17 @@
     }
     @if (!string.IsNullOrEmpty(accent))
     {
+        var accentJson = System.Text.Json.JsonSerializer.Serialize(accent);
+        var contrastJs = $"(function(a){{if(!window.CSS||!CSS.supports||!CSS.supports('color','contrast-color(black)')){{try{{var d=document.createElement('div');d.style.color=a;(document.head||document.documentElement).appendChild(d);var c=window.getComputedStyle(d).color;d.remove();var m=c.match(/[\\d.]+/g);if(m&&m.length>=3){{var r=parseFloat(m[0])/255,g=parseFloat(m[1])/255,b=parseFloat(m[2])/255;var rL=r<=0.04045?r/12.92:Math.pow((r+0.055)/1.055,2.4);var gL=g<=0.04045?g/12.92:Math.pow((g+0.055)/1.055,2.4);var bL=b<=0.04045?b/12.92:Math.pow((b+0.055)/1.055,2.4);var l=0.2126*rL+0.7152*gL+0.0722*bL;document.documentElement.style.setProperty('--primary-foreground',l>0.179?'#000000':'#ffffff');}}}}catch(e){{}}}}}})({accentJson});";
         if (!string.IsNullOrEmpty(nonce))
         {
-            <style nonce="@nonce">:root { --primary: @accent; --ring: @accent; }</style>
+            <style nonce="@nonce">:root { --primary: @accent; --ring: @accent; --primary-foreground: contrast-color(@accent); }</style>
+            <script nonce="@nonce">@Html.Raw(contrastJs)</script>
         }
         else
         {
-            <style>:root { --primary: @accent; --ring: @accent; }</style>
+            <style>:root { --primary: @accent; --ring: @accent; --primary-foreground: contrast-color(@accent); }</style>
+            <script>@Html.Raw(contrastJs)</script>
         }
     }
 </head>

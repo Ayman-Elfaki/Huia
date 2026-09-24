@@ -14,12 +14,8 @@ import {
 } from './storage'
 import type { ResolvedAuthConfig, TokenRecord } from './internal-types'
 
-export class RefreshTokenExpiredError extends Error {
-  constructor(message = 'refresh_token_expired') {
-    super(message)
-    this.name = 'RefreshTokenExpiredError'
-  }
-}
+import { RefreshTokenExpiredError } from 'huia-auth-core'
+export { RefreshTokenExpiredError }
 
 const inflight = new Map<string, Promise<TokenRecord>>()
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
@@ -102,6 +98,10 @@ async function stealIfStale(cfg: ResolvedAuthConfig, sid: string): Promise<boole
     return true
   }
   return false
+}
+
+export async function refreshStatelessTokens(cfg: ResolvedAuthConfig, record: TokenRecord): Promise<TokenRecord> {
+  return performRefresh(cfg, record)
 }
 
 async function performRefresh(cfg: ResolvedAuthConfig, record: TokenRecord): Promise<TokenRecord> {

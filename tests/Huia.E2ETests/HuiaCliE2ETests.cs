@@ -14,13 +14,11 @@ namespace Huia.E2ETests;
 public sealed partial class HuiaCliE2ETests(SampleHostFixture host)
 {
     private static readonly string CliDll = Path.Combine(
-        RepoRoot.Find(), "samples", "Huia.Cli", "bin", "Release", "net10.0", "huia.dll");
+        RepoRoot.Find(), "samples", "Shared", "Huia.Cli", "bin", "Release", "net10.0", "huia.dll");
 
-    [SkippableFact]
+    [Fact]
     public async Task Device_login_then_whoami_then_logout()
     {
-        Skip.IfNot(host.Started, "The sample identity server is not running.");
-        Skip.IfNot(File.Exists(CliDll), "Huia.Cli has not been built in Release.");
 
         var cliHome = Path.Combine(Path.GetTempPath(), "huia-cli-e2e-" + Guid.NewGuid().ToString("N"));
         try

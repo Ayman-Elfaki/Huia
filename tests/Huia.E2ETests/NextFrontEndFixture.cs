@@ -43,33 +43,14 @@ public sealed class NextFrontEndFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
+        await E2EArtifacts.EnsureNextStackAsync(_repoRoot);
+
         var idpDll = Path.Combine(_repoRoot, "samples", "Todo", "Todo.IdentityServer", "bin", "Release", "net10.0", "Todo.IdentityServer.dll");
         var externalDll = Path.Combine(_repoRoot, "samples", "Shared", "Huia.External", "bin", "Release", "net10.0", "Huia.External.dll");
         var todoApiDll = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Api", "bin", "Release", "net10.0", "Todo.Api.dll");
         var shopApiDll = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Api", "bin", "Release", "net10.0", "Shop.Api.dll");
         var todoNextDir = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Next");
         var shopNextDir = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Next");
-
-        if (!File.Exists(idpDll))
-        {
-            SkipReason = $"Missing {idpDll}. Build the Release .NET output.";
-            return;
-        }
-        if (!File.Exists(externalDll))
-        {
-            SkipReason = $"Missing {externalDll}. Build the Release .NET output.";
-            return;
-        }
-        if (!Directory.Exists(Path.Combine(todoNextDir, ".next")))
-        {
-            SkipReason = $"Missing .next build in {todoNextDir}. Run `npm run build` first.";
-            return;
-        }
-        if (!Directory.Exists(Path.Combine(shopNextDir, ".next")))
-        {
-            SkipReason = $"Missing .next build in {shopNextDir}. Run `npm run build` first.";
-            return;
-        }
 
         StartDotnet(externalDll, new()
         {

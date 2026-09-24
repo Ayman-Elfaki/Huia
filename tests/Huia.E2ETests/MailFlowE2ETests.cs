@@ -13,10 +13,9 @@ namespace Huia.E2ETests;
 [Collection("apphost")]
 public sealed partial class MailFlowE2ETests(AppHostFixture host)
 {
-    [SkippableFact]
+    [Fact]
     public async Task Forgot_password_emails_a_working_reset_link()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
         await host.Mailpit.ClearAsync();
 
         using var client = host.CreateIdpClient();
@@ -37,10 +36,9 @@ public sealed partial class MailFlowE2ETests(AppHostFixture host)
         resetBody.ShouldContain("data-testid=\"reset-done\"");
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Register_sends_a_confirmation_link_that_activates_the_account()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
         await host.Mailpit.ClearAsync();
 
         using var client = host.CreateIdpClient();

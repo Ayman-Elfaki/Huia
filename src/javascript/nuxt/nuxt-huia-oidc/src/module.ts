@@ -26,6 +26,7 @@ export interface ModuleOptions {
     maxAge?: number
     cookie?: { sameSite?: 'lax' | 'strict' | 'none', secure?: boolean }
     userClaims?: string[]
+    stateless?: boolean
   }
   storage?: { base?: string }
   refresh?: {
@@ -56,6 +57,7 @@ const defaults = {
     maxAge: 60 * 60 * 24 * 7,
     cookie: { sameSite: 'lax' as const },
     userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
+    stateless: false,
   },
   storage: { base: 'huia-auth' },
   refresh: {
@@ -140,6 +142,15 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.alias['#huia-auth'] = resolve('runtime/types')
 
     // ── auto-imports ──────────────────────────────────────────────────────────
+    nuxt.options.imports = nuxt.options.imports || {}
+    nuxt.options.imports.exclude = [...(nuxt.options.imports.exclude || []), /[\\/]huia-auth-core[\\/]/]
+
+    nuxt.hook('nitro:config', (nitroConfig) => {
+      nitroConfig.imports = nitroConfig.imports || {}
+      nitroConfig.imports.exclude = nitroConfig.imports.exclude || []
+      nitroConfig.imports.exclude.push(/[\\/]huia-auth-core[\\/]/)
+    })
+
     addServerImportsDir(resolve('runtime/server/utils'))
     addImportsDir(resolve('runtime/app/composables'))
 

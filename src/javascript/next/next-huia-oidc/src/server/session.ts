@@ -8,6 +8,7 @@ import {
   resolveCookieName,
   defaultOidcHelper,
   ensureFreshTokenRecord,
+  needsRefresh,
   pickUserClaims,
   type CookiePayload,
   type UserSession,
@@ -109,7 +110,39 @@ export async function getAccessToken(configInput: HuiaOidcConfig | ResolvedHuiaO
   const cfg = resolveOidcConfig(configInput)
   const cookieStore = await cookies()
   const payload = await readSessionFromCookies(name => cookieStore.get(name)?.value, cfg)
-  if (!payload?.sid) return null
+  if (!payload) return null
+
+  if (payload.stateless || cfg.session.stateless) {
+    const record = payload.tokens
+    if (!record) return null
+    if (needsRefresh(record.accessTokenExpiresAt)) {
+      if (!record.refreshToken) return record.accessToken
+      try {
+        const oidcConfig = await defaultOidcHelper.getConfiguration(cfg)
+        const res = await defaultOidcHelper.refreshTokens(oidcConfig, record.refreshToken, record.scope)
+        const now = Date.now()
+        const expiresIn = Number(res.expires_in) || 300
+        const refreshExpiresIn = typeof res.refresh_expires_in === 'number' ? res.refresh_expires_in : undefined
+        const updatedRecord: TokenRecord = {
+          ...record,
+          accessToken: res.access_token,
+          refreshToken: res.refresh_token ?? record.refreshToken,
+          idToken: res.id_token ?? record.idToken,
+          claims: res.id_token ? ((res.claims() as never) ?? record.claims) : record.claims,
+          accessTokenExpiresAt: now + expiresIn * 1000,
+          refreshTokenExpiresAt: refreshExpiresIn ? now + refreshExpiresIn * 1000 : record.refreshTokenExpiresAt,
+          updatedAt: now,
+        }
+        return updatedRecord.accessToken
+      }
+      catch {
+        return record.accessToken
+      }
+    }
+    return record.accessToken
+  }
+
+  if (!payload.sid) return null
 
   const record = await cfg.storage.getTokenRecord(payload.sid)
   if (!record) return null

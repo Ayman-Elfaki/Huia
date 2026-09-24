@@ -70,6 +70,7 @@ export function resolveAuthConfig(event: H3Event): ResolvedAuthConfig {
       password: raw.session.password,
       maxAge: raw.session.maxAge || 60 * 60 * 24 * 7,
       userClaims: raw.session.userClaims ?? [],
+      stateless: raw.session.stateless ?? false,
     },
     cookie: {
       chunkSize: raw.cookie?.chunkSize || 3800,

@@ -40,21 +40,11 @@ public sealed class ShopStackFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
+        await E2EArtifacts.EnsureShopStackAsync(_repoRoot);
+
         var shopApiDll = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Api", "bin", "Release", "net10.0", "Shop.Api.dll");
         var shopAppOutput = Path.Combine(_repoRoot, "samples", "Shop", "Shop.Nuxt", ".output", "server", "index.mjs");
         var externalDll = Path.Combine(_repoRoot, "samples", "Shared", "Huia.External", "bin", "Release", "net10.0", "Huia.External.dll");
-
-        foreach (var (label, path) in new[]
-        {
-            ("Shop.Api", shopApiDll), ("Shop.Nuxt/.output", shopAppOutput), ("Huia.External", externalDll),
-        })
-        {
-            if (!File.Exists(path))
-            {
-                SkipReason = $"Missing build output for {label} ({path}). Build the Release .NET output and `npm run build` Shop.Nuxt.";
-                return;
-            }
-        }
 
         StartDotnet(externalDll, new()
         {

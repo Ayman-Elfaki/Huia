@@ -73,6 +73,7 @@ export interface ResolvedHuiaHeadlessConfig {
     password: string
     maxAge: number
     userClaims: string[]
+    stateless: boolean
   }
   cookie: {
     chunkSize: number

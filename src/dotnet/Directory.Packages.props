@@ -7,7 +7,7 @@
     <EfCoreVersion>10.0.11</EfCoreVersion>
     <AspNetCoreVersion>10.0.11</AspNetCoreVersion>
     <QuartzVersion>3.20.0</QuartzVersion>
-    <AspireVersion>13.5.3</AspireVersion>
+    <AspireVersion>13.5.4</AspireVersion>
   </PropertyGroup>
 
   <ItemGroup Label="OpenIddict">
@@ -59,7 +59,6 @@
   </ItemGroup>
 
   <ItemGroup Label="Aspire (samples)">
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(AspireVersion)" />

@@ -39,6 +39,7 @@ export function resolveOidcConfig(config: HuiaOidcConfig | ResolvedHuiaOidcConfi
       password: raw.session.password,
       maxAge: raw.session.maxAge ?? 604800,
       userClaims: raw.session.userClaims ?? ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
+      stateless: raw.session.stateless ?? false,
     },
     cookie: {
       chunkSize: raw.cookie?.chunkSize ?? 3800,

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Aspire.Hosting.ApplicationModel;
+using Huia.AppHost;
 using Microsoft.Extensions.Configuration;
 
 var builder = DistributedApplication.CreateBuilder(args);
@@ -114,7 +115,8 @@ var external = builder.AddProject<Projects.Huia_External>("huia-external")
     .WithEnvironment("Huia__Database", "Sqlite")
     .WithEnvironment("Huia__Issuer", externalUrl)
     .WithEnvironment("Consumer__BaseUrl", identityServerUrl)
-    .WithEnvironment("ShopConsumer__BaseUrl", shopApiUrl);
+    .WithEnvironment("ShopConsumer__BaseUrl", shopApiUrl)
+    .WithBuildE2EArtifactCommand("samples/Shared/Huia.External/Huia.External.csproj");
 
 // Huia.Headless is single-tenant and entirely self-contained — its bearer tokens are only valid
 // against the app that minted them, so unlike todoApi/identityServer it never shares a database with
@@ -137,7 +139,8 @@ var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
     .WithReference(shopPostgres)
     .WaitFor(shopPostgres)
     .WithReference(external)
-    .WaitFor(external);
+    .WaitFor(external)
+    .WithBuildE2EArtifactCommand("samples/Shop/Shop.Api/Shop.Api.csproj");
 
 shopApi.WithEnvironment("Huia__Issuer", shopApiUrl);
 
@@ -176,7 +179,9 @@ var identityServer = builder.AddProject<Projects.Todo_IdentityServer>("huia-iden
     })
     .WithHttpHealthCheck("/health/ready")
     .WithReference(external)
-    .WaitFor(external);
+    .WaitFor(external)
+    .WithBuildE2EArtifactCommand("samples/Todo/Todo.IdentityServer/Todo.IdentityServer.csproj")
+    .WithBuildAllE2EArtifactsCommand();
 
 var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
     // Unproxied on its fixed dev port (Properties/launchSettings.json pins 5330) — same reasons as
@@ -200,7 +205,8 @@ var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
     .WithReference(todoPostgres)
     .WaitFor(todoPostgres)
     .WithEnvironment("Huia__BaseUrl", identityServerUrl)
-    .WithEnvironment("Todo__Database", "Postgres");
+    .WithEnvironment("Todo__Database", "Postgres")
+    .WithBuildE2EArtifactCommand("samples/Todo/Todo.Api/Todo.Api.csproj");
 
 // The externally reachable origin of the API — used to build the Scalar reference's OAuth redirect
 // URI, which must match the redirect URI the identity server registers for the "todo-api-docs" client.
@@ -240,6 +246,7 @@ builder.AddViteApp("todo-app", "../../Todo/Todo.Nuxt")
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()
+    .WithBuildE2EArtifactCommand("samples/Todo/Todo.Nuxt", isNpm: true)
     ;
 
 builder.AddViteApp("admin-app", "../../Todo/Todo.Admin")
@@ -260,6 +267,7 @@ builder.AddViteApp("admin-app", "../../Todo/Todo.Admin")
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()
+    .WithBuildE2EArtifactCommand("samples/Todo/Todo.Admin", isNpm: true)
     ;
 
 builder.AddViteApp("shop-app", "../../Shop/Shop.Nuxt")
@@ -277,6 +285,7 @@ builder.AddViteApp("shop-app", "../../Shop/Shop.Nuxt")
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()
+    .WithBuildE2EArtifactCommand("samples/Shop/Shop.Nuxt", isNpm: true)
     ;
 
 builder.AddNextJsApp("todo-next", "../../Todo/Todo.Next")
@@ -302,6 +311,7 @@ builder.AddNextJsApp("todo-next", "../../Todo/Todo.Next")
     .WithEnvironment("HUIA_CLIENT_SECRET", "todo-next-secret")
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
+    .WithBuildE2EArtifactCommand("samples/Todo/Todo.Next", isNpm: true)
     ;
 
 builder.AddNextJsApp("shop-next", "../../Shop/Shop.Next")
@@ -323,6 +333,7 @@ builder.AddNextJsApp("shop-next", "../../Shop/Shop.Next")
     .WithEnvironment("HUIA_SESSION_PASSWORD", GenerateRandomUrlSafeString())
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
+    .WithBuildE2EArtifactCommand("samples/Shop/Shop.Next", isNpm: true)
     ;
 
 

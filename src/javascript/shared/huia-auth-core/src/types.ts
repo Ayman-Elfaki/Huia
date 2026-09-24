@@ -51,6 +51,8 @@ export interface CookiePayload {
   sid: string
   user: UserClaims
   expiresAt: number
+  tokens?: TokenRecord
+  stateless?: boolean
 }
 
 export interface SessionOptions {
@@ -58,6 +60,11 @@ export interface SessionOptions {
   password: string
   maxAge?: number // seconds, default 7 days (604800)
   userClaims?: string[]
+  /**
+   * When true, all session data (including tokens) is encrypted and stored directly inside a
+   * secure, HttpOnly cookie in the user's browser. The server does not keep track of who is logged in.
+   */
+  stateless?: boolean
 }
 
 export interface CookieOptions {

@@ -22,6 +22,7 @@ export function resolveHeadlessConfig(config: HuiaHeadlessConfig | ResolvedHuiaH
       password: raw.session.password,
       maxAge: raw.session.maxAge ?? 604800,
       userClaims: raw.session.userClaims ?? ['sub', 'name', 'email', 'firstName', 'lastName', 'roles', 'phoneNumber'],
+      stateless: raw.session.stateless ?? false,
     },
     cookie: {
       chunkSize: raw.cookie?.chunkSize ?? 3800,

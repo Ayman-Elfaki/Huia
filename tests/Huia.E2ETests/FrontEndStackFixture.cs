@@ -40,24 +40,13 @@ public sealed class FrontEndStackFixture : IAsyncLifetime
 
     private async Task StartAsync()
     {
+        await E2EArtifacts.EnsureFrontendStackAsync(_repoRoot);
+
         var idpDll = DllPath("samples", "Todo", "Todo.IdentityServer");
         var externalDll = DllPath("samples", "Shared", "Huia.External");
         var todoApiDll = DllPath("samples", "Todo", "Todo.Api");
         var todoAppOutput = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Nuxt", ".output", "server", "index.mjs");
         var adminAppOutput = Path.Combine(_repoRoot, "samples", "Todo", "Todo.Admin", ".output", "server", "index.mjs");
-
-        foreach (var (label, path) in new[]
-        {
-            ("Todo.IdentityServer", idpDll), ("Huia.External", externalDll), ("Todo.Api", todoApiDll),
-            ("Todo.Nuxt/.output", todoAppOutput), ("Todo.Admin/.output", adminAppOutput),
-        })
-        {
-            if (!File.Exists(path))
-            {
-                SkipReason = $"Missing build output for {label} ({path}). Build the Release .NET output and `npm run build` both Nuxt apps.";
-                return;
-            }
-        }
 
         StartDotnet(externalDll, new()
         {

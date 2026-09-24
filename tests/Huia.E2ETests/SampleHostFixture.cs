@@ -33,11 +33,9 @@ public sealed class SampleHostFixture : IAsyncLifetime
     private async Task StartAsync()
     {
         var repoRoot = RepoRoot.Find();
+        await E2EArtifacts.EnsureIdentityServerAsync(repoRoot);
+
         var dllPath = Path.Combine(repoRoot, "samples", "Todo", "Todo.IdentityServer", "bin", "Release", "net10.0", "Todo.IdentityServer.dll");
-        if (!File.Exists(dllPath))
-        {
-            return;
-        }
 
         var startInfo = new ProcessStartInfo("dotnet", $"\"{dllPath}\"")
         {

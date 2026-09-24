@@ -7,6 +7,7 @@ import {
   assembleChunks,
   resolveCookieName,
   ensureFreshTokenRecord,
+  needsRefresh,
   pickUserClaims,
   HuiaHeadlessClient,
   type CookiePayload,
@@ -108,7 +109,39 @@ export async function getAccessToken(configInput: HuiaHeadlessConfig | ResolvedH
   const cfg = resolveHeadlessConfig(configInput)
   const cookieStore = await cookies()
   const payload = await readSessionFromCookies(name => cookieStore.get(name)?.value, cfg)
-  if (!payload?.sid) return null
+  if (!payload) return null
+
+  if (payload.stateless || cfg.session.stateless) {
+    const record = payload.tokens
+    if (!record) return null
+    if (needsRefresh(record.accessTokenExpiresAt)) {
+      if (!record.refreshToken) return record.accessToken
+      try {
+        const client = new HuiaHeadlessClient({
+          baseUrl: cfg.baseUrl,
+          allowInsecureTls: cfg.allowInsecureTls,
+        })
+        const res = await client.refresh(record.refreshToken)
+        const me = await client.me(res.accessToken)
+        const now = Date.now()
+        const updatedRecord: TokenRecord = {
+          ...record,
+          accessToken: res.accessToken,
+          refreshToken: res.refreshToken ?? record.refreshToken,
+          claims: pickUserClaims(me as unknown as Record<string, unknown>, cfg.session.userClaims),
+          accessTokenExpiresAt: now + (res.expiresIn || 300) * 1000,
+          updatedAt: now,
+        }
+        return updatedRecord.accessToken
+      }
+      catch {
+        return record.accessToken
+      }
+    }
+    return record.accessToken
+  }
+
+  if (!payload.sid) return null
 
   const record = await cfg.storage.getTokenRecord(payload.sid)
   if (!record) return null

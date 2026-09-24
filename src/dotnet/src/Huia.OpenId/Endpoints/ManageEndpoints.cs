@@ -32,18 +32,18 @@ internal static class ManageEndpoints
         var group = endpoints.MapGroup("manage");
         group.RequireAuthorization(HuiaConstants.Policies.Api);
 
-        group.MapGet("profile", GetProfileAsync);
-        group.MapPut("profile", UpdateProfileAsync);
-        group.MapGet("email", GetEmailAsync);
-        group.MapPut("email", ChangeEmailAsync);
-        group.MapPost("email/confirm", SendEmailConfirmationAsync);
-        group.MapPut("password", ChangePasswordAsync);
-        group.MapGet("phone", GetPhoneAsync);
-        group.MapPut("phone", StartPhoneChangeAsync);
-        group.MapPost("phone/confirm", ConfirmPhoneChangeAsync);
-        group.MapDelete("phone", RemovePhoneAsync);
-        group.MapGet("external-logins", GetExternalLoginsAsync);
-        group.MapDelete("external-logins/{provider}/{providerKey}", RemoveExternalLoginAsync);
+        group.MapGet("profile", GetProfileAsync).WithName("huia.manage.profile.get");
+        group.MapPut("profile", UpdateProfileAsync).WithName("huia.manage.profile.update");
+        group.MapGet("email", GetEmailAsync).WithName("huia.manage.email.get");
+        group.MapPut("email", ChangeEmailAsync).WithName("huia.manage.email.update");
+        group.MapPost("email/confirm", SendEmailConfirmationAsync).WithName("huia.manage.email.confirm");
+        group.MapPut("password", ChangePasswordAsync).WithName("huia.manage.password.update");
+        group.MapGet("phone", GetPhoneAsync).WithName("huia.manage.phone.get");
+        group.MapPut("phone", StartPhoneChangeAsync).WithName("huia.manage.phone.update");
+        group.MapPost("phone/confirm", ConfirmPhoneChangeAsync).WithName("huia.manage.phone.confirm");
+        group.MapDelete("phone", RemovePhoneAsync).WithName("huia.manage.phone.delete");
+        group.MapGet("external-logins", GetExternalLoginsAsync).WithName("huia.manage.external-logins.list");
+        group.MapDelete("external-logins/{provider}/{providerKey}", RemoveExternalLoginAsync).WithName("huia.manage.external-logins.delete");
 
         PasskeyEndpoints.MapHuiaManagePasskeyEndpoints(group);
 

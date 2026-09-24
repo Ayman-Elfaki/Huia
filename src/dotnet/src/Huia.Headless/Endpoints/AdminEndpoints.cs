@@ -26,22 +26,22 @@ public static partial class AdminEndpoints
 
         var group = endpoints.MapGroup("admin");
 
-        group.MapGet("users", ListUsersAsync);
-        group.MapGet("users/{id}", GetUserAsync);
-        group.MapPost("users", CreateUserAsync);
-        group.MapPut("users/{id}", UpdateUserAsync);
-        group.MapDelete("users/{id}", DeleteUserAsync);
-        group.MapGet("users/{id}/roles", GetUserRolesAsync);
-        group.MapPost("users/{id}/roles", AddUserRoleAsync);
-        group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync);
-        group.MapPost("users/{id}/lock", LockUserAsync);
-        group.MapPost("users/{id}/unlock", UnlockUserAsync);
+        group.MapGet("users", ListUsersAsync).WithName("huia.headless.admin.users.list");
+        group.MapGet("users/{id}", GetUserAsync).WithName("huia.headless.admin.users.get");
+        group.MapPost("users", CreateUserAsync).WithName("huia.headless.admin.users.create");
+        group.MapPut("users/{id}", UpdateUserAsync).WithName("huia.headless.admin.users.update");
+        group.MapDelete("users/{id}", DeleteUserAsync).WithName("huia.headless.admin.users.delete");
+        group.MapGet("users/{id}/roles", GetUserRolesAsync).WithName("huia.headless.admin.users.roles.list");
+        group.MapPost("users/{id}/roles", AddUserRoleAsync).WithName("huia.headless.admin.users.roles.add");
+        group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync).WithName("huia.headless.admin.users.roles.remove");
+        group.MapPost("users/{id}/lock", LockUserAsync).WithName("huia.headless.admin.users.lock");
+        group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName("huia.headless.admin.users.unlock");
 
-        group.MapGet("roles", ListRolesAsync);
-        group.MapGet("roles/{id}", GetRoleAsync);
-        group.MapPost("roles", CreateRoleAsync);
-        group.MapPut("roles/{id}", UpdateRoleAsync);
-        group.MapDelete("roles/{id}", DeleteRoleAsync);
+        group.MapGet("roles", ListRolesAsync).WithName("huia.headless.admin.roles.list");
+        group.MapGet("roles/{id}", GetRoleAsync).WithName("huia.headless.admin.roles.get");
+        group.MapPost("roles", CreateRoleAsync).WithName("huia.headless.admin.roles.create");
+        group.MapPut("roles/{id}", UpdateRoleAsync).WithName("huia.headless.admin.roles.update");
+        group.MapDelete("roles/{id}", DeleteRoleAsync).WithName("huia.headless.admin.roles.delete");
 
         return group;
     }

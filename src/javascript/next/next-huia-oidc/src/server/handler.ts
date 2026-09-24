@@ -154,12 +154,15 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
       updatedAt: now,
     }
 
-    await cfg.storage.setTokenRecord(sid, tokenRecord, cfg.session.maxAge)
+    if (!cfg.session.stateless) {
+      await cfg.storage.setTokenRecord(sid, tokenRecord, cfg.session.maxAge)
+    }
 
     const payload: CookiePayload = {
       sid,
       user,
       expiresAt: tokenRecord.accessTokenExpiresAt,
+      ...(cfg.session.stateless ? { tokens: tokenRecord, stateless: true } : {}),
     }
 
     const redirectTarget = returnTo && returnTo.startsWith('/') ? returnTo : '/'
@@ -178,10 +181,14 @@ export function createHuiaOidcHandler(configInput: HuiaOidcConfig) {
     const payload = await readSessionFromCookies(name => req.cookies.get(name)?.value, cfg)
     let idTokenHint: string | undefined
 
-    if (payload?.sid) {
+    if (payload?.stateless || cfg.session.stateless) {
+      idTokenHint = payload?.tokens?.idToken
+    }
+    else if (payload?.sid) {
       const record = await cfg.storage.getTokenRecord(payload.sid)
       idTokenHint = record?.idToken
       await cfg.storage.deleteTokenRecord(payload.sid).catch(() => {})
+      await cfg.storage.deleteLock?.(payload.sid).catch(() => {})
     }
 
     const postLogoutRedirectUri = `${origin(url)}/`

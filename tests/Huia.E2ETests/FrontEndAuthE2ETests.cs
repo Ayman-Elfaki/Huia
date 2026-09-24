@@ -13,10 +13,9 @@ namespace Huia.E2ETests;
 [Collection("frontend-stack")]
 public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
 {
-    [SkippableFact]
+    [Fact]
     public async Task Todo_App_signs_in_with_password_and_signs_out()
     {
-        Skip.IfNot(stack.Started, stack.SkipReason ?? "stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -31,10 +30,9 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
         await SignOutAsync(page, stack.TodoAppUrl);
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Todo_App_signs_in_with_a_phone_one_time_code()
     {
-        Skip.IfNot(stack.Started, stack.SkipReason ?? "stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -69,10 +67,9 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
         await Expect(page.Locator("[data-testid=user-name]")).ToBeVisibleAsync();
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Todo_App_rejects_a_wrong_one_time_code_and_stays_on_the_verify_page()
     {
-        Skip.IfNot(stack.Started, stack.SkipReason ?? "stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -115,10 +112,9 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
         await Expect(page.Locator("[data-testid=user-name]")).ToBeVisibleAsync();
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Todo_App_forwards_the_selected_locale_to_the_Huia_sign_in_page()
     {
-        Skip.IfNot(stack.Started, stack.SkipReason ?? "stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -138,10 +134,9 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
         await Expect(page.Locator("html")).ToHaveAttributeAsync("dir", "rtl", new() { Timeout = 10_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Todo_App_signs_in_through_the_external_provider()
     {
-        Skip.IfNot(stack.Started, stack.SkipReason ?? "stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -164,10 +159,9 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
         await Expect(page.Locator("[data-testid=user-name]")).ToBeVisibleAsync();
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task External_sign_in_links_to_an_existing_account_with_the_same_email()
     {
-        Skip.IfNot(stack.Started, stack.SkipReason ?? "stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -187,10 +181,9 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
         (await page.Locator("[data-testid=complete-profile-form]").IsVisibleAsync()).ShouldBeFalse();
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Signing_out_of_the_Todo_app_ends_the_partner_session()
     {
-        Skip.IfNot(stack.Started, stack.SkipReason ?? "stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 

@@ -15,10 +15,9 @@ namespace Huia.E2ETests;
 [Collection("shop")]
 public sealed class ShopE2ETests(ShopStackFixture fx)
 {
-    [SkippableFact]
+    [Fact]
     public async Task Anonymous_visitors_can_browse_products_but_are_prompted_to_sign_in_to_buy()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -35,10 +34,9 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
         Assert.Contains("returnTo", page.Url, StringComparison.Ordinal);
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Registers_signs_in_buys_something_and_signs_out()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
         var email = $"e2e-shop-{Guid.NewGuid():N}@huia.local";
@@ -73,10 +71,9 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
         await page.WaitForURLAsync(u => u.Contains("/login", StringComparison.Ordinal), new() { Timeout = 15_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Rejects_sign_in_with_the_wrong_password()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
         var email = $"e2e-shop-{Guid.NewGuid():N}@huia.local";
@@ -93,10 +90,9 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
         Assert.Contains("/login", page.Url, StringComparison.Ordinal);
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Signs_in_with_a_phone_one_time_code_as_a_new_number()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
         var phone = "+1 202 555 0" + Random.Shared.Next(100, 999);
@@ -121,10 +117,9 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
         await Expect(page.Locator("header")).ToContainTextAsync("Percy", new() { Timeout = 15_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Signs_in_with_the_partner_external_provider()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
@@ -144,10 +139,9 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
         await Expect(page.Locator("header")).ToContainTextAsync("full@partners.test", new() { Timeout = 15_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Rejects_a_wrong_phone_code()
     {
-        Skip.IfNot(fx.Started, fx.SkipReason ?? "shop stack not started");
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
         var phone = "+1 202 555 0" + Random.Shared.Next(100, 999);
@@ -188,6 +182,8 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
     private static async Task RegisterAsync(IPage page, string email, string password)
     {
         await page.GetByRole(AriaRole.Button, new() { Name = "Don't have an account? Register" }).ClickAsync();
+        await page.GetByPlaceholder("First name").FillAsync("Percy");
+        await page.GetByPlaceholder("Last name").FillAsync("Shopper");
         await page.GetByPlaceholder("Email").FillAsync(email);
         await page.GetByPlaceholder("Password").FillAsync(password);
         await page.GetByRole(AriaRole.Button, new() { Name = "Create account", Exact = true }).ClickAsync();

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Events;
+using Huia.Localization;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Flows;
 using Huia.OpenId.Identity;
@@ -49,6 +50,12 @@ internal static class ConnectEndpoints
     {
         var request = context.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenIddict server request could not be retrieved.");
+
+        var uiLocales = request.UiLocales ?? (string?)request.GetParameter("ui_locales");
+        if (!string.IsNullOrWhiteSpace(uiLocales))
+        {
+            UiLocalesRequestCultureProvider.ApplyUiLocales(context, uiLocales);
+        }
 
         var authenticate = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         var forceLogin = request.HasPromptValue(PromptValues.Login);

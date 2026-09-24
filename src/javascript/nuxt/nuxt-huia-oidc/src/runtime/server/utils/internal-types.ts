@@ -8,6 +8,10 @@ export interface CookiePayload {
   user: UserClaims
   /** ms epoch — cookie/session hard expiry. */
   exp: number
+  /** Token record stored in cookie for stateless sessions */
+  tokens?: TokenRecord
+  /** True when session is in stateless mode */
+  stateless?: boolean
 }
 
 /** Server-only token record, keyed by `sid` in Nitro Storage. Never serialised to the client. */
@@ -58,6 +62,7 @@ export interface ResolvedAuthConfig {
     password: string
     maxAge: number
     userClaims: string[]
+    stateless: boolean
   }
   cookie: { chunkSize: number, maxChunks: number }
   refresh: {

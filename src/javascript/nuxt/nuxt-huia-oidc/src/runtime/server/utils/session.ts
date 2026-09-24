@@ -2,7 +2,7 @@ import { createError, type H3Event } from 'h3'
 import { resolveAuthConfig } from './config'
 import { readSessionCookie, writeSessionCookie, clearSessionCookies } from './cookie'
 import { getTokenRecord, setTokenRecord, deleteTokenRecord, deleteLock, newSessionId } from './storage'
-import { ensureFreshTokens, RefreshTokenExpiredError, needsRefresh } from './refresh'
+import { ensureFreshTokens, refreshStatelessTokens, RefreshTokenExpiredError, needsRefresh } from './refresh'
 import { pickUserClaims } from './tokens'
 import type { UserSession, UserSessionRequired } from '../../types'
 import type { TokenRecord } from './internal-types'
@@ -24,6 +24,34 @@ export async function getUserSession(event: H3Event): Promise<UserSession> {
 
   const payload = await readSessionCookie(event, cfg)
   if (!payload) return memo(event, empty)
+
+  if (cfg.session.stateless || payload.stateless) {
+    let record = payload.tokens
+    if (!record) {
+      await clearSessionCookies(event, cfg)
+      return memo(event, empty)
+    }
+
+    if (cfg.refresh.enabled && needsRefresh(record, cfg)) {
+      try {
+        record = await refreshStatelessTokens(cfg, record)
+        await writeSessionCookie(event, cfg, {
+          ...payload,
+          tokens: record,
+          expiresAt: record.accessTokenExpiresAt,
+        })
+      }
+      catch (err) {
+        if (err instanceof RefreshTokenExpiredError) {
+          await clearUserSession(event)
+          return memo(event, empty)
+        }
+        throw err
+      }
+    }
+
+    return memo(event, { user: payload.user, loggedIn: true, expiresAt: record.accessTokenExpiresAt })
+  }
 
   let record = await getTokenRecord(cfg, payload.sid)
   if (!record) {
@@ -72,13 +100,17 @@ export async function setUserSession(
       createdAt: now,
       updatedAt: now,
     }
-    await setTokenRecord(cfg, record)
+
+    if (!cfg.session.stateless) {
+      await setTokenRecord(cfg, record)
+    }
 
     const user = pickUserClaims(data.claims, cfg.session.userClaims)
     await writeSessionCookie(event, cfg, {
       sid,
       user,
       exp: now + cfg.session.maxAge * 1000,
+      ...(cfg.session.stateless ? { tokens: record, stateless: true } : {}),
     })
     return memo(event, { user, loggedIn: true, expiresAt: record.accessTokenExpiresAt })
   }
@@ -94,7 +126,7 @@ export async function setUserSession(
 export async function clearUserSession(event: H3Event): Promise<void> {
   const cfg = resolveAuthConfig(event)
   const payload = await readSessionCookie(event, cfg)
-  if (payload) {
+  if (!cfg.session.stateless && !payload?.stateless && payload) {
     await deleteTokenRecord(cfg, payload.sid).catch(() => {})
     await deleteLock(cfg, payload.sid).catch(() => {})
   }
@@ -115,6 +147,29 @@ export async function getAccessToken(event: H3Event): Promise<string | null> {
   const cfg = resolveAuthConfig(event)
   const payload = await readSessionCookie(event, cfg)
   if (!payload) return null
+
+  if (cfg.session.stateless || payload.stateless) {
+    let record = payload.tokens
+    if (!record) return null
+    if (cfg.refresh.enabled && needsRefresh(record, cfg)) {
+      try {
+        record = await refreshStatelessTokens(cfg, record)
+        await writeSessionCookie(event, cfg, {
+          ...payload,
+          tokens: record,
+          expiresAt: record.accessTokenExpiresAt,
+        })
+      }
+      catch (err) {
+        if (err instanceof RefreshTokenExpiredError) {
+          await clearUserSession(event)
+          return null
+        }
+        throw err
+      }
+    }
+    return record.accessToken
+  }
 
   let record = await getTokenRecord(cfg, payload.sid)
   if (!record) return null
@@ -138,5 +193,8 @@ export async function getAccessToken(event: H3Event): Promise<string | null> {
 export async function getSecureTokenRecord(event: H3Event): Promise<TokenRecord | null> {
   const cfg = resolveAuthConfig(event)
   const payload = await readSessionCookie(event, cfg)
+  if (cfg.session.stateless || payload?.stateless) {
+    return payload?.tokens ?? null
+  }
   return payload ? getTokenRecord(cfg, payload.sid) : null
 }

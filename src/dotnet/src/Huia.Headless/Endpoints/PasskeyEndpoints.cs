@@ -32,11 +32,11 @@ internal static class PasskeyEndpoints
         group.MapPost("assertion", AssertionAsync).WithName("huia.headless.passkey.assertion");
 
         var manage = endpoints.MapGroup("identity/manage/passkeys").RequireAuthorization();
-        manage.MapPost("creation-options", CreationOptionsAsync);
-        manage.MapGet("", ListAsync);
-        manage.MapPost("", RegisterAsync);
-        manage.MapPatch("{id}", RenameAsync);
-        manage.MapDelete("{id}", RemoveAsync);
+        manage.MapPost("creation-options", CreationOptionsAsync).WithName("huia.headless.passkey.creation-options");
+        manage.MapGet("", ListAsync).WithName("huia.headless.passkey.list");
+        manage.MapPost("", RegisterAsync).WithName("huia.headless.passkey.register");
+        manage.MapPatch("{id}", RenameAsync).WithName("huia.headless.passkey.rename");
+        manage.MapDelete("{id}", RemoveAsync).WithName("huia.headless.passkey.remove");
     }
 
     // ---- anonymous: discoverable primary sign-in --------------------------------------------------

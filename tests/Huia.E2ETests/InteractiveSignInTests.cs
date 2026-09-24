@@ -9,11 +9,9 @@ namespace Huia.E2ETests;
 [Collection("sample-host")]
 public sealed class InteractiveSignInTests(SampleHostFixture host)
 {
-    [SkippableFact]
+    [Fact]
     public async Task A_user_signs_in_through_the_browser_and_the_client_gets_a_code()
     {
-        Skip.IfNot(host.Started, "The sample host did not start; skipping the browser test.");
-
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
 
@@ -39,9 +37,8 @@ public sealed class InteractiveSignInTests(SampleHostFixture host)
         if (page.Url.Contains("/passkeyenroll", StringComparison.Ordinal))
         {
             await page.ClickAsync("[data-testid=passkey-enroll-skip]");
+            await page.WaitForURLAsync(u => u.Contains("/e2e-callback", StringComparison.Ordinal), new PageWaitForURLOptions { Timeout = 15_000 });
         }
-
-        await page.WaitForURLAsync("**/e2e-callback**", new PageWaitForURLOptions { Timeout = 15_000 });
 
         // The authorization code is delivered on the redirect back to the client's callback.
         page.Url.ShouldContain("code=");

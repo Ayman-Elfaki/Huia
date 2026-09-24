@@ -18,10 +18,9 @@ namespace Huia.E2ETests;
 [Collection("apphost")]
 public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
 {
-    [SkippableFact]
+    [Fact]
     public async Task External_login_via_Aspire_succeeds_for_identity_server()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
 
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
@@ -53,10 +52,9 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await page.WaitForURLAsync(u => u.Contains("/todo/", StringComparison.Ordinal) || u.StartsWith(host.Issuer, StringComparison.Ordinal), new() { Timeout = 25_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task External_login_via_Aspire_succeeds_for_shop_api()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
 
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
@@ -85,10 +83,9 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         ((int)exchangeResponse.StatusCode).ShouldBeInRange(200, 299);
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task External_login_via_Aspire_succeeds_from_todo_app()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
 
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
@@ -124,10 +121,9 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await Expect(page.Locator("[data-testid=user-name]")).ToBeVisibleAsync(new() { Timeout = 25_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task External_login_via_Aspire_succeeds_from_shop_app()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
 
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
@@ -150,10 +146,9 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await Expect(page.Locator("header")).ToContainTextAsync("full@partners.test", new() { Timeout = 15_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task External_login_via_Aspire_succeeds_from_todo_next()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
 
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
@@ -186,10 +181,9 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await Expect(page.Locator("[data-testid=user-name]")).ToBeVisibleAsync(new() { Timeout = 25_000 });
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task External_login_via_Aspire_succeeds_from_shop_next()
     {
-        Skip.IfNot(host.Started, host.SkipReason ?? "AppHost not started");
 
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
