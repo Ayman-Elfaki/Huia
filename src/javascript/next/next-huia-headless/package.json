@@ -1,6 +1,6 @@
 {
   "name": "next-huia-headless",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.7",
   "description": "Next.js bearer-token authentication library for Huia.Headless identity API",
   "license": "MIT",
   "type": "module",
