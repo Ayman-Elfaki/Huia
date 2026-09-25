@@ -2,14 +2,16 @@
 
 Multi-tenant OpenID Connect / OAuth 2.0 Identity Provider library suite for ASP.NET Core 10.
 
-Huia serves multiple isolated tenants over base-path routing (`/{tenant}/...`) and ships as three
-NuGet packages:
+Huia serves multiple isolated tenants over base-path routing (`/{tenant}/...`) and ships as five
+NuGet packages across two authentication flavors:
 
 | Package | Contents |
 |---|---|
-| `Huia` | Domain model, options tree, eventing abstractions, constants. **No** ASP.NET Core / EF Core dependency. |
-| `Huia.OpenId.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId>`, `Huia*`-renamed entities, tenant-scoped Identity + OpenIddict stores. Provider-agnostic; ships no migrations. |
+| `Huia` | Domain model, options tree, eventing abstractions, store abstractions (`IHuiaStore`, `IHuiaOpenIdAdminStore`), constants. **No** ASP.NET Core / EF Core dependency. |
+| `Huia.OpenId.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId>`, `Huia*`-renamed entities, tenant-scoped Identity + OpenIddict stores, `AddEntityFrameworkCoreStores<...>()` with keyset pagination. Provider-agnostic; ships no migrations. |
 | `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()`, OpenIddict server + client, the Razor Pages account UI, passwordless SMS, key lifecycle jobs, security headers. |
+| `Huia.Headless.EntityFrameworkCore` | Generic single-tenant `HuiaDbContext<TUser,TRole,TId>`, `AddEntityFrameworkCoreStores<...>()` with `MR.AspNetCore.Pagination` keyset and offset pagination. |
+| `Huia.Headless` | `AddHuiaHeadless()` / `MapHuiaHeadlessEndpoints()` — store-agnostic, pure JSON authentication endpoints & bearer tokens via `MapIdentityApi`. |
 
 ```csharp
 builder.Services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseNpgsql(cs).UseOpenIddict());
@@ -49,7 +51,7 @@ This project is `src/dotnet/` inside the Huia monorepo (see the repo-root `READM
 
 ```
 src/dotnet/
-  src/        Huia, Huia.OpenId.EntityFrameworkCore, Huia.OpenId
+  src/        Huia, Huia.OpenId, Huia.OpenId.EntityFrameworkCore, Huia.Headless, Huia.Headless.EntityFrameworkCore
   tests/      Huia.Tests, Huia.IntegrationTests, Huia.Tests.PenTest
 ../../samples/  Shared/Huia.AppHost (Aspire), Shared/Huia.External, Shared/Huia.Cli,
                 Todo/Todo.Api, Todo/Todo.Nuxt, Todo/Todo.Next, Todo/Todo.Admin, Todo/Todo.IdentityServer,

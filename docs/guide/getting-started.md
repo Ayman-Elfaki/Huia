@@ -1,16 +1,15 @@
 # Getting started
 
-Huia ships six NuGet packages across two authentication flavors — a multi-tenant OpenID Connect
+Huia ships five NuGet packages across two authentication flavors — a multi-tenant OpenID Connect
 provider (`Huia.OpenId`) and a single-tenant bearer-token API (`Huia.Headless`) — over a shared core:
 
 | Package | Contents |
 |---|---|
-| `Huia` | Domain model, options tree, eventing, constants. No EF Core / OpenIddict / Finbuckle dependency. |
-| `Huia.EntityFrameworkCore` | Common, tenant-agnostic EF Core schema + `AddEntityFrameworkCoreStores<...>()`. Shared by both flavors. |
-| `Huia.OpenId.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId> : MultiTenantIdentityDbContext`, tenant-scoped stores. Ships no migrations. |
+| `Huia` | Domain model, options tree, eventing, store abstractions, constants. No EF Core / OpenIddict / Finbuckle dependency. |
+| `Huia.OpenId.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId> : MultiTenantIdentityDbContext`, tenant-scoped stores, `AddEntityFrameworkCoreStores<...>()`. Ships no migrations. |
 | `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()`, OpenIddict, the Razor account UI, key jobs. |
-| `Huia.Headless.EntityFrameworkCore` | Generic single-tenant `HuiaDbContext<TUser,TRole,TId> : IdentityDbContext<TUser,TRole,string>`. |
-| `Huia.Headless` | `AddHuiaHeadless()` / `MapHuiaHeadlessEndpoints()` — bearer tokens via `MapIdentityApi`, no OpenIddict, no multi-tenancy. |
+| `Huia.Headless.EntityFrameworkCore` | Generic single-tenant `HuiaDbContext<TUser,TRole,TId> : IdentityDbContext<TUser,TRole,string>`, `AddEntityFrameworkCoreStores<...>()` with `MR.AspNetCore.Pagination`. |
+| `Huia.Headless` | `AddHuiaHeadless()` / `MapHuiaHeadlessEndpoints()` — store-agnostic, bearer tokens via `MapIdentityApi`, no OpenIddict, no multi-tenancy. |
 
 This page covers `Huia.OpenId`. For the headless flavor, see the
 [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api) and the

@@ -41,7 +41,6 @@ jobs:
           fi
           for proj in \
             src/Huia/Huia.csproj \
-            src/Huia.EntityFrameworkCore/Huia.EntityFrameworkCore.csproj \
             src/Huia.OpenId.EntityFrameworkCore/Huia.OpenId.EntityFrameworkCore.csproj \
             src/Huia.OpenId/Huia.OpenId.csproj \
             src/Huia.Headless.EntityFrameworkCore/Huia.Headless.EntityFrameworkCore.csproj \

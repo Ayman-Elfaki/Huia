@@ -22,18 +22,22 @@ fits and links only that flavor's packages:
 
 | Package | Role |
 |---|---|
-| `Huia` | domain model, the options tree, eventing, constants, the `IHuiaTenantContext` seam, generic `HuiaUserManager<TUser>`/`HuiaSignInManager<TUser>` — **no** EF Core / OpenIddict / Finbuckle dependency (a build target enforces it), though the ASP.NET Core shared framework is allowed |
-| `Huia.EntityFrameworkCore` | common, tenant-agnostic EF Core schema (`ConfigureHuiaIdentitySchema<TUser,TRole>()`) and `AddEntityFrameworkCoreStores<TContext,TUser,TRole>()`, shared by both flavors below |
-| `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext : MultiTenantIdentityDbContext`, layers OpenIddict + tenant-scoped composite indexes on top of the common schema — ships no migrations |
+| `Huia` | domain model, the options tree, eventing, store abstractions (`IHuiaStore`, `IHuiaOpenIdAdminStore`), constants, the `IHuiaTenantContext` seam, generic `HuiaUserManager<TUser>`/`HuiaSignInManager<TUser>` — **no** EF Core / OpenIddict / Finbuckle dependency (a build target enforces it), though the ASP.NET Core shared framework is allowed |
+| `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext : MultiTenantIdentityDbContext`, layers OpenIddict + tenant-scoped composite indexes on top of Identity schema, `AddEntityFrameworkCoreStores<TContext,TUser,TRole>()`, implements `IHuiaOpenIdAdminStore` with keyset pagination — ships no migrations |
 | `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()` / `MapHuiaEndpoints()` — multi-tenant, OpenIddict server + client, the Razor account UI, passwordless SMS, key-lifecycle jobs, security headers |
-| `Huia.Headless.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId> : IdentityDbContext<TUser,TRole,string>` — single-tenant, no multi-tenant schema additions |
-| `Huia.Headless` | `AddHuiaHeadless(...)` / `MapHuiaHeadlessEndpoints()` — a flat, tenant-free, branding-free options builder (single-tenant internally, but that's never exposed), ASP.NET Core Identity bearer tokens via `MapIdentityApi`, no OpenIddict, no Finbuckle. See the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api) |
+| `Huia.Headless.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId> : IdentityDbContext<TUser,TRole,string>` — single-tenant, implements `IHuiaStore` with `MR.AspNetCore.Pagination` keyset and offset pagination, `AddEntityFrameworkCoreStores<TContext,TUser,TRole>()` |
+| `Huia.Headless` | `AddHuiaHeadless(...)` / `MapHuiaHeadlessEndpoints()` — store-agnostic, a flat, tenant-free, branding-free options builder (single-tenant internally, but that's never exposed), ASP.NET Core Identity bearer tokens via `MapIdentityApi`, no OpenIddict, no Finbuckle. See the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api) |
 
 A host wires one flavor via a single root call:
 
 ```csharp
-services.AddHuiaOpenId(huia => { /* options */ })       // or .AddHuiaHeadless(huia => { /* options */ })
-  .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser,HuiaRole,string>>(); // Huia.EntityFrameworkCore
+// OpenId flavor:
+services.AddHuiaOpenId(huia => { /* options */ })
+  .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>();
+
+// Or Headless flavor:
+services.AddHuiaHeadless(huia => { /* options */ })
+  .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>();
 ```
 
 ## Pipeline order

@@ -13,8 +13,7 @@ and external login via the OpenIddict client.
 ```
 src/
   dotnet/     The .NET solution (Huia.slnx) — NuGet packages:
-                Huia                               domain model, options, eventing, constants (no ASP.NET / EF dep)
-                Huia.EntityFrameworkCore           base EF Core abstractions
+                Huia                               domain model, options, eventing, store abstractions (no ASP.NET / EF dep)
                 Huia.OpenId                        OpenIddict server + client, Razor account UI, PAR, SMS, passkeys
                 Huia.OpenId.EntityFrameworkCore    HuiaDbContext, tenant-scoped stores
                 Huia.Headless                      pure JSON authentication endpoints & bearer tokens
