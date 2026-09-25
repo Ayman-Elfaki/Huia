@@ -27,9 +27,9 @@ internal static class PhoneEndpoints
     public static void MapHuiaHeadlessPhoneEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("identity/phone");
-        group.MapPost("start", StartAsync).WithName("huia.headless.phone.start");
-        group.MapPost("verify", VerifyAsync).WithName("huia.headless.phone.verify");
-        group.MapPost("complete-profile", CompleteProfileAsync).WithName("huia.headless.phone.complete-profile");
+        group.MapPost("start", StartAsync).WithName(HuiaConstants.Endpoints.Headless.Phone.Start);
+        group.MapPost("verify", VerifyAsync).WithName(HuiaConstants.Endpoints.Headless.Phone.Verify);
+        group.MapPost("complete-profile", CompleteProfileAsync).WithName(HuiaConstants.Endpoints.Headless.Phone.CompleteProfile);
     }
 
     private static async Task<IResult> StartAsync(

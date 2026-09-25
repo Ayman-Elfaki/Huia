@@ -33,11 +33,11 @@ internal static class ExternalEndpoints
     {
         var group = endpoints.MapGroup("");
 
-        group.MapPost("identity/account/external/{provider}", ChallengeAsync).WithName("huia.external.challenge");
-        group.MapMethods("signin-{provider}", ["GET", "POST"], CallbackAsync).WithName("huia.external.callback");
+        group.MapPost("identity/account/external/{provider}", ChallengeAsync).WithName(HuiaConstants.Endpoints.External.Challenge);
+        group.MapMethods("signin-{provider}", ["GET", "POST"], CallbackAsync).WithName(HuiaConstants.Endpoints.External.Callback);
         group.MapMethods("identity/account/externallogincallback", ["GET", "POST"], ExternalLoginCallbackAsync)
-            .WithName("huia.external.dispatch");
-        group.MapMethods("signout-callback-oidc", ["GET", "POST"], (Delegate)SignOutCallbackAsync).WithName("huia.external.signout-callback");
+            .WithName(HuiaConstants.Endpoints.External.Dispatch);
+        group.MapMethods("signout-callback-oidc", ["GET", "POST"], (Delegate)SignOutCallbackAsync).WithName(HuiaConstants.Endpoints.External.SignOutCallback);
 
         return group;
     }

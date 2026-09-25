@@ -18,7 +18,7 @@ internal static class MeEndpoints
     {
         endpoints.MapGet("identity/me", GetMeAsync)
             .RequireAuthorization()
-            .WithName("huia.headless.me");
+            .WithName(HuiaConstants.Endpoints.Headless.Me);
     }
 
     private static async Task<IResult> GetMeAsync(HttpContext context, HuiaUserManager userManager)

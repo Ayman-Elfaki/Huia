@@ -30,46 +30,46 @@ internal static partial class AdminEndpoints
     {
         var group = endpoints.MapGroup("admin");
 
-        group.MapGet("tenants", ListTenants).WithName("huia.admin.tenants.list");
+        group.MapGet("tenants", ListTenants).WithName(HuiaConstants.Endpoints.Admin.Tenants.List);
 
-        group.MapGet("users", ListUsersAsync).WithName("huia.admin.users.list");
-        group.MapGet("users/{id}", GetUserAsync).WithName("huia.admin.users.get");
-        group.MapPost("users", CreateUserAsync).WithName("huia.admin.users.create");
-        group.MapPut("users/{id}", UpdateUserAsync).WithName("huia.admin.users.update");
-        group.MapDelete("users/{id}", DeleteUserAsync).WithName("huia.admin.users.delete");
-        group.MapGet("users/{id}/roles", GetUserRolesAsync).WithName("huia.admin.users.roles.list");
-        group.MapPost("users/{id}/roles", AddUserRoleAsync).WithName("huia.admin.users.roles.add");
-        group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync).WithName("huia.admin.users.roles.remove");
-        group.MapGet("users/{id}/claims", GetUserClaimsAsync).WithName("huia.admin.users.claims.list");
-        group.MapPost("users/{id}/claims", AddUserClaimsAsync).WithName("huia.admin.users.claims.add");
-        group.MapDelete("users/{id}/claims/{type}", RemoveUserClaimAsync).WithName("huia.admin.users.claims.remove");
-        group.MapDelete("users/{id}/claims", RemoveUserClaimsByQueryAsync).WithName("huia.admin.users.claims.remove.query");
-        group.MapPost("users/{id}/lock", LockUserAsync).WithName("huia.admin.users.lock");
-        group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName("huia.admin.users.unlock");
-        group.MapPost("users/{id}/verify-email", VerifyEmailAsync).WithName("huia.admin.users.verify-email");
+        group.MapGet("users", ListUsersAsync).WithName(HuiaConstants.Endpoints.Admin.Users.List);
+        group.MapGet("users/{id}", GetUserAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Get);
+        group.MapPost("users", CreateUserAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Create);
+        group.MapPut("users/{id}", UpdateUserAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Update);
+        group.MapDelete("users/{id}", DeleteUserAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Delete);
+        group.MapGet("users/{id}/roles", GetUserRolesAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Roles.List);
+        group.MapPost("users/{id}/roles", AddUserRoleAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Roles.Add);
+        group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Roles.Remove);
+        group.MapGet("users/{id}/claims", GetUserClaimsAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Claims.List);
+        group.MapPost("users/{id}/claims", AddUserClaimsAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Claims.Add);
+        group.MapDelete("users/{id}/claims/{type}", RemoveUserClaimAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Claims.Remove);
+        group.MapDelete("users/{id}/claims", RemoveUserClaimsByQueryAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Claims.RemoveByQuery);
+        group.MapPost("users/{id}/lock", LockUserAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Lock);
+        group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Unlock);
+        group.MapPost("users/{id}/verify-email", VerifyEmailAsync).WithName(HuiaConstants.Endpoints.Admin.Users.VerifyEmail);
 
-        group.MapGet("roles", ListRolesAsync).WithName("huia.admin.roles.list");
-        group.MapGet("roles/{id}", GetRoleAsync).WithName("huia.admin.roles.get");
-        group.MapPost("roles", CreateRoleAsync).WithName("huia.admin.roles.create");
-        group.MapPut("roles/{id}", UpdateRoleAsync).WithName("huia.admin.roles.update");
-        group.MapDelete("roles/{id}", DeleteRoleAsync).WithName("huia.admin.roles.delete");
+        group.MapGet("roles", ListRolesAsync).WithName(HuiaConstants.Endpoints.Admin.Roles.List);
+        group.MapGet("roles/{id}", GetRoleAsync).WithName(HuiaConstants.Endpoints.Admin.Roles.Get);
+        group.MapPost("roles", CreateRoleAsync).WithName(HuiaConstants.Endpoints.Admin.Roles.Create);
+        group.MapPut("roles/{id}", UpdateRoleAsync).WithName(HuiaConstants.Endpoints.Admin.Roles.Update);
+        group.MapDelete("roles/{id}", DeleteRoleAsync).WithName(HuiaConstants.Endpoints.Admin.Roles.Delete);
 
-        group.MapGet("clients", ListClientsAsync).WithName("huia.admin.clients.list");
-        group.MapGet("clients/{id}", GetClientAsync).WithName("huia.admin.clients.get");
-        group.MapPost("clients", CreateClientAsync).WithName("huia.admin.clients.create");
-        group.MapPut("clients/{id}", UpdateClientAsync).WithName("huia.admin.clients.update");
-        group.MapDelete("clients/{id}", DeleteClientAsync).WithName("huia.admin.clients.delete");
+        group.MapGet("clients", ListClientsAsync).WithName(HuiaConstants.Endpoints.Admin.Clients.List);
+        group.MapGet("clients/{id}", GetClientAsync).WithName(HuiaConstants.Endpoints.Admin.Clients.Get);
+        group.MapPost("clients", CreateClientAsync).WithName(HuiaConstants.Endpoints.Admin.Clients.Create);
+        group.MapPut("clients/{id}", UpdateClientAsync).WithName(HuiaConstants.Endpoints.Admin.Clients.Update);
+        group.MapDelete("clients/{id}", DeleteClientAsync).WithName(HuiaConstants.Endpoints.Admin.Clients.Delete);
 
-        group.MapGet("keys", ListKeysAsync).WithName("huia.admin.keys.list");
-        group.MapGet("keys/{id}", GetKeyAsync).WithName("huia.admin.keys.get");
-        group.MapPost("keys", CreateKeyAsync).WithName("huia.admin.keys.create");
-        group.MapPost("keys/{id}/revoke", RevokeKeyAsync).WithName("huia.admin.keys.revoke");
-        group.MapDelete("keys/{id}", DeleteKeyAsync).WithName("huia.admin.keys.delete");
+        group.MapGet("keys", ListKeysAsync).WithName(HuiaConstants.Endpoints.Admin.Keys.List);
+        group.MapGet("keys/{id}", GetKeyAsync).WithName(HuiaConstants.Endpoints.Admin.Keys.Get);
+        group.MapPost("keys", CreateKeyAsync).WithName(HuiaConstants.Endpoints.Admin.Keys.Create);
+        group.MapPost("keys/{id}/revoke", RevokeKeyAsync).WithName(HuiaConstants.Endpoints.Admin.Keys.Revoke);
+        group.MapDelete("keys/{id}", DeleteKeyAsync).WithName(HuiaConstants.Endpoints.Admin.Keys.Delete);
 
-        group.MapGet("scopes", ListScopesAsync).WithName("huia.admin.scopes.list");
-        group.MapPost("scopes", CreateScopeAsync).WithName("huia.admin.scopes.create");
-        group.MapPut("scopes/{name}", UpdateScopeAsync).WithName("huia.admin.scopes.update");
-        group.MapDelete("scopes/{name}", DeleteScopeAsync).WithName("huia.admin.scopes.delete");
+        group.MapGet("scopes", ListScopesAsync).WithName(HuiaConstants.Endpoints.Admin.Scopes.List);
+        group.MapPost("scopes", CreateScopeAsync).WithName(HuiaConstants.Endpoints.Admin.Scopes.Create);
+        group.MapPut("scopes/{name}", UpdateScopeAsync).WithName(HuiaConstants.Endpoints.Admin.Scopes.Update);
+        group.MapDelete("scopes/{name}", DeleteScopeAsync).WithName(HuiaConstants.Endpoints.Admin.Scopes.Delete);
 
         return group;
     }

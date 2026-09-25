@@ -35,10 +35,10 @@ internal static class ExternalEndpoints
     public static void MapHuiaHeadlessExternalEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("identity/account/external");
-        group.MapGet("{provider}", ChallengeAsync).WithName("huia.headless.external.challenge");
-        group.MapGet("callback", DispatchAsync).WithName("huia.headless.external.callback");
-        group.MapPost("exchange", ExchangeAsync).WithName("huia.headless.external.exchange");
-        group.MapPost("complete-profile", CompleteProfileAsync).WithName("huia.headless.external.complete-profile");
+        group.MapGet("{provider}", ChallengeAsync).WithName(HuiaConstants.Endpoints.Headless.External.Challenge);
+        group.MapGet("callback", DispatchAsync).WithName(HuiaConstants.Endpoints.Headless.External.Callback);
+        group.MapPost("exchange", ExchangeAsync).WithName(HuiaConstants.Endpoints.Headless.External.Exchange);
+        group.MapPost("complete-profile", CompleteProfileAsync).WithName(HuiaConstants.Endpoints.Headless.External.CompleteProfile);
     }
 
     private static IResult ChallengeAsync(HttpContext context, string provider, string returnUrl, TenantOptions tenant)

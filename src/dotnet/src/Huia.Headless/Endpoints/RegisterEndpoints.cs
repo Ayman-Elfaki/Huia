@@ -24,7 +24,7 @@ internal static class RegisterEndpoints
     public static void MapHuiaHeadlessRegisterEndpoint(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("identity/register", RegisterAsync)
-            .WithName("huia.headless.register")
+            .WithName(HuiaConstants.Endpoints.Headless.Register)
             .WithOrder(-1);
     }
 

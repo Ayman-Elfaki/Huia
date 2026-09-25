@@ -28,26 +28,26 @@ public static partial class AdminEndpoints
 
         var group = endpoints.MapGroup("admin");
 
-        group.MapGet("users", ListUsersAsync).WithName("huia.headless.admin.users.list");
-        group.MapGet("users/{id}", GetUserAsync).WithName("huia.headless.admin.users.get");
-        group.MapPost("users", CreateUserAsync).WithName("huia.headless.admin.users.create");
-        group.MapPut("users/{id}", UpdateUserAsync).WithName("huia.headless.admin.users.update");
-        group.MapDelete("users/{id}", DeleteUserAsync).WithName("huia.headless.admin.users.delete");
-        group.MapGet("users/{id}/roles", GetUserRolesAsync).WithName("huia.headless.admin.users.roles.list");
-        group.MapPost("users/{id}/roles", AddUserRoleAsync).WithName("huia.headless.admin.users.roles.add");
-        group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync).WithName("huia.headless.admin.users.roles.remove");
-        group.MapGet("users/{id}/claims", GetUserClaimsAsync).WithName("huia.headless.admin.users.claims.list");
-        group.MapPost("users/{id}/claims", AddUserClaimsAsync).WithName("huia.headless.admin.users.claims.add");
-        group.MapDelete("users/{id}/claims/{type}", RemoveUserClaimAsync).WithName("huia.headless.admin.users.claims.remove");
-        group.MapDelete("users/{id}/claims", RemoveUserClaimsByQueryAsync).WithName("huia.headless.admin.users.claims.remove.query");
-        group.MapPost("users/{id}/lock", LockUserAsync).WithName("huia.headless.admin.users.lock");
-        group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName("huia.headless.admin.users.unlock");
+        group.MapGet("users", ListUsersAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.List);
+        group.MapGet("users/{id}", GetUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Get);
+        group.MapPost("users", CreateUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Create);
+        group.MapPut("users/{id}", UpdateUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Update);
+        group.MapDelete("users/{id}", DeleteUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Delete);
+        group.MapGet("users/{id}/roles", GetUserRolesAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Roles.List);
+        group.MapPost("users/{id}/roles", AddUserRoleAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Roles.Add);
+        group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Roles.Remove);
+        group.MapGet("users/{id}/claims", GetUserClaimsAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.List);
+        group.MapPost("users/{id}/claims", AddUserClaimsAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.Add);
+        group.MapDelete("users/{id}/claims/{type}", RemoveUserClaimAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.Remove);
+        group.MapDelete("users/{id}/claims", RemoveUserClaimsByQueryAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.RemoveByQuery);
+        group.MapPost("users/{id}/lock", LockUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Lock);
+        group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Unlock);
 
-        group.MapGet("roles", ListRolesAsync).WithName("huia.headless.admin.roles.list");
-        group.MapGet("roles/{id}", GetRoleAsync).WithName("huia.headless.admin.roles.get");
-        group.MapPost("roles", CreateRoleAsync).WithName("huia.headless.admin.roles.create");
-        group.MapPut("roles/{id}", UpdateRoleAsync).WithName("huia.headless.admin.roles.update");
-        group.MapDelete("roles/{id}", DeleteRoleAsync).WithName("huia.headless.admin.roles.delete");
+        group.MapGet("roles", ListRolesAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Roles.List);
+        group.MapGet("roles/{id}", GetRoleAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Roles.Get);
+        group.MapPost("roles", CreateRoleAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Roles.Create);
+        group.MapPut("roles/{id}", UpdateRoleAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Roles.Update);
+        group.MapDelete("roles/{id}", DeleteRoleAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Roles.Delete);
 
         return group;
     }

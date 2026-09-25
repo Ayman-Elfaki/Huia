@@ -42,54 +42,82 @@ public sealed class EndpointNamingTests : IAsyncLifetime
             .ToHashSet();
 
         // Verify core OpenID Connect endpoints
-        Assert.Contains("huia.connect.authorize", namedEndpoints);
-        Assert.Contains("huia.connect.token", namedEndpoints);
-        Assert.Contains("huia.connect.userinfo", namedEndpoints);
-        Assert.Contains("huia.connect.logout", namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Connect.Authorize, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Connect.Token, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Connect.UserInfo, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Connect.Logout, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Connect.Verify, namedEndpoints);
 
         // Verify Admin API endpoints
-        Assert.Contains("huia.admin.tenants.list", namedEndpoints);
-        Assert.Contains("huia.admin.users.list", namedEndpoints);
-        Assert.Contains("huia.admin.users.get", namedEndpoints);
-        Assert.Contains("huia.admin.users.create", namedEndpoints);
-        Assert.Contains("huia.admin.users.update", namedEndpoints);
-        Assert.Contains("huia.admin.users.delete", namedEndpoints);
-        Assert.Contains("huia.admin.users.claims.list", namedEndpoints);
-        Assert.Contains("huia.admin.users.claims.add", namedEndpoints);
-        Assert.Contains("huia.admin.users.claims.remove", namedEndpoints);
-        Assert.Contains("huia.admin.roles.list", namedEndpoints);
-        Assert.Contains("huia.admin.clients.list", namedEndpoints);
-        Assert.Contains("huia.admin.keys.list", namedEndpoints);
-        Assert.Contains("huia.admin.scopes.list", namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Tenants.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Delete, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Claims.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Claims.Add, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Claims.Remove, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Claims.RemoveByQuery, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Roles.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Roles.Add, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Roles.Remove, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Lock, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Unlock, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Users.VerifyEmail, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Roles.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Roles.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Roles.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Roles.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Roles.Delete, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Clients.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Clients.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Clients.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Clients.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Clients.Delete, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Keys.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Keys.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Keys.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Keys.Revoke, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Keys.Delete, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Scopes.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Scopes.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Scopes.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Scopes.Delete, namedEndpoints);
 
         // Verify Manage API endpoints
-        Assert.Contains("huia.manage.profile.get", namedEndpoints);
-        Assert.Contains("huia.manage.profile.update", namedEndpoints);
-        Assert.Contains("huia.manage.email.get", namedEndpoints);
-        Assert.Contains("huia.manage.email.update", namedEndpoints);
-        Assert.Contains("huia.manage.password.update", namedEndpoints);
-        Assert.Contains("huia.manage.phone.get", namedEndpoints);
-        Assert.Contains("huia.manage.external-logins.list", namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Profile.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Profile.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Email.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Email.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Email.Confirm, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Password.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Phone.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Phone.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Phone.Confirm, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.Phone.Delete, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.ExternalLogins.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Manage.ExternalLogins.Delete, namedEndpoints);
 
         // Verify Passkey endpoints
-        Assert.Contains("huia.passkey.assertion", namedEndpoints);
-        Assert.Contains("huia.passkey.assertion-options", namedEndpoints);
-        Assert.Contains("huia.passkey.creation-options", namedEndpoints);
-        Assert.Contains("huia.passkey.list", namedEndpoints);
-        Assert.Contains("huia.passkey.register", namedEndpoints);
-        Assert.Contains("huia.passkey.rename", namedEndpoints);
-        Assert.Contains("huia.passkey.remove", namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Passkey.Assertion, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Passkey.AssertionOptions, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Passkey.CreationOptions, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Passkey.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Passkey.Register, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Passkey.Rename, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Passkey.Remove, namedEndpoints);
 
         // Verify External auth endpoints
-        Assert.Contains("huia.external.challenge", namedEndpoints);
-        Assert.Contains("huia.external.callback", namedEndpoints);
-        Assert.Contains("huia.external.dispatch", namedEndpoints);
-        Assert.Contains("huia.external.signout-callback", namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.External.Challenge, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.External.Callback, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.External.Dispatch, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.External.SignOutCallback, namedEndpoints);
 
         // Verify Health & Root endpoints
-        Assert.Contains("huia.health.live", namedEndpoints);
-        Assert.Contains("huia.health.ready", namedEndpoints);
-        Assert.Contains("huia.root", namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Health.Live, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Health.Ready, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Root, namedEndpoints);
     }
 
     [Fact]
@@ -146,35 +174,41 @@ public sealed class EndpointNamingTests : IAsyncLifetime
             .Where(name => !string.IsNullOrEmpty(name))
             .ToHashSet();
 
-        Assert.Contains("huia.headless.register", namedEndpoints);
-        Assert.Contains("huia.headless.me", namedEndpoints);
-        Assert.Contains("huia.headless.phone.start", namedEndpoints);
-        Assert.Contains("huia.headless.phone.verify", namedEndpoints);
-        Assert.Contains("huia.headless.phone.complete-profile", namedEndpoints);
-        Assert.Contains("huia.headless.passkey.assertion", namedEndpoints);
-        Assert.Contains("huia.headless.passkey.assertion-options", namedEndpoints);
-        Assert.Contains("huia.headless.passkey.creation-options", namedEndpoints);
-        Assert.Contains("huia.headless.passkey.list", namedEndpoints);
-        Assert.Contains("huia.headless.passkey.register", namedEndpoints);
-        Assert.Contains("huia.headless.passkey.rename", namedEndpoints);
-        Assert.Contains("huia.headless.passkey.remove", namedEndpoints);
-        Assert.Contains("huia.headless.external.challenge", namedEndpoints);
-        Assert.Contains("huia.headless.external.callback", namedEndpoints);
-        Assert.Contains("huia.headless.external.exchange", namedEndpoints);
-        Assert.Contains("huia.headless.external.complete-profile", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.list", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.get", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.create", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.update", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.delete", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.claims.list", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.claims.add", namedEndpoints);
-        Assert.Contains("huia.headless.admin.users.claims.remove", namedEndpoints);
-        Assert.Contains("huia.headless.admin.roles.list", namedEndpoints);
-        Assert.Contains("huia.headless.admin.roles.get", namedEndpoints);
-        Assert.Contains("huia.headless.admin.roles.create", namedEndpoints);
-        Assert.Contains("huia.headless.admin.roles.update", namedEndpoints);
-        Assert.Contains("huia.headless.admin.roles.delete", namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Register, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Me, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Phone.Start, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Phone.Verify, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Phone.CompleteProfile, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Passkey.Assertion, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Passkey.AssertionOptions, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Passkey.CreationOptions, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Passkey.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Passkey.Register, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Passkey.Rename, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Passkey.Remove, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.External.Challenge, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.External.Callback, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.External.Exchange, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.External.CompleteProfile, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Delete, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Lock, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Unlock, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Roles.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Roles.Add, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Roles.Remove, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.Add, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.Remove, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.RemoveByQuery, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Roles.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Roles.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Roles.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Roles.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Headless.Admin.Roles.Delete, namedEndpoints);
 
         await host.StopAsync();
         host.Dispose();

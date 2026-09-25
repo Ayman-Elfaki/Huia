@@ -33,11 +33,11 @@ internal static class ConnectEndpoints
     {
         var group = endpoints.MapGroup("connect");
 
-        group.MapMethods("authorize", ["GET", "POST"], AuthorizeAsync).WithName("huia.connect.authorize");
-        group.MapMethods("token", ["POST"], ExchangeAsync).WithName("huia.connect.token");
-        group.MapMethods("userinfo", ["GET", "POST"], UserInfoAsync).WithName("huia.connect.userinfo");
-        group.MapMethods("logout", ["GET", "POST"], LogoutAsync).WithName("huia.connect.logout");
-        group.MapMethods("verify", ["GET", "POST"], VerifyAsync).WithName("huia.connect.verify");
+        group.MapMethods("authorize", ["GET", "POST"], AuthorizeAsync).WithName(HuiaConstants.Endpoints.Connect.Authorize);
+        group.MapMethods("token", ["POST"], ExchangeAsync).WithName(HuiaConstants.Endpoints.Connect.Token);
+        group.MapMethods("userinfo", ["GET", "POST"], UserInfoAsync).WithName(HuiaConstants.Endpoints.Connect.UserInfo);
+        group.MapMethods("logout", ["GET", "POST"], LogoutAsync).WithName(HuiaConstants.Endpoints.Connect.Logout);
+        group.MapMethods("verify", ["GET", "POST"], VerifyAsync).WithName(HuiaConstants.Endpoints.Connect.Verify);
 
         return group;
     }
@@ -121,6 +121,14 @@ internal static class ConnectEndpoints
         foreach (var role in await userManager.GetRolesAsync(user))
         {
             identity.AddClaim(new Claim(Claims.Role, role));
+        }
+
+        foreach (var claim in await userManager.GetClaimsAsync(user))
+        {
+            if (!identity.HasClaim(c => c.Type == claim.Type && c.Value == claim.Value))
+            {
+                identity.AddClaim(new Claim(claim.Type, claim.Value));
+            }
         }
 
         identity.SetScopes(request.GetScopes());
@@ -208,6 +216,14 @@ internal static class ConnectEndpoints
         foreach (var role in await userManager.GetRolesAsync(user))
         {
             identity.AddClaim(new Claim(Claims.Role, role));
+        }
+
+        foreach (var claim in await userManager.GetClaimsAsync(user))
+        {
+            if (!identity.HasClaim(c => c.Type == claim.Type && c.Value == claim.Value))
+            {
+                identity.AddClaim(new Claim(claim.Type, claim.Value));
+            }
         }
 
         identity.SetScopes(scopes);
@@ -335,6 +351,25 @@ internal static class ConnectEndpoints
             {
                 claims[Claims.PhoneNumber] = user.PhoneNumber;
                 claims[Claims.PhoneNumberVerified] = user.PhoneNumberConfirmed;
+            }
+
+            foreach (var claim in await userManager.GetClaimsAsync(user))
+            {
+                if (claims.TryGetValue(claim.Type, out var existing))
+                {
+                    if (existing is List<object?> list)
+                    {
+                        list.Add(claim.Value);
+                    }
+                    else
+                    {
+                        claims[claim.Type] = new List<object?> { existing, claim.Value };
+                    }
+                }
+                else
+                {
+                    claims[claim.Type] = claim.Value;
+                }
             }
         }
 
@@ -505,6 +540,7 @@ internal static class ConnectEndpoints
 
             default:
                 yield return Destinations.AccessToken;
+                yield return Destinations.IdentityToken;
                 yield break;
         }
     }

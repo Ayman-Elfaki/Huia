@@ -1,3 +1,4 @@
+using Huia;
 using Huia.OpenId.Endpoints;
 using Huia.OpenId.HealthChecks;
 using Huia.OpenId.UI;
@@ -47,11 +48,11 @@ public static class HuiaEndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
 
         endpoints.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false })
-            .WithName("huia.health.live");
+            .WithName(HuiaConstants.Endpoints.Health.Live);
         endpoints.MapHealthChecks("/health/ready", new HealthCheckOptions
         {
             Predicate = registration => registration.Tags.Contains(HuiaHealthChecksConfiguration.ReadyTag),
-        }).WithName("huia.health.ready");
+        }).WithName(HuiaConstants.Endpoints.Health.Ready);
 
         return endpoints;
     }
@@ -135,7 +136,7 @@ public static class HuiaEndpointRouteBuilderExtensions
                 ?? fallbackTenantId
                 ?? options.Tenants.Keys.FirstOrDefault();
             return tenant is null ? Http.Results.NotFound() : Http.Results.Redirect($"/{tenant}/");
-        }).WithName("huia.root");
+        }).WithName(HuiaConstants.Endpoints.Root);
 
         return endpoints;
     }

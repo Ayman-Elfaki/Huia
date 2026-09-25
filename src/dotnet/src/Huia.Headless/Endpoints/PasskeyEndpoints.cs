@@ -28,15 +28,15 @@ internal static class PasskeyEndpoints
     public static void MapHuiaHeadlessPasskeyEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("identity/passkey");
-        group.MapPost("assertion-options", AssertionOptionsAsync).WithName("huia.headless.passkey.assertion-options");
-        group.MapPost("assertion", AssertionAsync).WithName("huia.headless.passkey.assertion");
+        group.MapPost("assertion-options", AssertionOptionsAsync).WithName(HuiaConstants.Endpoints.Headless.Passkey.AssertionOptions);
+        group.MapPost("assertion", AssertionAsync).WithName(HuiaConstants.Endpoints.Headless.Passkey.Assertion);
 
         var manage = endpoints.MapGroup("identity/manage/passkeys").RequireAuthorization();
-        manage.MapPost("creation-options", CreationOptionsAsync).WithName("huia.headless.passkey.creation-options");
-        manage.MapGet("", ListAsync).WithName("huia.headless.passkey.list");
-        manage.MapPost("", RegisterAsync).WithName("huia.headless.passkey.register");
-        manage.MapPatch("{id}", RenameAsync).WithName("huia.headless.passkey.rename");
-        manage.MapDelete("{id}", RemoveAsync).WithName("huia.headless.passkey.remove");
+        manage.MapPost("creation-options", CreationOptionsAsync).WithName(HuiaConstants.Endpoints.Headless.Passkey.CreationOptions);
+        manage.MapGet("", ListAsync).WithName(HuiaConstants.Endpoints.Headless.Passkey.List);
+        manage.MapPost("", RegisterAsync).WithName(HuiaConstants.Endpoints.Headless.Passkey.Register);
+        manage.MapPatch("{id}", RenameAsync).WithName(HuiaConstants.Endpoints.Headless.Passkey.Rename);
+        manage.MapDelete("{id}", RemoveAsync).WithName(HuiaConstants.Endpoints.Headless.Passkey.Remove);
     }
 
     // ---- anonymous: discoverable primary sign-in --------------------------------------------------

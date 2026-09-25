@@ -32,18 +32,18 @@ internal static class ManageEndpoints
         var group = endpoints.MapGroup("manage");
         group.RequireAuthorization(HuiaConstants.Policies.Api);
 
-        group.MapGet("profile", GetProfileAsync).WithName("huia.manage.profile.get");
-        group.MapPut("profile", UpdateProfileAsync).WithName("huia.manage.profile.update");
-        group.MapGet("email", GetEmailAsync).WithName("huia.manage.email.get");
-        group.MapPut("email", ChangeEmailAsync).WithName("huia.manage.email.update");
-        group.MapPost("email/confirm", SendEmailConfirmationAsync).WithName("huia.manage.email.confirm");
-        group.MapPut("password", ChangePasswordAsync).WithName("huia.manage.password.update");
-        group.MapGet("phone", GetPhoneAsync).WithName("huia.manage.phone.get");
-        group.MapPut("phone", StartPhoneChangeAsync).WithName("huia.manage.phone.update");
-        group.MapPost("phone/confirm", ConfirmPhoneChangeAsync).WithName("huia.manage.phone.confirm");
-        group.MapDelete("phone", RemovePhoneAsync).WithName("huia.manage.phone.delete");
-        group.MapGet("external-logins", GetExternalLoginsAsync).WithName("huia.manage.external-logins.list");
-        group.MapDelete("external-logins/{provider}/{providerKey}", RemoveExternalLoginAsync).WithName("huia.manage.external-logins.delete");
+        group.MapGet("profile", GetProfileAsync).WithName(HuiaConstants.Endpoints.Manage.Profile.Get);
+        group.MapPut("profile", UpdateProfileAsync).WithName(HuiaConstants.Endpoints.Manage.Profile.Update);
+        group.MapGet("email", GetEmailAsync).WithName(HuiaConstants.Endpoints.Manage.Email.Get);
+        group.MapPut("email", ChangeEmailAsync).WithName(HuiaConstants.Endpoints.Manage.Email.Update);
+        group.MapPost("email/confirm", SendEmailConfirmationAsync).WithName(HuiaConstants.Endpoints.Manage.Email.Confirm);
+        group.MapPut("password", ChangePasswordAsync).WithName(HuiaConstants.Endpoints.Manage.Password.Update);
+        group.MapGet("phone", GetPhoneAsync).WithName(HuiaConstants.Endpoints.Manage.Phone.Get);
+        group.MapPut("phone", StartPhoneChangeAsync).WithName(HuiaConstants.Endpoints.Manage.Phone.Update);
+        group.MapPost("phone/confirm", ConfirmPhoneChangeAsync).WithName(HuiaConstants.Endpoints.Manage.Phone.Confirm);
+        group.MapDelete("phone", RemovePhoneAsync).WithName(HuiaConstants.Endpoints.Manage.Phone.Delete);
+        group.MapGet("external-logins", GetExternalLoginsAsync).WithName(HuiaConstants.Endpoints.Manage.ExternalLogins.List);
+        group.MapDelete("external-logins/{provider}/{providerKey}", RemoveExternalLoginAsync).WithName(HuiaConstants.Endpoints.Manage.ExternalLogins.Delete);
 
         PasskeyEndpoints.MapHuiaManagePasskeyEndpoints(group);
 

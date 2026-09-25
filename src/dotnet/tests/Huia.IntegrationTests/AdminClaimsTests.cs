@@ -5,6 +5,7 @@ using System.Text.Json;
 using Huia.Events;
 using Huia.IntegrationTests.Infrastructure;
 using Shouldly;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Xunit;
 
 namespace Huia.IntegrationTests;
@@ -168,6 +169,56 @@ public sealed class AdminClaimsTests : IAsyncLifetime
 
         var response = await client.PostAsJsonAsync($"/acme/admin/users/{peonId}/claims", new { type = "sneaky", value = "val" });
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.Forbidden, HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Stored_claims_are_copied_into_identity_and_emitted_in_tokens_and_userinfo()
+    {
+        using var adminClient = await AdminApiAsync();
+        await _host.SeedInteractiveClientAsync("acme", "claims-app", RedirectUri);
+        var userId = await _host.SeedUserAsync("acme", "claimstester@acme.test", "Password1!", emailConfirmed: true);
+
+        // Add stored claims to user
+        var addRes = await adminClient.PostAsJsonAsync($"/master/admin/users/{userId}/claims", new
+        {
+            claims = new[]
+            {
+                new { type = "department", value = "engineering" },
+                new { type = "tier", value = "gold" }
+            }
+        });
+        addRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        // Sign in via authorization code flow
+        var flow = new AuthCodeFlow(_host, "acme", "claims-app", RedirectUri);
+        using var tokens = await flow.SignInAsync("claimstester@acme.test", "Password1!", "openid profile email offline_access");
+
+        var accessToken = tokens.RootElement.GetProperty("access_token").GetString()!;
+        var idToken = tokens.RootElement.GetProperty("id_token").GetString()!;
+        var refreshToken = tokens.RootElement.GetProperty("refresh_token").GetString()!;
+
+        // Verify claims in access token
+        var accessJwt = new JsonWebToken(accessToken);
+        accessJwt.GetClaim("department").Value.ShouldBe("engineering");
+        accessJwt.GetClaim("tier").Value.ShouldBe("gold");
+
+        // Verify claims in id token
+        var idJwt = new JsonWebToken(idToken);
+        idJwt.GetClaim("department").Value.ShouldBe("engineering");
+        idJwt.GetClaim("tier").Value.ShouldBe("gold");
+
+        // Verify claims in UserInfo endpoint
+        var client = _host.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var userInfo = await client.GetFromJsonAsync<JsonElement>("/acme/connect/userinfo");
+        userInfo.GetProperty("department").GetString().ShouldBe("engineering");
+        userInfo.GetProperty("tier").GetString().ShouldBe("gold");
+
+        // Verify claims survive refresh token exchange
+        using var refreshed = await flow.RefreshAsync(refreshToken);
+        var refreshedAccess = new JsonWebToken(refreshed.RootElement.GetProperty("access_token").GetString()!);
+        refreshedAccess.GetClaim("department").Value.ShouldBe("engineering");
+        refreshedAccess.GetClaim("tier").Value.ShouldBe("gold");
     }
 
     private sealed record ClaimDto(string Type, string Value);
