@@ -35,6 +35,9 @@ public sealed class HeadlessAdminEndpointsTests
 
         var rolesResponse = await host.Client.GetAsync("admin/roles");
         rolesResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        var claimsResponse = await host.Client.GetAsync("admin/users/fake-id/claims");
+        claimsResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -164,6 +167,94 @@ public sealed class HeadlessAdminEndpointsTests
         // 7. Delete role
         var deleteRoleRes = await client.DeleteAsync($"admin/roles/{role.Id}");
         deleteRoleRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Admin_can_manage_user_claims()
+    {
+        await using var host = await StartAsync();
+        var token = await host.CreateAndSignInAdminAsync("claimsadmin@test.local", "P@ssword123!");
+        using var client = host.CreateAuthorizedClient(token);
+
+        // 1. Create a user
+        var createUserRes = await client.PostAsJsonAsync("admin/users", new
+        {
+            email = "claimstest@test.local",
+            password = "P@ssword123!",
+            firstName = "Claim",
+            lastName = "Test"
+        });
+        createUserRes.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var user = await createUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        user.ShouldNotBeNull();
+
+        // 2. Add a single claim
+        var addClaimRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/claims", new
+        {
+            type = "department",
+            value = "rnd"
+        });
+        addClaimRes.EnsureSuccessStatusCode();
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(1, e => e.UserId == user.Id);
+
+        // Idempotent add
+        var reAddClaimRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/claims", new
+        {
+            type = "department",
+            value = "rnd"
+        });
+        reAddClaimRes.EnsureSuccessStatusCode();
+
+        // 3. Add batch claims
+        var addBatchRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/claims", new
+        {
+            claims = new[]
+            {
+                new { type = "clearance", value = "top-secret" },
+                new { type = "location", value = "hq" }
+            }
+        });
+        addBatchRes.EnsureSuccessStatusCode();
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(2, e => e.UserId == user.Id);
+
+        // 4. List claims
+        var listClaimsRes = await client.GetAsync($"admin/users/{user.Id}/claims");
+        listClaimsRes.EnsureSuccessStatusCode();
+        var claims = await listClaimsRes.Content.ReadFromJsonAsync<HeadlessClaimDto[]>(Json);
+        claims.ShouldNotBeNull();
+        claims.Length.ShouldBe(3);
+        claims.ShouldContain(c => c.Type == "department" && c.Value == "rnd");
+        claims.ShouldContain(c => c.Type == "clearance" && c.Value == "top-secret");
+        claims.ShouldContain(c => c.Type == "location" && c.Value == "hq");
+
+        // 5. Remove a claim by type and value
+        var removeClearanceRes = await client.DeleteAsync($"admin/users/{user.Id}/claims/clearance?value=top-secret");
+        removeClearanceRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(3, e => e.UserId == user.Id);
+
+        // 6. Remove a claim by type
+        var removeLocationRes = await client.DeleteAsync($"admin/users/{user.Id}/claims/location");
+        removeLocationRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(4, e => e.UserId == user.Id);
+
+        // 7. Remove by query endpoint
+        var removeDeptRes = await client.DeleteAsync($"admin/users/{user.Id}/claims?type=department");
+        removeDeptRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(5, e => e.UserId == user.Id);
+
+        var finalClaimsRes = await client.GetAsync($"admin/users/{user.Id}/claims");
+        var finalClaims = await finalClaimsRes.Content.ReadFromJsonAsync<HeadlessClaimDto[]>(Json);
+        finalClaims.ShouldNotBeNull();
+        finalClaims.ShouldBeEmpty();
+
+        // 8. Validation check
+        var invalidClaimRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/claims", new { type = "" });
+        invalidClaimRes.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]

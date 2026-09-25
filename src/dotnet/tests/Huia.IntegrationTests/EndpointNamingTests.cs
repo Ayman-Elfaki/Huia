@@ -54,6 +54,9 @@ public sealed class EndpointNamingTests : IAsyncLifetime
         Assert.Contains("huia.admin.users.create", namedEndpoints);
         Assert.Contains("huia.admin.users.update", namedEndpoints);
         Assert.Contains("huia.admin.users.delete", namedEndpoints);
+        Assert.Contains("huia.admin.users.claims.list", namedEndpoints);
+        Assert.Contains("huia.admin.users.claims.add", namedEndpoints);
+        Assert.Contains("huia.admin.users.claims.remove", namedEndpoints);
         Assert.Contains("huia.admin.roles.list", namedEndpoints);
         Assert.Contains("huia.admin.clients.list", namedEndpoints);
         Assert.Contains("huia.admin.keys.list", namedEndpoints);
@@ -164,6 +167,9 @@ public sealed class EndpointNamingTests : IAsyncLifetime
         Assert.Contains("huia.headless.admin.users.create", namedEndpoints);
         Assert.Contains("huia.headless.admin.users.update", namedEndpoints);
         Assert.Contains("huia.headless.admin.users.delete", namedEndpoints);
+        Assert.Contains("huia.headless.admin.users.claims.list", namedEndpoints);
+        Assert.Contains("huia.headless.admin.users.claims.add", namedEndpoints);
+        Assert.Contains("huia.headless.admin.users.claims.remove", namedEndpoints);
         Assert.Contains("huia.headless.admin.roles.list", namedEndpoints);
         Assert.Contains("huia.headless.admin.roles.get", namedEndpoints);
         Assert.Contains("huia.headless.admin.roles.create", namedEndpoints);

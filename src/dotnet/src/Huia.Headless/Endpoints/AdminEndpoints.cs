@@ -36,6 +36,10 @@ public static partial class AdminEndpoints
         group.MapGet("users/{id}/roles", GetUserRolesAsync).WithName("huia.headless.admin.users.roles.list");
         group.MapPost("users/{id}/roles", AddUserRoleAsync).WithName("huia.headless.admin.users.roles.add");
         group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync).WithName("huia.headless.admin.users.roles.remove");
+        group.MapGet("users/{id}/claims", GetUserClaimsAsync).WithName("huia.headless.admin.users.claims.list");
+        group.MapPost("users/{id}/claims", AddUserClaimsAsync).WithName("huia.headless.admin.users.claims.add");
+        group.MapDelete("users/{id}/claims/{type}", RemoveUserClaimAsync).WithName("huia.headless.admin.users.claims.remove");
+        group.MapDelete("users/{id}/claims", RemoveUserClaimsByQueryAsync).WithName("huia.headless.admin.users.claims.remove.query");
         group.MapPost("users/{id}/lock", LockUserAsync).WithName("huia.headless.admin.users.lock");
         group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName("huia.headless.admin.users.unlock");
 

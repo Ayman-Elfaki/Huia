@@ -40,6 +40,10 @@ internal static partial class AdminEndpoints
         group.MapGet("users/{id}/roles", GetUserRolesAsync).WithName("huia.admin.users.roles.list");
         group.MapPost("users/{id}/roles", AddUserRoleAsync).WithName("huia.admin.users.roles.add");
         group.MapDelete("users/{id}/roles/{role}", RemoveUserRoleAsync).WithName("huia.admin.users.roles.remove");
+        group.MapGet("users/{id}/claims", GetUserClaimsAsync).WithName("huia.admin.users.claims.list");
+        group.MapPost("users/{id}/claims", AddUserClaimsAsync).WithName("huia.admin.users.claims.add");
+        group.MapDelete("users/{id}/claims/{type}", RemoveUserClaimAsync).WithName("huia.admin.users.claims.remove");
+        group.MapDelete("users/{id}/claims", RemoveUserClaimsByQueryAsync).WithName("huia.admin.users.claims.remove.query");
         group.MapPost("users/{id}/lock", LockUserAsync).WithName("huia.admin.users.lock");
         group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName("huia.admin.users.unlock");
         group.MapPost("users/{id}/verify-email", VerifyEmailAsync).WithName("huia.admin.users.verify-email");

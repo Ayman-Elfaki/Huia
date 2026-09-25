@@ -26,7 +26,7 @@ requested the `roles` scope at sign-in (the console does). The Aspire sample see
 |-------|-------------|-------|
 | `/` | `GET admin/tenants` | Dashboard — tenant count, per-tenant sign-in methods, quick links |
 | `/tenants` | `GET admin/tenants` | Read-only |
-| `/users` | `GET/POST/PUT/DELETE admin/users` (+ `…/{id}/roles`) | Full CRUD; create a password or phone account; assign / unassign roles inline; keyset paged, tenant filter |
+| `/users` | `GET/POST/PUT/DELETE admin/users` (+ `…/{id}/roles`, `…/{id}/claims`) | Full CRUD; create a password or phone account; assign / unassign roles and claims inline; keyset paged, tenant filter |
 | `/roles` | `GET/POST/PUT/DELETE admin/roles` | Per-tenant roles; a role with members can't be deleted until they're unassigned |
 | `/clients` | `GET/POST/PUT/DELETE admin/clients` | Full CRUD for dynamic clients (static ones are read-only); keyset paged |
 | `/keys` | `GET/POST admin/keys` + `POST admin/keys/{id}/revoke` | Create a pending or active key, revoke a key; keyset paged, tenant filter |
