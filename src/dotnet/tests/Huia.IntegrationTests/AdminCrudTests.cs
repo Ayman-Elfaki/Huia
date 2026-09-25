@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Huia.Events;
 using Huia.IntegrationTests.Infrastructure;
 
 namespace Huia.IntegrationTests;
@@ -53,6 +54,12 @@ public sealed class AdminCrudTests : IAsyncLifetime
         create.StatusCode.ShouldBe(HttpStatusCode.Created);
         var id = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
 
+        var createEvt = await _host.Events.WaitForAsync<UserRegisteredEvent>(e => e.UserId == id);
+        createEvt.ShouldNotBeNull();
+        createEvt.TenantId.ShouldBe("acme");
+        createEvt.Method.ShouldBe(HuiaConstants.AuthenticationMethods.Password);
+        createEvt.Email.ShouldBe("newbie@acme.test");
+
         var read = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users/{id}");
         read.GetProperty("email").GetString().ShouldBe("newbie@acme.test");
         read.GetProperty("emailConfirmed").GetBoolean().ShouldBeTrue();
@@ -60,8 +67,16 @@ public sealed class AdminCrudTests : IAsyncLifetime
         var update = await client.PutAsJsonAsync($"/master/admin/users/{id}", new { firstName = "Renamed", lockoutEnabled = true });
         update.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
+        var updateEvt = await _host.Events.WaitForAsync<UserUpdatedEvent>(e => e.UserId == id);
+        updateEvt.ShouldNotBeNull();
+        updateEvt.TenantId.ShouldBe("acme");
+
         var delete = await client.DeleteAsync($"/master/admin/users/{id}");
         delete.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var deleteEvt = await _host.Events.WaitForAsync<UserDeletedEvent>(e => e.UserId == id);
+        deleteEvt.ShouldNotBeNull();
+        deleteEvt.TenantId.ShouldBe("acme");
 
         var afterDelete = await client.GetAsync($"/master/admin/users/{id}");
         afterDelete.StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -82,8 +97,14 @@ public sealed class AdminCrudTests : IAsyncLifetime
 
         create.StatusCode.ShouldBe(HttpStatusCode.Created);
         var body = await create.Content.ReadFromJsonAsync<JsonElement>();
+        var phoneId = body.GetProperty("id").GetString()!;
         body.GetProperty("userName").GetString().ShouldBe("+15005550401");
         body.GetProperty("phoneNumberConfirmed").GetBoolean().ShouldBeTrue();
+
+        var phoneEvt = await _host.Events.WaitForAsync<UserRegisteredEvent>(e => e.UserId == phoneId);
+        phoneEvt.ShouldNotBeNull();
+        phoneEvt.TenantId.ShouldBe("phone");
+        phoneEvt.Method.ShouldBe(HuiaConstants.AuthenticationMethods.Sms);
     }
 
     [Fact]
@@ -151,12 +172,16 @@ public sealed class AdminCrudTests : IAsyncLifetime
         var lock_ = await client.PostAsync($"/master/admin/users/{id}/lock", null);
         lock_.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
+        await _host.Events.WaitForCountAsync<UserUpdatedEvent>(1, e => e.UserId == id && e.TenantId == "acme");
+
         var afterLock = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users/{id}");
         afterLock.GetProperty("lockoutEnabled").GetBoolean().ShouldBeTrue();
         afterLock.GetProperty("lockoutEnd").GetDateTimeOffset().ShouldBeGreaterThan(DateTimeOffset.UtcNow.AddYears(1));
 
         var unlock = await client.PostAsync($"/master/admin/users/{id}/unlock", null);
         unlock.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        await _host.Events.WaitForCountAsync<UserUpdatedEvent>(2, e => e.UserId == id && e.TenantId == "acme");
 
         var afterUnlock = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users/{id}");
         afterUnlock.GetProperty("lockoutEnd").ValueKind.ShouldBe(JsonValueKind.Null);
@@ -181,6 +206,9 @@ public sealed class AdminCrudTests : IAsyncLifetime
 
         var verify = await client.PostAsync($"/master/admin/users/{id}/verify-email", null);
         verify.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var verifyEvt = await _host.Events.WaitForAsync<UserUpdatedEvent>(e => e.UserId == id && e.TenantId == "acme");
+        verifyEvt.ShouldNotBeNull();
 
         var after = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users/{id}");
         after.GetProperty("emailConfirmed").GetBoolean().ShouldBeTrue();

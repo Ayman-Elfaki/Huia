@@ -7,11 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Huia\Huia.csproj" />
+    <ProjectReference Include="..\Huia.Headless\Huia.Headless.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="MR.AspNetCore.Pagination" />
   </ItemGroup>
 
 </Project>

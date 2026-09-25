@@ -138,6 +138,7 @@ public sealed class VerifyOtpModel(
             user.PhoneNumberConfirmed = true;
             await phone.UserManager.UpdateAsync(user);
             await events.PublishAsync(new PhoneChangedEvent(tenantId, user.Id, MaskFor(state), true, timeProvider.GetUtcNow()));
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
         }
 
         if (!user.HasCompleteProfile)

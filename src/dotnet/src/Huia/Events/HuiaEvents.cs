@@ -15,6 +15,24 @@ public sealed record UserRegisteredEvent(
     string Method,
     DateTimeOffset OccurredAt) : IHuiaEvent;
 
+/// <summary>Raised after an existing user account has been updated.</summary>
+/// <param name="TenantId">The tenant the user belongs to.</param>
+/// <param name="UserId">The user's identifier.</param>
+/// <param name="OccurredAt">When the update occurred (UTC).</param>
+public sealed record UserUpdatedEvent(
+    string TenantId,
+    string UserId,
+    DateTimeOffset OccurredAt) : IHuiaEvent;
+
+/// <summary>Raised after a user account has been deleted.</summary>
+/// <param name="TenantId">The tenant the user belonged to.</param>
+/// <param name="UserId">The user's identifier.</param>
+/// <param name="OccurredAt">When the deletion occurred (UTC).</param>
+public sealed record UserDeletedEvent(
+    string TenantId,
+    string UserId,
+    DateTimeOffset OccurredAt) : IHuiaEvent;
+
 /// <summary>Raised after a user has successfully signed in (interactive or token flow).</summary>
 /// <param name="TenantId">The tenant the user belongs to.</param>
 /// <param name="UserId">The user's identifier.</param>

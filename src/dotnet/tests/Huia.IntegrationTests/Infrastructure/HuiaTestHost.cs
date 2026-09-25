@@ -190,6 +190,8 @@ public sealed class HuiaTestHost : IAsyncDisposable
         void Add<T>() where T : Huia.Events.IHuiaEvent =>
             services.AddSingleton<Huia.Events.IHuiaEventHandler<T>>(new CollectingEventHandler<T>(collector));
         Add<Huia.Events.UserRegisteredEvent>();
+        Add<Huia.Events.UserUpdatedEvent>();
+        Add<Huia.Events.UserDeletedEvent>();
         Add<Huia.Events.UserLoggedInEvent>();
         Add<Huia.Events.PasswordChangedEvent>();
         Add<Huia.Events.OtpRequestedEvent>();

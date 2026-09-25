@@ -84,9 +84,13 @@ internal static class HuiaMultiTenancyConfiguration
     /// </summary>
     public static IServiceCollection AddHuiaPerTenantPasskeyOptions(this IServiceCollection services, HuiaOptions options)
     {
+        services.Configure<IdentityPasskeyOptions>(identity => identity.ResidentKeyRequirement = "required");
+
         services.AddOptions<IdentityPasskeyOptions>()
             .ConfigurePerTenant<IdentityPasskeyOptions, HuiaTenantInfo>((passkey, tenant) =>
             {
+                passkey.ResidentKeyRequirement = "required";
+
                 if (!options.Tenants.TryGetValue(tenant.Identifier, out var config) || config.Authentication.Passkey is not { } policy)
                 {
                     return;

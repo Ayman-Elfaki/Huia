@@ -73,7 +73,13 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> RemoveExternalLoginAsync(
-        HttpContext context, HuiaUserManager userManager, string provider, string providerKey)
+        HttpContext context,
+        HuiaUserManager userManager,
+        IMultiTenantContextAccessor tenantAccessor,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
+        string provider,
+        string providerKey)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -90,7 +96,14 @@ internal static class ManageEndpoints
         }
 
         var result = await userManager.RemoveLoginAsync(user, provider, providerKey);
-        return result.Succeeded ? Results.NoContent() : Problem(result);
+        if (!result.Succeeded)
+        {
+            return Problem(result);
+        }
+
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
+        await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.NoContent();
     }
 
     private static string ShortProviderName(string loginProvider) =>
@@ -106,7 +119,13 @@ internal static class ManageEndpoints
             : Results.Ok(new ProfileDto(user.FirstName, user.LastName, user.Email, user.PhoneNumber, user.PhoneNumberConfirmed));
     }
 
-    private static async Task<IResult> UpdateProfileAsync(HttpContext context, HuiaUserManager userManager, UpdateProfileRequest body)
+    private static async Task<IResult> UpdateProfileAsync(
+        HttpContext context,
+        HuiaUserManager userManager,
+        IMultiTenantContextAccessor tenantAccessor,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
+        UpdateProfileRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -125,7 +144,14 @@ internal static class ManageEndpoints
         user.FirstName = body.FirstName.Trim();
         user.LastName = body.LastName.Trim();
         var result = await userManager.UpdateAsync(user);
-        return result.Succeeded ? Results.NoContent() : Problem(result);
+        if (!result.Succeeded)
+        {
+            return Problem(result);
+        }
+
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
+        await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetEmailAsync(HttpContext context, HuiaUserManager userManager)
@@ -135,7 +161,13 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> ChangeEmailAsync(
-        HttpContext context, HuiaUserManager userManager, IHuiaEmailSender emailSender, ChangeEmailRequest body)
+        HttpContext context,
+        HuiaUserManager userManager,
+        IHuiaEmailSender emailSender,
+        IMultiTenantContextAccessor tenantAccessor,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
+        ChangeEmailRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -164,6 +196,8 @@ internal static class ManageEndpoints
             return Problem(result);
         }
 
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
+        await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
         await SendConfirmationEmailAsync(context, userManager, emailSender, user);
         return Results.Accepted();
     }
@@ -331,6 +365,7 @@ internal static class ManageEndpoints
 
         await userManager.RemoveAuthenticationTokenAsync(user, HuiaConstants.PasswordlessLoginProvider, PendingPhoneToken);
         await events.PublishAsync(new PhoneChangedEvent(tenantId, user.Id, phoneNumbers.Mask(pending), true, timeProvider.GetUtcNow()));
+        await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
         return Results.NoContent();
     }
 
@@ -360,8 +395,10 @@ internal static class ManageEndpoints
             return Problem(result);
         }
 
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
         await events.PublishAsync(new PhoneChangedEvent(
-            tenantAccessor.RequireCurrentTenantId(), user.Id, PhoneNumberMask: null, Confirmed: false, timeProvider.GetUtcNow()));
+            tenantId, user.Id, PhoneNumberMask: null, Confirmed: false, timeProvider.GetUtcNow()));
+        await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
         return Results.NoContent();
     }
 

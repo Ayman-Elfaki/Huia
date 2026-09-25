@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Huia.Entities;
+using Huia.Events;
 using Huia.Headless.Identity;
+using Huia.Multitenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -26,7 +28,12 @@ internal static class RegisterEndpoints
             .WithOrder(-1);
     }
 
-    private static async Task<IResult> RegisterAsync(HuiaUserManager userManager, RegisterRequest body)
+    private static async Task<IResult> RegisterAsync(
+        HuiaUserManager userManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
+        RegisterRequest body)
     {
         var errors = new Dictionary<string, string[]>();
         if (string.IsNullOrWhiteSpace(body.Email) || !EmailAddressValidator.IsValid(body.Email))
@@ -65,6 +72,14 @@ internal static class RegisterEndpoints
                 ["identity"] = result.Errors.Select(e => e.Description).ToArray(),
             });
         }
+
+        await events.PublishAsync(new UserRegisteredEvent(
+            tenantContext.CurrentTenantId,
+            user.Id,
+            user.UserName!,
+            user.Email,
+            HuiaConstants.AuthenticationMethods.Password,
+            timeProvider.GetUtcNow()));
 
         return Results.Ok();
     }

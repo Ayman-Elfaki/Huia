@@ -1,7 +1,7 @@
 # Events
 
 Huia raises a small set of immutable, in-process domain events at security- and audit-relevant
-moments — an account is registered, a sign-in succeeds, a password changes, an OTP is requested or
+moments — an account is registered, updated, or deleted, a sign-in succeeds, a password changes, an OTP is requested or
 verified, a phone number is confirmed or removed. Subscribe by registering a handler in DI; publish
 your own events the same way Huia publishes its own, through the same `IHuiaEventPublisher`.
 
@@ -53,6 +53,8 @@ only masked (`PhoneNumberMask`, last four digits retained — see `IPhoneNumberS
 | Event | Fields | Raised when |
 |---|---|---|
 | `UserRegisteredEvent` | `UserId`, `UserName`, `Email?`, `Method` | A new account is persisted — `Method` is `password`, `sms`, or an external provider name. |
+| `UserUpdatedEvent` | `UserId` | An existing account is updated. |
+| `UserDeletedEvent` | `UserId` | An existing account is deleted. |
 | `UserLoggedInEvent` | `UserId`, `Method`, `ClientId?` | A sign-in succeeds, interactively or via `/connect/token`. `Method` is `pwd`, `sms`, `passkey`, or an external provider name. `ClientId` is the OAuth client the sign-in was for, when there is one. |
 | `PasswordChangedEvent` | `UserId`, `Reset` | A password is set or changed — `Reset` is `true` for a forgot-password flow, `false` for an authenticated change via `/manage/password`. |
 | `OtpRequestedEvent` | `UserId?`, `PhoneNumberMask`, `Delivered` | A one-time code is generated and a delivery attempt made. `UserId` is `null` when the number has no account yet (auto-provisioning); `Delivered` reflects whether the SMS provider accepted the message. |

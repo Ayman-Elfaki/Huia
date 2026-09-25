@@ -92,7 +92,6 @@
     <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" />
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
     <PackageReference Include="OpenIddict.AspNetCore" />
-    <PackageReference Include="OpenIddict.EntityFrameworkCore" />
     <PackageReference Include="OpenIddict.Client.AspNetCore" />
     <PackageReference Include="OpenIddict.Client.SystemNetHttp" />
     <PackageReference Include="OpenIddict.Client.DataProtection" />
@@ -102,7 +101,6 @@
     <PackageReference Include="Quartz.Extensions.DependencyInjection" />
     <PackageReference Include="libphonenumber-csharp" />
     <PackageReference Include="MailKit" />
-    <PackageReference Include="MR.AspNetCore.Pagination" />
   </ItemGroup>
 
 </Project>

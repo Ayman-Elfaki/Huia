@@ -1,9 +1,10 @@
+using Huia.Events;
 using Huia.Identity;
 using Huia.OpenId.Identity;
 using Huia.OpenId.Keys;
 using Huia.OpenId.Multitenancy;
 using Huia.OpenId.OpenIddict;
-using Huia.OpenId.EntityFrameworkCore;
+using Huia.Stores;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Options;
 using Microsoft.AspNetCore.Http;
@@ -22,16 +23,18 @@ internal static partial class AdminEndpoints
     // Users
     // ---------------------------------------------------------------------------------------------
 
-    private static async Task<IResult> GetUserAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> GetUserAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id)
     {
-        var user = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == id, context.RequestAborted);
+        var user = await store.FindUserByIdAsync(id, context.RequestAborted);
         if (user is null)
         {
             return Results.NotFound();
         }
 
-        var roles = (await RolesByUserAsync(db, [id], context.RequestAborted)).GetValueOrDefault(id, []);
+        var roles = (await store.GetRolesByUserIdsAsync([id], context.RequestAborted)).GetValueOrDefault(id, []);
         return Results.Ok(new UserDto(user.Id, user.TenantId, user.UserName, user.Email, user.EmailConfirmed,
             user.PhoneNumber, user.PhoneNumberConfirmed, user.LockoutEnabled, user.LockoutEnd, roles));
     }
@@ -98,6 +101,17 @@ internal static partial class AdminEndpoints
                 await userManager.AddToRoleAsync(user, role);
             }
 
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            var method = hasPassword ? HuiaConstants.AuthenticationMethods.Password : HuiaConstants.AuthenticationMethods.Sms;
+            await events.PublishAsync(new UserRegisteredEvent(
+                body.Tenant,
+                user.Id,
+                user.UserName!,
+                user.Email,
+                method,
+                timeProvider.GetUtcNow()));
+
             return Results.Created(
                 $"/admin/users/{Uri.EscapeDataString(user.Id)}",
                 new UserDto(user.Id, user.TenantId, user.UserName, user.Email, user.EmailConfirmed,
@@ -106,10 +120,13 @@ internal static partial class AdminEndpoints
         });
     }
 
-    private static async Task<IResult> UpdateUserAsync(HttpContext context, HuiaDbContext db, string id, UpdateUserRequest body)
+    private static async Task<IResult> UpdateUserAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id,
+        UpdateUserRequest body)
     {
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -155,14 +172,24 @@ internal static partial class AdminEndpoints
             }
 
             var result = await userManager.UpdateAsync(user);
-            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+            if (!result.Succeeded)
+            {
+                return IdentityProblem(result);
+            }
+
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            return Results.NoContent();
         });
     }
 
-    private static async Task<IResult> DeleteUserAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> DeleteUserAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id)
     {
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -178,15 +205,26 @@ internal static partial class AdminEndpoints
             }
 
             var result = await userManager.DeleteAsync(user);
-            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+            if (!result.Succeeded)
+            {
+                return IdentityProblem(result);
+            }
+
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            await events.PublishAsync(new UserDeletedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            return Results.NoContent();
         });
     }
 
     /// <summary>Locks a user out until <see cref="LockUserRequest.Until"/> (indefinitely by default).</summary>
-    private static async Task<IResult> LockUserAsync(HttpContext context, HuiaDbContext db, string id, LockUserRequest? body)
+    private static async Task<IResult> LockUserAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id,
+        LockUserRequest? body)
     {
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -203,15 +241,25 @@ internal static partial class AdminEndpoints
 
             await userManager.SetLockoutEnabledAsync(user, true);
             var result = await userManager.SetLockoutEndDateAsync(user, body?.Until ?? DateTimeOffset.MaxValue);
-            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+            if (!result.Succeeded)
+            {
+                return IdentityProblem(result);
+            }
+
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            return Results.NoContent();
         });
     }
 
     /// <summary>Clears an existing lockout and resets the failed-access counter.</summary>
-    private static async Task<IResult> UnlockUserAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> UnlockUserAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id)
     {
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -233,15 +281,21 @@ internal static partial class AdminEndpoints
             }
 
             await userManager.ResetAccessFailedCountAsync(user);
+
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
             return Results.NoContent();
         });
     }
 
     /// <summary>Confirms an email-and-password account's email address without a confirmation link.</summary>
-    private static async Task<IResult> VerifyEmailAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> VerifyEmailAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id)
     {
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -271,7 +325,15 @@ internal static partial class AdminEndpoints
 
             user.EmailConfirmed = true;
             var result = await userManager.UpdateAsync(user);
-            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+            if (!result.Succeeded)
+            {
+                return IdentityProblem(result);
+            }
+
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            return Results.NoContent();
         });
     }
 
@@ -487,11 +549,6 @@ internal static partial class AdminEndpoints
     private static Uri? ParseAbsoluteUri(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : new Uri(value, UriKind.Absolute);
 
-    private static IResult CodeDefinedClientProblem()
-        => Results.Problem(
-            statusCode: StatusCodes.Status409Conflict,
-            title: "This client is defined in code and cannot be modified through the admin API.");
-
     // ---------------------------------------------------------------------------------------------
     // Signing keys
     // ---------------------------------------------------------------------------------------------
@@ -602,6 +659,7 @@ internal static partial class AdminEndpoints
     // Shared helpers
     // ---------------------------------------------------------------------------------------------
 
+
     /// <summary>
     /// Runs <paramref name="work"/> in a fresh DI scope entered into <paramref name="tenantId"/>, so a
     /// <c>HuiaDbContext</c> / <c>UserManager</c> resolved inside it is bound to that tenant (the context
@@ -625,6 +683,11 @@ internal static partial class AdminEndpoints
         {
             ["identity"] = result.Errors.Select(e => e.Description).ToArray(),
         });
+
+    private static IResult CodeDefinedClientProblem()
+        => Results.Problem(
+            statusCode: StatusCodes.Status409Conflict,
+            title: "This client is defined in code and cannot be modified through the admin API.");
 
     private sealed record ClientDetailDto(
         string? Id,

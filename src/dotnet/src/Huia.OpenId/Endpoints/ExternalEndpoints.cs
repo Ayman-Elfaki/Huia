@@ -203,6 +203,10 @@ internal static class ExternalEndpoints
             }
 
             var linked = await userManager.AddExternalLoginAsync(current, info.LoginProvider, info.ProviderKey, providerName);
+            if (linked.Succeeded)
+            {
+                await events.PublishAsync(new UserUpdatedEvent(tenantId, current.Id, timeProvider.GetUtcNow()));
+            }
             return Results.Redirect($"{pathBase}/{ExternalLoginsPage}?linked=" + (linked.Succeeded ? "ok" : "error"));
         }
 
@@ -224,6 +228,7 @@ internal static class ExternalEndpoints
             {
                 case ExternalEmailLinkOutcome.Linked:
                     user = linked;
+                    await events.PublishAsync(new UserUpdatedEvent(tenantId, user!.Id, timeProvider.GetUtcNow()));
                     break;
                 case ExternalEmailLinkOutcome.Blocked:
                     // An account already owns this email; linking is disabled or ineligible. Never create a duplicate.

@@ -1,11 +1,13 @@
 using System.Text.RegularExpressions;
 using Huia.Entities;
+using Huia.Events;
 using Huia.Headless.Identity;
+using Huia.Multitenancy;
+using Huia.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 
 namespace Huia.Headless.Endpoints;
 
@@ -49,35 +51,26 @@ public static partial class AdminEndpoints
     private static async Task<IResult> ListUsersAsync(
         HttpContext context,
         HuiaUserManager userManager,
+        IHuiaStore<HuiaUser, HuiaRole> store,
         int? page = 1,
         int? pageSize = 20,
-        string? search = null)
+        string? search = null,
+        string? after = null,
+        string? before = null)
     {
-        var query = userManager.Users.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(search))
+        var query = new HuiaUserQuery
         {
-            var s = search.Trim();
-            query = query.Where(u =>
-                (u.Email != null && u.Email.Contains(s)) ||
-                (u.UserName != null && u.UserName.Contains(s)) ||
-                (u.FirstName != null && u.FirstName.Contains(s)) ||
-                (u.LastName != null && u.LastName.Contains(s)) ||
-                (u.PhoneNumber != null && u.PhoneNumber.Contains(s)));
-        }
+            Search = search,
+            PageSize = Math.Clamp(pageSize ?? 20, 1, 100),
+            After = after,
+            Before = before,
+            Page = Math.Max(1, page ?? 1),
+        };
 
-        var totalCount = await query.CountAsync(context.RequestAborted);
-        var p = Math.Max(1, page ?? 1);
-        var size = Math.Clamp(pageSize ?? 20, 1, 100);
+        var result = await store.ListUsersAsync(query, context.RequestAborted);
 
-        var users = await query
-            .OrderBy(u => u.Id)
-            .Skip((p - 1) * size)
-            .Take(size)
-            .ToListAsync(context.RequestAborted);
-
-        var userDtos = new List<HeadlessUserDto>(users.Count);
-        foreach (var u in users)
+        var userDtos = new List<HeadlessUserDto>(result.Data.Count);
+        foreach (var u in result.Data)
         {
             var roles = await userManager.GetRolesAsync(u);
             userDtos.Add(ToDto(u, roles));
@@ -86,11 +79,12 @@ public static partial class AdminEndpoints
         return Results.Ok(new
         {
             data = userDtos,
-            totalCount,
-            page = p,
-            pageSize = size,
-            hasNext = (p * size) < totalCount,
-            hasPrevious = p > 1
+            result.HasNext,
+            result.HasPrevious,
+            result.TotalCount,
+            result.NextCursor,
+            result.PreviousCursor,
+            page = result.Page,
         });
     }
 
@@ -113,6 +107,9 @@ public static partial class AdminEndpoints
         HttpContext context,
         HuiaUserManager userManager,
         RoleManager<HuiaRole> roleManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
         CreateHeadlessUserRequest body)
     {
         var hasPassword = !string.IsNullOrWhiteSpace(body.Password);
@@ -168,6 +165,15 @@ public static partial class AdminEndpoints
             }
         }
 
+        var method = hasPassword ? HuiaConstants.AuthenticationMethods.Password : HuiaConstants.AuthenticationMethods.Sms;
+        await events.PublishAsync(new UserRegisteredEvent(
+            tenantContext.CurrentTenantId,
+            user.Id,
+            user.UserName!,
+            user.Email,
+            method,
+            timeProvider.GetUtcNow()));
+
         var roles = await userManager.GetRolesAsync(user);
         return Results.Created($"/admin/users/{Uri.EscapeDataString(user.Id)}", ToDto(user, roles));
     }
@@ -175,6 +181,9 @@ public static partial class AdminEndpoints
     private static async Task<IResult> UpdateUserAsync(
         HttpContext context,
         HuiaUserManager userManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
         string id,
         UpdateHeadlessUserRequest body)
     {
@@ -215,6 +224,8 @@ public static partial class AdminEndpoints
             return IdentityProblem(result);
         }
 
+        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+
         var roles = await userManager.GetRolesAsync(user);
         return Results.Ok(ToDto(user, roles));
     }
@@ -222,6 +233,9 @@ public static partial class AdminEndpoints
     private static async Task<IResult> DeleteUserAsync(
         HttpContext context,
         HuiaUserManager userManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
         string id)
     {
         var user = await userManager.FindByIdAsync(id);
@@ -231,7 +245,13 @@ public static partial class AdminEndpoints
         }
 
         var result = await userManager.DeleteAsync(user);
-        return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+        if (!result.Succeeded)
+        {
+            return IdentityProblem(result);
+        }
+
+        await events.PublishAsync(new UserDeletedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetUserRolesAsync(
@@ -253,6 +273,9 @@ public static partial class AdminEndpoints
         HttpContext context,
         HuiaUserManager userManager,
         RoleManager<HuiaRole> roleManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
         string id,
         AddUserRoleRequest body)
     {
@@ -267,18 +290,32 @@ public static partial class AdminEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["role"] = ["Role is required."] });
         }
 
+        if (await userManager.IsInRoleAsync(user, body.Role))
+        {
+            return Results.Ok();
+        }
+
         if (!await roleManager.RoleExistsAsync(body.Role))
         {
             await roleManager.CreateAsync(new HuiaRole(body.Role) { Origin = HuiaConstants.Origins.Dynamic });
         }
 
         var result = await userManager.AddToRoleAsync(user, body.Role);
-        return result.Succeeded ? Results.Ok() : IdentityProblem(result);
+        if (!result.Succeeded)
+        {
+            return IdentityProblem(result);
+        }
+
+        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.Ok();
     }
 
     private static async Task<IResult> RemoveUserRoleAsync(
         HttpContext context,
         HuiaUserManager userManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
         string id,
         string role)
     {
@@ -288,13 +325,27 @@ public static partial class AdminEndpoints
             return Results.NotFound();
         }
 
+        if (!await userManager.IsInRoleAsync(user, role))
+        {
+            return Results.NoContent();
+        }
+
         var result = await userManager.RemoveFromRoleAsync(user, role);
-        return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+        if (!result.Succeeded)
+        {
+            return IdentityProblem(result);
+        }
+
+        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.NoContent();
     }
 
     private static async Task<IResult> LockUserAsync(
         HttpContext context,
         HuiaUserManager userManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
         string id)
     {
         var user = await userManager.FindByIdAsync(id);
@@ -305,12 +356,21 @@ public static partial class AdminEndpoints
 
         await userManager.SetLockoutEnabledAsync(user, true);
         var result = await userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
-        return result.Succeeded ? Results.Ok() : IdentityProblem(result);
+        if (!result.Succeeded)
+        {
+            return IdentityProblem(result);
+        }
+
+        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.Ok();
     }
 
     private static async Task<IResult> UnlockUserAsync(
         HttpContext context,
         HuiaUserManager userManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
         string id)
     {
         var user = await userManager.FindByIdAsync(id);
@@ -320,18 +380,44 @@ public static partial class AdminEndpoints
         }
 
         var result = await userManager.SetLockoutEndDateAsync(user, null);
-        return result.Succeeded ? Results.Ok() : IdentityProblem(result);
+        if (!result.Succeeded)
+        {
+            return IdentityProblem(result);
+        }
+
+        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.Ok();
     }
 
     private static async Task<IResult> ListRolesAsync(
         HttpContext context,
-        RoleManager<HuiaRole> roleManager)
+        RoleManager<HuiaRole> roleManager,
+        IHuiaStore<HuiaUser, HuiaRole> store,
+        int? page = 1,
+        int? pageSize = 20,
+        string? after = null,
+        string? before = null)
     {
-        var roles = await roleManager.Roles.AsNoTracking()
-            .Select(r => new HeadlessRoleDto(r.Id, r.Name, r.Origin))
-            .ToListAsync(context.RequestAborted);
+        var query = new HuiaRoleQuery
+        {
+            PageSize = Math.Clamp(pageSize ?? 20, 1, 100),
+            After = after,
+            Before = before,
+            Page = Math.Max(1, page ?? 1),
+        };
 
-        return Results.Ok(new { data = roles });
+        var result = await store.ListRolesAsync(query, context.RequestAborted);
+
+        return Results.Ok(new
+        {
+            data = result.Data.Select(r => new HeadlessRoleDto(r.Id, r.Name, r.Origin)),
+            result.HasNext,
+            result.HasPrevious,
+            result.TotalCount,
+            result.NextCursor,
+            result.PreviousCursor,
+            page = result.Page,
+        });
     }
 
     private static async Task<IResult> GetRoleAsync(

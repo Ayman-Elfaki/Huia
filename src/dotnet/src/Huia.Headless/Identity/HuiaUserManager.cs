@@ -1,6 +1,5 @@
 using Huia.Entities;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -34,6 +33,6 @@ public class HuiaUserManager : Huia.Identity.HuiaUserManager<HuiaUser>
     public Task<HuiaUser?> FindByPhoneNumberAsync(string phoneNumber)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(phoneNumber);
-        return Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber, CancellationToken);
+        return Task.FromResult(Users.FirstOrDefault(u => u.PhoneNumber == phoneNumber));
     }
 }

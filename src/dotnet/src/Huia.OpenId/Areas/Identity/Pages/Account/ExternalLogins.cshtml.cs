@@ -1,3 +1,4 @@
+using Huia.Events;
 using Huia.OpenId.Identity;
 using Huia.OpenId.UI;
 using Huia.OpenId.EntityFrameworkCore.Entities;
@@ -15,6 +16,8 @@ namespace Huia.OpenId.Areas.Identity.Pages.Account;
 public sealed class ExternalLoginsModel(
     HuiaUserManager userManager,
     SignInManager<HuiaUser> signInManager,
+    IHuiaEventPublisher events,
+    TimeProvider timeProvider,
     IStringLocalizer<SharedResource> localizer) : HuiaAccountPageModel
 {
     /// <summary>The providers currently linked to the account.</summary>
@@ -82,6 +85,7 @@ public sealed class ExternalLoginsModel(
         if (result.Succeeded)
         {
             await signInManager.RefreshSignInAsync(user);
+            await events.PublishAsync(new UserUpdatedEvent(user.TenantId, user.Id, timeProvider.GetUtcNow()));
         }
         else
         {

@@ -1,12 +1,8 @@
 using Huia.OpenId.OpenIddict.Handlers;
-using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Stores;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Abstractions;
 using OpenIddict.Client;
-using OpenIddict.EntityFrameworkCore.Models;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Huia.OpenId.OpenIddict;
@@ -27,7 +23,9 @@ internal static class HuiaOpenIddictConfiguration
         var builder = services.AddOpenIddict()
             .AddCore(core =>
             {
-                core.UseEntityFrameworkCore().UseDbContext<HuiaDbContext>();
+                // EF Core persistence is wired by Huia.OpenId.EntityFrameworkCore's
+                // AddEntityFrameworkCoreStores<>() via an IOpenIddictCoreBuilder action stored
+                // in the options. This AddCore() call sets up the OpenIddict DI skeleton only.
 
                 if (options.Cleanup.EnableBackgroundJobs)
                 {
@@ -140,14 +138,6 @@ internal static class HuiaOpenIddictConfiguration
                 RegisterExternalProviders(client, options);
             });
         }
-
-        // Tenant-scoped application store: clients bound to other tenants are invisible to authorize/token.
-        services.RemoveAll(typeof(IOpenIddictApplicationStore<OpenIddictEntityFrameworkCoreApplication>));
-        services.AddScoped<IOpenIddictApplicationStore<OpenIddictEntityFrameworkCoreApplication>, HuiaOpenIddictApplicationStore>();
-
-        // Tenant-scoped scope store: custom scopes owned by other tenants are invisible to authorize.
-        services.RemoveAll(typeof(IOpenIddictScopeStore<OpenIddictEntityFrameworkCoreScope>));
-        services.AddScoped<IOpenIddictScopeStore<OpenIddictEntityFrameworkCoreScope>, HuiaOpenIddictScopeStore>();
 
         return services;
     }

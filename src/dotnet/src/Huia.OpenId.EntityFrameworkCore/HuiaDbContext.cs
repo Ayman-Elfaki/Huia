@@ -1,7 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Finbuckle.MultiTenant.EntityFrameworkCore.Extensions;
 using Finbuckle.MultiTenant.Identity.EntityFrameworkCore;
-using Huia.EntityFrameworkCore;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

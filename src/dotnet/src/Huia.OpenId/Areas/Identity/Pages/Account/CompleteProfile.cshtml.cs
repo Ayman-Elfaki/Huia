@@ -91,6 +91,11 @@ public sealed class CompleteProfileModel(
             return Page();
         }
 
+        if (state.UserId is not null)
+        {
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+        }
+
         var claims = new List<Claim>();
         if (state.ExternalProvider is { } registrationId)
         {

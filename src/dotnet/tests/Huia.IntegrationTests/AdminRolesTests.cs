@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Huia.Events;
 using Huia.IntegrationTests.Infrastructure;
 
 namespace Huia.IntegrationTests;
@@ -80,6 +81,11 @@ public sealed class AdminRolesTests : IAsyncLifetime
         var assign = await client.PostAsJsonAsync($"/master/admin/users/{userId}/roles", new { role = "reviewer" });
         assign.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
+        await _host.Events.WaitForCountAsync<UserUpdatedEvent>(1, e => e.UserId == userId && e.TenantId == "acme");
+
+        var reassign = await client.PostAsJsonAsync($"/master/admin/users/{userId}/roles", new { role = "reviewer" });
+        reassign.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
         var roles = await client.GetFromJsonAsync<string[]>($"/master/admin/users/{userId}/roles");
         roles.ShouldContain("reviewer");
 
@@ -88,6 +94,11 @@ public sealed class AdminRolesTests : IAsyncLifetime
 
         var remove = await client.DeleteAsync($"/master/admin/users/{userId}/roles/reviewer");
         remove.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        await _host.Events.WaitForCountAsync<UserUpdatedEvent>(2, e => e.UserId == userId && e.TenantId == "acme");
+
+        var reremove = await client.DeleteAsync($"/master/admin/users/{userId}/roles/reviewer");
+        reremove.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         (await client.GetFromJsonAsync<string[]>($"/master/admin/users/{userId}/roles")).ShouldNotContain("reviewer");
     }

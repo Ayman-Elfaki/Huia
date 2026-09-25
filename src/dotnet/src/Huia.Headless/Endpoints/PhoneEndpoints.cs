@@ -156,6 +156,7 @@ internal static class PhoneEndpoints
             user.PhoneNumberConfirmed = true;
             await userManager.UpdateAsync(user);
             await events.PublishAsync(new PhoneChangedEvent(tenantId, user.Id, MaskOf(flow.PhoneNumber), true, timeProvider.GetUtcNow()));
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
         }
 
         if (!user.HasCompleteProfile)
@@ -227,6 +228,7 @@ internal static class PhoneEndpoints
                 });
             }
 
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, existing.Id, timeProvider.GetUtcNow()));
             user = existing;
         }
         else

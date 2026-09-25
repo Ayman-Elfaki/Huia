@@ -50,6 +50,10 @@ public sealed class ManageEndpointsTests : IAsyncLifetime
         var update = await _api.PutAsJsonAsync("/acme/manage/profile", new { firstName = "David", lastName = "Jones" });
         update.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
+        var evt = await _host.Events.WaitForAsync<UserUpdatedEvent>(e => e.UserId == _daveId);
+        evt.ShouldNotBeNull();
+        evt.TenantId.ShouldBe("acme");
+
         var after = await _api.GetFromJsonAsync<JsonElement>("/acme/manage/profile");
         after.GetProperty("firstName").GetString().ShouldBe("David");
         after.GetProperty("lastName").GetString().ShouldBe("Jones");
@@ -71,6 +75,10 @@ public sealed class ManageEndpointsTests : IAsyncLifetime
 
         var remove = await _api.DeleteAsync("/acme/manage/external-logins/acme%3APartner/partner-subject-1");
         remove.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var evt = await _host.Events.WaitForAsync<UserUpdatedEvent>(e => e.UserId == _daveId);
+        evt.ShouldNotBeNull();
+        evt.TenantId.ShouldBe("acme");
 
         var empty = await _api.GetFromJsonAsync<JsonElement>("/acme/manage/external-logins");
         empty.GetProperty("logins").GetArrayLength().ShouldBe(0);
@@ -122,6 +130,17 @@ public sealed class ManageEndpointsTests : IAsyncLifetime
     {
         var response = await _api.PostAsync("/acme/manage/email/confirm", null);
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Email_can_be_changed_and_publishes_event()
+    {
+        var response = await _api.PutAsJsonAsync("/acme/manage/email", new { newEmail = "dave.new@acme.test" });
+        response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+
+        var evt = await _host.Events.WaitForAsync<UserUpdatedEvent>(e => e.UserId == _daveId);
+        evt.ShouldNotBeNull();
+        evt.TenantId.ShouldBe("acme");
     }
 
     [Fact]

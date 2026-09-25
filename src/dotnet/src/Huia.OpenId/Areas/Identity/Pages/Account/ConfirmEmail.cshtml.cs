@@ -1,4 +1,5 @@
 using System.Text;
+using Huia.Events;
 using Huia.OpenId.Flows;
 using Huia.OpenId.Identity;
 using Huia.OpenId.UI;
@@ -10,7 +11,11 @@ using Microsoft.Extensions.Localization;
 namespace Huia.OpenId.Areas.Identity.Pages.Account;
 
 /// <summary>Consumes an email-confirmation link.</summary>
-public sealed class ConfirmEmailModel(IHuiaFlowIdentityFactory flowIdentity, IStringLocalizer<SharedResource> localizer) : HuiaAccountPageModel
+public sealed class ConfirmEmailModel(
+    IHuiaFlowIdentityFactory flowIdentity,
+    IStringLocalizer<SharedResource> localizer,
+    IHuiaEventPublisher events,
+    TimeProvider timeProvider) : HuiaAccountPageModel
 {
     /// <summary>Whether the confirmation succeeded.</summary>
     public bool Confirmed { get; private set; }
@@ -40,6 +45,10 @@ public sealed class ConfirmEmailModel(IHuiaFlowIdentityFactory flowIdentity, ISt
         {
             var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
             Confirmed = (await userManager.ConfirmEmailAsync(user, token)).Succeeded;
+            if (Confirmed)
+            {
+                await events.PublishAsync(new UserUpdatedEvent(user.TenantId, user.Id, timeProvider.GetUtcNow()));
+            }
         }
 
         return Page();

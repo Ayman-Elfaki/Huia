@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Huia\Huia.csproj" />
-    <ProjectReference Include="..\Huia.EntityFrameworkCore\Huia.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,6 +15,7 @@
     <PackageReference Include="OpenIddict.EntityFrameworkCore" />
     <PackageReference Include="Finbuckle.MultiTenant.EntityFrameworkCore" />
     <PackageReference Include="Finbuckle.MultiTenant.Identity.EntityFrameworkCore" />
+    <PackageReference Include="MR.AspNetCore.Pagination" />
   </ItemGroup>
 
 </Project>

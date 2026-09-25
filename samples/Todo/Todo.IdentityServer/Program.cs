@@ -33,13 +33,16 @@ if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase
     sqliteConnection = new SqliteConnection(connectionString);
     sqliteConnection.Open();
     builder.Services.AddSingleton(sqliteConnection);
-    builder.Services.AddDbContext<IdentityHuiaDbContext>(options => options.UseSqlite(sqliteConnection).UseOpenIddict());
+    builder.Services.AddDbContext<IdentityHuiaDbContext>(options =>
+        options.UseSqlite(sqliteConnection).UseOpenIddict());
 }
 else
 {
     var connectionString = builder.Configuration.GetConnectionString("huia")
-        ?? throw new InvalidOperationException("A 'huia' connection string is required for the Postgres provider.");
-    builder.Services.AddDbContext<IdentityHuiaDbContext>(options => options.UseNpgsql(connectionString).UseOpenIddict());
+                           ?? throw new InvalidOperationException(
+                               "A 'huia' connection string is required for the Postgres provider.");
+    builder.Services.AddDbContext<IdentityHuiaDbContext>(options =>
+        options.UseNpgsql(connectionString).UseOpenIddict());
 }
 
 // The schema initializer runs before any Huia hosted service (registration order).
@@ -60,8 +63,10 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
 
     huia.ConfigureEmail(email => builder.Configuration.GetSection("Huia:Email").Bind(email));
     huia.ConfigureSms(sms => sms.LogCodesToLogger = builder.Environment.IsDevelopment());
-    huia.ConfigureKeys(keys => keys.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
-    huia.ConfigureCleanup(cleanup => cleanup.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
+    huia.ConfigureKeys(keys =>
+        keys.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
+    huia.ConfigureCleanup(cleanup =>
+        cleanup.EnableBackgroundJobs = builder.Configuration.GetValue("Huia:EnableBackgroundJobs", true));
 
     huia.AddTenant("master", tenant =>
     {
@@ -109,7 +114,7 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
         tenant.Branding.DisplayName = "Todo";
         tenant.Branding.LogoUrl = "/brand/huia-logo.svg";
         tenant.Branding.FaviconUrl = "/brand/favicon.svg";
-        tenant.Branding.AccentColor = "#059669";
+        tenant.Branding.AccentColor = "#5e0e00";
         tenant.Branding.TermsUrl = new Uri($"{issuer}/legal/terms.html");
         tenant.Branding.PrivacyUrl = new Uri($"{issuer}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
@@ -206,7 +211,8 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
         huia.AddTenant("e2e", tenant =>
         {
             tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-            tenant.Authentication.UsePasskeyLogin(passkey => passkey.UserVerification = PasskeyUserVerification.Preferred);
+            tenant.Authentication.UsePasskeyLogin(passkey =>
+                passkey.UserVerification = PasskeyUserVerification.Preferred);
             tenant.Authentication.UsePhoneLogin(p =>
             {
                 p.AllowAutoProvisioning = true;
@@ -235,10 +241,11 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
 
         // Self-service registration (on by default) with mandatory email confirmation, for the
         // confirm-email E2E spec.
-        huia.AddTenant("e2e-signup", tenant =>
-        {
-            tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = true);
-        });
+        huia.AddTenant("e2e-signup",
+            tenant =>
+            {
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = true);
+            });
     }
 });
 
@@ -260,7 +267,8 @@ if (builder.Environment.IsDevelopment() || enableE2E)
     if (!smtpConfigured)
     {
         builder.Services.AddSingleton<CapturingEmailSender>();
-        builder.Services.AddScoped<Huia.OpenId.Emails.IHuiaEmailSender>(sp => sp.GetRequiredService<CapturingEmailSender>());
+        builder.Services.AddScoped<Huia.OpenId.Emails.IHuiaEmailSender>(sp =>
+            sp.GetRequiredService<CapturingEmailSender>());
     }
 }
 

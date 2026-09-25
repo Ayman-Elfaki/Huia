@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Huia.Entities;
+using Huia.Events;
 using Huia.Headless.Endpoints;
 using Huia.Headless.EntityFrameworkCore;
 using Huia.Headless.Identity;
@@ -91,6 +92,11 @@ public sealed class HeadlessAdminEndpointsTests
         user.Email.ShouldBe("worker@test.local");
         user.Roles.ShouldContain("inventory-manager");
 
+        var regEvt = await host.Events.WaitForAsync<UserRegisteredEvent>(e => e.UserId == user.Id);
+        regEvt.ShouldNotBeNull();
+        regEvt.Email.ShouldBe("worker@test.local");
+        regEvt.Method.ShouldBe(HuiaConstants.AuthenticationMethods.Password);
+
         // 3. Update user
         var updateUserRes = await client.PutAsJsonAsync($"admin/users/{user.Id}", new
         {
@@ -101,9 +107,13 @@ public sealed class HeadlessAdminEndpointsTests
         var updatedUser = await updateUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
         updatedUser!.FirstName.ShouldBe("Bobby");
 
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(1, e => e.UserId == user.Id);
+
         // 4. Lock and unlock user
         var lockRes = await client.PostAsync($"admin/users/{user.Id}/lock", null);
         lockRes.EnsureSuccessStatusCode();
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(2, e => e.UserId == user.Id);
 
         var lockedUserRes = await client.GetAsync($"admin/users/{user.Id}");
         var lockedUser = await lockedUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
@@ -111,6 +121,8 @@ public sealed class HeadlessAdminEndpointsTests
 
         var unlockRes = await client.PostAsync($"admin/users/{user.Id}/unlock", null);
         unlockRes.EnsureSuccessStatusCode();
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(3, e => e.UserId == user.Id);
 
         var unlockedUserRes = await client.GetAsync($"admin/users/{user.Id}");
         var unlockedUser = await unlockedUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
@@ -120,6 +132,12 @@ public sealed class HeadlessAdminEndpointsTests
         var addRoleRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/roles", new { role = "supervisor" });
         addRoleRes.EnsureSuccessStatusCode();
 
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(4, e => e.UserId == user.Id);
+
+        // Idempotent add role
+        var reAddRoleRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/roles", new { role = "supervisor" });
+        reAddRoleRes.EnsureSuccessStatusCode();
+
         var userRolesRes = await client.GetAsync($"admin/users/{user.Id}/roles");
         var roles = await userRolesRes.Content.ReadFromJsonAsync<string[]>(Json);
         roles.ShouldContain("supervisor");
@@ -127,9 +145,18 @@ public sealed class HeadlessAdminEndpointsTests
         var removeRoleRes = await client.DeleteAsync($"admin/users/{user.Id}/roles/supervisor");
         removeRoleRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(5, e => e.UserId == user.Id);
+
+        // Idempotent remove role
+        var reRemoveRoleRes = await client.DeleteAsync($"admin/users/{user.Id}/roles/supervisor");
+        reRemoveRoleRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
         // 6. Delete user
         var deleteUserRes = await client.DeleteAsync($"admin/users/{user.Id}");
         deleteUserRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var deleteEvt = await host.Events.WaitForAsync<UserDeletedEvent>(e => e.UserId == user.Id);
+        deleteEvt.ShouldNotBeNull();
 
         var getDeletedRes = await client.GetAsync($"admin/users/{user.Id}");
         getDeletedRes.StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -139,10 +166,31 @@ public sealed class HeadlessAdminEndpointsTests
         deleteRoleRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
 
+    [Fact]
+    public async Task Headless_register_endpoint_creates_user_and_publishes_event()
+    {
+        await using var host = await StartAsync();
+
+        var res = await host.Client.PostAsJsonAsync("identity/register", new
+        {
+            email = "selfsignup@test.local",
+            password = "P@ssword123!",
+            firstName = "Self",
+            lastName = "Signup"
+        });
+        res.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var regEvt = await host.Events.WaitForAsync<UserRegisteredEvent>(e => e.Email == "selfsignup@test.local");
+        regEvt.ShouldNotBeNull();
+        regEvt.Method.ShouldBe(HuiaConstants.AuthenticationMethods.Password);
+        regEvt.UserName.ShouldBe("selfsignup@test.local");
+    }
+
     private static async Task<HeadlessAdminTestHost> StartAsync()
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
+        var eventCollector = new CapturingEventCollector();
 
         var builder = new HostBuilder()
             .ConfigureWebHost(web =>
@@ -161,6 +209,13 @@ public sealed class HeadlessAdminEndpointsTests
                             huia.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
                         })
                         .AddEntityFrameworkCoreStores<HuiaDbContext>();
+
+                    services.AddSingleton<Huia.Events.IHuiaEventHandler<Huia.Events.UserRegisteredEvent>>(
+                        new CollectingEventHandler<Huia.Events.UserRegisteredEvent>(eventCollector));
+                    services.AddSingleton<Huia.Events.IHuiaEventHandler<Huia.Events.UserUpdatedEvent>>(
+                        new CollectingEventHandler<Huia.Events.UserUpdatedEvent>(eventCollector));
+                    services.AddSingleton<Huia.Events.IHuiaEventHandler<Huia.Events.UserDeletedEvent>>(
+                        new CollectingEventHandler<Huia.Events.UserDeletedEvent>(eventCollector));
                 });
                 web.Configure(app =>
                 {
@@ -181,11 +236,12 @@ public sealed class HeadlessAdminEndpointsTests
             await scope.ServiceProvider.GetRequiredService<HuiaDbContext>().Database.EnsureCreatedAsync();
         }
 
-        return new HeadlessAdminTestHost(host, connection);
+        return new HeadlessAdminTestHost(host, connection, eventCollector);
     }
 
-    private sealed class HeadlessAdminTestHost(IHost host, SqliteConnection connection) : IAsyncDisposable
+    private sealed class HeadlessAdminTestHost(IHost host, SqliteConnection connection, CapturingEventCollector events) : IAsyncDisposable
     {
+        public CapturingEventCollector Events => events;
         public HttpClient Client { get; } = host.GetTestClient();
         public IServiceProvider Services => host.Services;
 

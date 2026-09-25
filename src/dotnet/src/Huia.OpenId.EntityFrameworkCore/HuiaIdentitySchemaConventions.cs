@@ -2,7 +2,7 @@ using Huia.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Huia.EntityFrameworkCore;
+namespace Huia.OpenId.EntityFrameworkCore;
 
 /// <summary>
 /// The <c>Huia*</c>-renamed ASP.NET Core Identity schema, shared by every Huia identity-provider flavor.

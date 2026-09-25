@@ -1,12 +1,11 @@
 using System.Text.RegularExpressions;
-using Huia.OpenId.EntityFrameworkCore;
+using Huia.Events;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Options;
+using Huia.Stores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MR.AspNetCore.Pagination;
 
 namespace Huia.OpenId.Endpoints;
 
@@ -16,42 +15,63 @@ internal static partial class AdminEndpoints
     [GeneratedRegex("^[A-Za-z0-9._:-]{1,256}$")]
     private static partial Regex RoleNamePattern();
 
-    private static async Task<IResult> ListRolesAsync(HttpContext context, HuiaDbContext db, IPaginationService pagination)
+    private static async Task<IResult> ListRolesAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string? tenant = null,
+        string? after = null,
+        string? before = null,
+        int? size = 25)
     {
-        var tenant = context.Request.Query["tenant"].ToString();
-
-        var source = db.Set<HuiaRole>().IgnoreQueryFilters().AsNoTracking();
-        if (!string.IsNullOrEmpty(tenant))
+        var query = new HuiaRoleQuery
         {
-            source = source.Where(r => r.TenantId == tenant);
-        }
+            TenantId = string.IsNullOrEmpty(tenant) ? null : tenant,
+            PageSize = Math.Clamp(size ?? 25, 1, 100),
+            After = after,
+            Before = before,
+        };
 
-        var result = await pagination.KeysetPaginateAsync(
-            source,
-            builder => builder.Ascending(r => r.Id),
-            async id => await db.Set<HuiaRole>().IgnoreQueryFilters().FirstOrDefaultAsync(r => r.Id == id, context.RequestAborted),
-            roles => roles.Select(r => new RoleDto(r.Id, r.TenantId, r.Name, r.Origin)),
-            ReadQuery(context));
+        var result = await store.ListRolesAsync(query, context.RequestAborted);
 
-        return Results.Ok(result);
+        return Results.Ok(new
+        {
+            data = result.Data.Select(r => new RoleDto(r.Id, r.TenantId, r.Name, r.Origin)),
+            result.HasNext,
+            result.HasPrevious,
+            result.NextCursor,
+            result.PreviousCursor,
+        });
     }
 
-    private static async Task<IResult> GetRoleAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> GetRoleAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id)
     {
-        var role = await db.Set<HuiaRole>().IgnoreQueryFilters().AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == id, context.RequestAborted);
-        if (role is null)
+        var (tenantId, _) = await store.GetRoleMetadataAsync(id, context.RequestAborted);
+        if (tenantId is null)
         {
             return Results.NotFound();
         }
 
-        var members = await db.Set<IdentityUserRole<string>>().IgnoreQueryFilters().AsNoTracking()
-            .CountAsync(ur => ur.RoleId == id, context.RequestAborted);
+        return await WithTenantScopeAsync(context, tenantId, async services =>
+        {
+            var roleManager = services.GetRequiredService<RoleManager<HuiaRole>>();
+            var role = await roleManager.FindByIdAsync(id);
+            if (role is null)
+            {
+                return Results.NotFound();
+            }
 
-        return Results.Ok(new RoleDetailDto(role.Id, role.TenantId, role.Name, role.Origin, members));
+            var members = await store.GetRoleMemberCountAsync(id, context.RequestAborted);
+            return Results.Ok(new RoleDetailDto(role.Id, role.TenantId, role.Name, role.Origin, members));
+        });
     }
 
-    private static async Task<IResult> CreateRoleAsync(HttpContext context, HuiaOptions options, CreateRoleRequest body)
+    private static async Task<IResult> CreateRoleAsync(
+        HttpContext context,
+        HuiaOptions options,
+        CreateRoleRequest body)
     {
         if (string.IsNullOrWhiteSpace(body.Tenant) || !options.Tenants.ContainsKey(body.Tenant))
         {
@@ -83,15 +103,18 @@ internal static partial class AdminEndpoints
         });
     }
 
-    private static async Task<IResult> UpdateRoleAsync(HttpContext context, HuiaDbContext db, string id, UpdateRoleRequest body)
+    private static async Task<IResult> UpdateRoleAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id,
+        UpdateRoleRequest body)
     {
         if (string.IsNullOrWhiteSpace(body.Name) || !RoleNamePattern().IsMatch(body.Name))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["name"] = ["Invalid role name."] });
         }
 
-        var tenantId = await db.Set<HuiaRole>().IgnoreQueryFilters().AsNoTracking()
-            .Where(r => r.Id == id).Select(r => r.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var (tenantId, _) = await store.GetRoleMetadataAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -121,22 +144,23 @@ internal static partial class AdminEndpoints
         });
     }
 
-    private static async Task<IResult> DeleteRoleAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> DeleteRoleAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id)
     {
-        var found = await db.Set<HuiaRole>().IgnoreQueryFilters().AsNoTracking()
-            .Where(r => r.Id == id).Select(r => new { r.TenantId, r.Origin }).FirstOrDefaultAsync(context.RequestAborted);
-        if (found is null)
+        var (tenantId, origin) = await store.GetRoleMetadataAsync(id, context.RequestAborted);
+        if (tenantId is null)
         {
             return Results.NotFound();
         }
 
-        if (found.Origin == HuiaConstants.Origins.Static)
+        if (origin == HuiaConstants.Origins.Static)
         {
             return CodeDefinedRoleProblem();
         }
 
-        var tenantId = found.TenantId;
-        if (await db.Set<IdentityUserRole<string>>().IgnoreQueryFilters().AsNoTracking().AnyAsync(ur => ur.RoleId == id, context.RequestAborted))
+        if (await store.IsRoleAssignedToAnyUserAsync(id, context.RequestAborted))
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
@@ -157,10 +181,12 @@ internal static partial class AdminEndpoints
         });
     }
 
-    private static async Task<IResult> GetUserRolesAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> GetUserRolesAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id)
     {
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -174,15 +200,18 @@ internal static partial class AdminEndpoints
         });
     }
 
-    private static async Task<IResult> AddUserRoleAsync(HttpContext context, HuiaDbContext db, string id, AddUserRoleRequest body)
+    private static async Task<IResult> AddUserRoleAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id,
+        AddUserRoleRequest body)
     {
         if (string.IsNullOrWhiteSpace(body.Role))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["role"] = ["Is required."] });
         }
 
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -210,14 +239,25 @@ internal static partial class AdminEndpoints
             }
 
             var result = await userManager.AddToRoleAsync(user, body.Role);
-            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+            if (!result.Succeeded)
+            {
+                return IdentityProblem(result);
+            }
+
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            return Results.NoContent();
         });
     }
 
-    private static async Task<IResult> RemoveUserRoleAsync(HttpContext context, HuiaDbContext db, string id, string role)
+    private static async Task<IResult> RemoveUserRoleAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string id,
+        string role)
     {
-        var tenantId = await db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking()
-            .Where(u => u.Id == id).Select(u => u.TenantId).FirstOrDefaultAsync(context.RequestAborted);
+        var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
         if (tenantId is null)
         {
             return Results.NotFound();
@@ -232,8 +272,21 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
+            if (!await userManager.IsInRoleAsync(user, role))
+            {
+                return Results.NoContent();
+            }
+
             var result = await userManager.RemoveFromRoleAsync(user, role);
-            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+            if (!result.Succeeded)
+            {
+                return IdentityProblem(result);
+            }
+
+            var events = services.GetRequiredService<IHuiaEventPublisher>();
+            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            return Results.NoContent();
         });
     }
 

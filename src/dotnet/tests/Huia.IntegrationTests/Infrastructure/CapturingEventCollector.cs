@@ -37,6 +37,26 @@ public sealed class CapturingEventCollector
 
         throw new TimeoutException($"No {typeof(T).Name} event was raised within the timeout.");
     }
+
+    /// <summary>Waits (polling) until at least <paramref name="expectedCount"/> events of type <typeparamref name="T"/> matching the predicate appear.</summary>
+    public async Task<IReadOnlyList<T>> WaitForCountAsync<T>(int expectedCount, Func<T, bool>? predicate = null, TimeSpan? timeout = null)
+        where T : IHuiaEvent
+    {
+        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
+        while (DateTime.UtcNow < deadline)
+        {
+            var matches = _events.OfType<T>().Where(e => predicate is null || predicate(e)).ToList();
+            if (matches.Count >= expectedCount)
+            {
+                return matches;
+            }
+
+            await Task.Delay(25);
+        }
+
+        var actualCount = _events.OfType<T>().Count(e => predicate is null || predicate(e));
+        throw new TimeoutException($"Expected {expectedCount} {typeof(T).Name} events, but observed {actualCount} within the timeout.");
+    }
 }
 
 /// <summary>Forwards one event type into a <see cref="CapturingEventCollector"/>.</summary>

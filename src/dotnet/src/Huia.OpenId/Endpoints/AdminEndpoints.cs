@@ -3,6 +3,7 @@ using Huia.OpenId.Multitenancy;
 using Huia.OpenId.EntityFrameworkCore;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Options;
+using Huia.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +18,11 @@ namespace Huia.OpenId.Endpoints;
 /// <summary>
 /// Administrative endpoints (<c>/admin/*</c>). The group is returned <em>without</em> an
 /// authorization policy — the host attaches its own (for example
-/// <c>.RequireAuthorization(p =&gt; p.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator))</c>).
-/// Lists use keyset (cursor) pagination via <c>MR.AspNetCore.Pagination</c>, never offset. Users,
-/// clients and custom scopes have full CRUD; signing keys can be created and revoked. Everything
-/// created through this API is stamped <c>huia:origin = dynamic</c>; code-seeded ("static") clients
-/// and scopes are read-only (a mutating call returns 409).
+/// <c>.RequireAuthorization(p => p.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator))</c>).
+/// Lists use keyset (cursor) pagination via the injected <see cref="IHuiaOpenIdAdminStore{TUser,TRole}"/>,
+/// never offset. Users, clients and custom scopes have full CRUD; signing keys can be created and revoked.
+/// Everything created through this API is stamped <c>huia:origin = dynamic</c>; code-seeded ("static")
+/// clients and scopes are read-only (a mutating call returns 409).
 /// </summary>
 internal static partial class AdminEndpoints
 {
@@ -85,50 +86,30 @@ internal static partial class AdminEndpoints
         return Results.Ok(tenants);
     }
 
-    private static async Task<IResult> ListUsersAsync(HttpContext context, HuiaDbContext db,
-        IPaginationService pagination)
+    private static async Task<IResult> ListUsersAsync(
+        HttpContext context,
+        IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
+        string? tenant = null,
+        string? after = null,
+        string? before = null,
+        int? size = 25)
     {
-        var tenant = context.Request.Query["tenant"].ToString();
-
-        // The admin console lists users across every tenant, so bypass HuiaDbContext's per-tenant
-        // query filter and narrow explicitly when a ?tenant= is supplied.
-        var source = db.Set<HuiaUser>().IgnoreQueryFilters().AsNoTracking();
-        if (!string.IsNullOrEmpty(tenant))
+        var query = new HuiaUserQuery
         {
-            source = source.Where(u => u.TenantId == tenant);
-        }
+            TenantId = string.IsNullOrEmpty(tenant) ? null : tenant,
+            PageSize = Math.Clamp(size ?? 25, 1, 100),
+            After = after,
+            Before = before,
+        };
 
-        var result = await pagination.KeysetPaginateAsync(
-            source,
-            builder => builder.Ascending(u => u.Id),
-            async id => await db.Set<HuiaUser>().IgnoreQueryFilters()
-                .FirstOrDefaultAsync(u => u.Id == id, context.RequestAborted),
-            users => users.Select(u => new UserDto(u.Id, u.TenantId, u.UserName, u.Email, u.EmailConfirmed,
-                u.PhoneNumber, u.PhoneNumberConfirmed, u.LockoutEnabled, u.LockoutEnd, Array.Empty<string>())),
-            ReadQuery(context));
+        var result = await store.ListUsersAsync(query, context.RequestAborted);
 
-        var byUser = await RolesByUserAsync(db, [.. result.Data.Select(d => d.Id)], context.RequestAborted);
-        var data = result.Data.Select(d => d with { Roles = byUser.GetValueOrDefault(d.Id, []) }).ToList();
+        var byUser = await store.GetRolesByUserIdsAsync([.. result.Data.Select(u => u.Id)], context.RequestAborted);
+        var data = result.Data.Select(u => new UserDto(u.Id, u.TenantId, u.UserName, u.Email, u.EmailConfirmed,
+            u.PhoneNumber, u.PhoneNumberConfirmed, u.LockoutEnabled, u.LockoutEnd,
+            byUser.GetValueOrDefault(u.Id, []))).ToList();
 
-        return Results.Ok(new { data, result.HasNext, result.HasPrevious });
-    }
-
-    /// <summary>Maps a set of user ids to their role names in one query (tenant filter bypassed).</summary>
-    private static async Task<Dictionary<string, string[]>> RolesByUserAsync(
-        HuiaDbContext db, IReadOnlyCollection<string> userIds, CancellationToken cancellationToken)
-    {
-        if (userIds.Count == 0)
-        {
-            return [];
-        }
-
-        var rows = await db.Set<Microsoft.AspNetCore.Identity.IdentityUserRole<string>>().IgnoreQueryFilters().AsNoTracking()
-            .Where(ur => userIds.Contains(ur.UserId))
-            .Join(db.Set<HuiaRole>().IgnoreQueryFilters().AsNoTracking(),
-                ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
-            .ToListAsync(cancellationToken);
-
-        return rows.GroupBy(x => x.UserId).ToDictionary(g => g.Key, g => g.Select(x => x.Name!).ToArray());
+        return Results.Ok(new { data, result.HasNext, result.HasPrevious, result.NextCursor, result.PreviousCursor });
     }
 
     private static async Task<IResult> ListClientsAsync(HttpContext context, HuiaDbContext db,
