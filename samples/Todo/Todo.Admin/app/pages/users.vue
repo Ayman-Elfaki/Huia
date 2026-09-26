@@ -37,6 +37,7 @@ const form = reactive({
   firstName: '',
   lastName: '',
   emailConfirmed: true,
+  phoneNumberConfirmed: false,
   lockoutEnabled: false,
   busy: false,
   error: '',
@@ -56,6 +57,7 @@ function openCreate() {
     firstName: '',
     lastName: '',
     emailConfirmed: true,
+    phoneNumberConfirmed: false,
     lockoutEnabled: false,
     error: '',
   })
@@ -85,7 +87,13 @@ async function submit() {
   try {
     if (form.mode === 'create') {
       const body = form.kind === 'phone'
-        ? { tenant: form.tenant, phoneNumber: form.phoneNumber, firstName: form.firstName, lastName: form.lastName }
+        ? {
+            tenant: form.tenant,
+            phoneNumber: form.phoneNumber,
+            firstName: form.firstName,
+            lastName: form.lastName,
+            phoneNumberConfirmed: form.phoneNumberConfirmed,
+          }
         : {
             tenant: form.tenant,
             email: form.email,
@@ -268,6 +276,10 @@ async function removeRole(row: UserRow, role: string) {
           <label v-if="form.mode === 'create' && form.kind === 'password'" class="flex items-center gap-2 text-sm">
             <input v-model="form.emailConfirmed" type="checkbox" data-testid="user-email-confirmed">
             Mark the email as already confirmed
+          </label>
+          <label v-if="form.mode === 'create' && form.kind === 'phone'" class="flex items-center gap-2 text-sm">
+            <input v-model="form.phoneNumberConfirmed" type="checkbox" data-testid="user-phone-confirmed">
+            Mark the phone number as already confirmed
           </label>
           <label v-if="form.mode === 'edit'" class="flex items-center gap-2 text-sm">
             <input v-model="form.emailConfirmed" type="checkbox" data-testid="user-email-confirmed-edit">

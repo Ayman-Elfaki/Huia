@@ -277,6 +277,90 @@ public sealed class HeadlessAdminEndpointsTests
         regEvt.UserName.ShouldBe("selfsignup@test.local");
     }
 
+    [Fact]
+    public async Task Admin_can_create_phone_user_with_default_confirmed_phone()
+    {
+        await using var host = await StartAsync();
+        var token = await host.CreateAndSignInAdminAsync("phoneadmin1@test.local", "P@ssword123!");
+        using var client = host.CreateAuthorizedClient(token);
+
+        var createUserRes = await client.PostAsJsonAsync("admin/users", new
+        {
+            phoneNumber = "+15005550901",
+            firstName = "Phone",
+            lastName = "Default",
+        });
+        createUserRes.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var user = await createUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        user.ShouldNotBeNull();
+        user.PhoneNumber.ShouldBe("+15005550901");
+        user.PhoneNumberConfirmed.ShouldBeTrue();
+
+        var getUserRes = await client.GetAsync($"admin/users/{user.Id}");
+        getUserRes.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var fetched = await getUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        fetched.ShouldNotBeNull();
+        fetched.PhoneNumberConfirmed.ShouldBeTrue();
+
+        var regEvt = await host.Events.WaitForAsync<UserRegisteredEvent>(e => e.UserId == user.Id);
+        regEvt.ShouldNotBeNull();
+        regEvt.Method.ShouldBe(HuiaConstants.AuthenticationMethods.Sms);
+    }
+
+    [Fact]
+    public async Task Admin_can_create_phone_user_with_unconfirmed_phone()
+    {
+        await using var host = await StartAsync();
+        var token = await host.CreateAndSignInAdminAsync("phoneadmin2@test.local", "P@ssword123!");
+        using var client = host.CreateAuthorizedClient(token);
+
+        var createUserRes = await client.PostAsJsonAsync("admin/users", new
+        {
+            phoneNumber = "+15005550902",
+            firstName = "Phone",
+            lastName = "Unconfirmed",
+            phoneNumberConfirmed = false,
+        });
+        createUserRes.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var user = await createUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        user.ShouldNotBeNull();
+        user.PhoneNumber.ShouldBe("+15005550902");
+        user.PhoneNumberConfirmed.ShouldBeFalse();
+
+        var getUserRes = await client.GetAsync($"admin/users/{user.Id}");
+        getUserRes.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var fetched = await getUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        fetched.ShouldNotBeNull();
+        fetched.PhoneNumberConfirmed.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Admin_can_create_phone_user_with_confirmed_phone()
+    {
+        await using var host = await StartAsync();
+        var token = await host.CreateAndSignInAdminAsync("phoneadmin3@test.local", "P@ssword123!");
+        using var client = host.CreateAuthorizedClient(token);
+
+        var createUserRes = await client.PostAsJsonAsync("admin/users", new
+        {
+            phoneNumber = "+15005550903",
+            firstName = "Phone",
+            lastName = "Confirmed",
+            phoneNumberConfirmed = true,
+        });
+        createUserRes.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var user = await createUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        user.ShouldNotBeNull();
+        user.PhoneNumber.ShouldBe("+15005550903");
+        user.PhoneNumberConfirmed.ShouldBeTrue();
+
+        var getUserRes = await client.GetAsync($"admin/users/{user.Id}");
+        getUserRes.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var fetched = await getUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        fetched.ShouldNotBeNull();
+        fetched.PhoneNumberConfirmed.ShouldBeTrue();
+    }
+
     private static async Task<HeadlessAdminTestHost> StartAsync()
     {
         var connection = new SqliteConnection("DataSource=:memory:");

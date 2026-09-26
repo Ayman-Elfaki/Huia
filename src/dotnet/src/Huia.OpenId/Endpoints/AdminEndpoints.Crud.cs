@@ -77,7 +77,7 @@ internal static partial class AdminEndpoints
                 Email = hasEmail ? body.Email!.Trim() : null,
                 EmailConfirmed = hasEmail && (body.EmailConfirmed ?? false),
                 PhoneNumber = hasPhone ? body.PhoneNumber!.Trim() : null,
-                PhoneNumberConfirmed = hasPhone,
+                PhoneNumberConfirmed = hasPhone && (body.PhoneNumberConfirmed ?? true),
                 FirstName = body.FirstName?.Trim() ?? string.Empty,
                 LastName = body.LastName?.Trim() ?? string.Empty,
             };
@@ -718,6 +718,7 @@ internal static partial class AdminEndpoints
         string? LastName,
         string? Password,
         bool? EmailConfirmed,
+        bool? PhoneNumberConfirmed,
         string[]? Roles);
 
     private sealed record UpdateUserRequest(
