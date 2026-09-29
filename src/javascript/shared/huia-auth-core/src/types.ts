@@ -172,6 +172,7 @@ export interface CreateHeadlessAdminUserRequest {
   firstName?: string
   lastName?: string
   emailConfirmed?: boolean
+  phoneNumberConfirmed?: boolean
   roles?: string[]
 }
 
@@ -180,4 +181,25 @@ export interface UpdateHeadlessAdminUserRequest {
   lastName?: string
   email?: string
   phoneNumber?: string
+}
+
+export interface PasskeyDto {
+  id: string
+  name?: string | null
+  createdAt: string
+  isBackedUp: boolean
+  isUserVerified: boolean
+}
+
+export interface PasskeyAssertionRequest {
+  credential: unknown
+}
+
+export interface PasskeyRegistrationRequest {
+  credential: unknown
+  name?: string
+}
+
+export interface RenamePasskeyRequest {
+  name: string
 }

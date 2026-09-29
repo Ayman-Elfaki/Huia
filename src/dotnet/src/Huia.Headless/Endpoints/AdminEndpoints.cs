@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Huia.Entities;
 using Huia.Events;
 using Huia.Headless.Identity;
+using Huia.Identity;
 using Huia.Multitenancy;
 using Huia.Stores;
 using Microsoft.AspNetCore.Builder;
@@ -42,6 +43,7 @@ public static partial class AdminEndpoints
         group.MapDelete("users/{id}/claims", RemoveUserClaimsByQueryAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Claims.RemoveByQuery);
         group.MapPost("users/{id}/lock", LockUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Lock);
         group.MapPost("users/{id}/unlock", UnlockUserAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.Unlock);
+        group.MapPost("users/{id}/verify-email", VerifyEmailAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Users.VerifyEmail);
 
         group.MapGet("roles", ListRolesAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Roles.List);
         group.MapGet("roles/{id}", GetRoleAsync).WithName(HuiaConstants.Endpoints.Headless.Admin.Roles.Get);
@@ -142,7 +144,7 @@ public static partial class AdminEndpoints
             Email = hasEmail ? body.Email!.Trim() : null,
             EmailConfirmed = hasEmail && (body.EmailConfirmed ?? false),
             PhoneNumber = hasPhone ? body.PhoneNumber!.Trim() : null,
-            PhoneNumberConfirmed = hasPhone,
+            PhoneNumberConfirmed = hasPhone && (body.PhoneNumberConfirmed ?? true),
             FirstName = body.FirstName?.Trim() ?? string.Empty,
             LastName = body.LastName?.Trim() ?? string.Empty,
         };
@@ -393,6 +395,44 @@ public static partial class AdminEndpoints
         return Results.Ok();
     }
 
+    private static async Task<IResult> VerifyEmailAsync(
+        HttpContext context,
+        HuiaUserManager userManager,
+        IHuiaTenantContext tenantContext,
+        IHuiaEventPublisher events,
+        TimeProvider timeProvider,
+        string id)
+    {
+        var user = await userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (await userManager.GetUserTypeAsync(user) != HuiaUserType.Password)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["email"] = ["Only an email-and-password account has an email address to verify."],
+            });
+        }
+
+        if (user.EmailConfirmed)
+        {
+            return Results.NoContent();
+        }
+
+        user.EmailConfirmed = true;
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return IdentityProblem(result);
+        }
+
+        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> ListRolesAsync(
         HttpContext context,
         RoleManager<HuiaRole> roleManager,
@@ -566,7 +606,8 @@ public sealed record CreateHeadlessUserRequest(
     string? FirstName,
     string? LastName,
     bool? EmailConfirmed,
-    string[]? Roles);
+    string[]? Roles,
+    bool? PhoneNumberConfirmed = null);
 
 /// <summary>Request body for updating a user in the headless admin API.</summary>
 public sealed record UpdateHeadlessUserRequest(

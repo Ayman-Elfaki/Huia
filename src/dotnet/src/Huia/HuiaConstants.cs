@@ -406,6 +406,9 @@ public static class HuiaConstants
                     /// <summary>The unlock user endpoint name.</summary>
                     public const string Unlock = "huia.headless.admin.users.unlock";
 
+                    /// <summary>The verify user email endpoint name.</summary>
+                    public const string VerifyEmail = "huia.headless.admin.users.verify-email";
+
                     /// <summary>Headless user roles administrative endpoint names.</summary>
                     public static class Roles
                     {

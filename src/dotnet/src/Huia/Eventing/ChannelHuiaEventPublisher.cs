@@ -13,13 +13,19 @@ namespace Huia.Eventing;
 /// </summary>
 internal sealed class ChannelHuiaEventPublisher : IHuiaEventPublisher
 {
-    private readonly Channel<IHuiaEvent> _channel = Channel.CreateUnbounded<IHuiaEvent>(new UnboundedChannelOptions
+    public const int DefaultCapacity = 10_000;
+
+    private readonly Channel<IHuiaEvent> _channel = Channel.CreateBounded<IHuiaEvent>(new BoundedChannelOptions(DefaultCapacity)
     {
         SingleReader = true,
         SingleWriter = false,
+        FullMode = BoundedChannelFullMode.Wait,
     });
 
     public ChannelReader<IHuiaEvent> Reader => _channel.Reader;
+
+    /// <summary>Gets the current number of events waiting in the queue.</summary>
+    public int QueueDepth => _channel.Reader.Count;
 
     public ValueTask PublishAsync(IHuiaEvent domainEvent, CancellationToken cancellationToken = default)
     {

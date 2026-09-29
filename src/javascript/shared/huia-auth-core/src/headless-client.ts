@@ -9,6 +9,8 @@ import type {
   HeadlessAdminUsersPage,
   CreateHeadlessAdminUserRequest,
   UpdateHeadlessAdminUserRequest,
+  PasskeyDto,
+  PasskeyRegistrationRequest,
 } from './types.js'
 
 export class BackendError extends Error {
@@ -239,6 +241,13 @@ export class HuiaHeadlessClient {
     })
   }
 
+  adminVerifyEmail(accessToken: string, id: string): Promise<void> {
+    return this.call(`/admin/users/${encodeURIComponent(id)}/verify-email`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+  }
+
   adminListRoles(accessToken: string): Promise<{ data: HeadlessAdminRole[] }> {
     return this.call<{ data: HeadlessAdminRole[] }>('/admin/roles', {
       method: 'GET',
@@ -271,6 +280,57 @@ export class HuiaHeadlessClient {
 
   adminDeleteRole(accessToken: string, id: string): Promise<void> {
     return this.call(`/admin/roles/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+  }
+
+  // Passkey methods
+  passkeyAssertionOptions(): Promise<unknown> {
+    return this.call('/identity/passkey/assertion-options', {
+      method: 'POST',
+    })
+  }
+
+  passkeyAssertion(credential: unknown): Promise<BackendTokenResponse> {
+    return this.call<BackendTokenResponse>('/identity/passkey/assertion', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    })
+  }
+
+  passkeyCreationOptions(accessToken: string): Promise<unknown> {
+    return this.call('/identity/manage/passkeys/creation-options', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+  }
+
+  passkeyList(accessToken: string): Promise<PasskeyDto[]> {
+    return this.call<PasskeyDto[]>('/identity/manage/passkeys', {
+      method: 'GET',
+      headers: { authorization: `Bearer ${accessToken}` },
+    })
+  }
+
+  passkeyRegister(accessToken: string, body: PasskeyRegistrationRequest): Promise<PasskeyDto> {
+    return this.call<PasskeyDto>('/identity/manage/passkeys', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(body),
+    })
+  }
+
+  passkeyRename(accessToken: string, id: string, name: string): Promise<void> {
+    return this.call(`/identity/manage/passkeys/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ name }),
+    })
+  }
+
+  passkeyRemove(accessToken: string, id: string): Promise<void> {
+    return this.call(`/identity/manage/passkeys/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${accessToken}` },
     })

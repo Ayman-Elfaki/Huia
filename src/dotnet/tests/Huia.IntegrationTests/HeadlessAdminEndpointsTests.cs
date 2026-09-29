@@ -131,11 +131,21 @@ public sealed class HeadlessAdminEndpointsTests
         var unlockedUser = await unlockedUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
         unlockedUser!.LockoutEnd.ShouldBeNull();
 
-        // 5. Add and remove roles
+        // 5. Verify email
+        var verifyEmailRes = await client.PostAsync($"admin/users/{user.Id}/verify-email", null);
+        verifyEmailRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(4, e => e.UserId == user.Id);
+
+        var verifiedUserRes = await client.GetAsync($"admin/users/{user.Id}");
+        var verifiedUser = await verifiedUserRes.Content.ReadFromJsonAsync<HeadlessUserDto>(Json);
+        verifiedUser!.EmailConfirmed.ShouldBeTrue();
+
+        // 6. Add and remove roles
         var addRoleRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/roles", new { role = "supervisor" });
         addRoleRes.EnsureSuccessStatusCode();
 
-        await host.Events.WaitForCountAsync<UserUpdatedEvent>(4, e => e.UserId == user.Id);
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(5, e => e.UserId == user.Id);
 
         // Idempotent add role
         var reAddRoleRes = await client.PostAsJsonAsync($"admin/users/{user.Id}/roles", new { role = "supervisor" });
@@ -148,7 +158,7 @@ public sealed class HeadlessAdminEndpointsTests
         var removeRoleRes = await client.DeleteAsync($"admin/users/{user.Id}/roles/supervisor");
         removeRoleRes.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
-        await host.Events.WaitForCountAsync<UserUpdatedEvent>(5, e => e.UserId == user.Id);
+        await host.Events.WaitForCountAsync<UserUpdatedEvent>(6, e => e.UserId == user.Id);
 
         // Idempotent remove role
         var reRemoveRoleRes = await client.DeleteAsync($"admin/users/{user.Id}/roles/supervisor");

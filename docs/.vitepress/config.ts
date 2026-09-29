@@ -31,7 +31,8 @@ export default withMermaid(defineConfig({
       {
         text: 'Guide',
         items: [
-          { text: 'Getting started', link: '/guide/getting-started' },
+          { text: 'Getting started (OpenID)', link: '/guide/getting-started' },
+          { text: 'Getting started (Headless)', link: '/guide/getting-started-headless' },
           { text: 'Configuration', link: '/guide/configuration' },
           { text: 'Multi-tenancy', link: '/guide/multi-tenancy' },
           { text: 'Pushed authorization (PAR)', link: '/guide/pushed-authorization' },
@@ -68,6 +69,9 @@ export default withMermaid(defineConfig({
         items: [
           { text: 'Overview', link: '/next/overview' },
           { text: 'Configuration', link: '/next/configuration' },
+          { text: 'Session model & security', link: '/next/session-model' },
+          { text: 'Route protection', link: '/next/route-protection' },
+          { text: 'Migrating from NextAuth', link: '/next/migrating' },
         ],
       },
       {

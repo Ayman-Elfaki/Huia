@@ -18,6 +18,10 @@ export type {
 	HeadlessAdminUsersPage,
 	CreateHeadlessAdminUserRequest,
 	UpdateHeadlessAdminUserRequest,
+	PasskeyDto,
+	PasskeyAssertionRequest,
+	PasskeyRegistrationRequest,
+	RenamePasskeyRequest,
 } from './types.js'
 export * from './cookie.js'
 export * from './tokens.js'
