@@ -19,8 +19,7 @@ public sealed partial class HuiaCliE2ETests(SampleHostFixture host)
     [Fact]
     public async Task Device_login_then_whoami_then_logout()
     {
-
-        var cliHome = Path.Combine(Path.GetTempPath(), "huia-cli-e2e-" + Guid.NewGuid().ToString("N"));
+        var cliHome = Path.Combine(Path.GetTempPath(), "huia-cli-e2e-" + Guid.CreateVersion7().ToString("N"));
         try
         {
             using var login = StartCli(cliHome, "login", "--issuer", host.BaseUrl, "--tenant", "master");
@@ -36,8 +35,8 @@ public sealed partial class HuiaCliE2ETests(SampleHostFixture host)
             (await WaitAsync(whoami, TimeSpan.FromSeconds(20))).ShouldBe(0, whoami.Output);
             whoami.Output.ShouldContain("admin@huia.local");
 
-            Path.Combine(cliHome, "tokens.json").ShouldSatisfyAllConditions(
-                () => File.Exists(Path.Combine(cliHome, "tokens.json")).ShouldBeTrue());
+            Path.Combine(cliHome, "tokens.json").ShouldSatisfyAllConditions(() =>
+                File.Exists(Path.Combine(cliHome, "tokens.json")).ShouldBeTrue());
 
             using var logout = StartCli(cliHome, "logout");
             (await WaitAsync(logout, TimeSpan.FromSeconds(10))).ShouldBe(0, logout.Output);
@@ -45,7 +44,14 @@ public sealed partial class HuiaCliE2ETests(SampleHostFixture host)
         }
         finally
         {
-            try { Directory.Delete(cliHome, recursive: true); } catch { /* best effort */ }
+            try
+            {
+                Directory.Delete(cliHome, recursive: true);
+            }
+            catch
+            {
+                /* best effort */
+            }
         }
     }
 

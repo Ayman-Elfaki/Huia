@@ -56,7 +56,7 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
     public string Create(string tenantId, string phoneNumber, string code, PhoneOptions options)
     {
         Sweep();
-        var id = Guid.NewGuid().ToString("N");
+        var id = Guid.CreateVersion7().ToString("N");
         var (hash, salt) = OtpHashing.Create(code);
         _entries[id] = new Entry(tenantId, phoneNumber, hash, salt,
             timeProvider.GetUtcNow().Add(options.CodeLifetime),

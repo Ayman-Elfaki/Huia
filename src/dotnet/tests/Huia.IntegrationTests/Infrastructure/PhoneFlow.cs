@@ -107,7 +107,7 @@ public sealed partial class PhoneFlow(HuiaTestHost host, string tenant)
         var authorizeUrl =
             $"/{tenant}/connect/authorize?response_type=code&client_id={Uri.EscapeDataString(clientId)}" +
             $"&redirect_uri={Uri.EscapeDataString(redirectUri)}&scope={Uri.EscapeDataString(scope)}" +
-            $"&code_challenge={challenge}&code_challenge_method=S256&state={Guid.NewGuid():N}";
+            $"&code_challenge={challenge}&code_challenge_method=S256&state={Guid.CreateVersion7():N}";
 
         var toCallback = await _client.GetAsync(authorizeUrl);
         toCallback.StatusCode.ShouldBe(HttpStatusCode.Redirect, await Body(toCallback));

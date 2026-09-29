@@ -11,7 +11,7 @@ public class HuiaRole : IdentityRole<string>
     /// <summary>Creates a role with a generated identifier.</summary>
     public HuiaRole()
     {
-        Id = Guid.NewGuid().ToString("N");
+        Id = Guid.CreateVersion7().ToString("N");
     }
 
     /// <summary>Creates a role with a generated identifier and the given name.</summary>

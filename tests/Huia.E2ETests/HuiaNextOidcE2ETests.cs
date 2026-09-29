@@ -61,7 +61,7 @@ public sealed class HuiaNextOidcE2ETests(NextFrontEndFixture fx)
         await FillPasswordAsync(page, UserEmail, UserPassword);
         await WaitForAppAsync(page, fx.TodoNextUrl);
 
-        var todoTitle = $"Test Next.js OIDC Task {Guid.NewGuid():N}";
+        var todoTitle = $"Test Next.js OIDC Task {Guid.CreateVersion7():N}";
         await page.GetByPlaceholder("What needs to be done?").FillAsync(todoTitle);
         await page.GetByRole(AriaRole.Button, new() { Name = "Add" }).ClickAsync();
 
@@ -104,7 +104,8 @@ public sealed class HuiaNextOidcE2ETests(NextFrontEndFixture fx)
         await page.ClickAsync("[data-testid=external-providers] button");
 
         // Now on Huia.External's own Razor login page.
-        await page.WaitForURLAsync(u => u.Contains("/partners/identity/account/", StringComparison.Ordinal), new() { Timeout = 25_000 });
+        await page.WaitForURLAsync(u => u.Contains("/partners/identity/account/", StringComparison.Ordinal),
+            new() { Timeout = 25_000 });
         await FillPasswordAsync(page, "full@partners.test", "Partner1!Pass");
 
         if (await page.Locator("[data-testid=complete-profile-form]").IsVisibleAsync())

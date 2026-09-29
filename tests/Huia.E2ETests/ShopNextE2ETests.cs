@@ -39,7 +39,7 @@ public sealed class ShopNextE2ETests(NextFrontEndFixture fx)
     {
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
-        var email = $"e2e-shop-next-{Guid.NewGuid():N}@huia.local";
+        var email = $"e2e-shop-next-{Guid.CreateVersion7():N}@huia.local";
         const string password = "Password1!";
 
         await page.GotoAsync($"{fx.ShopNextUrl}/login");
@@ -65,7 +65,8 @@ public sealed class ShopNextE2ETests(NextFrontEndFixture fx)
 
         // Sign out clears the session and the cart route is protected again.
         await page.GetByRole(AriaRole.Button, new() { Name = "Sign out" }).ClickAsync();
-        await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true })).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         await page.GotoAsync($"{fx.ShopNextUrl}/cart");
         await page.WaitForURLAsync(u => u.Contains("/login", StringComparison.Ordinal), new() { Timeout = 15_000 });
@@ -76,7 +77,7 @@ public sealed class ShopNextE2ETests(NextFrontEndFixture fx)
     {
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
-        var email = $"e2e-shop-next-{Guid.NewGuid():N}@huia.local";
+        var email = $"e2e-shop-next-{Guid.CreateVersion7():N}@huia.local";
         const string password = "Password1!";
 
         await page.GotoAsync($"{fx.ShopNextUrl}/login");
@@ -127,7 +128,8 @@ public sealed class ShopNextE2ETests(NextFrontEndFixture fx)
         await page.GetByRole(AriaRole.Link, new() { Name = "Sign in with Partner" }).ClickAsync();
 
         // Now on Huia.External's own Razor login page — the real upstream IdP, not a stand-in.
-        await page.WaitForURLAsync(u => u.Contains("/partners/identity/account/", StringComparison.Ordinal), new() { Timeout = 25_000 });
+        await page.WaitForURLAsync(u => u.Contains("/partners/identity/account/", StringComparison.Ordinal),
+            new() { Timeout = 25_000 });
         await FillPasswordAsync(page, "full@partners.test", "Partner1!Pass");
 
         // First time this partner identity signs into Shop.Api's tenant, so it needs a name.

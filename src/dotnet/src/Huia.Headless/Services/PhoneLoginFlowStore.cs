@@ -52,8 +52,9 @@ internal sealed class PhoneLoginFlowStore(TimeProvider timeProvider) : IPhoneLog
     public string Create(string phoneNumber, string? userId, string? pendingSignupId)
     {
         Sweep();
-        var id = Guid.NewGuid().ToString("N");
-        _entries[id] = new Entry(phoneNumber, userId, pendingSignupId, Verified: false, timeProvider.GetUtcNow().Add(Lifetime));
+        var id = Guid.CreateVersion7().ToString("N");
+        _entries[id] = new Entry(phoneNumber, userId, pendingSignupId, Verified: false,
+            timeProvider.GetUtcNow().Add(Lifetime));
         return id;
     }
 

@@ -11,7 +11,7 @@ public class HuiaUser : IdentityUser<string>
     /// <summary>Creates a user with a generated identifier.</summary>
     public HuiaUser()
     {
-        Id = Guid.NewGuid().ToString("N");
+        Id = Guid.CreateVersion7().ToString("N");
     }
 
     /// <summary>The user's given name. Required by the account UI before a profile is considered complete.</summary>

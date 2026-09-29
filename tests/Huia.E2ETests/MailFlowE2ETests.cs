@@ -42,7 +42,7 @@ public sealed partial class MailFlowE2ETests(AppHostFixture host)
         await host.Mailpit.ClearAsync();
 
         using var client = host.CreateIdpClient();
-        var email = $"new-{Guid.NewGuid():N}@e2e.test";
+        var email = $"new-{Guid.CreateVersion7():N}@e2e.test";
 
         var registered = await PostFormAsync(client, "e2e-signup/identity/account/register", new()
         {

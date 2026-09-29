@@ -14,7 +14,8 @@ var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "http://shop-app.
 var shopNextAppUrl = builder.Configuration.GetValue("Shop:NextAppUrl", "http://shop-next.dev.localhost:3060")!;
 var databaseProvider = builder.Configuration.GetValue("Huia:Database", (string?)null);
 
-var rawConnectionString = builder.Configuration.GetConnectionString("shop") ?? builder.Configuration.GetConnectionString("huia");
+var rawConnectionString = builder.Configuration.GetConnectionString("shop") ??
+                          builder.Configuration.GetConnectionString("huia");
 if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase)
     || (rawConnectionString != null && rawConnectionString.Contains("DataSource", StringComparison.OrdinalIgnoreCase))
     || rawConnectionString == null)
@@ -28,6 +29,7 @@ else
 {
     builder.Services.AddDbContext<HuiaDbContext>(options => options.UseNpgsql(rawConnectionString));
 }
+
 builder.Services.AddHostedService<SchemaInitializer>();
 
 builder.Services
@@ -86,8 +88,9 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
         if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
         {
             return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-                || uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase);
+                   || uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase);
         }
+
         return false;
     })
     .AllowAnyHeader()
@@ -138,7 +141,7 @@ app.MapPost("/checkout", (HttpContext ctx, CartStore store) =>
 
     var total = items.Sum(i => i.Quantity * Catalog.Products.First(p => p.Id == i.ProductId).Price);
     store.Clear(Owner(ctx));
-    return Results.Ok(new { orderId = Guid.NewGuid().ToString("N"), total });
+    return Results.Ok(new { orderId = Guid.CreateVersion7().ToString("N"), total });
 }).RequireAuthorization();
 
 app.Run();
@@ -224,7 +227,8 @@ namespace Shop.Api
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             await using var scope = services.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<HuiaDbContext>().Database.EnsureCreatedAsync(cancellationToken);
+            await scope.ServiceProvider.GetRequiredService<HuiaDbContext>().Database
+                .EnsureCreatedAsync(cancellationToken);
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -238,7 +242,8 @@ namespace Shop.Api
 
         public bool IsConfigured => true;
 
-        public Task<bool> SendOtpAsync(string tenantId, string phoneNumber, string code, CancellationToken cancellationToken = default)
+        public Task<bool> SendOtpAsync(string tenantId, string phoneNumber, string code,
+            CancellationToken cancellationToken = default)
         {
             lock (_gate)
             {

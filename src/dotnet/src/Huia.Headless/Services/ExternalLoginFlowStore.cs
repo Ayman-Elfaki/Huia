@@ -79,7 +79,7 @@ internal sealed class ExternalLoginFlowStore(TimeProvider timeProvider) : IExter
 
     private string Create(string? userId, string? loginProvider, ExternalSignup? signup)
     {
-        var code = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        var code = Guid.CreateVersion7().ToString("N") + Guid.CreateVersion7().ToString("N");
         _entries[code] = new Entry(userId, loginProvider, signup, timeProvider.GetUtcNow().Add(Lifetime));
         return code;
     }
@@ -96,5 +96,9 @@ internal sealed class ExternalLoginFlowStore(TimeProvider timeProvider) : IExter
         }
     }
 
-    private sealed record Entry(string? UserId, string? LoginProvider, ExternalSignup? PendingSignup, DateTimeOffset ExpiresUtc);
+    private sealed record Entry(
+        string? UserId,
+        string? LoginProvider,
+        ExternalSignup? PendingSignup,
+        DateTimeOffset ExpiresUtc);
 }

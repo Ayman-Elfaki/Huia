@@ -23,10 +23,11 @@ public sealed partial class AuthCodeFlow(HuiaTestHost host, string tenant, strin
     /// <param name="password">The password.</param>
     /// <param name="scope">The requested scope.</param>
     /// <returns>The token endpoint's JSON payload.</returns>
-    public async Task<JsonDocument> SignInAsync(string userName, string password, string scope = "openid profile email offline_access")
+    public async Task<JsonDocument> SignInAsync(string userName, string password,
+        string scope = "openid profile email offline_access")
     {
         var challenge = Base64UrlEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(CodeVerifier)));
-        var state = Guid.NewGuid().ToString("N");
+        var state = Guid.CreateVersion7().ToString("N");
         var authorizeUrl =
             $"/{tenant}/connect/authorize?response_type=code&client_id={Uri.EscapeDataString(clientId)}" +
             $"&redirect_uri={Uri.EscapeDataString(redirectUri)}&scope={Uri.EscapeDataString(scope)}" +
@@ -59,14 +60,15 @@ public sealed partial class AuthCodeFlow(HuiaTestHost host, string tenant, strin
         var code = ExtractQueryValue(callback, "code");
         code.ShouldNotBeNullOrEmpty();
 
-        var tokenResponse = await _client.PostAsync($"/{tenant}/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["grant_type"] = "authorization_code",
-            ["code"] = code!,
-            ["redirect_uri"] = redirectUri,
-            ["client_id"] = clientId,
-            ["code_verifier"] = CodeVerifier,
-        }));
+        var tokenResponse = await _client.PostAsync($"/{tenant}/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["code"] = code!,
+                ["redirect_uri"] = redirectUri,
+                ["client_id"] = clientId,
+                ["code_verifier"] = CodeVerifier,
+            }));
 
         var body = await tokenResponse.Content.ReadAsStringAsync();
         tokenResponse.StatusCode.ShouldBe(HttpStatusCode.OK, body);
@@ -78,12 +80,13 @@ public sealed partial class AuthCodeFlow(HuiaTestHost host, string tenant, strin
     /// <returns>The token endpoint's JSON payload.</returns>
     public async Task<JsonDocument> RefreshAsync(string refreshToken)
     {
-        var response = await _client.PostAsync($"/{tenant}/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["grant_type"] = "refresh_token",
-            ["refresh_token"] = refreshToken,
-            ["client_id"] = clientId,
-        }));
+        var response = await _client.PostAsync($"/{tenant}/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                ["grant_type"] = "refresh_token",
+                ["refresh_token"] = refreshToken,
+                ["client_id"] = clientId,
+            }));
 
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.ShouldBe(HttpStatusCode.OK, body);
@@ -172,7 +175,9 @@ public sealed partial class AuthCodeFlow(HuiaTestHost host, string tenant, strin
 
     private static string? ExtractQueryValue(string url, string key)
     {
-        var query = url.Contains('?', StringComparison.Ordinal) ? url[(url.IndexOf('?', StringComparison.Ordinal) + 1)..] : string.Empty;
+        var query = url.Contains('?', StringComparison.Ordinal)
+            ? url[(url.IndexOf('?', StringComparison.Ordinal) + 1)..]
+            : string.Empty;
         foreach (var pair in query.Split('&'))
         {
             var parts = pair.Split('=', 2);

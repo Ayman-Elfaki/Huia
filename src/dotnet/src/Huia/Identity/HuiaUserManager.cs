@@ -28,7 +28,8 @@ public partial class HuiaUserManager<TUser> : UserManager<TUser>
         IdentityErrorDescriber errors,
         IServiceProvider services,
         ILogger<UserManager<TUser>> logger)
-        : base(store, optionsAccessor, passwordHasher, userValidators, passwordValidators, keyNormalizer, errors, services, logger)
+        : base(store, optionsAccessor, passwordHasher, userValidators, passwordValidators, keyNormalizer, errors,
+            services, logger)
     {
     }
 
@@ -108,7 +109,8 @@ public partial class HuiaUserManager<TUser> : UserManager<TUser>
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        if (await HasPasswordAsync(user) || !string.IsNullOrEmpty(user.PhoneNumber) || (await GetLoginsAsync(user)).Count > 0)
+        if (await HasPasswordAsync(user) || !string.IsNullOrEmpty(user.PhoneNumber) ||
+            (await GetLoginsAsync(user)).Count > 0)
         {
             return true;
         }
@@ -120,7 +122,8 @@ public partial class HuiaUserManager<TUser> : UserManager<TUser>
     /// Creates a phone-login account: the E.164 number is both the username and the (confirmed) phone
     /// number, there is no password and no email.
     /// </summary>
-    public async Task<HuiaUserCreation<TUser>> CreatePhoneUserAsync(string tenantId, string phoneNumber, string firstName, string lastName)
+    public async Task<HuiaUserCreation<TUser>> CreatePhoneUserAsync(string tenantId, string phoneNumber,
+        string firstName, string lastName)
     {
         var user = new TUser
         {
@@ -137,7 +140,8 @@ public partial class HuiaUserManager<TUser> : UserManager<TUser>
     }
 
     /// <summary>Attaches an external provider login to an account.</summary>
-    public Task<IdentityResult> AddExternalLoginAsync(TUser user, string loginProvider, string providerKey, string providerDisplayName)
+    public Task<IdentityResult> AddExternalLoginAsync(TUser user, string loginProvider, string providerKey,
+        string providerDisplayName)
         => AddLoginAsync(user, new UserLoginInfo(loginProvider, providerKey, providerDisplayName));
 
     /// <summary>
@@ -214,7 +218,7 @@ public partial class HuiaUserManager<TUser> : UserManager<TUser>
     private static string SanitizeUserName(string value)
     {
         var cleaned = InvalidUserNameChars().Replace(value, string.Empty);
-        return string.IsNullOrWhiteSpace(cleaned) ? "user-" + Guid.NewGuid().ToString("N")[..8] : cleaned;
+        return string.IsNullOrWhiteSpace(cleaned) ? "user-" + Guid.CreateVersion7().ToString("N")[..8] : cleaned;
     }
 
     [GeneratedRegex("[^a-z0-9]+")]

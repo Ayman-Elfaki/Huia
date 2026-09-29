@@ -23,7 +23,7 @@ public enum HuiaSigningKeyStatus
 public class HuiaSigningKey
 {
     /// <summary>Surrogate key.</summary>
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Id { get; set; } = Guid.CreateVersion7().ToString("N");
 
     /// <summary>The tenant this key belongs to.</summary>
     public string TenantId { get; set; } = string.Empty;
@@ -56,5 +56,6 @@ public class HuiaSigningKey
     public DateTimeOffset? RetiredAt { get; set; }
 
     /// <summary>Whether the key is currently advertised in the tenant JWKS.</summary>
-    public bool IsPublished => Status is HuiaSigningKeyStatus.Pending or HuiaSigningKeyStatus.Active or HuiaSigningKeyStatus.Rotated;
+    public bool IsPublished =>
+        Status is HuiaSigningKeyStatus.Pending or HuiaSigningKeyStatus.Active or HuiaSigningKeyStatus.Rotated;
 }
