@@ -11,5 +11,9 @@
     "mermaid": "^11.4.0",
     "vitepress": "^1.5.0",
     "vitepress-plugin-mermaid": "^2.0.17"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.63.1",
+    "@esbuild/linux-x64": "0.21.5"
   }
 }
