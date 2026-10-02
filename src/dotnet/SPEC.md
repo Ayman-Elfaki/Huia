@@ -319,7 +319,7 @@ otherwise open-coded across the account UI and the endpoints:
 | `Task<HuiaUser?> FindByPhoneNumberAsync(string e164)` | `Users.FirstOrDefault(u => u.PhoneNumber == e164)` (looks up the **column**, not the username) — tenant-scoped by the query filter |
 | `Task<HuiaUserCreation> CreatePhoneUserAsync(tenantId, e164, first, last)` | the `new HuiaUser { UserName = e164, PhoneNumber = e164, PhoneNumberConfirmed = true, EmailConfirmed = true } + CreateAsync` in `CompleteProfile` / admin CRUD |
 | `Task<IdentityResult> AddExternalLoginAsync(user, provider, key, displayName)` | `AddLoginAsync(user, new UserLoginInfo(…))` |
-| `Task<HuiaUserCreation> CreateExternalUserAsync(tenantId, email?, first, last, provider, key, displayName)` | derive-username (email, or a `slug(displayName)-{key}`) + `CreateAsync` + `AddExternalLoginAsync` in `CompleteProfile.CompleteExternalSignupAsync` |
+| `Task<HuiaUserCreation> CreateExternalUserAsync(tenantId, email?, first, last, phoneNumber?, provider, key, displayName)` | derive-username (email, or a `slug(displayName)-{key}`) + `CreateAsync` + `AddExternalLoginAsync` in `CompleteProfile.CompleteExternalSignupAsync` |
 | `Task<(ExternalEmailLinkOutcome Outcome, HuiaUser? User)> TryLinkExternalByEmailAsync(email, providerVouches, accountLinkingEnabled, provider, key, displayName)` | the `FindByEmailAsync` + `AccountLinkingEnabled && EmailConfirmed && providerVouches` + `AddLoginAsync` block in `ExternalEndpoints.ExternalLoginCallbackAsync` — `NoMatch` (provision), `Linked` (sign in), `Blocked` (refuse, never duplicate) |
 
 `HuiaUserCreation` is `readonly record struct (IdentityResult Result, HuiaUser User)` with

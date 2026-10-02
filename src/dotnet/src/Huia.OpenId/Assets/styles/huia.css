@@ -2,8 +2,8 @@
 @import "basecoat-css";
 
 /* Tailwind v4 scans these for utility classes used in the account UI + emails. */
-@source "../Areas/**/*.cshtml";
-@source "../Emails/**/*.cshtml";
+@source "../../Areas/**/*.cshtml";
+@source "../../Emails/**/*.cshtml";
 
 /*
  * The account UI has no theme toggle: it follows the OS. Basecoat ships a `.dark` class variant;
@@ -408,6 +408,12 @@
     font-weight: 400;
   }
 
+  .huia-country-select > button > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
   .huia-country-select > button::after {
     content: "";
     flex: none;
@@ -426,6 +432,13 @@
   .huia-country-select [data-popover] {
     min-width: 15rem;
     max-height: 17rem;
+  }
+
+  .huia-country-select [data-popover] > header {
+    position: sticky;
+    top: 0;
+    background: var(--popover);
+    z-index: 10;
   }
 
   .huia-country-select .fi {

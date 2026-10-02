@@ -6,7 +6,7 @@
     <div class="alert alert-destructive" role="alert">@Model.ErrorMessage</div>
 }
 
-<form class="form" method="post" asp-route-returnUrl="@Model.ReturnUrl" data-testid="register-form">
+<form class="form huia-country" method="post" asp-route-returnUrl="@Model.ReturnUrl" data-validate data-testid="register-form">
     <div class="huia-name-row">
         <div class="field">
             <label class="label" asp-for="Input.FirstName">@Localizer["Register.FirstName"]</label>
@@ -22,6 +22,59 @@
         <input class="input" asp-for="Input.Email" type="email" autocomplete="email" />
     </div>
     <div class="field">
+        <label class="label" asp-for="Input.PhoneNumber">@Localizer["Common.PhoneNumber"]</label>
+        <div class="huia-phone-row" dir="ltr">
+            <div class="select huia-country-select" data-close-on-select="true">
+                @{
+                    var registerCountryCode = Model.Input?.Country ?? Model.PhoneDefaultCountry;
+                    var registerSelectedCountry = !string.IsNullOrEmpty(registerCountryCode)
+                        ? Model.Countries.FirstOrDefault(c => string.Equals(c.RegionCode, registerCountryCode, StringComparison.OrdinalIgnoreCase))
+                        : null;
+                }
+                <button type="button" class="btn-outline" aria-haspopup="listbox" aria-expanded="false"
+                        aria-label="@Localizer["PhoneLogin.Country"]" aria-controls="register-phone-country-listbox">
+                    <span>
+                        @if (registerSelectedCountry is not null)
+                        {
+                            <span class="fi fi-@registerSelectedCountry.RegionCode.ToLowerInvariant()" aria-hidden="true"></span>
+                            <span class="huia-country-name grow truncate">@registerSelectedCountry.DisplayName</span>
+                            <span class="huia-country-code">+@registerSelectedCountry.DialCode</span>
+                        }
+                        else
+                        {
+                            <span class="huia-country-code text-muted-foreground">@Localizer["PhoneLogin.Country"]</span>
+                        }
+                    </span>
+                </button>
+                <div data-popover aria-hidden="true" class="scrollbar">
+                    <header>
+                        <input type="text" role="combobox" autocomplete="off" spellcheck="false"
+                               placeholder="@Localizer["PhoneLogin.SearchCountry"]" aria-label="@Localizer["PhoneLogin.SearchCountry"]" />
+                    </header>
+                    <div role="listbox" id="register-phone-country-listbox" aria-label="@Localizer["PhoneLogin.Country"]"
+                         data-empty="@Localizer["PhoneLogin.NoCountry"]">
+                        <div role="option" data-value="" data-filter="@Localizer["PhoneLogin.CountryPlaceholder"]">
+                            <span class="huia-country-code text-muted-foreground">@Localizer["PhoneLogin.Country"]</span>
+                        </div>
+                        @foreach (var country in Model.Countries)
+                        {
+                            <div role="option" data-value="@country.RegionCode"
+                                 data-filter="@country.DisplayName @country.RegionCode +@country.DialCode">
+                                <span class="fi fi-@country.RegionCode.ToLowerInvariant()" aria-hidden="true"></span>
+                                <span class="huia-country-name grow truncate">@country.DisplayName</span>
+                                <span class="huia-country-code">+@country.DialCode</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <input type="hidden" name="Input.Country" value="@(registerCountryCode)" />
+            </div>
+            <input class="input" asp-for="Input.PhoneNumber" type="tel" autocomplete="tel" inputmode="tel"
+                   data-invalid-message="@Localizer["PhoneLogin.Invalid"]" />
+        </div>
+        <span class="huia-muted" asp-validation-for="Input.PhoneNumber" data-val-for="Input.PhoneNumber"></span>
+    </div>
+    <div class="field">
         <label class="label" asp-for="Input.Password">@Localizer["Common.Password"]</label>
         <input class="input" asp-for="Input.Password" type="password" autocomplete="new-password" />
     </div>
@@ -35,3 +88,9 @@
 <div class="huia-links">
     <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">@Localizer["Register.HaveAccount"]</a>
 </div>
+
+@section Scripts {
+    <script src="@(Model.PathBase)/_content/Huia.OpenId/js/libphonenumber.js" nonce="@CspNonce.Value" defer></script>
+    <script src="@(Model.PathBase)/_content/Huia.OpenId/js/phone-validate.js" nonce="@CspNonce.Value" defer></script>
+    <script src="@(Model.PathBase)/_content/Huia.OpenId/js/form-validate.js" nonce="@CspNonce.Value" defer></script>
+}

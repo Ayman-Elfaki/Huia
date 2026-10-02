@@ -37,7 +37,7 @@ export function useHuia() {
     hasAnyRole,
 
     /** Creates an account. Does not sign in — call `login()` afterward (once any required email confirmation is done). */
-    async register(opts: { email: string, password: string, firstName: string, lastName: string }): Promise<{ ok: boolean, error?: unknown }> {
+    async register(opts: { email: string, password: string, firstName: string, lastName: string, phoneNumber?: string, country?: string }): Promise<{ ok: boolean, error?: unknown }> {
       try {
         await useRequestFetch()(paths.registerPath, { method: 'POST', body: opts })
         return { ok: true }
@@ -128,7 +128,7 @@ export function useHuia() {
     },
 
     /** Completes a first-time external sign-up with a name, then signs in. */
-    async completeExternalProfile(opts: { code: string, firstName: string, lastName: string }): Promise<HuiaLoginResult> {
+    async completeExternalProfile(opts: { code: string, firstName: string, lastName: string, phoneNumber?: string, country?: string }): Promise<HuiaLoginResult> {
       try {
         const result = await useRequestFetch()(paths.externalCompleteProfilePath, { method: 'POST', body: opts }) as { user: UserClaims }
         await fetchSession()

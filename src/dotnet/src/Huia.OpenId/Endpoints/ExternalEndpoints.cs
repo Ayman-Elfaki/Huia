@@ -117,10 +117,10 @@ internal static class ExternalEndpoints
 
         var registrationId = $"{tenantId}:{registered.Name}";
         var email = FirstClaim(result.Principal, "email", ClaimTypes.Email);
-        var emailVerified = FirstClaim(result.Principal, "email_verified");
+        var emailVerified = FirstClaim(result.Principal, "email_verified", "verified_email");
         var givenName = FirstClaim(result.Principal, "given_name", ClaimTypes.GivenName);
         var familyName = FirstClaim(result.Principal, "family_name", ClaimTypes.Surname);
-        var displayName = FirstClaim(result.Principal, "name") ?? $"{givenName} {familyName}".Trim();
+        var displayName = FirstClaim(result.Principal, "name", ClaimTypes.Name) ?? $"{givenName} {familyName}".Trim();
         var storedReturn = result.Properties?.Items is { } items && items.TryGetValue("huia:return", out var r) ? r : null;
         var idToken = result.Properties?.GetTokenValue("id_token");
 

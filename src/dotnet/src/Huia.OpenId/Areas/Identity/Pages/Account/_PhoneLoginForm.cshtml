@@ -7,9 +7,26 @@
         <label class="label" for="phone-number">@Localizer["PhoneLogin.Number"]</label>
         <div class="huia-phone-row" dir="ltr">
             <div class="select huia-country-select" data-close-on-select="true">
+                @{
+                    var phoneCountryCode = Model.Input?.Country ?? Model.PhoneDefaultCountry;
+                    var phoneSelectedCountry = !string.IsNullOrEmpty(phoneCountryCode)
+                        ? Model.Countries.FirstOrDefault(c => string.Equals(c.RegionCode, phoneCountryCode, StringComparison.OrdinalIgnoreCase))
+                        : null;
+                }
                 <button type="button" class="btn-outline" aria-haspopup="listbox" aria-expanded="false"
                         aria-label="@Localizer["PhoneLogin.Country"]" aria-controls="phone-country-listbox">
-                    <span class="huia-country-code text-muted-foreground">@Localizer["PhoneLogin.Country"]</span>
+                    <span>
+                        @if (phoneSelectedCountry is not null)
+                        {
+                            <span class="fi fi-@phoneSelectedCountry.RegionCode.ToLowerInvariant()" aria-hidden="true"></span>
+                            <span class="huia-country-name grow truncate">@phoneSelectedCountry.DisplayName</span>
+                            <span class="huia-country-code">+@phoneSelectedCountry.DialCode</span>
+                        }
+                        else
+                        {
+                            <span class="huia-country-code text-muted-foreground">@Localizer["PhoneLogin.Country"]</span>
+                        }
+                    </span>
                 </button>
                 <div data-popover aria-hidden="true" class="scrollbar">
                     <header>
@@ -32,7 +49,7 @@
                         }
                     </div>
                 </div>
-                <input type="hidden" name="Input.Country" value="@Model.PhoneDefaultCountry" />
+                <input type="hidden" name="Input.Country" value="@(phoneCountryCode)" />
             </div>
             <input id="phone-number" name="Input.PhoneNumber" class="input" type="tel" autocomplete="tel" inputmode="tel"
                    data-invalid-message="@Localizer["PhoneLogin.Invalid"]" />

@@ -255,6 +255,29 @@ public class HuiaOptionsValidationTests
             .Errors.ShouldContain(e => e.Contains("DefaultCountry", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("SA", true)]
+    [InlineData("US", true)]
+    [InlineData("usa", false)]
+    [InlineData("12", false)]
+    [InlineData("S", false)]
+    [InlineData("SAU", false)]
+    public void Tenant_authentication_default_phone_country_validation(string country, bool valid)
+    {
+        var options = ValidOptions();
+        options.Tenants["acme"].Authentication.DefaultPhoneCountry = country;
+
+        if (valid)
+        {
+            Should.NotThrow(() => options.Validate());
+        }
+        else
+        {
+            Should.Throw<HuiaOptionsException>(() => options.Validate())
+                .Errors.ShouldContain(e => e.Contains("DefaultPhoneCountry", StringComparison.Ordinal));
+        }
+    }
+
     [Fact]
     public void External_provider_names_must_be_unique()
     {

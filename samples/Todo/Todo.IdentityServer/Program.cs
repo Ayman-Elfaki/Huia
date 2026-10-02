@@ -15,9 +15,9 @@ var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5310");
 var todoApiUrl = builder.Configuration.GetValue("Clients:TodoApi:BaseUrl", "http://localhost:5330");
 
-var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "http://todo-app.dev.localhost:3000");
-var todoNextUrl = builder.Configuration.GetValue("Clients:TodoNext:BaseUrl", "http://todo-next.dev.localhost:3050");
-var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "http://admin-app.dev.localhost:3001");
+var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "https://localhost:3000");
+var todoNextUrl = builder.Configuration.GetValue("Clients:TodoNext:BaseUrl", "https://localhost:3050");
+var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "https://localhost:3001");
 
 
 // The huia-nuxt module's own E2E playground (EnableE2E only).
@@ -26,7 +26,7 @@ var playgroundUrl = builder.Configuration.GetValue("Clients:PlaygroundApp:BaseUr
 var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320");
 
 // A single shared in-memory SQLite connection kept open for the process lifetime.
-SqliteConnection? sqliteConnection = null;
+SqliteConnection? sqliteConnection;
 if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 {
     var connectionString = builder.Configuration.GetConnectionString("huia") ?? "DataSource=:memory:";
@@ -114,7 +114,7 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
         tenant.Branding.DisplayName = "Todo";
         tenant.Branding.LogoUrl = "/brand/huia-logo.svg";
         tenant.Branding.FaviconUrl = "/brand/favicon.svg";
-        tenant.Branding.AccentColor = "#5e0e00";
+        tenant.Branding.AccentColor = "#059669";
         tenant.Branding.TermsUrl = new Uri($"{issuer}/legal/terms.html");
         tenant.Branding.PrivacyUrl = new Uri($"{issuer}/legal/privacy.html");
         tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
@@ -146,6 +146,7 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
         // factor after the password.
         tenant.Authentication.UsePasskeyLogin();
 
+        tenant.Authentication.DefaultPhoneCountry = "SA";
         tenant.Authentication.UsePhoneLogin(phone =>
         {
             phone.DefaultCountry = "SA";
@@ -163,6 +164,19 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
 
         tenant.Authentication.UseExternalLogin(ext =>
         {
+            var googleClientId = builder.Configuration["Google:ClientId"];
+            var googleClientSecret = builder.Configuration["Google:ClientSecret"];
+
+            if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+            {
+                ext.AddGoogle(googleClientId, googleClientSecret, g =>
+                {
+                    g.Scopes.Add("email");
+                    g.Scopes.Add("openid");
+                    g.Scopes.Add("profile");
+                });
+            }
+
             ext.AddOpenIdConnect(
                 "huia", "huia-idp", "huia-idp-secret", $"{externalIssuer}/partners", p =>
                 {

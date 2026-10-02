@@ -47,7 +47,7 @@ public sealed class LoginModel(
     public IReadOnlyList<CountryDialInfo> Countries => countryCatalog.GetCountries();
 
     /// <summary>The tenant's configured default region, used to preselect the phone-tab country picker.</summary>
-    public string? PhoneDefaultCountry => Tenant?.Authentication.Phone?.DefaultCountry;
+    public string? PhoneDefaultCountry => Tenant?.Authentication.Phone?.DefaultCountry ?? Tenant?.Authentication.DefaultPhoneCountry;
 
     /// <summary>The sanitized return URL carried through the form.</summary>
     public string ReturnUrl { get; private set; } = "/";
@@ -134,7 +134,7 @@ public sealed class LoginModel(
             return Page();
         }
 
-        var defaultCountry = Input.Country ?? Tenant?.Authentication.Phone?.DefaultCountry;
+        var defaultCountry = !string.IsNullOrWhiteSpace(Input.Country) ? Input.Country : PhoneDefaultCountry;
 
         if (!phoneNumbers.TryNormalize(Input.PhoneNumber, defaultCountry, out var e164))
         {

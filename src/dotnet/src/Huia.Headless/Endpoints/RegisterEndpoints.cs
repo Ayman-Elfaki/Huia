@@ -3,6 +3,7 @@ using Huia.Entities;
 using Huia.Events;
 using Huia.Headless.Identity;
 using Huia.Multitenancy;
+using Huia.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -30,6 +31,7 @@ internal static class RegisterEndpoints
 
     private static async Task<IResult> RegisterAsync(
         HuiaUserManager userManager,
+        IPhoneNumberService phoneNumbers,
         IHuiaTenantContext tenantContext,
         IHuiaEventPublisher events,
         TimeProvider timeProvider,
@@ -51,6 +53,12 @@ internal static class RegisterEndpoints
             errors["lastName"] = ["Last name is required."];
         }
 
+        string? e164 = null;
+        if (string.IsNullOrWhiteSpace(body.PhoneNumber) || !phoneNumbers.TryNormalize(body.PhoneNumber, body.Country, out e164))
+        {
+            errors["phoneNumber"] = ["A valid phone number is required."];
+        }
+
         if (errors.Count > 0)
         {
             return Results.ValidationProblem(errors);
@@ -62,6 +70,8 @@ internal static class RegisterEndpoints
             Email = body.Email,
             FirstName = body.FirstName,
             LastName = body.LastName,
+            PhoneNumber = e164,
+            PhoneNumberConfirmed = false,
         };
 
         var result = await userManager.CreateAsync(user, body.Password);
@@ -89,5 +99,7 @@ internal static class RegisterEndpoints
     /// <param name="Password">The account password.</param>
     /// <param name="FirstName">The account holder's first name.</param>
     /// <param name="LastName">The account holder's last name.</param>
-    public sealed record RegisterRequest(string Email, string Password, string FirstName, string LastName);
+    /// <param name="PhoneNumber">The account holder's phone number (national or E.164 format). Required.</param>
+    /// <param name="Country">ISO 3166-1 alpha-2 region code for interpreting a national-format number.</param>
+    public sealed record RegisterRequest(string Email, string Password, string FirstName, string LastName, string? PhoneNumber = null, string? Country = null);
 }

@@ -17,6 +17,7 @@ function AuthCallbackContent() {
   const [flowCode, setFlowCode] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -65,6 +66,7 @@ function AuthCallbackContent() {
         code: flowCode,
         firstName,
         lastName,
+        phoneNumber: phone,
       })
       if (!result.ok) {
         setError('Could not finish creating the account.')
@@ -125,6 +127,18 @@ function AuthCallbackContent() {
                   placeholder="Last name"
                   value={lastName}
                   onChange={e => setLastName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 focus:border-emerald-500 focus:outline-none text-sm text-gray-100 placeholder-gray-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-300 mb-1.5">Phone number</label>
+                <input
+                  type="tel"
+                  placeholder="Phone number"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  required
                   className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 focus:border-emerald-500 focus:outline-none text-sm text-gray-100 placeholder-gray-500 transition"
                 />
               </div>

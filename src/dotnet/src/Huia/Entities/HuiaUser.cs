@@ -23,7 +23,7 @@ public class HuiaUser : IdentityUser<string>
     /// <summary>When the account was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    /// <summary>Whether both <see cref="FirstName"/> and <see cref="LastName"/> have been supplied.</summary>
+    /// <summary>Whether <see cref="FirstName"/>, <see cref="LastName"/>, and a phone number have all been supplied.</summary>
     public bool HasCompleteProfile =>
-        !string.IsNullOrWhiteSpace(FirstName) && !string.IsNullOrWhiteSpace(LastName);
+        !string.IsNullOrWhiteSpace(FirstName) && !string.IsNullOrWhiteSpace(LastName) && !string.IsNullOrWhiteSpace(PhoneNumber);
 }

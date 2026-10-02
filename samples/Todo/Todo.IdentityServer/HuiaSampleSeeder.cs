@@ -8,7 +8,9 @@ namespace Todo.IdentityServer;
 
 /// <summary>Seeds the demo accounts once the schema and clients are in place.</summary>
 internal sealed class HuiaSampleSeeder(
-    IServiceProvider services, IConfiguration configuration, ILogger<HuiaSampleSeeder> logger) : IHostedService
+    IServiceProvider services,
+    IConfiguration configuration,
+    ILogger<HuiaSampleSeeder> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -16,17 +18,17 @@ internal sealed class HuiaSampleSeeder(
 
         await SeedAdminAsync();
         // The todo tenant sets a 12-char minimum + a required symbol (per-tenant IdentityOptions).
-        await SeedUserAsync("todo", "alice@todo.test", "Password1!2345", "Alice", "Anderson");
+        await SeedUserAsync("todo", "alice@todo.test", "Password1!2345", "Alice", "Anderson", "+15005550005");
         // Demonstrates a user with several roles — the roles claim carries an array, not a scalar.
         await AssignRolesAsync("todo", "alice@todo.test", "editor", "beta-tester");
         // Shares an email with a partner IdP user, so an external sign-in links to this account
         // (the todo tenant enables LinkExistingAccountsByEmail).
-        await SeedUserAsync("todo", "link@partners.test", "Password1!2345", "Linus", "Existing");
+        await SeedUserAsync("todo", "link@partners.test", "Password1!2345", "Linus", "Existing", "+15005550006");
 
         if (enableE2E)
         {
-            await SeedUserAsync("e2e", "e2e-user@huia.local", "Password1!", "Eve", "Everett");
-            await SeedUserAsync("e2e", "e2e-phone@huia.local", password: null, "Phoebe", "Nguyen", "+15005550006");
+            await SeedUserAsync("e2e", "e2e-user@huia.local", "Password1!", "Eve", "Everett", "+15005550007");
+            await SeedUserAsync("e2e", "e2e-phone@huia.local", password: null, "Phoebe", "Nguyen", "+15005550008");
         }
     }
 
@@ -63,6 +65,8 @@ internal sealed class HuiaSampleSeeder(
                 EmailConfirmed = true,
                 FirstName = "Ada",
                 LastName = "Admin",
+                PhoneNumber = "+15005550007",
+                PhoneNumberConfirmed = true,
             };
             await userManager.CreateAsync(admin, "Admin1!Pass");
             await userManager.AddToRoleAsync(admin, HuiaConstants.Roles.Administrator);
@@ -74,7 +78,8 @@ internal sealed class HuiaSampleSeeder(
         InTenantAsync(tenantId, async sp =>
         {
             var userManager = sp.GetRequiredService<UserManager<HuiaUser>>();
-            if (await userManager.FindByNameAsync(phone ?? email) is not null)
+            var userName = !string.IsNullOrWhiteSpace(email) ? email : phone!;
+            if (await userManager.FindByNameAsync(userName) is not null)
             {
                 return;
             }
@@ -82,7 +87,7 @@ internal sealed class HuiaSampleSeeder(
             var user = new HuiaUser
             {
                 TenantId = tenantId,
-                UserName = phone ?? email,
+                UserName = userName,
                 Email = email,
                 EmailConfirmed = true,
                 FirstName = firstName,
@@ -138,11 +143,13 @@ internal sealed class HuiaSampleSeeder(
 /// </summary>
 internal sealed partial class CapturingSmsSender(ILogger<CapturingSmsSender> logger) : Huia.Services.ISmsSender
 {
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _codes = new(StringComparer.Ordinal);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _codes =
+        new(StringComparer.Ordinal);
 
     public bool IsConfigured => true;
 
-    public Task<bool> SendOtpAsync(string tenantId, string phoneNumber, string code, CancellationToken cancellationToken = default)
+    public Task<bool> SendOtpAsync(string tenantId, string phoneNumber, string code,
+        CancellationToken cancellationToken = default)
     {
         _codes[phoneNumber] = code;
         LogCode(tenantId, phoneNumber, code);
@@ -158,9 +165,11 @@ internal sealed partial class CapturingSmsSender(ILogger<CapturingSmsSender> log
 /// <summary>Records the last action URL per email address so the <c>/e2e-mail</c> endpoint can hand it back.</summary>
 internal sealed class CapturingEmailSender : IHuiaEmailSender
 {
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _urls = new(StringComparer.OrdinalIgnoreCase);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _urls =
+        new(StringComparer.OrdinalIgnoreCase);
 
-    public Task SendEmailConfirmationAsync(HuiaUser user, string confirmationUrl, CancellationToken cancellationToken = default) =>
+    public Task SendEmailConfirmationAsync(HuiaUser user, string confirmationUrl,
+        CancellationToken cancellationToken = default) =>
         Capture(user.Email, confirmationUrl);
 
     public Task SendPasswordResetAsync(HuiaUser user, string resetUrl, CancellationToken cancellationToken = default) =>

@@ -75,8 +75,8 @@ public sealed class HuiaUserManagerTests : IAsyncLifetime
     public async Task Create_external_user_creates_and_links_in_one_step()
     {
         var (withEmail, slugged) = await _host.WithUserManagerAsync("consumer", async um => (
-            WithEmail: await um.CreateExternalUserAsync("consumer", "grace@ext.test", "Grace", "Hopper", "HuiaExternal", "gh-1", "Partner"),
-            Slugged: await um.CreateExternalUserAsync("consumer", null, "No", "Email", "HuiaExternal", "ne-1", "Partner")));
+            WithEmail: await um.CreateExternalUserAsync("consumer", "grace@ext.test", "Grace", "Hopper", "+15005550001", "HuiaExternal", "gh-1", "Partner"),
+            Slugged: await um.CreateExternalUserAsync("consumer", null, "No", "Email", "+15005550002", "HuiaExternal", "ne-1", "Partner")));
 
         withEmail.Succeeded.ShouldBeTrue();
         withEmail.User.UserName.ShouldBe("grace@ext.test");

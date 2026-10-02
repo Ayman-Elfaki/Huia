@@ -15,14 +15,14 @@ export interface HuiaHeadlessContextValue {
   hasRole: (role: string) => boolean
   hasAnyRole: (...roles: string[]) => boolean
 
-  register: (opts: { email: string; password: string; firstName?: string; lastName?: string }) => Promise<{ ok: boolean; error?: unknown }>
+  register: (opts: { email: string; password: string; firstName?: string; lastName?: string; phoneNumber: string; country?: string }) => Promise<{ ok: boolean; error?: unknown }>
   login: (opts: { email: string; password: string; twoFactorCode?: string; twoFactorRecoveryCode?: string }) => Promise<HuiaLoginResult>
   startPhoneLogin: (opts: { phoneNumber: string; country?: string; captchaResponse?: string }) => Promise<{ ok: boolean; flowId?: string; expiresInSeconds?: number; error?: unknown }>
   verifyPhoneLogin: (opts: { flowId: string; code: string }) => Promise<HuiaFlowResult>
   completePhoneProfile: (opts: { flowId: string; firstName: string; lastName: string }) => Promise<HuiaLoginResult>
   externalLoginHref: (provider: string, returnTo?: string) => string
   exchangeExternalCode: (code: string) => Promise<HuiaFlowResult>
-  completeExternalProfile: (opts: { code: string; firstName: string; lastName: string }) => Promise<HuiaLoginResult>
+  completeExternalProfile: (opts: { code: string; firstName: string; lastName: string; phoneNumber: string; country?: string }) => Promise<HuiaLoginResult>
 }
 
 export const HuiaHeadlessContext = createContext<HuiaHeadlessContextValue | null>(null)
@@ -81,7 +81,7 @@ export function HuiaHeadlessProvider({
   }, [])
 
   const register = useCallback(
-    async (opts: { email: string; password: string; firstName?: string; lastName?: string }) => {
+    async (opts: { email: string; password: string; firstName?: string; lastName?: string; phoneNumber: string; country?: string }) => {
       try {
         const res = await fetch(`${baseAuthPath}/register`, {
           method: 'POST',
@@ -235,7 +235,7 @@ export function HuiaHeadlessProvider({
   )
 
   const completeExternalProfile = useCallback(
-    async (opts: { code: string; firstName: string; lastName: string }): Promise<HuiaLoginResult> => {
+    async (opts: { code: string; firstName: string; lastName: string; phoneNumber: string; country?: string }): Promise<HuiaLoginResult> => {
       try {
         const res = await fetch(`${baseAuthPath}/external-complete-profile`, {
           method: 'POST',

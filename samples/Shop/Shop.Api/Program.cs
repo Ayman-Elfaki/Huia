@@ -10,8 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 var issuer = builder.Configuration.GetValue("Huia:Issuer", "https://localhost:5340")!;
 var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
-var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "http://shop-app.dev.localhost:3040")!;
-var shopNextAppUrl = builder.Configuration.GetValue("Shop:NextAppUrl", "http://shop-next.dev.localhost:3060")!;
+var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "https://localhost:3002")!;
+var shopNextAppUrl = builder.Configuration.GetValue("Shop:NextAppUrl", "https://localhost:3060")!;
 var databaseProvider = builder.Configuration.GetValue("Huia:Database", (string?)null);
 
 var rawConnectionString = builder.Configuration.GetConnectionString("shop") ??

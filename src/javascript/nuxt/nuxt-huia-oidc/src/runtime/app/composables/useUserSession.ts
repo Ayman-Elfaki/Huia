@@ -18,9 +18,9 @@ export function useUserSession() {
     },
 
     /** Full logout via the server route (clears storage + cookies, hits the OP end_session). */
-    async clear(): Promise<void> {
+    async clear(opts: { returnTo?: string } = {}): Promise<void> {
       await navigateTo(
-        { path: paths.logoutPath, query: { returnTo: useRoute().fullPath } },
+        { path: paths.logoutPath, query: { returnTo: opts.returnTo ?? '/' } },
         { external: true },
       )
     },

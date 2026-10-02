@@ -17,6 +17,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using HuiaDbContext = Huia.OpenId.EntityFrameworkCore.HuiaDbContext<Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser, Huia.OpenId.EntityFrameworkCore.Entities.HuiaRole, string>;
@@ -125,9 +126,13 @@ public sealed class HuiaTestHost : IAsyncDisposable
                         huia.AddTenant("phone", tenant =>
                             tenant.Authentication.UsePhoneLogin());
                         huia.AddTenant("phone-auto", tenant =>
-                            tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true));
+                        {
+                            tenant.Authentication.DefaultPhoneCountry = "US";
+                            tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
+                        });
                         huia.AddTenant("signup", tenant =>
                         {
+                            tenant.Authentication.DefaultPhoneCountry = "US";
                             tenant.Authentication.UseEmailAndPasswordLogin(password =>
                             {
                                 password.RequireConfirmedEmail = true;

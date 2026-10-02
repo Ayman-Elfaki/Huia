@@ -65,7 +65,7 @@ function LoginContent() {
     setSubmitting(true)
 
     try {
-      const res = await register({ email, password, firstName, lastName })
+      const res = await register({ email, password, firstName, lastName, phoneNumber: phone })
       if (res.ok) {
         setSuccess('Account created — sign in below.')
         setMode('login')
@@ -302,6 +302,18 @@ function LoginContent() {
                 placeholder="Password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 focus:border-emerald-500 focus:outline-none text-sm text-gray-100 placeholder-gray-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-300 mb-1.5">Phone number</label>
+              <input
+                type="tel"
+                placeholder="Phone number"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
                 required
                 className="w-full px-4 py-2.5 rounded-xl bg-gray-950 border border-gray-800 focus:border-emerald-500 focus:outline-none text-sm text-gray-100 placeholder-gray-500 transition"
               />

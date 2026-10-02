@@ -150,7 +150,7 @@ public partial class HuiaUserManager<TUser> : UserManager<TUser>
     /// no email. The external provider is treated as the confirmed factor.
     /// </summary>
     public async Task<HuiaUserCreation<TUser>> CreateExternalUserAsync(
-        string tenantId, string? email, string firstName, string lastName,
+        string tenantId, string? email, string firstName, string lastName, string? phoneNumber,
         string loginProvider, string providerKey, string providerDisplayName)
     {
         var userName = !string.IsNullOrWhiteSpace(email)
@@ -164,6 +164,8 @@ public partial class HuiaUserManager<TUser> : UserManager<TUser>
             EmailConfirmed = true,
             FirstName = firstName,
             LastName = lastName,
+            PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
+            PhoneNumberConfirmed = false,
         };
         OnUserCreating(user, tenantId);
 

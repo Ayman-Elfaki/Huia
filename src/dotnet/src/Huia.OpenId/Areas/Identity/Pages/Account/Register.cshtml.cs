@@ -8,6 +8,8 @@ using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Services;
+using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -22,12 +24,20 @@ public sealed class RegisterModel(
     IMultiTenantContextAccessor tenantAccessor,
     IHuiaEventPublisher events,
     IHuiaEmailSender emailSender,
+    ICountryCatalog countryCatalog,
+    IPhoneNumberService phoneNumbers,
     IStringLocalizer<SharedResource> localizer,
     TimeProvider timeProvider) : HuiaAccountPageModel
 {
     /// <summary>The bound registration fields.</summary>
     [BindProperty]
     public InputModel Input { get; set; } = new();
+
+    /// <summary>The countries for the phone country picker.</summary>
+    public IReadOnlyList<CountryDialInfo> Countries => countryCatalog.GetCountries();
+
+    /// <summary>The tenant's configured default region, used to preselect the phone country picker.</summary>
+    public string? PhoneDefaultCountry => Tenant?.Authentication.DefaultPhoneCountry ?? Tenant?.Authentication.Phone?.DefaultCountry;
 
     /// <summary>The sanitized return URL carried through the form.</summary>
     public string ReturnUrl { get; private set; } = "/";
@@ -42,6 +52,10 @@ public sealed class RegisterModel(
     {
         SetHeadings();
         ReturnUrl = returnUrlProtector.SanitizeReturnUrl(returnUrl, HttpContext);
+        Input = new InputModel
+        {
+            Country = PhoneDefaultCountry,
+        };
         return RegistrationEnabled ? Page() : NotFound();
     }
 
@@ -65,6 +79,15 @@ public sealed class RegisterModel(
 
         var tenantId = tenantAccessor.RequireCurrentTenantId();
         var password = flowIdentity.Create(HuiaAuthFlow.EmailAndPasswordLogin);
+
+        string? e164 = null;
+        var defaultCountry = !string.IsNullOrWhiteSpace(Input.Country) ? Input.Country : PhoneDefaultCountry;
+        if (string.IsNullOrWhiteSpace(Input.PhoneNumber) || !phoneNumbers.TryNormalize(Input.PhoneNumber, defaultCountry, out e164))
+        {
+            ModelState.AddModelError($"{nameof(Input)}.{nameof(Input.PhoneNumber)}", localizer["Common.PhoneNumber.Invalid"].Value);
+            return Page();
+        }
+
         var user = new HuiaUser
         {
             TenantId = tenantId,
@@ -72,6 +95,8 @@ public sealed class RegisterModel(
             Email = Input.Email,
             FirstName = Input.FirstName,
             LastName = Input.LastName,
+            PhoneNumber = e164,
+            PhoneNumberConfirmed = false,
         };
 
         var result = await password.UserManager.CreateAsync(user, Input.Password);
@@ -130,5 +155,11 @@ public sealed class RegisterModel(
         [DataType(DataType.Password)]
         [Compare(nameof(Password))]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        /// <summary>Phone number (national or E.164).</summary>
+        public string? PhoneNumber { get; set; }
+
+        /// <summary>ISO 3166-1 alpha-2 region code for national-format number interpretation.</summary>
+        public string? Country { get; set; }
     }
 }

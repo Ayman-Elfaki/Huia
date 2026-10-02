@@ -98,11 +98,11 @@ public sealed class AppHostFixture : IAsyncLifetime
             Issuer = "https://localhost:5310";
             ExternalIssuer = "https://localhost:5320";
             ShopApiUrl = "https://localhost:5341";
-            AdminAppUrl = "http://admin-app.dev.localhost:3001";
-            TodoAppUrl = "http://todo-app.dev.localhost:3000";
-            ShopAppUrl = "http://shop-app.dev.localhost:3002";
-            TodoNextUrl = "http://todo-next.dev.localhost:3050";
-            ShopNextUrl = "http://shop-next.dev.localhost:3060";
+            AdminAppUrl = "https://localhost:3001";
+            TodoAppUrl = "https://localhost:3000";
+            ShopAppUrl = "https://localhost:3002";
+            TodoNextUrl = "https://localhost:3050";
+            ShopNextUrl = "https://localhost:3060";
             Mailpit = new MailpitClient(_app.GetEndpoint("mailpit", "http").ToString().TrimEnd('/'));
             await Mailpit.WaitUntilReadyAsync();
             await WaitForAdminConsoleAsync();
@@ -127,13 +127,14 @@ public sealed class AppHostFixture : IAsyncLifetime
     /// <summary>Polls the Nuxt dev server until it renders the landing page (first compile is slow).</summary>
     private async Task WaitForAdminConsoleAsync()
     {
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        using var http = CreateClient(AdminAppUrl);
+        http.Timeout = TimeSpan.FromSeconds(15);
         var deadline = DateTime.UtcNow.AddMinutes(3);
         while (DateTime.UtcNow < deadline)
         {
             try
             {
-                using var response = await http.GetAsync($"{Loopback(AdminAppUrl)}/");
+                using var response = await http.GetAsync("");
                 var body = await response.Content.ReadAsStringAsync();
                 if (response.IsSuccessStatusCode && body.Contains("landing-sign-in", StringComparison.Ordinal))
                 {

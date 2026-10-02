@@ -44,6 +44,22 @@ export default defineNuxtConfig({
     ? { storage: { 'huia-auth': { driver: 'redis', url: process.env.NUXT_REDIS_URL } } }
     : {},
 
+  // HTTPS for the dev server when the AppHost supplies the ASP.NET dev certificate.
+  devServer: {
+    https: process.env.TLS_CONFIG_CERT && process.env.TLS_CONFIG_KEY
+      ? {
+        cert: process.env.TLS_CONFIG_CERT,
+        key: process.env.TLS_CONFIG_KEY,
+        passphrase: process.env.TLS_CONFIG_PASSWORD
+      }
+      : process.env.TLS_CONFIG_PFX
+        ? {
+          pfx: process.env.TLS_CONFIG_PFX,
+          passphrase: process.env.TLS_CONFIG_PASSWORD
+        }
+        : undefined
+  },
+
   // Server-side proxy to the master-tenant APIs; the bearer token is added by
   // server/plugins/api-party-auth.ts and never reaches the browser.
   apiParty: {

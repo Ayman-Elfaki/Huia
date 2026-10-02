@@ -97,6 +97,12 @@
   <data name="Common.Support" xml:space="preserve">
     <value>الدعم</value>
   </data>
+  <data name="Common.PhoneNumber" xml:space="preserve">
+    <value>رقم الهاتف</value>
+  </data>
+  <data name="Common.PhoneNumber.Invalid" xml:space="preserve">
+    <value>يرجى إدخال رقم هاتف صحيح.</value>
+  </data>
   <data name="Diagnostics.Greeting" xml:space="preserve">
     <value>مرحبا</value>
   </data>

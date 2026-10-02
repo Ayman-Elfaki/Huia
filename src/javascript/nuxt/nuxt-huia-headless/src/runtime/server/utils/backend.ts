@@ -65,7 +65,7 @@ function tryParseJson(text: string): unknown {
 
 export function registerAsync(
   cfg: ResolvedAuthConfig,
-  body: { email: string, password: string, firstName: string, lastName: string },
+  body: { email: string, password: string, firstName: string, lastName: string, phoneNumber?: string, country?: string },
 ): Promise<void> {
   return call(cfg, '/identity/register', { method: 'POST', body: JSON.stringify(body) })
 }
@@ -126,7 +126,7 @@ export function externalExchangeAsync(cfg: ResolvedAuthConfig, code: string): Pr
 
 export function externalCompleteProfileAsync(
   cfg: ResolvedAuthConfig,
-  body: { code: string, firstName: string, lastName: string },
+  body: { code: string, firstName: string, lastName: string, phoneNumber?: string, country?: string },
 ): Promise<BackendTokenResponse> {
   return call<BackendTokenResponse>(cfg, '/identity/account/external/complete-profile', { method: 'POST', body: JSON.stringify(body) })
 }

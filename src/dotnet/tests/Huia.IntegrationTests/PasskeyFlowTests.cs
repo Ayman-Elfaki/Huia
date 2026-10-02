@@ -287,6 +287,7 @@ public sealed partial class PasskeyFlowTests : IAsyncLifetime
         {
             ["Input.FirstName"] = "New",
             ["Input.LastName"] = "User",
+            ["Input.PhoneNumber"] = "+15005550199",
             ["Input.Email"] = email,
             ["Input.Password"] = password,
             ["Input.ConfirmPassword"] = password,

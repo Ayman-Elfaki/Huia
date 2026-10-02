@@ -69,7 +69,7 @@ export class HuiaHeadlessClient {
     return JSON.parse(text) as T
   }
 
-  register(body: { email: string, password: string, firstName?: string, lastName?: string }): Promise<void> {
+  register(body: { email: string, password: string, firstName?: string, lastName?: string, phoneNumber?: string, country?: string }): Promise<void> {
     return this.call('/identity/register', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -156,7 +156,7 @@ export class HuiaHeadlessClient {
     })
   }
 
-  externalCompleteProfile(body: { code: string, firstName: string, lastName: string }): Promise<BackendTokenResponse> {
+  externalCompleteProfile(body: { code: string, firstName: string, lastName: string, phoneNumber?: string, country?: string }): Promise<BackendTokenResponse> {
     return this.call<BackendTokenResponse>('/identity/account/external/complete-profile', {
       method: 'POST',
       body: JSON.stringify(body),

@@ -78,4 +78,46 @@ public sealed class ConnectUserInfoAndLogoutTests : IAsyncLifetime
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.Redirect, HttpStatusCode.Found);
         response.Headers.Location!.ToString().ShouldBe("https://app.example.test/");
     }
+
+    [Fact]
+    public async Task Logout_with_client_id_and_post_logout_redirect_uri_redirects_to_uri()
+    {
+        await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
+            huia.AddTenant("logout-app", tenant =>
+            {
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+                tenant.AddServerSideWebApplication("logout-web", "logout-web-secret", client =>
+                {
+                    client.RedirectUris.Add(new Uri("https://app.example.test/callback"));
+                    client.PostLogoutRedirectUris.Add(new Uri("https://app.example.test/custom-logout"));
+                });
+            }));
+
+        var response = await host.CreateClient().GetAsync(
+            "/logout-app/connect/logout?client_id=logout-web&post_logout_redirect_uri=https%3A%2F%2Fapp.example.test%2Fcustom-logout");
+
+        response.StatusCode.ShouldBeOneOf(HttpStatusCode.Redirect, HttpStatusCode.Found);
+        response.Headers.Location!.ToString().ShouldBe("https://app.example.test/custom-logout");
+    }
+
+    [Fact]
+    public async Task Logout_with_post_logout_redirect_uri_matching_tenant_client_without_client_id_redirects_to_uri()
+    {
+        await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
+            huia.AddTenant("logout-app", tenant =>
+            {
+                tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+                tenant.AddServerSideWebApplication("logout-web", "logout-web-secret", client =>
+                {
+                    client.RedirectUris.Add(new Uri("https://app.example.test/callback"));
+                    client.PostLogoutRedirectUris.Add(new Uri("https://app.example.test/"));
+                });
+            }));
+
+        var response = await host.CreateClient().GetAsync(
+            "/logout-app/connect/logout?post_logout_redirect_uri=https%3A%2F%2Fapp.example.test%2F");
+
+        response.StatusCode.ShouldBeOneOf(HttpStatusCode.Redirect, HttpStatusCode.Found);
+        response.Headers.Location!.ToString().ShouldBe("https://app.example.test/");
+    }
 }

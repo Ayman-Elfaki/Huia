@@ -6,6 +6,7 @@ using Huia.Headless.Services;
 using Huia.Identity;
 using Huia.Multitenancy;
 using Huia.Options;
+using Huia.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -168,7 +169,7 @@ internal static class ExternalEndpoints
 
     private static async Task<IResult> CompleteProfileAsync(
         HuiaUserManager userManager, HuiaSignInManager<HuiaUser> signInManager, IExternalLoginFlowStore flows,
-        IHuiaEventPublisher events, TimeProvider timeProvider, IHuiaTenantContext tenantContext,
+        IPhoneNumberService phoneNumbers, IHuiaEventPublisher events, TimeProvider timeProvider, IHuiaTenantContext tenantContext,
         CompleteExternalProfileRequest body)
     {
         var flow = flows.Get(body.Code);
@@ -179,6 +180,15 @@ internal static class ExternalEndpoints
 
         var tenantId = tenantContext.CurrentTenantId;
 
+        string? e164 = null;
+        if (string.IsNullOrWhiteSpace(body.PhoneNumber) || !phoneNumbers.TryNormalize(body.PhoneNumber, body.Country, out e164))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["phoneNumber"] = ["A valid phone number is required."],
+            });
+        }
+
         // Defensive: an account may have claimed this email since the callback decided to provision.
         if (!string.IsNullOrWhiteSpace(signup.Email) && await userManager.FindByEmailAsync(signup.Email) is not null)
         {
@@ -186,7 +196,7 @@ internal static class ExternalEndpoints
         }
 
         var (create, user) = await userManager.CreateExternalUserAsync(
-            tenantId, signup.Email, body.FirstName, body.LastName, signup.LoginProvider, signup.ProviderKey, signup.ProviderDisplayName);
+            tenantId, signup.Email, body.FirstName, body.LastName, e164, signup.LoginProvider, signup.ProviderKey, signup.ProviderDisplayName);
         if (!create.Succeeded)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
@@ -257,5 +267,7 @@ internal static class ExternalEndpoints
     /// <param name="Code">The code from an <c>exchange</c> response with <c>requiresProfile: true</c>.</param>
     /// <param name="FirstName">The account's first name.</param>
     /// <param name="LastName">The account's last name.</param>
-    public sealed record CompleteExternalProfileRequest(string Code, string FirstName, string LastName);
+    /// <param name="PhoneNumber">The account holder's phone number (national or E.164 format). Required.</param>
+    /// <param name="Country">ISO 3166-1 alpha-2 region code for interpreting a national-format number.</param>
+    public sealed record CompleteExternalProfileRequest(string Code, string FirstName, string LastName, string? PhoneNumber = null, string? Country = null);
 }

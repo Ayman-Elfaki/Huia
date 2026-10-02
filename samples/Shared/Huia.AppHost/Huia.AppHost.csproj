@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.5.4">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.0">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,7 +7,7 @@
     <AspireUseCliBundle>false</AspireUseCliBundle>
     <!-- ASPIRETERMINAL001: WithTerminal() is still marked [Experimental] in Aspire 13.5. -->
     <!-- ASPIREJAVASCRIPT001: AddNextJsApp is marked experimental in Aspire 13.5. -->
-    <NoWarn>$(NoWarn);ASPIRE010;ASPIRETERMINAL001;ASPIREJAVASCRIPT001</NoWarn>
+    <NoWarn>$(NoWarn);ASPIRE010;ASPIRETERMINAL001;ASPIREJAVASCRIPT001;ASPIRECERTIFICATES001</NoWarn>
     <MSBuildWarningsAsMessages>ASPIRE010</MSBuildWarningsAsMessages>
   </PropertyGroup>
 

@@ -70,6 +70,22 @@ export default defineNuxtConfig({
       todoApi: { url: todoApiUrl },
     },
   },
+  // HTTPS for the dev server when the AppHost supplies the ASP.NET dev certificate. PEM (cert + key) is preferred:
+  // Nuxt's certificate parser cannot read the PFX Aspire exports ("Cannot read properties of undefined (reading 'n')").
+  devServer: {
+    https: process.env.TLS_CONFIG_CERT && process.env.TLS_CONFIG_KEY
+      ? {
+        cert: process.env.TLS_CONFIG_CERT,
+        key: process.env.TLS_CONFIG_KEY,
+        passphrase: process.env.TLS_CONFIG_PASSWORD
+      }
+      : process.env.TLS_CONFIG_PFX
+        ? {
+          pfx: process.env.TLS_CONFIG_PFX,
+          passphrase: process.env.TLS_CONFIG_PASSWORD
+        }
+        : undefined
+  },
 
   huia: {
     baseUrl: huiaBaseUrl,

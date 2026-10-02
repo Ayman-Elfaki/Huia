@@ -135,6 +135,7 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
         // First time this partner identity signs into Shop.Api's own (separate) tenant, so it needs a
         // name before the account is created — same as Huia.OpenId's CompleteProfile step.
         await Expect(page.Locator("body")).ToContainTextAsync("what's your name", new() { Timeout = 25_000 });
+        await page.GetByPlaceholder("Phone number").FillAsync("+1 202 555 0123");
         await page.GetByRole(AriaRole.Button, new() { Name = "Finish" }).ClickAsync();
 
         await page.WaitForURLAsync(u => u.TrimEnd('/') == fx.ShopAppUrl.TrimEnd('/'), new() { Timeout = 15_000 });
@@ -188,6 +189,7 @@ public sealed class ShopE2ETests(ShopStackFixture fx)
         await page.GetByPlaceholder("Last name").FillAsync("Shopper");
         await page.GetByPlaceholder("Email").FillAsync(email);
         await page.GetByPlaceholder("Password").FillAsync(password);
+        await page.GetByPlaceholder("Phone number").FillAsync("+1 202 555 0123");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create account", Exact = true }).ClickAsync();
         await Expect(page.Locator("body")).ToContainTextAsync("Account created", new() { Timeout = 15_000 });
     }

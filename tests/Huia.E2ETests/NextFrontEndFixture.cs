@@ -18,10 +18,10 @@ public sealed class NextFrontEndFixture : IAsyncLifetime
     public string Issuer { get; } = "http://localhost:5325";
     public string ExternalIssuer { get; } = "http://localhost:5328";
     public string TodoApiUrl { get; } = "http://localhost:5335";
-    public string TodoNextUrl { get; } = "http://todo-next.dev.localhost:3050";
+    public string TodoNextUrl { get; } = "http://localhost:3050";
 
     public string ShopApiUrl { get; } = "http://localhost:5345";
-    public string ShopNextUrl { get; } = "http://shop-next.dev.localhost:3060";
+    public string ShopNextUrl { get; } = "http://localhost:3060";
 
     public bool Started { get; private set; }
     public string? SkipReason { get; private set; }

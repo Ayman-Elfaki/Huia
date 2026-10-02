@@ -12,6 +12,7 @@ const step = ref<'working' | 'profile' | 'error'>('working')
 const flowCode = ref('')
 const firstName = ref('')
 const lastName = ref('')
+const phoneNumber = ref('')
 const busy = ref(false)
 const error = ref<string | null>(null)
 
@@ -43,7 +44,7 @@ async function run() {
 async function onCompleteProfile() {
   busy.value = true
   error.value = null
-  const result = await completeExternalProfile({ code: flowCode.value, firstName: firstName.value, lastName: lastName.value })
+  const result = await completeExternalProfile({ code: flowCode.value, firstName: firstName.value, lastName: lastName.value, phoneNumber: phoneNumber.value })
   busy.value = false
   if (!result.ok) {
     error.value = 'Could not finish creating the account.'
@@ -75,6 +76,9 @@ await run()
           </UFormField>
           <UFormField label="Last name">
             <UInput v-model="lastName" type="text" placeholder="Last name" required class="w-full" />
+          </UFormField>
+          <UFormField label="Phone number">
+            <UInput v-model="phoneNumber" type="tel" placeholder="Phone number" autocomplete="tel" required class="w-full" />
           </UFormField>
           <UButton type="submit" block :loading="busy">
             Finish

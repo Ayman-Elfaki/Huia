@@ -7,6 +7,7 @@ using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Services;
 using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -25,12 +26,20 @@ public sealed class CompleteProfileModel(
     IMultiTenantContextAccessor tenantAccessor,
     IReturnUrlProtector returnUrlProtector,
     IHuiaEventPublisher events,
+    ICountryCatalog countryCatalog,
+    IPhoneNumberService phoneNumbers,
     IStringLocalizer<SharedResource> localizer,
     TimeProvider timeProvider) : HuiaAccountPageModel
 {
     /// <summary>The bound name fields.</summary>
     [BindProperty]
     public InputModel Input { get; set; } = new();
+
+    /// <summary>The countries for the phone country picker.</summary>
+    public IReadOnlyList<CountryDialInfo> Countries => countryCatalog.GetCountries();
+
+    /// <summary>The tenant's configured default region, used to preselect the phone country picker.</summary>
+    public string? PhoneDefaultCountry => Tenant?.Authentication.DefaultPhoneCountry ?? Tenant?.Authentication.Phone?.DefaultCountry;
 
     /// <summary>The opaque flow token round-tripped through the form.</summary>
     [BindProperty]
@@ -49,7 +58,12 @@ public sealed class CompleteProfileModel(
             return NotFound();
         }
 
-        Input = new InputModel { FirstName = state.FirstName ?? string.Empty, LastName = state.LastName ?? string.Empty };
+        Input = new InputModel
+        {
+            FirstName = state.FirstName ?? string.Empty,
+            LastName = state.LastName ?? string.Empty,
+            Country = PhoneDefaultCountry,
+        };
         return Page();
     }
 
@@ -69,6 +83,20 @@ public sealed class CompleteProfileModel(
             return Page();
         }
 
+        // Normalize phone number for all paths that don't already have one (phone login users
+        // always have their phone set — we only require it for external and existing-user paths).
+        string? e164 = null;
+        var isPhoneLoginPath = state.PendingSignupId is not null && state.ExternalProvider is null;
+        if (!isPhoneLoginPath)
+        {
+            var defaultCountry = !string.IsNullOrWhiteSpace(Input.Country) ? Input.Country : PhoneDefaultCountry;
+            if (string.IsNullOrWhiteSpace(Input.PhoneNumber) || !phoneNumbers.TryNormalize(Input.PhoneNumber, defaultCountry, out e164))
+            {
+                ModelState.AddModelError($"{nameof(Input)}.{nameof(Input.PhoneNumber)}", localizer["Common.PhoneNumber.Invalid"].Value);
+                return Page();
+            }
+        }
+
         var tenantId = tenantAccessor.RequireCurrentTenantId();
         var returnUrl = returnUrlProtector.SanitizeReturnUrl(state.ReturnUrl, HttpContext);
 
@@ -80,8 +108,8 @@ public sealed class CompleteProfileModel(
         var user = state switch
         {
             { PendingSignupId: { } pendingId } => await CompletePhoneSignupAsync(userManager, tenantId, pendingId, state),
-            { UserId: { } userId } => await CompleteExistingUserAsync(userManager, userId),
-            { ExternalProvider: { } } => await CompleteExternalSignupAsync(userManager, tenantId, state),
+            { UserId: { } userId } => await CompleteExistingUserAsync(userManager, userId, e164),
+            { ExternalProvider: { } } => await CompleteExternalSignupAsync(userManager, tenantId, state, e164!),
             _ => null,
         };
 
@@ -143,7 +171,7 @@ public sealed class CompleteProfileModel(
         return user;
     }
 
-    private async Task<HuiaUser?> CompleteExistingUserAsync(HuiaUserManager userManager, string userId)
+    private async Task<HuiaUser?> CompleteExistingUserAsync(HuiaUserManager userManager, string userId, string? e164)
     {
         var user = await userManager.FindByIdAsync(userId);
         if (user is null)
@@ -153,11 +181,17 @@ public sealed class CompleteProfileModel(
 
         user.FirstName = Input.FirstName;
         user.LastName = Input.LastName;
+        // Only update the phone when the user doesn't already have one (phone-login users have it set).
+        if (e164 is not null && string.IsNullOrWhiteSpace(user.PhoneNumber))
+        {
+            user.PhoneNumber = e164;
+        }
+
         var result = await userManager.UpdateAsync(user);
         return result.Succeeded ? user : null;
     }
 
-    private async Task<HuiaUser?> CompleteExternalSignupAsync(HuiaUserManager userManager, string tenantId, AuthFlowState state)
+    private async Task<HuiaUser?> CompleteExternalSignupAsync(HuiaUserManager userManager, string tenantId, AuthFlowState state, string e164)
     {
         var email = state.Email;
 
@@ -173,7 +207,7 @@ public sealed class CompleteProfileModel(
         var displayName = state.ExternalDisplayName ?? provider;
 
         var (create, user) = await userManager.CreateExternalUserAsync(
-            tenantId, email, Input.FirstName, Input.LastName, provider, key, displayName);
+            tenantId, email, Input.FirstName, Input.LastName, e164, provider, key, displayName);
         if (!create.Succeeded)
         {
             ErrorMessage = string.Join(" ", create.Errors.Select(e => e.Description));
@@ -203,5 +237,11 @@ public sealed class CompleteProfileModel(
         [Required]
         [StringLength(256)]
         public string LastName { get; set; } = string.Empty;
+
+        /// <summary>Phone number (national or E.164). Required for external and existing-user paths.</summary>
+        public string? PhoneNumber { get; set; }
+
+        /// <summary>ISO 3166-1 alpha-2 region code for national-format number interpretation.</summary>
+        public string? Country { get; set; }
     }
 }

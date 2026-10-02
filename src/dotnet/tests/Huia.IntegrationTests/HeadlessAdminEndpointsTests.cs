@@ -277,7 +277,8 @@ public sealed class HeadlessAdminEndpointsTests
             email = "selfsignup@test.local",
             password = "P@ssword123!",
             firstName = "Self",
-            lastName = "Signup"
+            lastName = "Signup",
+            phoneNumber = "+15005550123"
         });
         res.StatusCode.ShouldBe(HttpStatusCode.OK);
 

@@ -15,7 +15,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Abstractions;
+using OpenIddict.Client;
 using OpenIddict.Client.AspNetCore;
 using OpenIddict.Server.AspNetCore;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -391,26 +393,41 @@ internal static class ConnectEndpoints
 
         await signInManager.SignOutAsync();
 
+        var finalRedirect = await ResolveFinalLogoutRedirectAsync(context, tenantAccessor, applicationManager, huiaOptions, request);
+
         if (externalIdp is not null)
         {
-            // The session was federated: end the upstream provider's session too, then land the browser
-            // wherever the relying party wanted (resolved here since we bypass the server end-session).
-            var finalRedirect = await ResolveFinalLogoutRedirectAsync(context, tenantAccessor, applicationManager, huiaOptions, request);
-
-            var properties = new AuthenticationProperties { RedirectUri = finalRedirect };
-            properties.Items[OpenIddictClientAspNetCoreConstants.Properties.RegistrationId] = externalIdp;
-            if (externalIdToken is not null)
+            // The session was federated: attempt to end the upstream provider's session if it supports
+            // RP-initiated logout (has an end_session_endpoint). Otherwise (e.g. Google, GitHub), fall
+            // back to the local OpenIddict server logout so the user isn't crashed with a 500 error.
+            var clientService = context.RequestServices.GetService<OpenIddictClientService>();
+            if (clientService is not null)
             {
-                properties.Items[OpenIddictClientAspNetCoreConstants.Properties.IdentityTokenHint] = externalIdToken;
-            }
+                try
+                {
+                    var configuration = await clientService.GetServerConfigurationByRegistrationIdAsync(externalIdp);
+                    if (configuration?.EndSessionEndpoint is not null)
+                    {
+                        var properties = new AuthenticationProperties { RedirectUri = finalRedirect };
+                        properties.Items[OpenIddictClientAspNetCoreConstants.Properties.RegistrationId] = externalIdp;
+                        if (externalIdToken is not null)
+                        {
+                            properties.Items[OpenIddictClientAspNetCoreConstants.Properties.IdentityTokenHint] = externalIdToken;
+                        }
 
-            return Results.SignOut(properties, [OpenIddictClientAspNetCoreDefaults.AuthenticationScheme]);
+                        return Results.SignOut(properties, [OpenIddictClientAspNetCoreDefaults.AuthenticationScheme]);
+                    }
+                }
+                catch
+                {
+                    // Upstream provider configuration could not be resolved or provider is unreachable;
+                    // fall through to local server logout.
+                }
+            }
         }
 
-        var fallback = await ResolveLogoutFallbackAsync(context, tenantAccessor, applicationManager, huiaOptions, request);
-
         return Results.SignOut(
-            new AuthenticationProperties { RedirectUri = fallback },
+            new AuthenticationProperties { RedirectUri = finalRedirect },
             [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme]);
     }
 
@@ -426,13 +443,32 @@ internal static class ConnectEndpoints
         OpenIddictRequest? request)
     {
         var postLogout = request?.PostLogoutRedirectUri;
-        if (!string.IsNullOrEmpty(postLogout) && request?.ClientId is { } clientId
-            && await applicationManager.FindByClientIdAsync(clientId) is { } application)
+        if (!string.IsNullOrEmpty(postLogout))
         {
-            var registered = await applicationManager.GetPostLogoutRedirectUrisAsync(application);
-            if (registered.Contains(postLogout, StringComparer.OrdinalIgnoreCase))
+            if (request?.ClientId is { } clientId
+                && await applicationManager.FindByClientIdAsync(clientId) is { } application)
             {
-                return postLogout;
+                var registered = await applicationManager.GetPostLogoutRedirectUrisAsync(application);
+                if (registered.Any(r => string.Equals(r.TrimEnd('/'), postLogout.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+                {
+                    return postLogout;
+                }
+            }
+            else
+            {
+                var tenantId = tenantAccessor.CurrentTenantId();
+                if (tenantId is not null && huiaOptions.Tenants.TryGetValue(tenantId, out var tenant))
+                {
+                    foreach (var client in tenant.Clients)
+                    {
+                        if (client.PostLogoutRedirectUris.Any(uri =>
+                            string.Equals(uri.ToString().TrimEnd('/'), postLogout.TrimEnd('/'), StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(uri.OriginalString.TrimEnd('/'), postLogout.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+                        {
+                            return postLogout;
+                        }
+                    }
+                }
             }
         }
 
@@ -455,6 +491,12 @@ internal static class ConnectEndpoints
                 homeUris.GetArrayLength() > 0)
             {
                 return homeUris[0].GetString() ?? "/";
+            }
+
+            var postLogouts = await applicationManager.GetPostLogoutRedirectUrisAsync(application);
+            if (postLogouts.Length > 0)
+            {
+                return postLogouts[0];
             }
         }
 

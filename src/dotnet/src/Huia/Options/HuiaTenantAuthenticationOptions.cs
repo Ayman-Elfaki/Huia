@@ -33,6 +33,24 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
     public bool IsPasskeyLoginEnabled => Passkey is not null;
 
     /// <summary>
+    /// Default phone country region (ISO 3166-1 alpha-2, for example <c>US</c>) used to interpret
+    /// phone numbers without a country code and preselect the country dropdown in profile completion
+    /// and registration.
+    /// </summary>
+    public string? DefaultPhoneCountry { get; set; }
+
+    /// <summary>
+    /// Sets the default phone country region (ISO 3166-1 alpha-2, for example <c>US</c>) for this tenant.
+    /// </summary>
+    /// <param name="country">The 2-letter uppercase ISO 3166-1 alpha-2 country code.</param>
+    /// <returns>This instance, for chaining.</returns>
+    public HuiaTenantAuthenticationOptions SetDefaultPhoneCountry(string country)
+    {
+        DefaultPhoneCountry = country;
+        return this;
+    }
+
+    /// <summary>
     /// Enables and configures the interactive email/password flow. Calling it sets
     /// <see cref="EmailAndPasswordLoginOptions.Enabled"/>.
     /// </summary>
@@ -51,6 +69,10 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
     public HuiaTenantAuthenticationOptions UsePhoneLogin(Action<PhoneOptions>? configure = null)
     {
         Phone ??= new PhoneOptions();
+        if (Phone.DefaultCountry is null && DefaultPhoneCountry is not null)
+        {
+            Phone.DefaultCountry = DefaultPhoneCountry;
+        }
         configure?.Invoke(Phone);
         return this;
     }
@@ -123,6 +145,13 @@ public sealed class HuiaTenantAuthenticationOptions : IHuiaOptionsSection
         if (Passkey is not null)
         {
             ((IHuiaOptionsSection)Passkey).Validate(HuiaOptionsValidation.Combine(path, nameof(Passkey)), errors);
+        }
+
+        if (!string.IsNullOrWhiteSpace(DefaultPhoneCountry))
+        {
+            errors.Require(DefaultPhoneCountry.Length == 2 && DefaultPhoneCountry.All(static c => c is >= 'A' and <= 'Z'),
+                HuiaOptionsValidation.Combine(path, nameof(DefaultPhoneCountry)),
+                "must be a 2-letter uppercase ISO 3166-1 alpha-2 code (e.g. 'US').");
         }
 
         var anyMethod = EmailAndPassword.Enabled || Phone is not null || IsExternalLoginEnabled || Passkey is not null;

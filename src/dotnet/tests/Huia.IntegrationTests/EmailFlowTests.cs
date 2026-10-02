@@ -29,6 +29,7 @@ public sealed partial class EmailFlowTests : IAsyncLifetime
             ["Input.Email"] = email,
             ["Input.Password"] = "Password1!",
             ["Input.ConfirmPassword"] = "Password1!",
+            ["Input.PhoneNumber"] = "+15005550199",
             ["__RequestVerificationToken"] = token,
         }));
         register.StatusCode.ShouldBe(HttpStatusCode.Redirect);
@@ -38,6 +39,18 @@ public sealed partial class EmailFlowTests : IAsyncLifetime
 
         var confirm = await client.GetAsync(ToLocal(confirmUrl!));
         (await confirm.Content.ReadAsStringAsync()).ShouldContain("email-confirmed");
+    }
+
+    [Fact]
+    public async Task Register_page_renders_country_dropdown_with_default_country()
+    {
+        var client = _host.CreateClient();
+        var html = await client.GetStringAsync("/signup/identity/account/register");
+
+        html.ShouldContain("register-phone-country-listbox");
+        html.ShouldContain("fi-us");
+        html.ShouldContain("js/phone-validate.js");
+        html.ShouldContain("""<input type="hidden" name="Input.Country" value="US" />""");
     }
 
     [Fact]

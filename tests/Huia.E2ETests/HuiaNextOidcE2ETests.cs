@@ -110,6 +110,7 @@ public sealed class HuiaNextOidcE2ETests(NextFrontEndFixture fx)
 
         if (await page.Locator("[data-testid=complete-profile-form]").IsVisibleAsync())
         {
+            await page.FillAsync("input[name='Input.PhoneNumber']", "+1 202 555 0123");
             await page.ClickAsync("[data-testid=complete-profile-submit]");
         }
 

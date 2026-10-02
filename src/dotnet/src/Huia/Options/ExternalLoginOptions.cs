@@ -152,6 +152,11 @@ public sealed class ExternalProviderRegistration : IHuiaOptionsSection
     /// </summary>
     public IList<string> Scopes { get; } = [];
 
+    /// <summary>
+    /// Optional custom redirect URI (relative or absolute). Defaults to <c>signin-{Name}</c>.
+    /// </summary>
+    public Uri? RedirectUri { get; set; }
+
     void IHuiaOptionsSection.Validate(string path, List<string> errors)
     {
         errors.Require(!string.IsNullOrWhiteSpace(Name), HuiaOptionsValidation.Combine(path, nameof(Name)), "is required.");

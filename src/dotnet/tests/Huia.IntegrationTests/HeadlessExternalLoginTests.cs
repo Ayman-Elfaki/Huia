@@ -76,7 +76,7 @@ public sealed class HeadlessExternalLoginTests
         exchange.IsSuccessStatusCode.ShouldBeFalse();
 
         var complete = await host.Client.PostAsJsonAsync("identity/account/external/complete-profile",
-            new { code = "does-not-exist", firstName = "A", lastName = "B" });
+            new { code = "does-not-exist", firstName = "A", lastName = "B", phoneNumber = "+15005550000" });
         complete.IsSuccessStatusCode.ShouldBeFalse();
     }
 
@@ -111,7 +111,7 @@ public sealed class HeadlessExternalLoginTests
         exchangeBody.GetProperty("lastName").GetString().ShouldBe("New");
 
         var complete = await host.Client.PostAsJsonAsync("identity/account/external/complete-profile",
-            new { code, firstName = "Nina", lastName = "New" });
+            new { code, firstName = "Nina", lastName = "New", phoneNumber = "+15005550199" });
         complete.EnsureSuccessStatusCode();
         var tokens = await complete.Content.ReadFromJsonAsync<JsonElement>();
         var accessToken = tokens.GetProperty("accessToken").GetString();
@@ -242,7 +242,7 @@ public sealed class HeadlessExternalLoginTests
             await using var scope = host.Services.CreateAsyncScope();
             var userManager = scope.ServiceProvider.GetRequiredService<HuiaUserManager>();
             var (result, _) = await userManager.CreateExternalUserAsync(
-                "ext", email, firstName, lastName, loginProvider, providerKey, loginProvider);
+                "ext", email, firstName, lastName, "+15005550001", loginProvider, providerKey, loginProvider);
             result.Succeeded.ShouldBeTrue(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
 

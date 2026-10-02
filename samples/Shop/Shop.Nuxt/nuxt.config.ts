@@ -34,6 +34,22 @@ export default defineNuxtConfig({
     '/auth/callback': { ssr: false },
   },
 
+  // HTTPS for the dev server when the AppHost supplies the ASP.NET dev certificate.
+  devServer: {
+    https: process.env.TLS_CONFIG_CERT && process.env.TLS_CONFIG_KEY
+      ? {
+        cert: process.env.TLS_CONFIG_CERT,
+        key: process.env.TLS_CONFIG_KEY,
+        passphrase: process.env.TLS_CONFIG_PASSWORD
+      }
+      : process.env.TLS_CONFIG_PFX
+        ? {
+          pfx: process.env.TLS_CONFIG_PFX,
+          passphrase: process.env.TLS_CONFIG_PASSWORD
+        }
+        : undefined
+  },
+
   huiaHeadless: {
     baseUrl: shopApiUrl,
     session: {

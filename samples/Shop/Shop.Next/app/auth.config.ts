@@ -18,7 +18,7 @@ export const huiaHeadlessConfig: HuiaHeadlessConfig = {
   // "localhost"), not the request's actual Host header, so the external-login callback URL the handler
   // builds on its own behalf would otherwise silently point at the wrong origin whenever this app is
   // reached under a different hostname — as it is here, via *.dev.localhost under Aspire.
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://shop-next.dev.localhost:3060',
+  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://localhost:3060',
   session: {
     password: process.env.HUIA_SESSION_PASSWORD ?? 'dev-only-shop-session-password-change-me-01234567890',
     userClaims: ['sub', 'name', 'email', 'firstName', 'lastName', 'roles', 'phoneNumber'],

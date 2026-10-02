@@ -1,6 +1,9 @@
+using System.Net;
+using System.Net.Sockets;
 using Huia.OpenId.OpenIddict.Handlers;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
 using OpenIddict.Abstractions;
 using OpenIddict.Client;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -137,6 +140,17 @@ internal static class HuiaOpenIddictConfiguration
 
                 RegisterExternalProviders(client, options);
             });
+
+            services.ConfigureAll<HttpClientFactoryOptions>(httpOptions =>
+            {
+                httpOptions.HttpMessageHandlerBuilderActions.Add(b =>
+                {
+                    if (b.Name?.StartsWith("OpenIddict", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        b.PrimaryHandler = CreateRobustHttpClientHandler();
+                    }
+                });
+            });
         }
 
         return services;
@@ -159,10 +173,67 @@ internal static class HuiaOpenIddictConfiguration
 
             foreach (var provider in external.Providers)
             {
+                var redirectUri = provider.RedirectUri ?? new Uri($"signin-{provider.Name.ToLowerInvariant()}", UriKind.Relative);
+                var postLogoutUri = new Uri("signout-callback-oidc", UriKind.Relative);
+
+                if (provider.Kind == ExternalProviderKind.Google)
+                {
+                    client.UseWebProviders().AddGoogle(google =>
+                    {
+                        google.SetClientId(provider.ClientId)
+                              .SetClientSecret(provider.ClientSecret)
+                              .SetRedirectUri(redirectUri)
+                              .SetPostLogoutRedirectUri(postLogoutUri)
+                              .SetRegistrationId($"{tenantId}:{provider.Name}");
+
+                        google.AddScopes(Scopes.OpenId);
+                        foreach (var scope in provider.Scopes)
+                        {
+                            google.AddScopes(scope);
+                        }
+                    });
+                    continue;
+                }
+
+                if (provider.Kind == ExternalProviderKind.GitHub)
+                {
+                    client.UseWebProviders().AddGitHub(github =>
+                    {
+                        github.SetClientId(provider.ClientId)
+                              .SetClientSecret(provider.ClientSecret)
+                              .SetRedirectUri(redirectUri)
+                              .SetPostLogoutRedirectUri(postLogoutUri)
+                              .SetRegistrationId($"{tenantId}:{provider.Name}");
+
+                        foreach (var scope in provider.Scopes)
+                        {
+                            github.AddScopes(scope);
+                        }
+                    });
+                    continue;
+                }
+
+                if (provider.Kind == ExternalProviderKind.MicrosoftAccount)
+                {
+                    client.UseWebProviders().AddMicrosoft(ms =>
+                    {
+                        ms.SetClientId(provider.ClientId)
+                          .SetClientSecret(provider.ClientSecret)
+                          .SetRedirectUri(redirectUri)
+                          .SetPostLogoutRedirectUri(postLogoutUri)
+                          .SetRegistrationId($"{tenantId}:{provider.Name}");
+
+                        ms.AddScopes(Scopes.OpenId);
+                        foreach (var scope in provider.Scopes)
+                        {
+                            ms.AddScopes(scope);
+                        }
+                    });
+                    continue;
+                }
+
                 if (provider.Kind != ExternalProviderKind.OpenIdConnect)
                 {
-                    // The vendor providers (Google, GitHub, Microsoft) go through UseWebProviders();
-                    // that wiring is added with the sample provider suite.
                     continue;
                 }
 
@@ -172,8 +243,8 @@ internal static class HuiaOpenIddictConfiguration
                     Issuer = new Uri(provider.Authority!, UriKind.Absolute),
                     ClientId = provider.ClientId,
                     ClientSecret = provider.ClientSecret,
-                    RedirectUri = new Uri($"signin-{provider.Name.ToLowerInvariant()}", UriKind.Relative),
-                    PostLogoutRedirectUri = new Uri("signout-callback-oidc", UriKind.Relative),
+                    RedirectUri = redirectUri,
+                    PostLogoutRedirectUri = postLogoutUri,
                 };
 
                 registration.Scopes.Add(Scopes.OpenId);
@@ -185,5 +256,68 @@ internal static class HuiaOpenIddictConfiguration
                 client.AddRegistration(registration);
             }
         }
+    }
+
+    private static HttpClientHandler CreateRobustHttpClientHandler()
+    {
+        var handler = new HttpClientHandler();
+        var underlyingField = typeof(HttpClientHandler).GetField("_underlyingHandler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (underlyingField?.GetValue(handler) is SocketsHttpHandler socketsHandler)
+        {
+            socketsHandler.ConnectCallback = async (context, cancellationToken) =>
+            {
+                if (IPAddress.TryParse(context.DnsEndPoint.Host, out var ip))
+                {
+                    var socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+                    try
+                    {
+                        await socket.ConnectAsync(ip, context.DnsEndPoint.Port, cancellationToken);
+                        return new NetworkStream(socket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        socket.Dispose();
+                        throw;
+                    }
+                }
+
+                var addresses = await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, cancellationToken);
+                // Sort IPv4 first so dual-stack hosts with unroutable/black-holed IPv6 don't hang on TCP SYN timeouts.
+                var sorted = addresses
+                    .OrderBy(a => a.AddressFamily == AddressFamily.InterNetwork ? 0 : 1)
+                    .ToArray();
+
+                Socket? connectedSocket = null;
+                Exception? lastException = null;
+
+                foreach (var address in sorted)
+                {
+                    var s = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+                    try
+                    {
+                        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+                        await s.ConnectAsync(address, context.DnsEndPoint.Port, linkedCts.Token);
+                        connectedSocket = s;
+                        break;
+                    }
+                    catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                    {
+                        s.Dispose();
+                        lastException = ex;
+                    }
+                }
+
+                if (connectedSocket is null)
+                {
+                    throw lastException ?? new SocketException((int)SocketError.HostNotFound);
+                }
+
+                return new NetworkStream(connectedSocket, ownsSocket: true);
+            };
+        }
+
+        return handler;
     }
 }

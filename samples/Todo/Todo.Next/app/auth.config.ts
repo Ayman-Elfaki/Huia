@@ -21,7 +21,7 @@ export const huiaConfig: HuiaOidcConfig = {
   // "localhost"), not the request's actual Host header, so the OAuth redirect_uri/post-logout URLs the
   // handler builds on its own behalf would otherwise silently point at the wrong origin whenever this
   // app is reached under a different hostname — as it is here, via *.dev.localhost under Aspire.
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://todo-next.dev.localhost:3050',
+  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://localhost:3050',
   scopes: ['openid', 'profile', 'email', 'roles', 'offline_access'],
   allowedAuthParams: ['ui_locales'],
   par: { enabled: true },

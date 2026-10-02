@@ -22,7 +22,7 @@ async function onSubmit() {
   info.value = null
 
   if (mode.value === 'register') {
-    const result = await register({ email: email.value, password: password.value, firstName: firstName.value, lastName: lastName.value })
+    const result = await register({ email: email.value, password: password.value, firstName: firstName.value, lastName: lastName.value, phoneNumber: phoneNumber.value })
     busy.value = false
     if (!result.ok) {
       error.value = 'Registration failed. Check the password requirements.'
@@ -135,6 +135,11 @@ async function onPhoneCompleteProfile() {
           <UFormField label="Password">
             <UInput v-model="password" type="password" placeholder="Password" autocomplete="current-password" required class="w-full" />
           </UFormField>
+          <template v-if="mode === 'register'">
+            <UFormField label="Phone number">
+              <UInput v-model="phoneNumber" type="tel" placeholder="Phone number" autocomplete="tel" required class="w-full" />
+            </UFormField>
+          </template>
           <UButton type="submit" block :loading="busy">
             {{ mode === 'login' ? 'Sign in' : 'Create account' }}
           </UButton>

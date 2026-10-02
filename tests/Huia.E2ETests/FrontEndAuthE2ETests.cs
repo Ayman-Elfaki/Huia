@@ -152,6 +152,7 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
 
         if (await page.Locator("[data-testid=complete-profile-form]").IsVisibleAsync())
         {
+            await page.FillAsync("input[name='Input.PhoneNumber']", "+1 202 555 0123");
             await page.ClickAsync("[data-testid=complete-profile-submit]");
         }
 
@@ -195,6 +196,7 @@ public sealed class FrontEndAuthE2ETests(FrontEndStackFixture stack)
         await FillPasswordAsync(page, "full@partners.test", "Partner1!Pass");
         if (await page.Locator("[data-testid=complete-profile-form]").IsVisibleAsync())
         {
+            await page.FillAsync("input[name='Input.PhoneNumber']", "+1 202 555 0123");
             await page.ClickAsync("[data-testid=complete-profile-submit]");
         }
 

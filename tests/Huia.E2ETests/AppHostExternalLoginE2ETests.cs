@@ -90,7 +90,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
-        var todoUrl = !string.IsNullOrEmpty(host.TodoAppUrl) ? host.TodoAppUrl : "http://localhost:3000";
+        var todoUrl = !string.IsNullOrEmpty(host.TodoAppUrl) ? host.TodoAppUrl : "https://localhost:3000";
         // Navigate directly to the OIDC login endpoint which starts the authorization flow
         await page.GotoAsync($"{todoUrl}/auth/oidc/login", new() { Timeout = 30_000 });
 
@@ -113,6 +113,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
 
         if (await page.Locator("[data-testid=complete-profile-form]").IsVisibleAsync())
         {
+            await page.FillAsync("input[name='Input.PhoneNumber']", "+1 202 555 0123");
             await page.ClickAsync("[data-testid=complete-profile-submit]");
         }
 
@@ -128,7 +129,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
-        var shopUrl = !string.IsNullOrEmpty(host.ShopAppUrl) ? host.ShopAppUrl : "http://localhost:3002";
+        var shopUrl = !string.IsNullOrEmpty(host.ShopAppUrl) ? host.ShopAppUrl : "https://localhost:3002";
         await page.GotoAsync($"{shopUrl}/login");
 
         await page.WaitForSelectorAsync("text=Sign in with Partner", new() { Timeout = 30_000 });
@@ -140,6 +141,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
 
         // First time this partner signs in to Shop.Api, it shows the name confirmation form
         await Expect(page.Locator("body")).ToContainTextAsync("what's your name", new() { Timeout = 25_000 });
+        await page.GetByPlaceholder("Phone number").FillAsync("+1 202 555 0123");
         await page.GetByRole(AriaRole.Button, new() { Name = "Finish" }).ClickAsync();
 
         await page.WaitForURLAsync(u => u.TrimEnd('/') == shopUrl.TrimEnd('/'), new() { Timeout = 15_000 });
@@ -153,7 +155,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
-        var todoNextUrl = !string.IsNullOrEmpty(host.TodoNextUrl) ? host.TodoNextUrl : "http://todo-next.dev.localhost:3050";
+        var todoNextUrl = !string.IsNullOrEmpty(host.TodoNextUrl) ? host.TodoNextUrl : "https://localhost:3050";
         await page.GotoAsync(todoNextUrl);
         await page.ClickAsync("[data-testid=landing-sign-in], [data-testid=sign-in]");
 
@@ -174,6 +176,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
 
         if (await page.Locator("[data-testid=complete-profile-form]").IsVisibleAsync())
         {
+            await page.FillAsync("input[name='Input.PhoneNumber']", "+1 202 555 0123");
             await page.ClickAsync("[data-testid=complete-profile-submit]");
         }
 
@@ -188,7 +191,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         await using var session = await BrowserSession.StartAsync();
         var page = session.Page;
 
-        var shopNextUrl = !string.IsNullOrEmpty(host.ShopNextUrl) ? host.ShopNextUrl : "http://localhost:3060";
+        var shopNextUrl = !string.IsNullOrEmpty(host.ShopNextUrl) ? host.ShopNextUrl : "https://localhost:3060";
         await page.GotoAsync($"{shopNextUrl}/login");
 
         await page.WaitForSelectorAsync("text=Sign in with Partner", new() { Timeout = 30_000 });
@@ -204,6 +207,7 @@ public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
         try
         {
             await finish.WaitForAsync(new() { Timeout = 10_000 });
+            await page.GetByPlaceholder("Phone number").FillAsync("+1 202 555 0123");
             await finish.ClickAsync();
         }
         catch (TimeoutException)

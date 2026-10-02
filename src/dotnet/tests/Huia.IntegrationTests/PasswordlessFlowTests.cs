@@ -95,6 +95,9 @@ public sealed class PasswordlessFlowTests : IAsyncLifetime
             $"/phone-auto/identity/account/completeprofile?flow={Uri.EscapeDataString(completeFlow)}");
         page.ShouldContain("data-validate");
         page.ShouldContain("js/form-validate.js");
+        page.ShouldContain("js/phone-validate.js");
+        page.ShouldContain("complete-profile-phone-country-listbox");
+        page.ShouldContain("fi-us");
         page.ShouldContain("data-val-for=\"Input.FirstName\"");
         page.ShouldContain("required");
 

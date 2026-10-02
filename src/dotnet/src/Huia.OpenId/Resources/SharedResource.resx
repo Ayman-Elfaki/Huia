@@ -97,6 +97,12 @@
   <data name="Common.Support" xml:space="preserve">
     <value>Support</value>
   </data>
+  <data name="Common.PhoneNumber" xml:space="preserve">
+    <value>Phone number</value>
+  </data>
+  <data name="Common.PhoneNumber.Invalid" xml:space="preserve">
+    <value>A valid phone number is required.</value>
+  </data>
   <data name="Diagnostics.Greeting" xml:space="preserve">
     <value>Hello</value>
   </data>

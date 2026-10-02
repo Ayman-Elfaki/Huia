@@ -57,7 +57,7 @@ governs which contact details an account may change through `/manage/*`:
 | `Task<HuiaUser?> FindByPhoneNumberAsync(string e164)` | looks up the **`PhoneNumber` column** (not the username); tenant-scoped by `HuiaDbContext`'s global query filter |
 | `Task<HuiaUserCreation> CreatePhoneUserAsync(string tenantId, string e164, string firstName, string lastName)` | creates a phone-login account — `UserName == PhoneNumber == e164`, `PhoneNumberConfirmed`, no password, no email |
 | `Task<IdentityResult> AddExternalLoginAsync(HuiaUser, string provider, string key, string displayName)` | thin wrapper over `AddLoginAsync(new UserLoginInfo(...))` |
-| `Task<HuiaUserCreation> CreateExternalUserAsync(string tenantId, string? email, string firstName, string lastName, string provider, string key, string displayName)` | derives the username (the email, or `slug(displayName)-{key}` when there is none), creates the account, and attaches the provider login |
+| `Task<HuiaUserCreation> CreateExternalUserAsync(string tenantId, string? email, string firstName, string lastName, string? phoneNumber, string provider, string key, string displayName)` | derives the username (the email, or `slug(displayName)-{key}` when there is none), creates the account, and attaches the provider login |
 | `Task<(ExternalEmailLinkOutcome Outcome, HuiaUser? User)> TryLinkExternalByEmailAsync(string email, bool providerVouches, bool accountLinkingEnabled, string provider, string key, string displayName)` | a logged-out external sign-in whose email matches a local account — see below |
 
 `HuiaUserCreation` is a `readonly record struct (IdentityResult Result, HuiaUser User)` with

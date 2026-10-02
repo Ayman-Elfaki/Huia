@@ -1,15 +1,14 @@
 using System.Security.Cryptography;
-using Aspire.Hosting.ApplicationModel;
 using Huia.AppHost;
 using Microsoft.Extensions.Configuration;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-const string adminAppUrl = "http://admin-app.dev.localhost:3001";
-const string todoAppUrl = "http://todo-app.dev.localhost:3000";
-const string todoNextUrl = "http://todo-next.dev.localhost:3050";
-const string shopAppUrl = "http://shop-app.dev.localhost:3002";
-const string shopNextUrl = "http://shop-next.dev.localhost:3060";
+const string adminAppUrl = "https://localhost:3001";
+const string todoAppUrl = "https://localhost:3000";
+const string todoNextUrl = "https://localhost:3050";
+const string shopAppUrl = "https://localhost:3002";
+const string shopNextUrl = "https://localhost:3060";
 // huia-external, shop-api, huia-identityserver and todo-api below all run unproxied on these fixed dev
 // ports (Properties/launchSettings.json pins the same values). Unlike the browser-facing app URLs above,
 // their own URLs stay on plain "localhost" rather than a *.dev.localhost alias: every one of them is also
@@ -106,7 +105,6 @@ var external = builder.AddProject<Projects.Huia_External>("huia-external")
     // `aspire run`'s dashboard (see the externalUrl comment above for why config stays on "localhost").
     .WithEndpoint("https", endpoint =>
     {
-        endpoint.TargetHost = "external.dev.localhost";
         endpoint.Port = 5320;
         endpoint.TargetPort = 5320;
         endpoint.IsProxied = false;
@@ -126,7 +124,6 @@ var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
     // huia-external above (including TargetHost being dashboard-only).
     .WithEndpoint("https", endpoint =>
     {
-        endpoint.TargetHost = "shop-api.dev.localhost";
         endpoint.Port = 5341;
         endpoint.TargetPort = 5341;
         endpoint.IsProxied = false;
@@ -145,14 +142,19 @@ var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
 shopApi.WithEnvironment("Huia__Issuer", shopApiUrl);
 
 // Huia.External needs Shop.Api's own base URL (it's the OIDC relying party for the "shop-api" client
-// registered there, not Shop.Nuxt — see samples/Shared/Huia.External/Program.cs).
+var googleClientSecret = builder.Configuration["Parameters:google-client-secret"]
+    ?? builder.Configuration["Parameters:google-password"]
+    ?? "";
+var googleClientIdVal = builder.Configuration["Parameters:google-client-id"] ?? "";
+
+var googlePassword = builder.AddParameter("google-password", googleClientSecret, secret: true);
+var googleClientId = builder.AddParameter("google-client-id", googleClientIdVal, secret: true);
 
 var identityServer = builder.AddProject<Projects.Todo_IdentityServer>("huia-identityserver")
     // Unproxied on its fixed dev port (Properties/launchSettings.json pins 5310) — same reasons as
     // huia-external above (including TargetHost being dashboard-only).
     .WithEndpoint("https", endpoint =>
     {
-        endpoint.TargetHost = "identityserver.dev.localhost";
         endpoint.Port = 5310;
         endpoint.TargetPort = 5310;
         endpoint.IsProxied = false;
@@ -167,6 +169,8 @@ var identityServer = builder.AddProject<Projects.Todo_IdentityServer>("huia-iden
     .WithEnvironment("Clients__TodoApp__BaseUrl", todoAppUrl)
     .WithEnvironment("Clients__TodoNext__BaseUrl", todoNextUrl)
     .WithEnvironment("Clients__AdminApp__BaseUrl", adminAppUrl)
+    .WithEnvironment("Google__ClientId", googleClientId)
+    .WithEnvironment("Google__ClientSecret", googlePassword)
     .WithEnvironment("Huia__ExternalIssuer", externalUrl)
     .WithEnvironment(context =>
     {
@@ -188,13 +192,11 @@ var todoApi = builder.AddProject<Projects.Todo_Api>("todo-api")
     // huia-external above (including TargetHost being dashboard-only).
     .WithEndpoint("http", endpoint =>
     {
-        endpoint.TargetHost = "todo-api.dev.localhost";
         endpoint.Port = 5330;
         endpoint.TargetPort = 5330;
         endpoint.IsProxied = false;
     })
     .WithExternalHttpEndpoints()
-
     .WithUrlForEndpoint("http", url =>
     {
         url.DisplayText = "Scalar UI";
@@ -214,7 +216,6 @@ todoApi.WithEnvironment("Todo__PublicUrl", todoApiUrl);
 identityServer.WithEnvironment("Clients__TodoApi__BaseUrl", todoApiUrl);
 
 
-
 // The admin CLI (device-authorization grant against the master tenant). It runs one command and exits,
 // so it does not start with the rest of the graph — press "Start" in the dashboard to open it in a
 // terminal (e.g. `huia login`, which waits for you to approve the device code in the browser).
@@ -224,13 +225,21 @@ builder.AddProject<Projects.Huia_Cli>("huia-cli")
     .WithTerminal()
     .WaitFor(identityServer);
 
+// Password of the PFX handed to the Nuxt dev servers. It must be non-empty: with none, Aspire exports the PFX with an
+// empty password, Windows drops empty environment variables, and Node then fails with "PKCS#12 MAC could not be verified".
+var nuxtDevCertPassword = builder.AddParameter("nuxt-dev-cert-password", "nuxt-dev-cert-password", secret: true);
 
 builder.AddViteApp("todo-app", "../../Todo/Todo.Nuxt")
     // Unproxied on a fixed port, with a TargetHost alias below, so the app's origin matches its
-    // registered OIDC redirect URI (http://todo-app.dev.localhost:3000/...) under both `aspire run`
+    // registered OIDC redirect URI (https://localhost:3000/...) under both `aspire run`
     // and Aspire.Hosting.Testing.
     .WithHttpEndpoint(port: 3000, targetPort: 3000, env: "PORT", isProxied: false)
-    .WithEndpoint("http", endpoint => endpoint.TargetHost = "todo-app.dev.localhost")
+    // Node's undici rejects the ASP.NET Core dev cert; this also lets nuxt-huia-oidc discover it.
+    .WithUrlForEndpoint("https", url => url.Url = todoAppUrl)
+    .WithHttpsDeveloperCertificate(nuxtDevCertPassword)
+    .WithHttpsCertificateConfiguration(NuxtHttpsCertificate)
+    .WithDeveloperCertificateTrust(true)
+    .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WaitFor(identityServer)
     .WaitFor(todoApi)
     .WithReference(redis)
@@ -242,19 +251,17 @@ builder.AddViteApp("todo-app", "../../Todo/Todo.Nuxt")
     .WithEnvironment("NUXT_HUIA_CLIENT_SECRET", "todo-app-secret")
     .WithEnvironment("NUXT_HUIA_BASE_URL", identityServerUrl)
     .WithEnvironment("NUXT_HUIA_TENANT", "todo")
-    // Node's undici rejects the ASP.NET Core dev cert; this also lets nuxt-huia-oidc discover it.
-    .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
     .WithExternalHttpEndpoints()
     .WithNpm()
     .WithBuildE2EArtifactCommand("samples/Todo/Todo.Nuxt", isNpm: true)
     ;
 
 builder.AddViteApp("admin-app", "../../Todo/Todo.Admin")
-    // Unproxied on a fixed port, with a TargetHost alias below, so the app's origin matches its
-    // registered OIDC redirect URI (http://admin-app.dev.localhost:3001/...) under both `aspire run`
-    // and Aspire.Hosting.Testing.
     .WithHttpEndpoint(port: 3001, targetPort: 3001, env: "PORT", isProxied: false)
-    .WithEndpoint("http", endpoint => endpoint.TargetHost = "admin-app.dev.localhost")
+    .WithUrlForEndpoint("https", url => url.Url = adminAppUrl)
+    .WithHttpsDeveloperCertificate(nuxtDevCertPassword)
+    .WithHttpsCertificateConfiguration(NuxtHttpsCertificate)
+    .WithDeveloperCertificateTrust(true)
     .WaitFor(identityServer)
     .WithReference(redis)
     .WaitFor(redis)
@@ -271,11 +278,11 @@ builder.AddViteApp("admin-app", "../../Todo/Todo.Admin")
     ;
 
 builder.AddViteApp("shop-app", "../../Shop/Shop.Nuxt")
-    // Unproxied on a fixed port, with a TargetHost alias below, so the app's origin matches its
-    // registered OIDC redirect URI (http://shop-app.dev.localhost:3002/...) under both `aspire run`
-    // and Aspire.Hosting.Testing.
     .WithHttpEndpoint(port: 3002, targetPort: 3002, env: "PORT", isProxied: false)
-    .WithEndpoint("http", endpoint => endpoint.TargetHost = "shop-app.dev.localhost")
+    .WithUrlForEndpoint("https", url => url.Url = shopAppUrl)
+    .WithHttpsDeveloperCertificate(nuxtDevCertPassword)
+    .WithHttpsCertificateConfiguration(NuxtHttpsCertificate)
+    .WithDeveloperCertificateTrust(true)
     .WaitFor(shopApi)
     .WithEnvironment("NUXT_PUBLIC_SHOP_API_URL", shopApiUrl)
     .WithEnvironment("NUXT_SHOP_API_URL", shopApiUrl)
@@ -289,12 +296,11 @@ builder.AddViteApp("shop-app", "../../Shop/Shop.Nuxt")
     ;
 
 builder.AddNextJsApp("todo-next", "../../Todo/Todo.Next")
-    // Unproxied on a fixed port, with a TargetHost alias below, so the app's origin matches its
-    // registered OIDC redirect URI (http://todo-next.dev.localhost:3050/...) under both `aspire run`
-    // and Aspire.Hosting.Testing. NEXT_PUBLIC_APP_URL feeds next-huia-oidc's appUrl (see auth.config.ts)
-    // for the same reason — Next.js's own request.url doesn't reflect this origin either.
     .WithHttpEndpoint(port: 3050, targetPort: 3050, env: "PORT", isProxied: false)
-    .WithEndpoint("http", endpoint => endpoint.TargetHost = "todo-next.dev.localhost")
+    .WithUrlForEndpoint("https", url => url.Url = todoNextUrl)
+    .WithHttpsDeveloperCertificate(nuxtDevCertPassword)
+    .WithHttpsCertificateConfiguration(NuxtHttpsCertificate)
+    .WithDeveloperCertificateTrust(true)
     .WaitFor(identityServer)
     .WaitFor(todoApi)
     .WithReference(redis)
@@ -315,12 +321,11 @@ builder.AddNextJsApp("todo-next", "../../Todo/Todo.Next")
     ;
 
 builder.AddNextJsApp("shop-next", "../../Shop/Shop.Next")
-    // Unproxied on a fixed port, with a TargetHost alias below, so the app's origin matches its
-    // registered OIDC redirect URI (http://shop-next.dev.localhost:3060/...) under both `aspire run`
-    // and Aspire.Hosting.Testing. NEXT_PUBLIC_APP_URL feeds next-huia-headless's appUrl (see
-    // auth.config.ts) for the same reason — Next.js's own request.url doesn't reflect this origin either.
     .WithHttpEndpoint(port: 3060, targetPort: 3060, env: "PORT", isProxied: false)
-    .WithEndpoint("http", endpoint => endpoint.TargetHost = "shop-next.dev.localhost")
+    .WithUrlForEndpoint("https", url => url.Url = shopNextUrl)
+    .WithHttpsDeveloperCertificate(nuxtDevCertPassword)
+    .WithHttpsCertificateConfiguration(NuxtHttpsCertificate)
+    .WithDeveloperCertificateTrust(true)
     .WaitFor(shopApi)
     .WithReference(redis)
     .WaitFor(redis)
@@ -339,6 +344,8 @@ builder.AddNextJsApp("shop-next", "../../Shop/Shop.Next")
 
 builder.Build().Run();
 
+return;
+
 static string GenerateRandomUrlSafeString(int length = 48)
 {
     var randomBytes = new byte[length];
@@ -348,4 +355,17 @@ static string GenerateRandomUrlSafeString(int length = 48)
         .Replace('+', '-')
         .Replace('/', '_')
         .TrimEnd('=');
+}
+
+
+// Hands the ASP.NET dev certificate to front-end dev servers (Nuxt and Next.js). WithHttpsDeveloperCertificate() only *makes* the key pair
+// available; a JavaScript app has to be told where it is. nuxt.config.ts files read these variables into
+// `devServer.https` (PEM cert + key: Nuxt's parser cannot read Aspire's PFX), and Next.js dev runners forward
+// them to `next dev --experimental-https`, so the sites are served with the certificate `dotnet dev-certs https --trust` already trusts.
+static Task NuxtHttpsCertificate(HttpsCertificateConfigurationCallbackAnnotationContext context)
+{
+    context.EnvironmentVariables["TLS_CONFIG_CERT"] = context.CertificatePath;
+    context.EnvironmentVariables["TLS_CONFIG_KEY"] = context.KeyPath;
+    context.EnvironmentVariables["TLS_CONFIG_PASSWORD"] = context.Password!;
+    return Task.CompletedTask;
 }

@@ -24,12 +24,29 @@ internal sealed class HuiaSecurityHeadersMiddleware(RequestDelegate next, IOptio
             .SelectMany(tenant => tenant.Clients
                 .SelectMany(client => client.RedirectUris.Concat(client.PostLogoutRedirectUris).Concat(client.HomeUris))
                 .Concat(tenant.Authentication.External?.Providers
-                    .Where(provider => provider.Authority is not null)
-                    .Select(provider => new Uri(provider.Authority!, UriKind.Absolute)) ?? []))
+                    .Select(GetProviderAuthority)
+                    .Where(uri => uri is not null)
+                    .Select(uri => uri!) ?? []))
             .Where(uri => uri.IsAbsoluteUri)
             .Select(uri => uri.GetLeftPart(UriPartial.Authority))
             .Distinct(StringComparer.OrdinalIgnoreCase),
     ];
+
+    private static Uri? GetProviderAuthority(ExternalProviderRegistration provider)
+    {
+        if (provider.Authority is not null)
+        {
+            return new Uri(provider.Authority, UriKind.Absolute);
+        }
+
+        return provider.Kind switch
+        {
+            ExternalProviderKind.Google => new Uri("https://accounts.google.com", UriKind.Absolute),
+            ExternalProviderKind.GitHub => new Uri("https://github.com", UriKind.Absolute),
+            ExternalProviderKind.MicrosoftAccount => new Uri("https://login.microsoftonline.com", UriKind.Absolute),
+            _ => null,
+        };
+    }
 
     public async Task InvokeAsync(HttpContext context, IHuiaCspNonce nonce)
     {

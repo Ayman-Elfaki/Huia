@@ -49,6 +49,7 @@ public sealed partial class MailFlowE2ETests(AppHostFixture host)
             ["Input.FirstName"] = "Nora",
             ["Input.LastName"] = "New",
             ["Input.Email"] = email,
+            ["Input.PhoneNumber"] = "+1 202 555 0199",
             ["Input.Password"] = "Fresh1!Pass",
             ["Input.ConfirmPassword"] = "Fresh1!Pass",
         });
