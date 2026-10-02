@@ -1,6 +1,6 @@
 {
   "name": "nuxt-huia-headless",
-  "version": "1.0.0-alpha.8",
+  "version": "1.0.0-alpha.9",
   "description": "Nuxt 3+ bearer-token authentication module for the Huia.Headless identity API",
   "license": "MIT",
   "type": "module",
