@@ -58,4 +58,4 @@ query the REST API:
 (`AppHostFixture`), posts the forgot-password / register forms on the identity server, then uses
 `MailpitClient.WaitForActionUrlAsync` to pull the reset / confirmation link out of the delivered
 message and follow it. The suite needs Docker (Mailpit + Postgres images) and is tagged
-`Category=E2E`.
+`Category=Aspire`.

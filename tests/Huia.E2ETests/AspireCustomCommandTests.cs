@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Huia.E2ETests;
 
+[Trait("Category", "Aspire")]
 public sealed class AspireCustomCommandTests
 {
     [Fact]

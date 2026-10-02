@@ -37,7 +37,7 @@ jobs:
         run: dotnet build Huia.slnx -c Release
 
       - name: Test
-        run: dotnet test Huia.slnx -c Release --no-build --filter "Category!=Container&Category!=E2E"
+        run: dotnet test Huia.slnx -c Release --no-build --filter "Category!=Container&Category!=E2E&Category!=Aspire"
 
       - name: Pack
         run: |

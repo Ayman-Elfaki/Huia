@@ -14,7 +14,7 @@ namespace Huia.E2ETests;
 /// (Huia.Headless OpenIdConnect handler) successfully discover, challenge, authenticate, and
 /// exchange tokens with <c>Huia.External</c> in the Aspire environment.
 /// </summary>
-[Trait("Category", "E2E")]
+[Trait("Category", "Aspire")]
 [Collection("apphost")]
 public sealed class AppHostExternalLoginE2ETests(AppHostFixture host)
 {

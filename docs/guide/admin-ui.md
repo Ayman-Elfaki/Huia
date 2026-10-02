@@ -66,4 +66,4 @@ dotnet run --project samples/Shared/Huia.AppHost
 ```
 
 `tests/Huia.E2ETests/AdminUiE2ETests.cs` drives the console through the same AppHost via
-`Aspire.Hosting.Testing` + Playwright (`Category=E2E`, needs Docker).
+`Aspire.Hosting.Testing` + Playwright (`Category=Aspire`, needs Docker).

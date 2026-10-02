@@ -9,7 +9,7 @@ namespace Huia.E2ETests;
 /// administrator. Covers every admin surface: the dashboard, the tenants / users / clients / keys lists,
 /// and the full per-tenant scope CRUD, including that code-defined scopes are read-only.
 /// </summary>
-[Trait("Category", "E2E")]
+[Trait("Category", "Aspire")]
 [Collection("apphost")]
 public sealed class AdminUiE2ETests(AppHostFixture host)
 {

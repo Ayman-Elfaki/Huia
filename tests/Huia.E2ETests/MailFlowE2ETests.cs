@@ -9,7 +9,7 @@ namespace Huia.E2ETests;
 /// specs post the identity server's own Razor forms and then read the resulting message — and follow its
 /// link — through Mailpit's REST API.
 /// </summary>
-[Trait("Category", "E2E")]
+[Trait("Category", "Aspire")]
 [Collection("apphost")]
 public sealed partial class MailFlowE2ETests(AppHostFixture host)
 {
