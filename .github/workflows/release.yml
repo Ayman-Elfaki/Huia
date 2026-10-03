@@ -15,7 +15,7 @@ on:
           - dotnet
           - npm
       version:
-        description: 'Explicit version to release (e.g. 1.0.0-alpha.16). Leave blank on a tag build to let MinVer / tag derive it.'
+        description: 'Explicit version to release (e.g. 1.0.0-alpha.16). Leave blank on a tag build to let MinVer / tag derive it, or on branch build to use package.json.'
         required: false
 
 permissions:
@@ -43,6 +43,20 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Determine release version
+        id: meta
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            raw="${{ inputs.version }}"
+            echo "version=${raw#v}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_name }}" == v* ]]; then
+            ref="${{ github.ref_name }}"
+            echo "version=${ref#v}" >> "$GITHUB_OUTPUT"
+          else
+            ver=$(grep -m 1 '"version":' ../javascript/shared/huia-auth-core/package.json | sed -E 's/.*"version": "([^"]+)".*/\1/')
+            echo "version=$ver" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build
         run: dotnet build Huia.slnx -c Release
 
@@ -52,8 +66,8 @@ jobs:
       - name: Pack
         run: |
           version_arg=""
-          if [ -n "${{ inputs.version }}" ]; then
-            version_arg="-p:Version=${{ inputs.version }}"
+          if [ -n "${{ steps.meta.outputs.version }}" ]; then
+            version_arg="-p:Version=${{ steps.meta.outputs.version }}"
           fi
           for proj in \
             src/Huia/Huia.csproj \
@@ -95,10 +109,13 @@ jobs:
         id: meta
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            version="${{ inputs.version }}"
-          else
+            raw="${{ inputs.version }}"
+            version="${raw#v}"
+          elif [[ "${{ github.ref_name }}" == v* ]]; then
             ref="${{ github.ref_name }}"
             version="${ref#v}"
+          else
+            version=$(node -p "require('./src/javascript/shared/huia-auth-core/package.json').version")
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
