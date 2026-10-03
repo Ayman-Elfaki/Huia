@@ -36,7 +36,7 @@ internal static class PhoneEndpoints
         HttpContext context, HuiaUserManager userManager, IPhoneNumberService phoneNumbers,
         IOtpRateLimiter rateLimiter, IPhoneLoginRateLimiter phoneLoginRateLimiter, IOtpService<HuiaUser> otpService,
         IPendingPhoneSignup pendingSignups, IPhoneLoginFlowStore flows, ISmsSender smsSender,
-        ICaptchaVerifier captcha, IHuiaTenantContext tenantContext, TenantOptions tenant,
+        ICaptchaVerifier captcha, IHuiaTenantContext tenantContext, HuiaTenant tenant,
         IHuiaEventPublisher events, TimeProvider timeProvider, StartPhoneLoginRequest body)
     {
         var tenantId = tenantContext.CurrentTenantId;
@@ -102,7 +102,7 @@ internal static class PhoneEndpoints
     private static async Task<IResult> VerifyAsync(
         HttpContext context, HuiaUserManager userManager, HuiaSignInManager<HuiaUser> signInManager,
         IPhoneLoginFlowStore flows, IPendingPhoneSignup pendingSignups, IOtpService<HuiaUser> otpService,
-        IPhoneLoginRateLimiter phoneLoginRateLimiter, IHuiaTenantContext tenantContext, TenantOptions tenant,
+        IPhoneLoginRateLimiter phoneLoginRateLimiter, IHuiaTenantContext tenantContext, HuiaTenant tenant,
         IHuiaEventPublisher events, TimeProvider timeProvider, VerifyPhoneLoginRequest body)
     {
         var tenantId = tenantContext.CurrentTenantId;

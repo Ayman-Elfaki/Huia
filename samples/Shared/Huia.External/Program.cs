@@ -1,10 +1,10 @@
 using Huia.OpenId.Multitenancy;
 using Huia.OpenId.EntityFrameworkCore;
 using Huia.OpenId.EntityFrameworkCore.Entities;
-using Huia.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Huia.External.Tenants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,48 +19,11 @@ builder.Services.AddDbContext<HuiaDbContext>(options => options.UseSqlite(connec
 builder.Services.AddHostedService<SchemaInitializer>();
 
 builder.Services.AddHuiaOpenId(huia =>
-{
-    huia.UseIssuer(issuer);
-    huia.DisableTransportSecurityRequirement();
-    huia.AddTenant("partners", tenant =>
     {
-        // The mock upstream IdP gets its own branding too (amber accent, legal pages served by the
-        // main Huia sample it federates with).
-        tenant.Branding.DisplayName = "Partner Directory";
-        tenant.Branding.LogoUrl = $"{consumerBaseUrl}/brand/huia-logo.svg";
-        tenant.Branding.FaviconUrl = $"{consumerBaseUrl}/brand/favicon.svg";
-        tenant.Branding.AccentColor = "#d97706";
-        tenant.Branding.TermsUrl = new Uri($"{consumerBaseUrl}/legal/terms.html");
-        tenant.Branding.PrivacyUrl = new Uri($"{consumerBaseUrl}/legal/privacy.html");
-        tenant.Branding.SupportUrl = new Uri("https://github.com/Ayman-Elfaki/Huia");
-        tenant.Authentication.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
-        tenant.AddServerSideWebApplication("huia-idp", "huia-idp-secret", client =>
-        {
-            client.DisplayName = "Todo (via partner sign-in)";
-            client.ClientUri = new Uri($"{consumerBaseUrl}/todo/");
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huia"));
-            client.RedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signin-huiapartial"));
-            // The downstream Huia's OpenIddict-client post-logout callback, so signing out of the Todo
-            // app also ends this partner session.
-            client.PostLogoutRedirectUris.Add(new Uri($"{consumerBaseUrl}/todo/signout-callback-oidc"));
-            client.Scopes.Add("email");
-            client.Scopes.Add("profile");
-        });
-
-        tenant.AddServerSideWebApplication("shop-api", "shop-api-secret", client =>
-        {
-            client.DisplayName = "Shop (via partner sign-in)";
-            client.ClientUri = new Uri($"{shopConsumerBaseUrl}/");
-            // Huia.Headless's classic OpenIdConnect handler callback path is "/signin-{provider}"
-            // verbatim (no tenant segment, no lower-casing — unlike the OpenIddict-client shape above),
-            // so this must match the provider name Shop.Api registers exactly: "huia".
-            client.RedirectUris.Add(new Uri($"{shopConsumerBaseUrl}/signin-huia"));
-
-            client.Scopes.Add("email");
-            client.Scopes.Add("profile");
-        });
-    });
-})
+        huia.UseIssuer(issuer);
+        huia.DisableTransportSecurityRequirement();
+        huia.AddTenant(new PartnersTenant(consumerBaseUrl, shopConsumerBaseUrl));
+    })
     .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
     .AddHuiaUi();
 
@@ -103,7 +66,8 @@ internal sealed class PartnerUserSeeder(IServiceProvider services) : IHostedServ
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private static async Task EnsureAsync(UserManager<HuiaUser> userManager, string email, string password, string first, string last)
+    private static async Task EnsureAsync(UserManager<HuiaUser> userManager, string email, string password,
+        string first, string last)
     {
         if (await userManager.FindByNameAsync(email) is not null)
         {

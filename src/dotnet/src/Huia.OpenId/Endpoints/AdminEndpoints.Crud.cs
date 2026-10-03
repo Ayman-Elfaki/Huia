@@ -383,25 +383,25 @@ internal static partial class AdminEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }
 
-        if (!TryBuildClientDescriptor(body, out var descriptor, out var problem))
+        if (!TryBuildClientApplication(body, out var application, out var problem))
         {
             return problem;
         }
 
         using (HuiaTenantScope.Enter(context.RequestServices, body.Tenant))
         {
-            if (await manager.FindByClientIdAsync(descriptor.ClientId, context.RequestAborted) is not null)
+            if (await manager.FindByClientIdAsync(application.ClientId, context.RequestAborted) is not null)
             {
-                return Results.Conflict(new { message = $"A client '{descriptor.ClientId}' already exists." });
+                return Results.Conflict(new { message = $"A client '{application.ClientId}' already exists." });
             }
 
             var appDescriptor = HuiaApplicationDescriptorMapper.ToDescriptor(
-                body.Tenant, descriptor, HuiaConstants.Origins.Dynamic);
+                body.Tenant, application, HuiaConstants.Origins.Dynamic);
             await manager.CreateAsync(appDescriptor, context.RequestAborted);
         }
 
-        return Results.Created($"/admin/clients/{Uri.EscapeDataString(descriptor.ClientId)}",
-            new { body.Tenant, descriptor.ClientId });
+        return Results.Created($"/admin/clients/{Uri.EscapeDataString(application.ClientId)}",
+            new { body.Tenant, application.ClientId });
     }
 
     private static async Task<IResult> UpdateClientAsync(
@@ -420,7 +420,7 @@ internal static partial class AdminEndpoints
             return CodeDefinedClientProblem();
         }
 
-        if (!TryBuildClientDescriptor(body with { Tenant = tenant, ClientId = body.ClientId ?? row.ClientId }, out var descriptor, out var problem))
+        if (!TryBuildClientApplication(body with { Tenant = tenant, ClientId = body.ClientId ?? row.ClientId }, out var application, out var problem))
         {
             return problem;
         }
@@ -434,7 +434,7 @@ internal static partial class AdminEndpoints
             }
 
             var appDescriptor = HuiaApplicationDescriptorMapper.ToDescriptor(
-                tenant, descriptor, HuiaConstants.Origins.Dynamic);
+                tenant, application, HuiaConstants.Origins.Dynamic);
             await manager.UpdateAsync(app, appDescriptor, context.RequestAborted);
         }
 
@@ -471,49 +471,91 @@ internal static partial class AdminEndpoints
         return Results.NoContent();
     }
 
-    private static bool TryBuildClientDescriptor(ClientWriteRequest body, out HuiaClientDescriptor descriptor, out IResult problem)
+    private static bool TryBuildClientApplication(ClientWriteRequest body, out HuiaApplication application, out IResult problem)
     {
-        descriptor = new HuiaClientDescriptor();
+        var clientId = body.ClientId ?? string.Empty;
+        var clientSecret = body.ClientSecret ?? string.Empty;
+        var kindStr = body.Kind?.ToLowerInvariant() ?? string.Empty;
 
-        if (!Enum.TryParse<ClientKind>(body.Kind, ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
+        HuiaApplication app;
+        switch (kindStr)
         {
-            problem = Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["kind"] = [$"Must be one of: {string.Join(", ", Enum.GetNames<ClientKind>())}."],
-            });
-            return false;
+            case "serversideweb":
+            case "serversidewebapplication":
+            case "server_side_web":
+            case "server":
+            case "web":
+                app = new ServerSideWebApplication(clientId, clientSecret)
+                {
+                    RequiresPushedAuthorizationRequests = body.RequirePushedAuthorizationRequests ?? false,
+                };
+                break;
+
+            case "singlepageapp":
+            case "singlepageapplication":
+            case "single_page_app":
+            case "spa":
+                app = new SinglePageApplication(clientId);
+                break;
+
+            case "native":
+            case "nativeapplication":
+            case "desktop":
+            case "mobile":
+                app = new NativeApplication(clientId);
+                break;
+
+            case "machinetomachine":
+            case "machinetomachineapplication":
+            case "machine_to_machine":
+            case "m2m":
+                app = new MachineToMachineApplication(clientId, clientSecret);
+                break;
+
+            case "device":
+            case "deviceapplication":
+                app = new DeviceApplication(clientId);
+                break;
+
+            default:
+                application = null!;
+                problem = Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["kind"] = ["Must be one of: ServerSideWeb, SinglePageApp, Native, MachineToMachine, Device."],
+                });
+                return false;
         }
 
-        descriptor.ClientId = body.ClientId ?? string.Empty;
-        descriptor.ClientSecret = body.ClientSecret;
-        descriptor.DisplayName = body.DisplayName;
-        descriptor.Kind = kind;
-        descriptor.RequirePkce = body.RequirePkce ?? false;
-        descriptor.RequireConsent = body.RequireConsent ?? false;
-        descriptor.RequiresPushedAuthorizationRequests = body.RequirePushedAuthorizationRequests ?? false;
+        app.DisplayName = body.DisplayName;
+        app.RequireConsent = body.RequireConsent ?? false;
 
         try
         {
-            descriptor.ClientUri = ParseAbsoluteUri(body.ClientUri);
-            descriptor.LogoUri = ParseAbsoluteUri(body.LogoUri);
-            AddUris(descriptor.RedirectUris, body.RedirectUris);
-            AddUris(descriptor.PostLogoutRedirectUris, body.PostLogoutRedirectUris);
-            AddUris(descriptor.HomeUris, body.HomeUris);
+            app.ClientUri = ParseAbsoluteUri(body.ClientUri);
+            app.LogoUri = ParseAbsoluteUri(body.LogoUri);
+
+            if (app is InteractiveClientApplication interactive)
+            {
+                AddUris(interactive.RedirectUris, body.RedirectUris);
+                AddUris(interactive.PostLogoutRedirectUris, body.PostLogoutRedirectUris);
+                AddUris(interactive.HomeUris, body.HomeUris);
+            }
         }
         catch (UriFormatException ex)
         {
+            application = null!;
             problem = Results.ValidationProblem(new Dictionary<string, string[]> { ["uri"] = [ex.Message] });
             return false;
         }
 
         foreach (var scope in body.Scopes ?? [])
         {
-            descriptor.Scopes.Add(scope);
+            app.Scopes.Add(scope);
         }
 
         if (body.Token is { } token)
         {
-            descriptor.Token = new TokenLifetimeOptions
+            app.Token = new TokenLifetimeOptions
             {
                 AccessToken = token.AccessToken,
                 IdentityToken = token.IdentityToken,
@@ -524,16 +566,16 @@ internal static partial class AdminEndpoints
             };
         }
 
-        try
+        var errors = new List<string>();
+        app.Validate("Application", errors);
+        if (errors.Count > 0)
         {
-            descriptor.Validate();
-        }
-        catch (HuiaOptionsException ex)
-        {
-            problem = Results.ValidationProblem(new Dictionary<string, string[]> { ["client"] = [.. ex.Errors] });
+            application = null!;
+            problem = Results.ValidationProblem(new Dictionary<string, string[]> { ["client"] = [.. errors] });
             return false;
         }
 
+        application = app;
         problem = Results.Empty;
         return true;
 

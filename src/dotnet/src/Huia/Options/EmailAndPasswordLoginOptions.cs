@@ -25,7 +25,7 @@ public sealed class EmailAndPasswordLoginOptions : IHuiaOptionsSection
 
     /// <summary>
     /// Whether anonymous visitors may create their own accounts via the account UI. On by default;
-    /// call <see cref="TenantOptions.DisableRegistration"/> to turn it off for a tenant.
+    /// call <see cref="HuiaTenant.DisableRegistration"/> to turn it off for a tenant.
     /// </summary>
     public bool AllowSelfServiceRegistration { get; set; } = true;
 

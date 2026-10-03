@@ -35,7 +35,8 @@ internal static class ConnectEndpoints
     {
         var group = endpoints.MapGroup("connect");
 
-        group.MapMethods("authorize", ["GET", "POST"], AuthorizeAsync).WithName(HuiaConstants.Endpoints.Connect.Authorize);
+        group.MapMethods("authorize", ["GET", "POST"], AuthorizeAsync)
+            .WithName(HuiaConstants.Endpoints.Connect.Authorize);
         group.MapMethods("token", ["POST"], ExchangeAsync).WithName(HuiaConstants.Endpoints.Connect.Token);
         group.MapMethods("userinfo", ["GET", "POST"], UserInfoAsync).WithName(HuiaConstants.Endpoints.Connect.UserInfo);
         group.MapMethods("logout", ["GET", "POST"], LogoutAsync).WithName(HuiaConstants.Endpoints.Connect.Logout);
@@ -51,7 +52,7 @@ internal static class ConnectEndpoints
         IMultiTenantContextAccessor tenantAccessor)
     {
         var request = context.GetOpenIddictServerRequest()
-            ?? throw new InvalidOperationException("The OpenIddict server request could not be retrieved.");
+                      ?? throw new InvalidOperationException("The OpenIddict server request could not be retrieved.");
 
         var uiLocales = request.UiLocales ?? (string?)request.GetParameter("ui_locales");
         if (!string.IsNullOrWhiteSpace(uiLocales))
@@ -61,7 +62,7 @@ internal static class ConnectEndpoints
 
         var authenticate = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         var forceLogin = request.HasPromptValue(PromptValues.Login);
-        var signedIn = authenticate.Succeeded && authenticate.Principal is not null;
+        var signedIn = authenticate is { Succeeded: true, Principal: not null };
 
         // A cookie can authenticate (right signature, right tenant) yet no longer name a real user —
         // most commonly a dev database reset (or a deleted account) outliving a browser session that
@@ -87,7 +88,8 @@ internal static class ConnectEndpoints
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
                         [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.LoginRequired,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user is not signed in.",
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The user is not signed in.",
                     }));
             }
 
@@ -111,6 +113,7 @@ internal static class ConnectEndpoints
         identity.SetClaim(Claims.Email, await userManager.GetEmailAsync(user));
         identity.SetClaim(Claims.Name, await userManager.GetUserNameAsync(user));
         identity.SetClaim(Claims.PreferredUsername, await userManager.GetUserNameAsync(user));
+        identity.SetClaim(Claims.PhoneNumber, await userManager.GetPhoneNumberAsync(user));
         identity.SetClaim(Claims.GivenName, user.FirstName);
         identity.SetClaim(Claims.FamilyName, user.LastName);
         identity.SetClaim(HuiaConstants.ClaimTypes.Tenant, tenantId);
@@ -136,7 +139,8 @@ internal static class ConnectEndpoints
         identity.SetScopes(request.GetScopes());
         identity.SetDestinations(GetDestinations);
 
-        return Results.SignIn(new ClaimsPrincipal(identity), properties: null, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        return Results.SignIn(new ClaimsPrincipal(identity), properties: null,
+            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     private static async Task<IResult> VerifyAsync(
@@ -146,7 +150,7 @@ internal static class ConnectEndpoints
         IAntiforgery antiforgery)
     {
         var request = context.GetOpenIddictServerRequest()
-            ?? throw new InvalidOperationException("The OpenIddict server request could not be retrieved.");
+                      ?? throw new InvalidOperationException("The OpenIddict server request could not be retrieved.");
 
         var authenticate = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         if (!authenticate.Succeeded || authenticate.Principal is null)
@@ -166,7 +170,7 @@ internal static class ConnectEndpoints
         {
             var userCode = request.UserCode ?? context.Request.Query["user_code"].ToString();
             var target = QueryHelpers.AddQueryString(
-                $"{context.Request.PathBase}/identity/account/deviceverification", "user_code", userCode ?? string.Empty);
+                $"{context.Request.PathBase}/identity/account/deviceverification", "user_code", userCode);
             return Results.Redirect(target);
         }
 
@@ -179,7 +183,8 @@ internal static class ConnectEndpoints
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.AccessDenied,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The authorization was denied by the end user.",
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The authorization was denied by the end user.",
                 }));
         }
 
@@ -211,6 +216,7 @@ internal static class ConnectEndpoints
         identity.SetClaim(Claims.Email, await userManager.GetEmailAsync(user));
         identity.SetClaim(Claims.Name, await userManager.GetUserNameAsync(user));
         identity.SetClaim(Claims.PreferredUsername, await userManager.GetUserNameAsync(user));
+        identity.SetClaim(Claims.PhoneNumber, await userManager.GetPhoneNumberAsync(user));
         identity.SetClaim(Claims.GivenName, user.FirstName);
         identity.SetClaim(Claims.FamilyName, user.LastName);
         identity.SetClaim(HuiaConstants.ClaimTypes.Tenant, tenantId);
@@ -231,7 +237,8 @@ internal static class ConnectEndpoints
         identity.SetScopes(scopes);
         identity.SetDestinations(GetDestinations);
 
-        return Results.SignIn(new ClaimsPrincipal(identity), properties: null, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        return Results.SignIn(new ClaimsPrincipal(identity), properties: null,
+            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     private static async Task<IResult> ExchangeAsync(
@@ -243,7 +250,7 @@ internal static class ConnectEndpoints
         TimeProvider timeProvider)
     {
         var request = context.GetOpenIddictServerRequest()
-            ?? throw new InvalidOperationException("The OpenIddict server request could not be retrieved.");
+                      ?? throw new InvalidOperationException("The OpenIddict server request could not be retrieved.");
 
         if (request.IsClientCredentialsGrantType())
         {
@@ -256,10 +263,12 @@ internal static class ConnectEndpoints
             machinePrincipal.SetScopes(request.GetScopes());
             machinePrincipal.SetDestinations(GetDestinations);
 
-            return Results.SignIn(machinePrincipal, properties: null, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            return Results.SignIn(machinePrincipal, properties: null,
+                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
-        if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType() || request.IsDeviceCodeGrantType())
+        if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType() ||
+            request.IsDeviceCodeGrantType())
         {
             var authenticate = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             if (authenticate.Principal is null)
@@ -302,12 +311,15 @@ internal static class ConnectEndpoints
                 await events.PublishAsync(new UserLoggedInEvent(
                     tenantAccessor.RequireCurrentTenantId(),
                     user.Id,
-                    isSmsSignIn ? HuiaConstants.AuthenticationMethods.Sms : HuiaConstants.AuthenticationMethods.Password,
+                    isSmsSignIn
+                        ? HuiaConstants.AuthenticationMethods.Sms
+                        : HuiaConstants.AuthenticationMethods.Password,
                     request.ClientId,
                     timeProvider.GetUtcNow()));
             }
 
-            return Results.SignIn(new ClaimsPrincipal(identity), properties: null, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            return Results.SignIn(new ClaimsPrincipal(identity), properties: null,
+                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
         return InvalidGrant("The specified grant type is not supported.");
@@ -393,7 +405,8 @@ internal static class ConnectEndpoints
 
         await signInManager.SignOutAsync();
 
-        var finalRedirect = await ResolveFinalLogoutRedirectAsync(context, tenantAccessor, applicationManager, huiaOptions, request);
+        var finalRedirect =
+            await ResolveFinalLogoutRedirectAsync(context, tenantAccessor, applicationManager, huiaOptions, request);
 
         if (externalIdp is not null)
         {
@@ -408,11 +421,18 @@ internal static class ConnectEndpoints
                     var configuration = await clientService.GetServerConfigurationByRegistrationIdAsync(externalIdp);
                     if (configuration?.EndSessionEndpoint is not null)
                     {
-                        var properties = new AuthenticationProperties { RedirectUri = finalRedirect };
-                        properties.Items[OpenIddictClientAspNetCoreConstants.Properties.RegistrationId] = externalIdp;
+                        var properties = new AuthenticationProperties
+                        {
+                            RedirectUri = finalRedirect,
+                            Items =
+                            {
+                                [OpenIddictClientAspNetCoreConstants.Properties.RegistrationId] = externalIdp
+                            }
+                        };
                         if (externalIdToken is not null)
                         {
-                            properties.Items[OpenIddictClientAspNetCoreConstants.Properties.IdentityTokenHint] = externalIdToken;
+                            properties.Items[OpenIddictClientAspNetCoreConstants.Properties.IdentityTokenHint] =
+                                externalIdToken;
                         }
 
                         return Results.SignOut(properties, [OpenIddictClientAspNetCoreDefaults.AuthenticationScheme]);
@@ -449,7 +469,8 @@ internal static class ConnectEndpoints
                 && await applicationManager.FindByClientIdAsync(clientId) is { } application)
             {
                 var registered = await applicationManager.GetPostLogoutRedirectUrisAsync(application);
-                if (registered.Any(r => string.Equals(r.TrimEnd('/'), postLogout.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+                if (registered.Any(r =>
+                        string.Equals(r.TrimEnd('/'), postLogout.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
                 {
                     return postLogout;
                 }
@@ -459,11 +480,13 @@ internal static class ConnectEndpoints
                 var tenantId = tenantAccessor.CurrentTenantId();
                 if (tenantId is not null && huiaOptions.Tenants.TryGetValue(tenantId, out var tenant))
                 {
-                    foreach (var client in tenant.Clients)
+                    foreach (var client in tenant.Applications.OfType<InteractiveClientApplication>())
                     {
                         if (client.PostLogoutRedirectUris.Any(uri =>
-                            string.Equals(uri.ToString().TrimEnd('/'), postLogout.TrimEnd('/'), StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(uri.OriginalString.TrimEnd('/'), postLogout.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+                                string.Equals(uri.ToString().TrimEnd('/'), postLogout.TrimEnd('/'),
+                                    StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(uri.OriginalString.TrimEnd('/'), postLogout.TrimEnd('/'),
+                                    StringComparison.OrdinalIgnoreCase)))
                         {
                             return postLogout;
                         }
@@ -506,7 +529,7 @@ internal static class ConnectEndpoints
         // configured client's home / post-logout URL for this tenant rather than the identity server's
         // own tenant root, which has nothing to serve and would just bounce to sign-in.
         if (tenantId is not null && huiaOptions.Tenants.TryGetValue(tenantId, out var tenant)
-            && TenantClientHome.Resolve(tenant) is { } appUri)
+                                 && TenantClientHome.Resolve(tenant) is { } appUri)
         {
             return appUri;
         }

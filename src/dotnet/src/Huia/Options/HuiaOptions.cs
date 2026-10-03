@@ -39,21 +39,31 @@ public sealed class HuiaOptions : IHuiaOptionsSection
     public CleanupOptions Cleanup { get; } = new();
 
     /// <summary>The configured tenants, keyed by tenant identifier (also the base-path segment).</summary>
-    public IDictionary<string, TenantOptions> Tenants { get; } =
-        new Dictionary<string, TenantOptions>(StringComparer.Ordinal);
+    public IDictionary<string, HuiaTenant> Tenants { get; } =
+        new Dictionary<string, HuiaTenant>(StringComparer.Ordinal);
+
+    /// <summary>Adds a strongly-typed tenant.</summary>
+    public HuiaTenant AddTenant(HuiaTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tenant.Identifier);
+        tenant.Initialize();
+        Tenants[tenant.Identifier] = tenant;
+        return tenant;
+    }
 
     /// <summary>Adds (or returns the existing) tenant and applies the configuration callback.</summary>
     /// <param name="tenantId">The tenant identifier / base-path segment.</param>
     /// <param name="configure">Configuration for the tenant.</param>
-    /// <returns>The tenant options.</returns>
-    public TenantOptions AddTenant(string tenantId, Action<TenantOptions> configure)
+    /// <returns>The tenant instance.</returns>
+    public HuiaTenant AddTenant(string tenantId, Action<HuiaTenant> configure)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
         ArgumentNullException.ThrowIfNull(configure);
 
         if (!Tenants.TryGetValue(tenantId, out var tenant))
         {
-            tenant = new TenantOptions();
+            tenant = new HuiaTenant(tenantId);
             Tenants[tenantId] = tenant;
         }
 

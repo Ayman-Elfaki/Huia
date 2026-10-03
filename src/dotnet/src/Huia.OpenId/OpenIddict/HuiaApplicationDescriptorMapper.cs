@@ -7,46 +7,56 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 namespace Huia.OpenId.OpenIddict;
 
 /// <summary>
-/// Translates a <see cref="HuiaClientDescriptor"/> into an <see cref="OpenIddictApplicationDescriptor"/>.
+/// Translates a <see cref="HuiaApplication"/> into an <see cref="OpenIddictApplicationDescriptor"/>.
 /// Shared by <see cref="HuiaClientSeeder"/> (options-tree clients, stamped <c>huia:origin = static</c>)
 /// and the admin API (runtime clients, stamped <c>dynamic</c>).
 /// </summary>
 internal static class HuiaApplicationDescriptorMapper
 {
-    /// <summary>Builds the OpenIddict descriptor for a client.</summary>
+    /// <summary>Builds the OpenIddict descriptor for an application.</summary>
     /// <param name="tenantId">The owning tenant, written to <c>Properties["huia:tenant"]</c>.</param>
-    /// <param name="client">The source client descriptor.</param>
+    /// <param name="client">The source application.</param>
     /// <param name="origin">Either <see cref="HuiaConstants.Origins.Static"/> or <c>Dynamic</c>.</param>
     /// <returns>A fully populated descriptor ready for <c>IOpenIddictApplicationManager.CreateAsync</c>.</returns>
-    public static OpenIddictApplicationDescriptor ToDescriptor(string tenantId, HuiaClientDescriptor client, string origin)
+    public static OpenIddictApplicationDescriptor ToDescriptor(string tenantId, HuiaApplication client, string origin)
     {
+        var clientSecret = GetClientSecret(client);
         var descriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = client.ClientId,
-            ClientSecret = client.IsPublic ? null : client.ClientSecret,
+            ClientSecret = client.IsPublic ? null : clientSecret,
             ClientType = client.IsPublic ? ClientTypes.Public : ClientTypes.Confidential,
             DisplayName = client.DisplayName ?? client.ClientId,
             ConsentType = client.RequireConsent ? ConsentTypes.Explicit : ConsentTypes.Implicit,
         };
 
-        foreach (var uri in client.RedirectUris)
+        if (client is InteractiveClientApplication interactive)
         {
-            descriptor.RedirectUris.Add(uri);
-        }
+            foreach (var uri in interactive.RedirectUris)
+            {
+                descriptor.RedirectUris.Add(uri);
+            }
 
-        foreach (var uri in client.PostLogoutRedirectUris)
-        {
-            descriptor.PostLogoutRedirectUris.Add(uri);
+            foreach (var uri in interactive.PostLogoutRedirectUris)
+            {
+                descriptor.PostLogoutRedirectUris.Add(uri);
+            }
+
+            if (interactive.HomeUris.Count > 0)
+            {
+                descriptor.Properties[HuiaConstants.ApplicationProperties.HomeUris] =
+                    JsonSerializer.SerializeToElement(interactive.HomeUris.Select(u => u.ToString()).ToArray());
+            }
         }
 
         ApplyPermissions(descriptor, client);
 
-        if (client.RequirePkce || client.Kind is ClientKind.SinglePageApplication or ClientKind.NativeApplication)
+        if (GetRequiresPkce(client))
         {
             descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
         }
 
-        if (client.RequiresPushedAuthorizationRequests)
+        if (GetRequiresPar(client))
         {
             descriptor.Requirements.Add(Requirements.Features.PushedAuthorizationRequests);
         }
@@ -55,12 +65,6 @@ internal static class HuiaApplicationDescriptorMapper
             JsonSerializer.SerializeToElement(tenantId);
         descriptor.Properties[HuiaConstants.ApplicationProperties.Origin] =
             JsonSerializer.SerializeToElement(origin);
-
-        if (client.HomeUris.Count > 0)
-        {
-            descriptor.Properties[HuiaConstants.ApplicationProperties.HomeUris] =
-                JsonSerializer.SerializeToElement(client.HomeUris.Select(u => u.ToString()).ToArray());
-        }
 
         if (client.ClientUri is not null)
         {
@@ -78,7 +82,33 @@ internal static class HuiaApplicationDescriptorMapper
         return descriptor;
     }
 
-    private static void ApplyPermissions(OpenIddictApplicationDescriptor descriptor, HuiaClientDescriptor client)
+    private static string? GetClientSecret(HuiaApplication client) => client switch
+    {
+        ServerSideWebApplication web => web.ClientSecret,
+        MachineToMachineApplication m2m => m2m.ClientSecret,
+        DeviceApplication dev => dev.ClientSecret,
+        HuiaClientDescriptor desc => desc.ClientSecret,
+        _ => null,
+    };
+
+    private static bool GetRequiresPkce(HuiaApplication client) => client switch
+    {
+        ServerSideWebApplication web => web.RequirePkce,
+        SinglePageApplication => true,
+        NativeApplication => true,
+        DeviceApplication dev => dev.RequirePkce,
+        HuiaClientDescriptor desc => desc.RequirePkce || desc.IsPublic,
+        _ => false,
+    };
+
+    private static bool GetRequiresPar(HuiaApplication client) => client switch
+    {
+        ServerSideWebApplication web => web.RequiresPushedAuthorizationRequests,
+        HuiaClientDescriptor desc => desc.RequiresPushedAuthorizationRequests,
+        _ => false,
+    };
+
+    private static void ApplyPermissions(OpenIddictApplicationDescriptor descriptor, HuiaApplication client)
     {
         descriptor.Permissions.Add(Permissions.Endpoints.Token);
 

@@ -44,7 +44,7 @@ internal sealed class HuiaReadinessHealthCheck(
             var scopeCount = 0;
             foreach (var tenant in options.Tenants.Values)
             {
-                foreach (var client in tenant.Clients)
+                foreach (var client in tenant.Applications)
                 {
                     clientCount++;
                     if (await applicationManager.FindByClientIdAsync(client.ClientId, cancellationToken) is null)

@@ -10,10 +10,10 @@ public class HuiaOptionsValidationTests
         options.AddTenant("acme", tenant =>
         {
             tenant.Authentication.UseEmailAndPasswordLogin();
-            tenant.AddClient("acme-web", ClientKind.ServerSideWebApplication);
-            var client = tenant.Clients[0];
-            client.ClientSecret = "s3cret-value";
-            client.RedirectUris.Add(new Uri("https://acme.example.test/callback"));
+            tenant.Applications.AddServerSideWeb("acme-web", "s3cret-value", app =>
+            {
+                app.RedirectUris.Add(new Uri("https://acme.example.test/callback"));
+            });
         });
         return options;
     }
@@ -156,19 +156,20 @@ public class HuiaOptionsValidationTests
     public void Email_and_password_login_is_off_until_UseEmailAndPasswordLogin_is_called()
     {
         var tenant = new TenantOptions();
-        tenant.Authentication.EmailAndPassword.Enabled.ShouldBeFalse();
+        tenant.Authentication.IsEmailAndPasswordLoginEnabled.ShouldBeFalse();
 
         tenant.Authentication.UseEmailAndPasswordLogin(password => password.MinimumLength = 12);
 
-        tenant.Authentication.EmailAndPassword.Enabled.ShouldBeTrue();
-        tenant.Authentication.EmailAndPassword.MinimumLength.ShouldBe(12);
+        tenant.Authentication.IsEmailAndPasswordLoginEnabled.ShouldBeTrue();
+        tenant.Authentication.EmailAndPassword!.MinimumLength.ShouldBe(12);
     }
 
     [Fact]
     public void Self_service_registration_is_on_by_default_and_DisableRegistration_turns_it_off()
     {
         var tenant = new TenantOptions();
-        tenant.Authentication.EmailAndPassword.AllowSelfServiceRegistration.ShouldBeTrue();
+        tenant.Authentication.UseEmailAndPasswordLogin();
+        tenant.Authentication.EmailAndPassword!.AllowSelfServiceRegistration.ShouldBeTrue();
 
         tenant.DisableRegistration();
 
@@ -189,11 +190,12 @@ public class HuiaOptionsValidationTests
     public void DisableRegistration_also_turns_off_phone_auto_provisioning_when_the_phone_flow_is_enabled()
     {
         var tenant = new TenantOptions();
+        tenant.Authentication.UseEmailAndPasswordLogin();
         tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
 
         tenant.DisableRegistration();
 
-        tenant.Authentication.EmailAndPassword.AllowSelfServiceRegistration.ShouldBeFalse();
+        tenant.Authentication.EmailAndPassword!.AllowSelfServiceRegistration.ShouldBeFalse();
         tenant.Authentication.Phone!.AllowAutoProvisioning.ShouldBeFalse();
     }
 
@@ -201,31 +203,32 @@ public class HuiaOptionsValidationTests
     public void A_confidential_client_without_a_secret_is_rejected()
     {
         var options = ValidOptions();
-        options.Tenants["acme"].Clients[0].ClientSecret = null;
+        var client = (ServerSideWebApplication)options.Tenants["acme"].Applications[0];
+        client.ClientSecret = null!;
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
-            .Errors.ShouldContain(e => e.Contains("confidential client", StringComparison.Ordinal));
+            .Errors.ShouldContain(e => e.Contains("ClientSecret", StringComparison.OrdinalIgnoreCase) || e.Contains("confidential client", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public void A_public_client_with_a_secret_is_rejected()
+    public void A_public_client_enforces_pkce()
     {
         var options = ValidOptions();
-        options.Tenants["acme"].AddClient("acme-spa", ClientKind.SinglePageApplication);
-        var spa = options.Tenants["acme"].Clients[1];
-        spa.ClientSecret = "should-not-be-here";
-        spa.RedirectUris.Add(new Uri("https://acme.example.test/spa"));
-
-        Should.Throw<HuiaOptionsException>(() => options.Validate())
-            .Errors.ShouldContain(e => e.Contains("public", StringComparison.Ordinal));
+        options.Tenants["acme"].Applications.AddSinglePageApp("acme-spa", spa =>
+        {
+            spa.RedirectUris.Add(new Uri("https://acme.example.test/spa"));
+        });
+        options.Validate();
+        var spa = (SinglePageApplication)options.Tenants["acme"].Applications[1];
+        spa.IsPublic.ShouldBeTrue();
+        spa.RequirePkce.ShouldBeTrue();
     }
 
     [Fact]
     public void Duplicate_client_ids_within_a_tenant_are_rejected()
     {
         var options = ValidOptions();
-        var dup = options.Tenants["acme"].AddClient("acme-web", ClientKind.MachineToMachine);
-        dup.ClientSecret = "another-secret";
+        options.Tenants["acme"].Applications.AddMachineToMachine("acme-web", "another-secret");
 
         Should.Throw<HuiaOptionsException>(() => options.Validate())
             .Errors.ShouldContain(e => e.Contains("more than once", StringComparison.Ordinal));

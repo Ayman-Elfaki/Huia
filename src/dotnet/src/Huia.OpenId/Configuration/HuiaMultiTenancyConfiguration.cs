@@ -2,6 +2,7 @@ using Finbuckle.MultiTenant;
 using Finbuckle.MultiTenant.AspNetCore.Extensions;
 using Finbuckle.MultiTenant.Extensions;
 using Huia.Multitenancy;
+using Huia.OpenId.DependencyInjection;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Huia.OpenId.Multitenancy;
 using Huia.Options;
@@ -19,11 +20,12 @@ namespace Huia.OpenId.Configuration;
 /// </summary>
 internal static class HuiaMultiTenancyConfiguration
 {
-    public static IServiceCollection AddHuiaMultiTenancy(this IServiceCollection services, HuiaOptions options)
+    public static IServiceCollection AddHuiaMultiTenancy(
+        this IServiceCollection services, HuiaOptions options, HuiaOpenIdConfigurationBuilder? configBuilder = null)
     {
         var tenants = options.Tenants.Keys.Select(id => new HuiaTenantInfo(id)).ToList();
 
-        services.AddMultiTenant<HuiaTenantInfo>()
+        var builder = services.AddMultiTenant<HuiaTenantInfo>()
             .WithBasePathStrategy(strategy => strategy.RebaseAspNetCorePathBase = true)
             .WithInMemoryStore(store =>
             {
@@ -33,6 +35,14 @@ internal static class HuiaMultiTenancyConfiguration
                     store.Tenants.Add(tenant);
                 }
             });
+
+        if (configBuilder is not null)
+        {
+            foreach (var configure in configBuilder.FinbuckleConfigurations)
+            {
+                configure(builder);
+            }
+        }
 
         services.AddHttpContextAccessor();
         services.AddScoped<IHuiaTenantContext, HuiaFinbuckleTenantContext>();
@@ -45,13 +55,6 @@ internal static class HuiaMultiTenancyConfiguration
     /// <em>after</em> <c>AddHuiaIdentity</c> (which registers <see cref="Microsoft.AspNetCore.Authentication.IAuthenticationService"/>)
     /// and after <c>AddHuiaCookieHardening</c> (so the per-tenant name overrides the shared one).
     /// </summary>
-    /// <remarks>
-    /// Finbuckle's <c>WithPerTenantAuthentication()</c>
-    /// wraps <c>OnValidatePrincipal</c> for every cookie scheme: a ticket carries the tenant it was
-    /// minted under in its (encrypted) authentication properties, and a request whose resolved tenant
-    /// does not match has its principal rejected. The per-tenant cookie <em>name</em> is layered on top
-    /// so a browser can hold several tenants' sessions at once.
-    /// </remarks>
     public static IServiceCollection AddHuiaPerTenantAuthentication(this IServiceCollection services)
     {
         new MultiTenantBuilder<HuiaTenantInfo>(services).WithPerTenantAuthentication();
@@ -64,9 +67,6 @@ internal static class HuiaMultiTenancyConfiguration
             .ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>((cookie, tenant) =>
                 cookie.Cookie.Name = $"huia.2fa.{tenant.Identifier}");
 
-        // ASP.NET Core Identity's passkey helpers stash the attestation / assertion ceremony state in
-        // this transient scheme. Per-tenant name so a browser can have a ceremony in flight for several
-        // tenants at once.
         services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.TwoFactorUserIdScheme)
             .ConfigurePerTenant<CookieAuthenticationOptions, HuiaTenantInfo>((cookie, tenant) =>
                 cookie.Cookie.Name = $"{HuiaConstants.Cookies.TwoFactorUser}.{tenant.Identifier}");
@@ -75,12 +75,7 @@ internal static class HuiaMultiTenancyConfiguration
     }
 
     /// <summary>
-    /// Projects each tenant's passkey policy onto <see cref="IdentityPasskeyOptions"/>: the relying-party
-    /// id and allowed origins, the user-verification requirement, the authenticator preference and the
-    /// ceremony timeout. The one globally-fixed setting (<c>ResidentKeyRequirement = "required"</c>) is in
-    /// <c>AddHuiaIdentity</c>. Mirrors <see cref="AddHuiaPerTenantIdentityOptions"/>:
-    /// <see cref="Microsoft.AspNetCore.Identity.PasskeyHandler{TUser}"/> reads <see cref="IOptions{T}"/>, a
-    /// process-wide snapshot, so a scoped re-registration re-points it at the tenant-aware value per request.
+    /// Projects each tenant's passkey policy onto <see cref="IdentityPasskeyOptions"/>.
     /// </summary>
     public static IServiceCollection AddHuiaPerTenantPasskeyOptions(this IServiceCollection services, HuiaOptions options)
     {
@@ -91,7 +86,7 @@ internal static class HuiaMultiTenancyConfiguration
             {
                 passkey.ResidentKeyRequirement = "required";
 
-                if (!options.Tenants.TryGetValue(tenant.Identifier, out var config) || config.Authentication.Passkey is not { } policy)
+                if (!options.Tenants.TryGetValue(tenant.Identifier, out var config) || config.Authentication.Find<PasskeyAuthenticationMethod>() is not { } policy)
                 {
                     return;
                 }
@@ -149,21 +144,8 @@ internal static class HuiaMultiTenancyConfiguration
 
     /// <summary>
     /// Projects each tenant's password-complexity policy (and the opt-in unique-email rule) onto the
-    /// default <see cref="IdentityOptions"/> for that tenant — this is what <c>/manage</c>'s
-    /// change-password endpoint and the admin API validate against. Must run <em>after</em>
-    /// <c>AddHuiaIdentity</c>, which registers the fixed baseline. Neither lockout nor the confirmed-email
-    /// / confirmed-phone rules are set here: lockout is per flow now (each flow's own options carry it —
-    /// see <c>AddHuiaFlowIdentity</c>), and this default instance is never consulted by a sign-in check
-    /// (nothing on the <c>Default</c> flow calls <c>CheckPasswordSignInAsync</c> / <c>IsLockedOutAsync</c>),
-    /// so a value here would be inert either way.
+    /// default <see cref="IdentityOptions"/> for that tenant.
     /// </summary>
-    /// <remarks>
-    /// Finbuckle's <c>ConfigurePerTenant</c> re-projects only <see cref="IOptionsSnapshot{T}"/> /
-    /// <see cref="IOptionsMonitor{T}"/>, but <see cref="UserManager{TUser}"/> and
-    /// <see cref="SignInManager{TUser}"/> read <see cref="IOptions{T}"/> — a process-wide singleton
-    /// snapshot. Both managers are scoped, so the second registration re-points
-    /// <c>IOptions&lt;IdentityOptions&gt;</c> at the tenant-aware snapshot for the duration of a request.
-    /// </remarks>
     public static IServiceCollection AddHuiaPerTenantIdentityOptions(this IServiceCollection services, HuiaOptions options)
     {
         services.AddOptions<IdentityOptions>()
@@ -174,7 +156,7 @@ internal static class HuiaMultiTenancyConfiguration
                     return;
                 }
 
-                var emailAndPassword = config.Authentication.EmailAndPassword;
+                var emailAndPassword = config.Authentication.Find<EmailPasswordAuthenticationMethod>() ?? new EmailPasswordAuthenticationMethod();
                 identity.Password.RequiredLength = emailAndPassword.MinimumLength;
                 identity.Password.RequireDigit = emailAndPassword.RequireDigit;
                 identity.Password.RequireLowercase = emailAndPassword.RequireLowercase;

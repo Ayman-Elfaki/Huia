@@ -51,7 +51,7 @@ public sealed class VerifyOtpModel(
     public int ResendCooldownSeconds =>
         (int)Math.Ceiling((Tenant?.Authentication.Phone?.ResendCooldown ?? TimeSpan.FromSeconds(30)).TotalSeconds);
 
-    private PhoneOptions PhoneOptions =>
+    private PhoneAuthenticationMethod PhoneOptions =>
         Tenant?.Authentication.Phone ?? throw new InvalidOperationException("Phone login is not enabled.");
 
     /// <summary>Handles the GET.</summary>

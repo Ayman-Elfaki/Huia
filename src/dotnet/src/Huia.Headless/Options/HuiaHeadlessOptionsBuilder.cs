@@ -8,7 +8,7 @@ namespace Huia.Headless.Options;
 /// <c>AddTenant(...)</c> wrapper, no <c>Branding</c> (nothing in Headless's JSON API ever reads it), and no
 /// <c>AddClient</c>/<c>AddScope</c>/<c>AddRoles</c> (OAuth-client/OpenIddict seeding concepts Headless never
 /// uses — it issues its own bearer tokens, not OpenIddict ones). Internally this still builds one
-/// <see cref="TenantOptions"/> under the hood, so the multi-tenancy seam shared with <c>Huia.OpenId</c>
+/// <see cref="HuiaTenant"/> under the hood, so the multi-tenancy seam shared with <c>Huia.OpenId</c>
 /// (<see cref="Huia.Multitenancy.IHuiaTenantContext"/>) keeps working unchanged.
 /// </summary>
 public sealed class HuiaHeadlessOptionsBuilder
@@ -20,7 +20,7 @@ public sealed class HuiaHeadlessOptionsBuilder
     internal const string TenantId = "default";
 
     private readonly HuiaOptions _options = new();
-    private readonly TenantOptions _tenant;
+    private readonly HuiaTenant _tenant;
 
     internal HuiaHeadlessOptionsBuilder()
     {
@@ -74,12 +74,11 @@ public sealed class HuiaHeadlessOptionsBuilder
     }
 
     /// <summary>
-    /// Enables and configures the interactive email/password flow. Calling it sets
-    /// <see cref="EmailAndPasswordLoginOptions.Enabled"/>.
+    /// Enables and configures the interactive email/password flow.
     /// </summary>
     /// <param name="configure">Optional further configuration for the flow.</param>
     /// <returns>This builder, for chaining.</returns>
-    public HuiaHeadlessOptionsBuilder UseEmailAndPasswordLogin(Action<EmailAndPasswordLoginOptions>? configure = null)
+    public HuiaHeadlessOptionsBuilder UseEmailAndPasswordLogin(Action<EmailPasswordAuthenticationMethod>? configure = null)
     {
         _tenant.Authentication.UseEmailAndPasswordLogin(configure);
         return this;
@@ -88,7 +87,7 @@ public sealed class HuiaHeadlessOptionsBuilder
     /// <summary>Enables the passwordless phone (SMS one-time code) sign-in.</summary>
     /// <param name="configure">Optional configuration for the flow.</param>
     /// <returns>This builder, for chaining.</returns>
-    public HuiaHeadlessOptionsBuilder UsePhoneLogin(Action<PhoneOptions>? configure = null)
+    public HuiaHeadlessOptionsBuilder UsePhoneLogin(Action<PhoneAuthenticationMethod>? configure = null)
     {
         _tenant.Authentication.UsePhoneLogin(configure);
         return this;
@@ -97,7 +96,7 @@ public sealed class HuiaHeadlessOptionsBuilder
     /// <summary>Enables external identity providers.</summary>
     /// <param name="configure">Configuration that registers at least one provider.</param>
     /// <returns>This builder, for chaining.</returns>
-    public HuiaHeadlessOptionsBuilder UseExternalLogin(Action<ExternalLoginOptions> configure)
+    public HuiaHeadlessOptionsBuilder UseExternalLogin(Action<ExternalLoginAuthenticationMethod> configure)
     {
         _tenant.Authentication.UseExternalLogin(configure);
         return this;
@@ -109,7 +108,7 @@ public sealed class HuiaHeadlessOptionsBuilder
     /// </summary>
     /// <param name="configure">Optional configuration for the flow.</param>
     /// <returns>This builder, for chaining.</returns>
-    public HuiaHeadlessOptionsBuilder UsePasskeyLogin(Action<PasskeyOptions>? configure = null)
+    public HuiaHeadlessOptionsBuilder UsePasskeyLogin(Action<PasskeyAuthenticationMethod>? configure = null)
     {
         _tenant.Authentication.UsePasskeyLogin(configure);
         return this;
@@ -127,9 +126,9 @@ public sealed class HuiaHeadlessOptionsBuilder
     }
 
     /// <summary>Validates the configured tree.</summary>
-    /// <returns>The validated <see cref="HuiaOptions"/> and its single <see cref="TenantOptions"/>.</returns>
+    /// <returns>The validated <see cref="HuiaOptions"/> and its single <see cref="HuiaTenant"/>.</returns>
     /// <exception cref="HuiaOptionsException">The configuration is invalid.</exception>
-    internal (HuiaOptions Options, TenantOptions Tenant) Build()
+    internal (HuiaOptions Options, HuiaTenant Tenant) Build()
     {
         _options.Validate();
         return (_options, _tenant);

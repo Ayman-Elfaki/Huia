@@ -14,25 +14,21 @@ namespace Huia.Identity;
 /// link-or-create.
 /// </summary>
 /// <typeparam name="TUser">The concrete user entity, at least as derived as <see cref="HuiaUser"/>.</typeparam>
-public partial class HuiaUserManager<TUser> : UserManager<TUser>
+/// <remarks>Creates the manager. Parameters are the stock <see cref="UserManager{TUser}"/> dependencies.</remarks>
+public partial class HuiaUserManager<TUser>(
+    IUserStore<TUser> store,
+    IOptions<IdentityOptions> optionsAccessor,
+    IPasswordHasher<TUser> passwordHasher,
+    IEnumerable<IUserValidator<TUser>> userValidators,
+    IEnumerable<IPasswordValidator<TUser>> passwordValidators,
+    ILookupNormalizer keyNormalizer,
+    IdentityErrorDescriber errors,
+    IServiceProvider services,
+    ILogger<UserManager<TUser>> logger) : UserManager<TUser>(store, optionsAccessor, passwordHasher, userValidators,
+    passwordValidators, keyNormalizer, errors,
+    services, logger)
     where TUser : HuiaUser, new()
 {
-    /// <summary>Creates the manager. Parameters are the stock <see cref="UserManager{TUser}"/> dependencies.</summary>
-    public HuiaUserManager(
-        IUserStore<TUser> store,
-        IOptions<IdentityOptions> optionsAccessor,
-        IPasswordHasher<TUser> passwordHasher,
-        IEnumerable<IUserValidator<TUser>> userValidators,
-        IEnumerable<IPasswordValidator<TUser>> passwordValidators,
-        ILookupNormalizer keyNormalizer,
-        IdentityErrorDescriber errors,
-        IServiceProvider services,
-        ILogger<UserManager<TUser>> logger)
-        : base(store, optionsAccessor, passwordHasher, userValidators, passwordValidators, keyNormalizer, errors,
-            services, logger)
-    {
-    }
-
     /// <summary>
     /// Resolves the account's <see cref="HuiaUserType"/>. Precedence is password → external → phone:
     /// a record with a password is a <see cref="HuiaUserType.Password"/> account even if it also has an

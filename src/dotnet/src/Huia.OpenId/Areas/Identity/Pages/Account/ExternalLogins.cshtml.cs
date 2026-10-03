@@ -2,6 +2,7 @@ using Huia.Events;
 using Huia.OpenId.Identity;
 using Huia.OpenId.UI;
 using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
@@ -24,7 +25,7 @@ public sealed class ExternalLoginsModel(
     public IList<LinkedProvider> CurrentLogins { get; private set; } = [];
 
     /// <summary>Configured providers that are not linked yet.</summary>
-    public IReadOnlyList<Options.ExternalProviderRegistration> AvailableProviders { get; private set; } = [];
+    public IReadOnlyList<ExternalIdentityProvider> AvailableProviders { get; private set; } = [];
 
     /// <summary>Whether any linked provider may be removed (there must be another way to sign in).</summary>
     public bool CanRemove { get; private set; }

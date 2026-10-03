@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using Huia.OpenId.DependencyInjection;
 using Huia.OpenId.OpenIddict.Handlers;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,38 +19,56 @@ namespace Huia.OpenId.OpenIddict;
 /// </summary>
 internal static class HuiaOpenIddictConfiguration
 {
-    public static IServiceCollection AddHuiaOpenIddict(this IServiceCollection services, HuiaOptions options)
+    public static IServiceCollection AddHuiaOpenIddict(
+        this IServiceCollection services, HuiaOptions options, HuiaOpenIdConfigurationBuilder? configBuilder = null)
     {
         var relaxTransport = options.DisableTransportSecurityRequirement;
         var anyExternalLogin = options.Tenants.Values.Any(t => t.Authentication.IsExternalLoginEnabled);
 
-        var builder = services.AddOpenIddict()
-            .AddCore(core =>
+        var builder = services.AddOpenIddict();
+
+        if (configBuilder is not null)
+        {
+            foreach (var configure in configBuilder.OpenIddictConfigurations)
             {
-                // EF Core persistence is wired by Huia.OpenId.EntityFrameworkCore's
-                // AddEntityFrameworkCoreStores<>() via an IOpenIddictCoreBuilder action stored
-                // in the options. This AddCore() call sets up the OpenIddict DI skeleton only.
+                configure(builder);
+            }
+        }
 
-                if (options.Cleanup.EnableBackgroundJobs)
+        builder.AddCore(core =>
+        {
+            // EF Core persistence is wired by Huia.OpenId.EntityFrameworkCore's
+            // AddEntityFrameworkCoreStores<>() via an IOpenIddictCoreBuilder action stored
+            // in the options. This AddCore() call sets up the OpenIddict DI skeleton only.
+
+            if (options.Cleanup.EnableBackgroundJobs)
+            {
+                core.UseQuartz(quartz =>
                 {
-                    core.UseQuartz(quartz =>
+                    if (!options.Cleanup.PruneAuthorizations)
                     {
-                        if (!options.Cleanup.PruneAuthorizations)
-                        {
-                            quartz.DisableAuthorizationPruning();
-                        }
+                        quartz.DisableAuthorizationPruning();
+                    }
 
-                        if (!options.Cleanup.PruneTokens)
-                        {
-                            quartz.DisableTokenPruning();
-                        }
+                    if (!options.Cleanup.PruneTokens)
+                    {
+                        quartz.DisableTokenPruning();
+                    }
 
-                        quartz.SetMaximumRefireCount(options.Cleanup.MaximumRefireCount);
-                        quartz.SetMinimumAuthorizationLifespan(options.Cleanup.MinimumAuthorizationLifespan);
-                        quartz.SetMinimumTokenLifespan(options.Cleanup.MinimumTokenLifespan);
-                    });
+                    quartz.SetMaximumRefireCount(options.Cleanup.MaximumRefireCount);
+                    quartz.SetMinimumAuthorizationLifespan(options.Cleanup.MinimumAuthorizationLifespan);
+                    quartz.SetMinimumTokenLifespan(options.Cleanup.MinimumTokenLifespan);
+                });
+            }
+
+            if (configBuilder is not null)
+            {
+                foreach (var configure in configBuilder.OpenIddictCoreConfigurations)
+                {
+                    configure(core);
                 }
-            });
+            }
+        });
 
         builder.AddServer(server =>
         {
@@ -80,9 +99,6 @@ internal static class HuiaOpenIddictConfiguration
 
             server.DisableAccessTokenEncryption();
 
-            // Note: OpenIddict's status-code-pages integration is deliberately NOT enabled — the
-            // account UI's UseStatusCodePagesWithReExecute renders a generic branded page, and
-            // protocol errors must keep OpenIddict's own (machine-readable) error responses.
             var aspNetCore = server.UseAspNetCore()
                 .EnableAuthorizationEndpointPassthrough()
                 .EnableTokenEndpointPassthrough()
@@ -100,6 +116,14 @@ internal static class HuiaOpenIddictConfiguration
             server.AddEventHandler(HuiaTenantSigningKeyHandler.Descriptor);
             server.AddEventHandler(HuiaTenantServerTokenValidationHandler.Descriptor);
             server.AddEventHandler(HuiaTenantJwksHandler.Descriptor);
+
+            if (configBuilder is not null)
+            {
+                foreach (var configure in configBuilder.OpenIddictServerConfigurations)
+                {
+                    configure(server);
+                }
+            }
         });
 
         builder.AddValidation(validation =>
@@ -108,9 +132,17 @@ internal static class HuiaOpenIddictConfiguration
             validation.UseAspNetCore();
 
             validation.AddEventHandler(HuiaTenantTokenValidationHandler.Descriptor);
+
+            if (configBuilder is not null)
+            {
+                foreach (var configure in configBuilder.OpenIddictValidationConfigurations)
+                {
+                    configure(validation);
+                }
+            }
         });
 
-        if (anyExternalLogin)
+        if (anyExternalLogin || (configBuilder?.OpenIddictClientConfigurations.Count > 0))
         {
             builder.AddClient(client =>
             {
@@ -118,15 +150,11 @@ internal static class HuiaOpenIddictConfiguration
 
                 client.UseDataProtection();
 
-                // OpenIddict refuses an interactive client with no encryption key even when Data
-                // Protection is in use; this pair only satisfies the guard. State/nonce tokens stay in
-                // the Data Protection format and survive restarts.
                 client.AddEphemeralEncryptionKey()
                       .AddEphemeralSigningKey();
 
                 client.UseSystemNetHttp();
 
-                // RP-initiated logout: a federated Huia session ends the upstream provider's session too.
                 client.SetPostLogoutRedirectionEndpointUris("signout-callback-oidc");
 
                 var clientAspNetCore = client.UseAspNetCore()
@@ -139,6 +167,14 @@ internal static class HuiaOpenIddictConfiguration
                 }
 
                 RegisterExternalProviders(client, options);
+
+                if (configBuilder is not null)
+                {
+                    foreach (var configure in configBuilder.OpenIddictClientConfigurations)
+                    {
+                        configure(client);
+                    }
+                }
             });
 
             services.ConfigureAll<HttpClientFactoryOptions>(httpOptions =>
@@ -157,15 +193,13 @@ internal static class HuiaOpenIddictConfiguration
     }
 
     /// <summary>
-    /// Adds one OpenIddict client registration per (tenant, provider). The registration id is
-    /// <c>{tenant}:{provider}</c> and the redirect URI is the relative <c>signin-{provider}</c>, which the
-    /// base-path rebasing turns into <c>/{tenant}/signin-{provider}</c>.
+    /// Adds one OpenIddict client registration per (tenant, provider).
     /// </summary>
     private static void RegisterExternalProviders(OpenIddictClientBuilder client, HuiaOptions options)
     {
         foreach (var (tenantId, tenant) in options.Tenants)
         {
-            var external = tenant.Authentication.External;
+            var external = tenant.Authentication.Find<ExternalLoginAuthenticationMethod>();
             if (external is null)
             {
                 continue;
@@ -237,10 +271,11 @@ internal static class HuiaOpenIddictConfiguration
                     continue;
                 }
 
+                var oidcProvider = (OpenIdConnectExternalProvider)provider;
                 var registration = new OpenIddictClientRegistration
                 {
                     RegistrationId = $"{tenantId}:{provider.Name}",
-                    Issuer = new Uri(provider.Authority!, UriKind.Absolute),
+                    Issuer = new Uri(oidcProvider.Authority, UriKind.Absolute),
                     ClientId = provider.ClientId,
                     ClientSecret = provider.ClientSecret,
                     RedirectUri = redirectUri,
@@ -282,7 +317,6 @@ internal static class HuiaOpenIddictConfiguration
                 }
 
                 var addresses = await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, cancellationToken);
-                // Sort IPv4 first so dual-stack hosts with unroutable/black-holed IPv6 don't hang on TCP SYN timeouts.
                 var sorted = addresses
                     .OrderBy(a => a.AddressFamily == AddressFamily.InterNetwork ? 0 : 1)
                     .ToArray();

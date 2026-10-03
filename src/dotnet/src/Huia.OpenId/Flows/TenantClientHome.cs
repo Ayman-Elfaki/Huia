@@ -13,8 +13,9 @@ public static class TenantClientHome
     /// <summary>The first absolute home / post-logout URI across the tenant's registered clients, if any.</summary>
     /// <param name="tenant">The resolved tenant options, or <see langword="null"/>.</param>
     /// <returns>An absolute URL, or <see langword="null"/> when the tenant has no client with one.</returns>
-    public static string? Resolve(TenantOptions? tenant) =>
-        tenant?.Clients
+    public static string? Resolve(HuiaTenant? tenant) =>
+        tenant?.Applications
+            .OfType<InteractiveClientApplication>()
             .SelectMany(client => client.HomeUris.Concat(client.PostLogoutRedirectUris))
             .FirstOrDefault(uri => uri.IsAbsoluteUri)?
             .ToString();

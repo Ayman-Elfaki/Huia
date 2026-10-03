@@ -410,10 +410,10 @@ internal static class ManageEndpoints
         return subject is null ? null : await userManager.FindByIdAsync(subject);
     }
 
-    private static PhoneOptions PhoneOptions(HuiaOptions options, string tenantId) =>
+    private static PhoneAuthenticationMethod PhoneOptions(HuiaOptions options, string tenantId) =>
         options.Tenants.TryGetValue(tenantId, out var tenant)
-            ? tenant.Authentication.Phone ?? new PhoneOptions()
-            : new PhoneOptions();
+            ? tenant.Authentication.Phone ?? new PhoneAuthenticationMethod()
+            : new PhoneAuthenticationMethod();
 
     private static IResult Problem(IdentityResult result) =>
         Results.ValidationProblem(new Dictionary<string, string[]>

@@ -52,7 +52,7 @@ public sealed class LoginModel(
     /// <summary>The sanitized return URL carried through the form.</summary>
     public string ReturnUrl { get; private set; } = "/";
 
-    private PhoneOptions PhoneOptions =>
+    private PhoneAuthenticationMethod PhoneOptions =>
         Tenant?.Authentication.Phone ?? throw new InvalidOperationException("Phone login is not enabled.");
 
     /// <summary>Handles the initial GET.</summary>

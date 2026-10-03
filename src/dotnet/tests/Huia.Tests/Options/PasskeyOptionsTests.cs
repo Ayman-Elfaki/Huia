@@ -4,7 +4,7 @@ namespace Huia.Tests.Options;
 
 public class PasskeyOptionsTests
 {
-    private static HuiaOptions OptionsWithPasskeyTenant(Action<PasskeyOptions>? configure = null)
+    private static HuiaOptions OptionsWithPasskeyTenant(Action<PasskeyAuthenticationMethod>? configure = null)
     {
         var options = new HuiaOptions { Issuer = new Uri("https://id.example.test") };
         options.AddTenant("acme", tenant => tenant.Authentication.UsePasskeyLogin(configure));
@@ -23,7 +23,7 @@ public class PasskeyOptionsTests
     [Fact]
     public void Passkey_policy_defaults_are_sensible()
     {
-        var passkey = new PasskeyOptions();
+        var passkey = new PasskeyAuthenticationMethod();
 
         passkey.UserVerification.ShouldBe(PasskeyUserVerification.Required);
         passkey.AuthenticatorAttachment.ShouldBe(PasskeyAuthenticatorAttachment.Any);

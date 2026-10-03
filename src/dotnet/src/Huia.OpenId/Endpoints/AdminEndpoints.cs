@@ -83,7 +83,7 @@ internal static partial class AdminEndpoints
                 kvp.Value.Authentication.IsEmailAndPasswordLoginEnabled,
                 kvp.Value.Authentication.IsPhoneLoginEnabled,
                 kvp.Value.Authentication.IsExternalLoginEnabled,
-                kvp.Value.Clients.Count))
+                kvp.Value.Applications.Count))
             .OrderBy(t => t.TenantId, StringComparer.Ordinal)
             .ToList();
 

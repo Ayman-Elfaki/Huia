@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Huia.OpenId.Identity;
 
 /// <summary>
-/// Ensures every role declared via <see cref="TenantOptions.AddRoles"/> exists for its tenant, stamped
+/// Ensures every role declared via <see cref="HuiaTenant.Roles"/> exists for its tenant, stamped
 /// <see cref="HuiaConstants.Origins.Static"/> — read-only in the admin API (rename / delete return
 /// <c>409</c>), mirroring <see cref="Huia.OpenId.OpenIddict.HuiaClientSeeder"/> and
 /// <see cref="Huia.OpenId.OpenIddict.HuiaScopeSeeder"/>. Only stamped at creation: a role that

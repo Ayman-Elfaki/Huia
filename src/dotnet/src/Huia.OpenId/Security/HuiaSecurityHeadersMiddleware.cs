@@ -21,7 +21,7 @@ internal sealed class HuiaSecurityHeadersMiddleware(RequestDelegate next, IOptio
     private readonly string[] _clientFormActionOrigins =
     [
         .. huiaOptions.Tenants.Values
-            .SelectMany(tenant => tenant.Clients
+            .SelectMany(tenant => tenant.Applications.OfType<InteractiveClientApplication>()
                 .SelectMany(client => client.RedirectUris.Concat(client.PostLogoutRedirectUris).Concat(client.HomeUris))
                 .Concat(tenant.Authentication.External?.Providers
                     .Select(GetProviderAuthority)
@@ -32,11 +32,11 @@ internal sealed class HuiaSecurityHeadersMiddleware(RequestDelegate next, IOptio
             .Distinct(StringComparer.OrdinalIgnoreCase),
     ];
 
-    private static Uri? GetProviderAuthority(ExternalProviderRegistration provider)
+    private static Uri? GetProviderAuthority(ExternalIdentityProvider provider)
     {
-        if (provider.Authority is not null)
+        if (provider is OpenIdConnectExternalProvider oidc && !string.IsNullOrWhiteSpace(oidc.Authority))
         {
-            return new Uri(provider.Authority, UriKind.Absolute);
+            return new Uri(oidc.Authority, UriKind.Absolute);
         }
 
         return provider.Kind switch

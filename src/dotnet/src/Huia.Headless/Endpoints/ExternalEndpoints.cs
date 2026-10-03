@@ -42,7 +42,7 @@ internal static class ExternalEndpoints
         group.MapPost("complete-profile", CompleteProfileAsync).WithName(HuiaConstants.Endpoints.Headless.External.CompleteProfile);
     }
 
-    private static IResult ChallengeAsync(HttpContext context, string provider, string returnUrl, TenantOptions tenant)
+    private static IResult ChallengeAsync(HttpContext context, string provider, string returnUrl, HuiaTenant tenant)
     {
         if (!TryFindProvider(tenant, provider, out var registered, out var external))
         {
@@ -76,7 +76,7 @@ internal static class ExternalEndpoints
     /// </summary>
     private static async Task<IResult> DispatchAsync(
         HttpContext context, HuiaUserManager userManager, HuiaSignInManager<HuiaUser> signInManager,
-        IExternalLoginFlowStore flows, TenantOptions tenant)
+        IExternalLoginFlowStore flows, HuiaTenant tenant)
     {
         var info = await signInManager.GetExternalLoginInfoAsync();
         if (info is null)
@@ -224,7 +224,7 @@ internal static class ExternalEndpoints
     }
 
     private static bool TryFindProvider(
-        TenantOptions tenant, string providerName, out ExternalProviderRegistration provider, out ExternalLoginOptions external)
+        HuiaTenant tenant, string providerName, out ExternalIdentityProvider provider, out ExternalLoginAuthenticationMethod external)
     {
         provider = null!;
         external = null!;
@@ -244,7 +244,7 @@ internal static class ExternalEndpoints
         return true;
     }
 
-    private static bool IsAllowedReturnUrl(string returnUrl, IReadOnlyList<string> allowedPrefixes) =>
+    private static bool IsAllowedReturnUrl(string returnUrl, IEnumerable<string> allowedPrefixes) =>
         Uri.TryCreate(returnUrl, UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
         && allowedPrefixes.Any(prefix => returnUrl.StartsWith(prefix, StringComparison.Ordinal));

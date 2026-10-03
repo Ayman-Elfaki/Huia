@@ -7,23 +7,19 @@ using Microsoft.Extensions.Options;
 namespace Huia.OpenId.Identity;
 
 /// <summary>The concrete Huia OpenId <see cref="Huia.Identity.HuiaUserManager{TUser}"/>.</summary>
-public class HuiaUserManager : Huia.Identity.HuiaUserManager<HuiaUser>
+/// <remarks>Creates the manager. Parameters are the stock <see cref="UserManager{TUser}"/> dependencies.</remarks>
+public class HuiaUserManager(
+    IUserStore<HuiaUser> store,
+    IOptions<IdentityOptions> optionsAccessor,
+    IPasswordHasher<HuiaUser> passwordHasher,
+    IEnumerable<IUserValidator<HuiaUser>> userValidators,
+    IEnumerable<IPasswordValidator<HuiaUser>> passwordValidators,
+    ILookupNormalizer keyNormalizer,
+    IdentityErrorDescriber errors,
+    IServiceProvider services,
+    ILogger<UserManager<HuiaUser>> logger) : Huia.Identity.HuiaUserManager<HuiaUser>(store, optionsAccessor,
+    passwordHasher, userValidators, passwordValidators, keyNormalizer, errors, services, logger)
 {
-    /// <summary>Creates the manager. Parameters are the stock <see cref="UserManager{TUser}"/> dependencies.</summary>
-    public HuiaUserManager(
-        IUserStore<HuiaUser> store,
-        IOptions<IdentityOptions> optionsAccessor,
-        IPasswordHasher<HuiaUser> passwordHasher,
-        IEnumerable<IUserValidator<HuiaUser>> userValidators,
-        IEnumerable<IPasswordValidator<HuiaUser>> passwordValidators,
-        ILookupNormalizer keyNormalizer,
-        IdentityErrorDescriber errors,
-        IServiceProvider services,
-        ILogger<UserManager<HuiaUser>> logger)
-        : base(store, optionsAccessor, passwordHasher, userValidators, passwordValidators, keyNormalizer, errors, services, logger)
-    {
-    }
-
     /// <summary>Stamps the tenant a freshly created phone/external-login account belongs to.</summary>
     protected override void OnUserCreating(HuiaUser user, string tenantId) => user.TenantId = tenantId;
 

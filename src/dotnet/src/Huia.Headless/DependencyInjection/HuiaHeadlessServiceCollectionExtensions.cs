@@ -116,11 +116,11 @@ public static class HuiaHeadlessServiceCollectionExtensions
 
     /// <summary>
     /// Registers one configured provider as a classic ASP.NET Core remote-authentication scheme, named
-    /// <see cref="ExternalProviderRegistration.Name"/> and signing into <see cref="IdentityConstants.ExternalScheme"/>
+    /// <see cref="ExternalIdentityProvider.Name"/> and signing into <see cref="IdentityConstants.ExternalScheme"/>
     /// — the same intermediate hand-off <c>Huia.OpenId</c> gets from the OpenIddict client, just via the
     /// framework's own handlers instead (Headless has no OpenIddict dependency to reuse for this).
     /// </summary>
-    private static void RegisterExternalProvider(AuthenticationBuilder authentication, ExternalProviderRegistration provider, bool allowInsecureTransport)
+    private static void RegisterExternalProvider(AuthenticationBuilder authentication, ExternalIdentityProvider provider, bool allowInsecureTransport)
     {
         switch (provider.Kind)
         {
@@ -196,7 +196,7 @@ public static class HuiaHeadlessServiceCollectionExtensions
                 {
                     o.ClientId = provider.ClientId;
                     o.ClientSecret = provider.ClientSecret;
-                    o.Authority = provider.Authority;
+                    o.Authority = provider is OpenIdConnectExternalProvider oidc ? oidc.Authority : string.Empty;
                     o.SignInScheme = IdentityConstants.ExternalScheme;
                     o.CallbackPath = $"/signin-{provider.Name}";
                     o.ResponseType = "code";

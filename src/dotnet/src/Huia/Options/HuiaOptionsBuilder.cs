@@ -1,10 +1,12 @@
+using System.Reflection;
+
 namespace Huia.Options;
 
 /// <summary>
 /// Fluent surface for configuring <see cref="HuiaOptions"/> in code. Wraps a single options instance so
 /// the same builder can be used from <c>AddHuiaOpenId</c> and from unit tests without a DI container.
 /// </summary>
-public sealed class HuiaOptionsBuilder
+public class HuiaOptionsBuilder
 {
     /// <summary>Creates a builder over a fresh options instance.</summary>
     public HuiaOptionsBuilder()
@@ -98,11 +100,42 @@ public sealed class HuiaOptionsBuilder
         return this;
     }
 
-    /// <summary>Adds or configures a tenant.</summary>
+    /// <summary>Adds a strongly-typed tenant class instance.</summary>
+    public HuiaOptionsBuilder AddTenant(HuiaTenant tenant)
+    {
+        Options.AddTenant(tenant);
+        return this;
+    }
+
+    /// <summary>Instantiates and adds a strongly-typed tenant class.</summary>
+    public HuiaOptionsBuilder AddTenant<TTenant>() where TTenant : HuiaTenant, new()
+    {
+        var tenant = new TTenant();
+        Options.AddTenant(tenant);
+        return this;
+    }
+
+    /// <summary>Scans an assembly for all non-abstract <see cref="HuiaTenant"/> subclasses and adds them.</summary>
+    public HuiaOptionsBuilder AddTenantsFromAssembly(Assembly assembly)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+        var tenantTypes = assembly.GetTypes()
+            .Where(t => !t.IsAbstract && typeof(HuiaTenant).IsAssignableFrom(t) && t.GetConstructor(Type.EmptyTypes) is not null);
+
+        foreach (var type in tenantTypes)
+        {
+            var tenant = (HuiaTenant)Activator.CreateInstance(type)!;
+            Options.AddTenant(tenant);
+        }
+
+        return this;
+    }
+
+    /// <summary>Adds or configures a tenant by id.</summary>
     /// <param name="tenantId">The tenant identifier / base-path segment.</param>
     /// <param name="configure">The configuration callback.</param>
     /// <returns>This builder, for chaining.</returns>
-    public HuiaOptionsBuilder AddTenant(string tenantId, Action<TenantOptions> configure)
+    public HuiaOptionsBuilder AddTenant(string tenantId, Action<HuiaTenant> configure)
     {
         Options.AddTenant(tenantId, configure);
         return this;

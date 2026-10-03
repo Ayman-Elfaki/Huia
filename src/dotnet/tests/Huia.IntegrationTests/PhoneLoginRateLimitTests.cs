@@ -22,7 +22,7 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl", tenant =>
             {
-                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
                 tenant.Authentication.UsePhoneLogin();
             }));
 
@@ -43,7 +43,7 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-cfg", tenant =>
             {
-                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
                 tenant.Authentication.UsePhoneLogin(phone => phone.SuccessfulLoginsPerWindow = 2);
             }));
 
@@ -61,7 +61,7 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-daily", tenant =>
             {
-                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
                 tenant.Authentication.UsePhoneLogin(phone =>
                 {
                     // A tiny window that replenishes between calls, so only the daily ceiling can bite.
@@ -93,7 +93,7 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-peek", tenant =>
             {
-                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
                 tenant.Authentication.UsePhoneLogin();
             }));
 
@@ -121,7 +121,7 @@ public sealed class PhoneLoginRateLimitTests
         await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
             huia.AddTenant("phone-rl-iso", tenant =>
             {
-                tenant.Authentication.EmailAndPassword.RequireConfirmedEmail = false;
+                tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
                 tenant.Authentication.UsePhoneLogin();
             }));
 

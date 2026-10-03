@@ -17,7 +17,7 @@ public abstract class HuiaAccountPageModel : PageModel
         HttpContext.RequestServices.GetService<IMultiTenantContextAccessor>()?.CurrentTenantId();
 
     /// <summary>The resolved tenant's options, or <see langword="null"/>.</summary>
-    protected TenantOptions? Tenant
+    protected HuiaTenant? Tenant
     {
         get
         {
@@ -30,11 +30,11 @@ public abstract class HuiaAccountPageModel : PageModel
     }
 
     /// <summary>Whether the interactive email/password form should be shown.</summary>
-    public bool IsEmailAndPasswordLoginEnabled => Tenant?.Authentication.EmailAndPassword.Enabled ?? true;
+    public bool IsEmailAndPasswordLoginEnabled => Tenant?.Authentication.IsEmailAndPasswordLoginEnabled ?? true;
 
     /// <summary>Whether anonymous visitors may register — controls whether the sign-up link is shown.</summary>
     public bool IsSelfServiceRegistrationEnabled =>
-        Tenant?.Authentication.EmailAndPassword.AllowSelfServiceRegistration ?? false;
+        Tenant?.Authentication.EmailAndPassword?.AllowSelfServiceRegistration ?? false;
 
     /// <summary>Whether the passwordless phone (SMS one-time code) tab should be shown.</summary>
     public bool IsPhoneLoginEnabled => Tenant?.Authentication.IsPhoneLoginEnabled ?? false;
@@ -43,8 +43,8 @@ public abstract class HuiaAccountPageModel : PageModel
     public bool IsPasskeyLoginEnabled => Tenant?.Authentication.IsPasskeyLoginEnabled ?? false;
 
     /// <summary>The external providers to render sign-in buttons for.</summary>
-    public IReadOnlyList<Options.ExternalProviderRegistration> ExternalProviders =>
-        Tenant?.Authentication.External?.Providers ?? [];
+    public IReadOnlyList<ExternalIdentityProvider> ExternalProviders =>
+        (IReadOnlyList<ExternalIdentityProvider>?)Tenant?.Authentication.External?.Providers ?? [];
 
     /// <summary>The tenant display name for the UI heading.</summary>
     public string DisplayName => Tenant?.Branding.DisplayName

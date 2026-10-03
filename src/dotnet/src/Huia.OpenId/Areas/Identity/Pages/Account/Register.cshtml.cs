@@ -43,7 +43,7 @@ public sealed class RegisterModel(
     public string ReturnUrl { get; private set; } = "/";
 
     /// <summary>Whether self-service registration is available for this tenant.</summary>
-    public bool RegistrationEnabled => Tenant?.Authentication.EmailAndPassword.AllowSelfServiceRegistration ?? false;
+    public bool RegistrationEnabled => Tenant?.Authentication.EmailAndPassword?.AllowSelfServiceRegistration ?? false;
 
     /// <summary>Handles the initial GET.</summary>
     /// <param name="returnUrl">The URL to return to after registering.</param>
@@ -109,7 +109,7 @@ public sealed class RegisterModel(
         await events.PublishAsync(new UserRegisteredEvent(
             tenantId, user.Id, user.UserName!, user.Email, HuiaConstants.AuthenticationMethods.Password, timeProvider.GetUtcNow()));
 
-        if (!(Tenant?.Authentication.EmailAndPassword.RequireConfirmedEmail ?? true))
+        if (!(Tenant?.Authentication.EmailAndPassword?.RequireConfirmedEmail ?? true))
         {
             await password.SignInManager.SignInAsync(user, isPersistent: false);
             return await ResolvePostSignUpRedirectAsync(user, ReturnUrl);

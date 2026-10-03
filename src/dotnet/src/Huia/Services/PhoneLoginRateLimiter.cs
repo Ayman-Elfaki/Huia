@@ -92,10 +92,10 @@ internal sealed class InMemoryPhoneLoginRateLimiter(HuiaOptions options, TimePro
         }
     }
 
-    private PhoneOptions PhoneOptionsFor(string tenantId) =>
+    private PhoneAuthenticationMethod PhoneOptionsFor(string tenantId) =>
         options.Tenants.TryGetValue(tenantId, out var tenant)
-            ? tenant.Authentication.Phone ?? new PhoneOptions()
-            : new PhoneOptions();
+            ? tenant.Authentication.Find<PhoneAuthenticationMethod>() ?? new PhoneAuthenticationMethod()
+            : new PhoneAuthenticationMethod();
 
     private readonly record struct Key(string TenantId, string PhoneNumber);
 

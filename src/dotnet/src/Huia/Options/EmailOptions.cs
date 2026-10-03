@@ -2,7 +2,7 @@ namespace Huia.Options;
 
 /// <summary>
 /// SMTP delivery settings. Configured once at the root (<see cref="HuiaOptions.Email"/>) and optionally
-/// overridden per tenant (<see cref="TenantOptions.Email"/>); the effective value is produced by
+/// overridden per tenant (<see cref="HuiaTenant.Email"/>); the effective value is produced by
 /// <see cref="MergedWith"/>.
 /// </summary>
 public sealed class EmailOptions : IHuiaOptionsSection

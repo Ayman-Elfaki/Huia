@@ -13,7 +13,7 @@ namespace Huia.OpenId.Configuration;
 /// Registers one named <see cref="IdentityOptions"/> instance per authentication flow
 /// (<see cref="HuiaFlowIdentityOptions"/>) and the <see cref="IHuiaFlowIdentityFactory"/> that hands a
 /// flow its manager pair. Each flow's <see cref="IdentityOptions"/> is projected from that flow's own
-/// options object (<see cref="EmailAndPasswordLoginOptions"/> / <see cref="PhoneOptions"/> each carry
+/// options object (<see cref="EmailPasswordAuthenticationMethod"/> / <see cref="PhoneAuthenticationMethod"/> each carry
 /// their own password-or-none, lockout, and confirmation policy — there is no longer a single policy
 /// shared across flows). Must run after <c>AddHuiaIdentity</c>.
 /// </summary>
@@ -27,7 +27,7 @@ internal static class HuiaFlowIdentityConfiguration
             {
                 if (options.Tenants.TryGetValue(tenant.Identifier, out var config))
                 {
-                    ApplyEmailAndPasswordFlow(identity, config.Authentication.EmailAndPassword);
+                    ApplyEmailAndPasswordFlow(identity, config.Authentication.Find<EmailPasswordAuthenticationMethod>() ?? new EmailPasswordAuthenticationMethod());
                 }
             });
 
@@ -35,7 +35,7 @@ internal static class HuiaFlowIdentityConfiguration
             .Configure(ApplyDefaultTokenProviders)
             .ConfigurePerTenant<IdentityOptions, HuiaTenantInfo>((identity, tenant) =>
             {
-                if (options.Tenants.TryGetValue(tenant.Identifier, out var config) && config.Authentication.Phone is { } phone)
+                if (options.Tenants.TryGetValue(tenant.Identifier, out var config) && config.Authentication.Find<PhoneAuthenticationMethod>() is { } phone)
                 {
                     ApplyPhoneFlow(identity, phone);
                 }
@@ -75,7 +75,7 @@ internal static class HuiaFlowIdentityConfiguration
     }
 
     /// <summary>Projects the tenant's email/password policy — including its own lockout — onto <see cref="IdentityOptions"/>.</summary>
-    private static void ApplyEmailAndPasswordFlow(IdentityOptions identity, EmailAndPasswordLoginOptions config)
+    private static void ApplyEmailAndPasswordFlow(IdentityOptions identity, EmailPasswordAuthenticationMethod config)
     {
         identity.Password.RequiredLength = config.MinimumLength;
         identity.Password.RequireDigit = config.RequireDigit;
@@ -86,7 +86,7 @@ internal static class HuiaFlowIdentityConfiguration
 
         identity.Lockout.MaxFailedAccessAttempts = config.MaxFailedAccessAttempts;
         identity.Lockout.DefaultLockoutTimeSpan = config.LockoutDuration;
-        identity.Lockout.AllowedForNewUsers = config.AllowedForNewUsers;
+        identity.Lockout.AllowedForNewUsers = true;
 
         identity.User.RequireUniqueEmail = config.RequireUniqueEmail;
 
@@ -96,7 +96,7 @@ internal static class HuiaFlowIdentityConfiguration
     }
 
     /// <summary>Projects the tenant's phone policy — including its own lockout — onto <see cref="IdentityOptions"/>.</summary>
-    private static void ApplyPhoneFlow(IdentityOptions identity, PhoneOptions config)
+    private static void ApplyPhoneFlow(IdentityOptions identity, PhoneAuthenticationMethod config)
     {
         identity.Lockout.MaxFailedAccessAttempts = config.MaxFailedAccessAttempts;
         identity.Lockout.DefaultLockoutTimeSpan = config.LockoutDuration;

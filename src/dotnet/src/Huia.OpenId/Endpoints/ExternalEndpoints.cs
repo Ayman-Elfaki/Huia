@@ -282,7 +282,7 @@ internal static class ExternalEndpoints
         await events.PublishAsync(new UserLoggedInEvent(tenantId, user.Id, providerName, null, timeProvider.GetUtcNow()));
     }
 
-    private static bool TryFindProvider(HuiaOptions options, string tenantId, string providerName, out ExternalProviderRegistration provider)
+    private static bool TryFindProvider(HuiaOptions options, string tenantId, string providerName, out ExternalIdentityProvider provider)
     {
         provider = null!;
         if (!options.Tenants.TryGetValue(tenantId, out var tenant))

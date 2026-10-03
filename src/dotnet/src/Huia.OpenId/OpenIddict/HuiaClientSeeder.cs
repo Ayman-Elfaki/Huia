@@ -28,7 +28,7 @@ internal sealed partial class HuiaClientSeeder(
 
         foreach (var (tenantId, tenant) in options.Tenants)
         {
-            foreach (var client in tenant.Clients)
+            foreach (var client in tenant.Applications)
             {
                 var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(
                     tenantId, client, HuiaConstants.Origins.Static);
@@ -76,7 +76,7 @@ internal sealed partial class HuiaClientSeeder(
 
             var stillDeclared = tenantId is not null
                 && options.Tenants.TryGetValue(tenantId, out var tenant)
-                && tenant.Clients.Any(c => string.Equals(c.ClientId, clientId, StringComparison.Ordinal));
+                && tenant.Applications.Any(c => string.Equals(c.ClientId, clientId, StringComparison.Ordinal));
             if (stillDeclared)
             {
                 continue;

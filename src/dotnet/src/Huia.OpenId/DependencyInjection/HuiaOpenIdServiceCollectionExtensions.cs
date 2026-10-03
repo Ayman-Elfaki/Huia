@@ -1,5 +1,6 @@
 using Huia.DependencyInjection;
 using Huia.OpenId.Configuration;
+using Huia.OpenId.DependencyInjection;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.OpenId.Flows;
 using Huia.OpenId.HealthChecks;
@@ -19,46 +20,54 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// <summary>
 /// Adds the multi-tenant, OpenIddict-backed flavor of Huia: Finbuckle multi-tenancy, per-tenant
 /// identity/passkey options, the flow-specific sign-in options, the OpenIddict server/client, the
-/// signing-key lifecycle, passwordless SMS + external login, and the readiness health check. The sole
-/// entry point for an OpenId host — chain <c>.AddEntityFrameworkCoreStores&lt;HuiaDbContext, HuiaUser,
-/// HuiaRole&gt;()</c>, then <c>.AddHuiaUi()</c> and/or <c>.AddHuiaSecurityHeaders()</c> for the Razor Pages
-/// account UI and the opt-in security-headers middleware.
+/// signing-key lifecycle, passwordless SMS + external login, and the readiness health check.
 /// </summary>
 public static class HuiaOpenIdServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the multi-tenant, OpenIddict-backed flavor of Huia.
+    /// Registers the multi-tenant, OpenIddict-backed flavor of Huia with OOP tenant configuration
+    /// and lower-level framework hooks for OpenIddict, Finbuckle, ASP.NET Core Identity, and Authentication.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="configure">Configures the options tree; validated before anything is registered.</param>
-    /// <returns>An <see cref="IHuiaBuilder"/> for feature opt-ins.</returns>
+    /// <param name="configure">Configures Huia options and lower-level framework extensions.</param>
+    /// <returns>An <see cref="IHuiaOpenIdBuilder"/> for feature opt-ins and lower-level configuration.</returns>
     /// <exception cref="HuiaOptionsException">The configured options are invalid.</exception>
-    public static IHuiaBuilder AddHuiaOpenId(this IServiceCollection services, Action<HuiaOptionsBuilder> configure)
+    public static IHuiaOpenIdBuilder AddHuiaOpenId(this IServiceCollection services, Action<HuiaOpenIdConfigurationBuilder> configure)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
-        var optionsBuilder = new HuiaOptionsBuilder();
-        configure(optionsBuilder);
-        var options = optionsBuilder.Build();
+        var configBuilder = new HuiaOpenIdConfigurationBuilder();
+        configure(configBuilder);
+        var options = configBuilder.Build();
 
-        var builder = services.AddHuiaCore(options);
+        services.AddHuiaCore(options);
+        var openIdBuilder = new HuiaOpenIdBuilder(services, options);
 
-        services.AddHuiaMultiTenancy(options);
+        services.AddHuiaMultiTenancy(options, configBuilder);
 
-        // The cookie-based authentication scheme — AddEntityFrameworkCoreStores() deliberately stops short
-        // of this (AddIdentityCore, not AddIdentity), since the scheme choice is flavor-specific (cookies
-        // here; bearer tokens for Headless). Must run before AddHuiaPerTenantAuthentication(), which wraps
-        // the schemes AddIdentityCookies() just registered.
-        services.AddAuthentication(o =>
+        // The cookie-based authentication scheme.
+        var authBuilder = services.AddAuthentication(o =>
         {
             o.DefaultScheme = IdentityConstants.ApplicationScheme;
             o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-        }).AddIdentityCookies();
+        });
 
-        new IdentityBuilder(typeof(HuiaUser), typeof(HuiaRole), services)
+        foreach (var action in configBuilder.AuthenticationConfigurations)
+        {
+            action(authBuilder);
+        }
+
+        authBuilder.AddIdentityCookies();
+
+        var identityBuilder = new IdentityBuilder(typeof(HuiaUser), typeof(HuiaRole), services)
             .AddUserManager<HuiaUserManager>()
             .AddSignInManager<HuiaSignInManager>();
+
+        foreach (var action in configBuilder.IdentityConfigurations)
+        {
+            action(identityBuilder);
+        }
 
         services.Configure<IdentityOptions>(identity =>
         {
@@ -78,7 +87,7 @@ public static class HuiaOpenIdServiceCollectionExtensions
         services.AddHuiaPerTenantIdentityOptions(options);
         services.AddHuiaPerTenantPasskeyOptions(options);
         services.AddHuiaFlowIdentity(options);
-        services.AddHuiaOpenIddict(options);
+        services.AddHuiaOpenIddict(options, configBuilder);
         services.AddHuiaKeyManagement(options);
 
         // Centralized here (rather than in AddHuiaKeyManagement/AddHuiaOpenIddict) because either flag
@@ -116,7 +125,7 @@ public static class HuiaOpenIdServiceCollectionExtensions
         services.AddHuiaAuthorization();
         services.AddHuiaHealthChecks();
 
-        return builder;
+        return openIdBuilder;
     }
 
     /// <summary>

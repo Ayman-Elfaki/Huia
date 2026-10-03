@@ -2,7 +2,7 @@ namespace Huia.Options;
 
 /// <summary>
 /// SMS delivery settings for the passwordless phone flow. Configured at the root
-/// (<see cref="HuiaOptions.Sms"/>) and optionally overridden per tenant (<see cref="TenantOptions.Sms"/>).
+/// (<see cref="HuiaOptions.Sms"/>) and optionally overridden per tenant (<see cref="HuiaTenant.Sms"/>).
 /// </summary>
 public sealed class SmsOptions : IHuiaOptionsSection
 {
