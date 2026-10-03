@@ -153,5 +153,81 @@ public sealed class OpenIdExternalLoginTests
                 });
             },
             configureEndpoints: configureEndpoints,
-            configureBuilder: b => b.AddHuiaSecurityHeaders());
+            configureBuilder: b =>
+            {
+                b.AddHuiaSecurityHeaders();
+                b.Services.ConfigureAll<Microsoft.Extensions.Http.HttpClientFactoryOptions>(httpOptions =>
+                {
+                    httpOptions.HttpMessageHandlerBuilderActions.Add(builder =>
+                    {
+                        if (builder.Name?.StartsWith("OpenIddict", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            builder.AdditionalHandlers.Add(new MockGoogleDiscoveryHandler());
+                        }
+                    });
+                });
+            });
+
+    private static readonly string MockJwksJson = CreateMockJwks();
+
+    private static string CreateMockJwks()
+    {
+        using var rsa = System.Security.Cryptography.RSA.Create(2048);
+        var p = rsa.ExportParameters(false);
+        var jwk = new
+        {
+            kty = "RSA",
+            use = "sig",
+            alg = "RS256",
+            kid = "google-test-key",
+            n = System.Buffers.Text.Base64Url.EncodeToString(p.Modulus!),
+            e = System.Buffers.Text.Base64Url.EncodeToString(p.Exponent!)
+        };
+        return System.Text.Json.JsonSerializer.Serialize(new { keys = new[] { jwk } });
+    }
+
+    private sealed class MockGoogleDiscoveryHandler : DelegatingHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri?.AbsoluteUri ?? string.Empty;
+            if (uri.Contains(".well-known/openid-configuration", StringComparison.OrdinalIgnoreCase))
+            {
+                const string json = """
+                {
+                  "issuer": "https://accounts.google.com",
+                  "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
+                  "token_endpoint": "https://oauth2.googleapis.com/token",
+                  "userinfo_endpoint": "https://openidconnect.googleapis.com/v1/userinfo",
+                  "revocation_endpoint": "https://oauth2.googleapis.com/revoke",
+                  "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
+                  "response_types_supported": ["code", "token", "id_token"],
+                  "grant_types_supported": ["authorization_code", "refresh_token"],
+                  "subject_types_supported": ["public"],
+                  "id_token_signing_alg_values_supported": ["RS256"],
+                  "scopes_supported": ["openid", "email", "profile"],
+                  "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"],
+                  "claims_supported": ["aud", "email", "email_verified", "exp", "family_name", "given_name", "iat", "iss", "locale", "name", "picture", "sub"],
+                  "code_challenge_methods_supported": ["plain", "S256"]
+                }
+                """;
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+                return Task.FromResult(response);
+            }
+
+            if (uri.Contains("certs", StringComparison.OrdinalIgnoreCase) || uri.Contains("jwks", StringComparison.OrdinalIgnoreCase))
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(MockJwksJson, System.Text.Encoding.UTF8, "application/json")
+                };
+                return Task.FromResult(response);
+            }
+
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
 }

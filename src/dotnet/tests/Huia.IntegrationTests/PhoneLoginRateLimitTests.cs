@@ -58,7 +58,10 @@ public sealed class PhoneLoginRateLimitTests
     [Fact]
     public async Task The_daily_ceiling_blocks_once_the_short_window_has_replenished()
     {
-        await using var host = await HuiaTestHost.StartAsync(configureOptions: huia =>
+        var clock = new FakeTimeProvider();
+        await using var host = await HuiaTestHost.StartAsync(
+            timeProvider: clock,
+            configureOptions: huia =>
             huia.AddTenant("phone-rl-daily", tenant =>
             {
                 tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
@@ -66,7 +69,7 @@ public sealed class PhoneLoginRateLimitTests
                 {
                     // A tiny window that replenishes between calls, so only the daily ceiling can bite.
                     phone.SuccessfulLoginsPerWindow = 3;
-                    phone.SuccessfulLoginWindow = TimeSpan.FromMilliseconds(100);
+                    phone.SuccessfulLoginWindow = TimeSpan.FromSeconds(1);
                     phone.SuccessfulLoginsPerDay = 3;
                 });
             }));
@@ -79,8 +82,8 @@ public sealed class PhoneLoginRateLimitTests
             limiter.TryRecordLogin("phone-rl-daily", number, out _, out _).ShouldBeTrue($"call #{i + 1}");
         }
 
-        // Let the fixed window fully replenish; the rolling day does not.
-        await Task.Delay(400);
+        // Let the fixed window fully replenish instantaneously via the fake clock; the rolling day does not.
+        clock.Advance(TimeSpan.FromSeconds(2));
 
         limiter.TryRecordLogin("phone-rl-daily", number, out var retryAfter, out var dailyLimitReached).ShouldBeFalse();
         dailyLimitReached.ShouldBeTrue();
