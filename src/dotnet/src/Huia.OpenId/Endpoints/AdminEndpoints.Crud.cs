@@ -36,7 +36,7 @@ internal static partial class AdminEndpoints
 
         var roles = (await store.GetRolesByUserIdsAsync([id], context.RequestAborted)).GetValueOrDefault(id, []);
         return Results.Ok(new UserDto(user.Id, user.TenantId, user.UserName, user.Email, user.EmailConfirmed,
-            user.PhoneNumber, user.PhoneNumberConfirmed, user.LockoutEnabled, user.LockoutEnd, roles));
+            user.PhoneNumber, user.PhoneNumberConfirmed, user.FirstName, user.LastName, user.LockoutEnabled, user.LockoutEnd, roles));
     }
 
     private static async Task<IResult> CreateUserAsync(HttpContext context, HuiaOptions options, CreateUserRequest body)
@@ -92,10 +92,18 @@ internal static partial class AdminEndpoints
 
             foreach (var role in body.Roles ?? [])
             {
+                if (!RoleNamePattern().IsMatch(role))
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["roles"] = [$"The role '{role}' is invalid. A role name must be 1-256 characters of letters, digits, '.', '_', ':' or '-'."],
+                    });
+                }
+
                 var roleManager = services.GetRequiredService<RoleManager<HuiaRole>>();
                 if (!await roleManager.RoleExistsAsync(role))
                 {
-                    await roleManager.CreateAsync(new HuiaRole(role) { TenantId = body.Tenant });
+                    await roleManager.CreateAsync(new HuiaRole(role) { TenantId = body.Tenant, Origin = HuiaConstants.Origins.Dynamic });
                 }
 
                 await userManager.AddToRoleAsync(user, role);
@@ -115,7 +123,7 @@ internal static partial class AdminEndpoints
             return Results.Created(
                 $"/admin/users/{Uri.EscapeDataString(user.Id)}",
                 new UserDto(user.Id, user.TenantId, user.UserName, user.Email, user.EmailConfirmed,
-                    user.PhoneNumber, user.PhoneNumberConfirmed, user.LockoutEnabled, user.LockoutEnd,
+                    user.PhoneNumber, user.PhoneNumberConfirmed, user.FirstName, user.LastName, user.LockoutEnabled, user.LockoutEnd,
                     [.. body.Roles ?? []]));
         });
     }
@@ -156,25 +164,34 @@ internal static partial class AdminEndpoints
                 user.EmailConfirmed = emailConfirmed;
             }
 
+            var lockoutChanged = false;
             if (body.LockoutEnabled is { } lockoutEnabled)
             {
                 user.LockoutEnabled = lockoutEnabled;
+                lockoutChanged = true;
             }
 
             if (body.ClearLockout == true)
             {
                 user.LockoutEnd = null;
                 await userManager.ResetAccessFailedCountAsync(user);
+                lockoutChanged = true;
             }
             else if (body.LockoutEnd is { } lockoutEnd)
             {
                 user.LockoutEnd = lockoutEnd;
+                lockoutChanged = true;
             }
 
             var result = await userManager.UpdateAsync(user);
             if (!result.Succeeded)
             {
                 return IdentityProblem(result);
+            }
+
+            if (lockoutChanged)
+            {
+                await userManager.UpdateSecurityStampAsync(user);
             }
 
             var events = services.GetRequiredService<IHuiaEventPublisher>();
@@ -246,6 +263,8 @@ internal static partial class AdminEndpoints
                 return IdentityProblem(result);
             }
 
+            await userManager.UpdateSecurityStampAsync(user);
+
             var events = services.GetRequiredService<IHuiaEventPublisher>();
             var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
             await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
@@ -281,6 +300,7 @@ internal static partial class AdminEndpoints
             }
 
             await userManager.ResetAccessFailedCountAsync(user);
+            await userManager.UpdateSecurityStampAsync(user);
 
             var events = services.GetRequiredService<IHuiaEventPublisher>();
             var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;

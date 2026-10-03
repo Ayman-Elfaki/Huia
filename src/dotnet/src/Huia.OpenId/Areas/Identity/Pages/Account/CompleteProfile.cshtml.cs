@@ -52,8 +52,10 @@ public sealed class CompleteProfileModel(
     {
         SetHeadings();
         Flow = flow ?? string.Empty;
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
         var state = returnUrlProtector.Read(Flow);
-        if (state is null || (state.PendingSignupId is null && state.UserId is null && state.ExternalProvider is null))
+        if (state is null || !state.Verified || (state.TenantId is not null && !string.Equals(state.TenantId, tenantId, StringComparison.Ordinal))
+            || (state.PendingSignupId is null && state.UserId is null && state.ExternalProvider is null))
         {
             return NotFound();
         }
@@ -72,8 +74,9 @@ public sealed class CompleteProfileModel(
     public async Task<IActionResult> OnPostAsync()
     {
         SetHeadings();
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
         var state = returnUrlProtector.Read(Flow);
-        if (state is null)
+        if (state is null || !state.Verified || (state.TenantId is not null && !string.Equals(state.TenantId, tenantId, StringComparison.Ordinal)))
         {
             return NotFound();
         }
@@ -97,7 +100,6 @@ public sealed class CompleteProfileModel(
             }
         }
 
-        var tenantId = tenantAccessor.RequireCurrentTenantId();
         var returnUrl = returnUrlProtector.SanitizeReturnUrl(state.ReturnUrl, HttpContext);
 
         // The completing account belongs to the flow that produced it: an external sign-up runs the
@@ -152,11 +154,12 @@ public sealed class CompleteProfileModel(
     private async Task<HuiaUser?> CompletePhoneSignupAsync(HuiaUserManager userManager, string tenantId, string pendingId, AuthFlowState state)
     {
         var pending = pendingSignups.Get(pendingId);
-        var phoneNumber = pending?.PhoneNumber ?? state.PhoneNumber;
-        if (phoneNumber is null)
+        if (pending is null || !pending.Verified || !string.Equals(pending.TenantId, tenantId, StringComparison.Ordinal))
         {
             return null;
         }
+
+        var phoneNumber = pending.PhoneNumber;
 
         var (result, user) = await userManager.CreatePhoneUserAsync(tenantId, phoneNumber, Input.FirstName, Input.LastName);
         if (!result.Succeeded)

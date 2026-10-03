@@ -5,8 +5,17 @@ on:
     tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
+      target:
+        description: 'Release target'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dotnet
+          - npm
       version:
-        description: 'Package version to stamp (e.g. 1.2.3). Leave blank on a tag build to let MinVer derive it.'
+        description: 'Explicit version to release (e.g. 1.0.0-alpha.16). Leave blank on a tag build to let MinVer / tag derive it.'
         required: false
 
 permissions:
@@ -18,7 +27,8 @@ env:
   CI: 'true'
 
 jobs:
-  publish:
+  publish-dotnet:
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'dotnet'
     runs-on: ubuntu-latest
     environment: nuget
     defaults:
@@ -42,8 +52,8 @@ jobs:
       - name: Pack
         run: |
           version_arg=""
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            version_arg="-p:Version=${{ github.event.inputs.version }}"
+          if [ -n "${{ inputs.version }}" ]; then
+            version_arg="-p:Version=${{ inputs.version }}"
           fi
           for proj in \
             src/Huia/Huia.csproj \
@@ -63,16 +73,108 @@ jobs:
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: packages
-          # `path` is resolved from the workspace root, not the job's run working-directory.
           path: |
             src/dotnet/artifacts/*.nupkg
             src/dotnet/artifacts/*.snupkg
 
+  publish-npm:
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'npm'
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Determine release version
+        id: meta
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            version="${{ inputs.version }}"
+          else
+            ref="${{ github.ref_name }}"
+            version="${ref#v}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify package versions match release tag
+        run: |
+          expected="${{ steps.meta.outputs.version }}"
+          for pkg in \
+            src/javascript/shared/huia-auth-core \
+            src/javascript/next/next-huia-oidc \
+            src/javascript/next/next-huia-headless \
+            src/javascript/nuxt/nuxt-huia-oidc \
+            src/javascript/nuxt/nuxt-huia-headless
+          do
+            v=$(node -p "require('./$pkg/package.json').version")
+            if [ "$v" != "$expected" ]; then
+              echo "::error::Package $pkg has version $v, expected $expected. Update package.json to match."
+              exit 1
+            fi
+          done
+
+      - name: Publish huia-auth-core
+        working-directory: src/javascript/shared/huia-auth-core
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Next.js packages
+        run: |
+          for pkg in next-huia-oidc next-huia-headless; do
+            echo "Publishing $pkg..."
+            cd "src/javascript/next/$pkg"
+            npm ci
+            npm test
+            npm run build
+            npm publish --access public
+            cd - >/dev/null
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish Nuxt packages
+        run: |
+          for pkg in nuxt-huia-oidc nuxt-huia-headless; do
+            echo "Publishing $pkg..."
+            cd "src/javascript/nuxt/$pkg"
+            npm ci
+            npm test
+            npm run build
+            npm publish --access public
+            cd - >/dev/null
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    needs: [publish-dotnet, publish-npm]
+    if: always() && startsWith(github.ref, 'refs/tags/v') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        if: needs.publish-dotnet.result == 'success'
+        continue-on-error: true
+        with:
+          name: packages
+          path: artifacts
       - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: gh release create "${{ github.ref_name }}" artifacts/*.nupkg --generate-notes
+        run: |
+          if ls artifacts/*.nupkg 1> /dev/null 2>&1; then
+            gh release create "${{ github.ref_name }}" artifacts/*.nupkg --generate-notes
+          else
+            gh release create "${{ github.ref_name }}" --generate-notes
+          fi
         env:
           GH_TOKEN: ${{ github.token }}

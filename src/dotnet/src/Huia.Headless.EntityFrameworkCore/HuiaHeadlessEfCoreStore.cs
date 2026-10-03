@@ -35,6 +35,81 @@ internal sealed class HuiaHeadlessEfCoreStore<TContext, TUser, TRole>(
                 (u.PhoneNumber != null && u.PhoneNumber.Contains(s)));
         }
 
+        if (!string.IsNullOrWhiteSpace(query.UserName))
+        {
+            var username = query.UserName.Trim();
+            source = source.Where(u => u.UserName != null && u.UserName.Contains(username));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.FirstName))
+        {
+            var firstName = query.FirstName.Trim();
+            source = source.Where(u => u.FirstName != null && u.FirstName.Contains(firstName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.LastName))
+        {
+            var lastName = query.LastName.Trim();
+            source = source.Where(u => u.LastName != null && u.LastName.Contains(lastName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.PhoneNumber))
+        {
+            var phone = query.PhoneNumber.Trim();
+            source = source.Where(u => u.PhoneNumber != null && u.PhoneNumber.Contains(phone));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Email))
+        {
+            var email = query.Email.Trim();
+            source = source.Where(u => u.Email != null && u.Email.Contains(email));
+        }
+
+        if (query.EmailConfirmed.HasValue)
+        {
+            source = source.Where(u => u.EmailConfirmed == query.EmailConfirmed.Value);
+        }
+
+        if (query.PhoneNumberConfirmed.HasValue)
+        {
+            source = source.Where(u => u.PhoneNumberConfirmed == query.PhoneNumberConfirmed.Value);
+        }
+
+        if (query.IsLockedOut.HasValue)
+        {
+            var isSqlite = db.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
+            if (isSqlite)
+            {
+                source = query.IsLockedOut.Value
+                    ? source.Where(u => u.LockoutEnd != null)
+                    : source.Where(u => u.LockoutEnd == null);
+            }
+            else
+            {
+                var now = DateTimeOffset.UtcNow;
+                source = query.IsLockedOut.Value
+                    ? source.Where(u => u.LockoutEnd != null && u.LockoutEnd > now)
+                    : source.Where(u => u.LockoutEnd == null || u.LockoutEnd <= now);
+            }
+        }
+
+        var roles = (query.Roles ?? (string.IsNullOrWhiteSpace(query.Role) ? null : [query.Role]))?
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => r.Trim())
+            .ToList();
+
+        if (roles is { Count: > 0 })
+        {
+            var matchingUserIds = db.Set<IdentityUserRole<string>>().AsNoTracking()
+                .Join(
+                    db.Set<TRole>().AsNoTracking().Where(r => roles.Contains(r.Name!)),
+                    ur => ur.RoleId,
+                    r => r.Id,
+                    (ur, r) => ur.UserId);
+
+            source = source.Where(u => matchingUserIds.Contains(u.Id));
+        }
+
         if (query.After != null || query.Before != null)
         {
             // Keyset pagination — cursor-based, O(log n), no row count.

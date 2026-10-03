@@ -372,6 +372,75 @@ public sealed class HeadlessAdminEndpointsTests
         fetched.PhoneNumberConfirmed.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task Admin_can_search_and_filter_users()
+    {
+        await using var host = await StartAsync();
+        var token = await host.CreateAndSignInAdminAsync("searchadmin@test.local", "P@ssword123!");
+        using var client = host.CreateAuthorizedClient(token);
+
+        var roleRes = await client.PostAsJsonAsync("admin/roles", new { name = "qa-lead" });
+        roleRes.EnsureSuccessStatusCode();
+
+        var u1Res = await client.PostAsJsonAsync("admin/users", new
+        {
+            email = "tester1@test.local",
+            password = "P@ssword123!",
+            firstName = "Alice",
+            lastName = "Tester",
+            roles = new[] { "qa-lead" }
+        });
+        u1Res.EnsureSuccessStatusCode();
+
+        var u2Res = await client.PostAsJsonAsync("admin/users", new
+        {
+            email = "dev1@test.local",
+            password = "P@ssword123!",
+            firstName = "Bob",
+            lastName = "Developer",
+        });
+        u2Res.EnsureSuccessStatusCode();
+
+        var u3Res = await client.PostAsJsonAsync("admin/users", new
+        {
+            phoneNumber = "+15005550111",
+            firstName = "Phone",
+            lastName = "User",
+        });
+        u3Res.EnsureSuccessStatusCode();
+
+        var searchRes = await client.GetFromJsonAsync<UsersPageResponse>("admin/users?search=Alice", Json);
+        searchRes.ShouldNotBeNull();
+        searchRes.Data.Count.ShouldBe(1);
+        searchRes.Data[0].Email.ShouldBe("tester1@test.local");
+
+        var usernameRes = await client.GetFromJsonAsync<UsersPageResponse>("admin/users?username=dev1", Json);
+        usernameRes.ShouldNotBeNull();
+        usernameRes.Data.Count.ShouldBe(1);
+        usernameRes.Data[0].Email.ShouldBe("dev1@test.local");
+
+        var firstRes = await client.GetFromJsonAsync<UsersPageResponse>("admin/users?firstName=Bob", Json);
+        firstRes.ShouldNotBeNull();
+        firstRes.Data.Count.ShouldBe(1);
+
+        var lastRes = await client.GetFromJsonAsync<UsersPageResponse>("admin/users?lastName=Tester", Json);
+        lastRes.ShouldNotBeNull();
+        lastRes.Data.Count.ShouldBe(1);
+
+        var phoneRes = await client.GetFromJsonAsync<UsersPageResponse>("admin/users?phoneNumber=0111", Json);
+        phoneRes.ShouldNotBeNull();
+        phoneRes.Data.Count.ShouldBe(1);
+
+        var roleFilterRes = await client.GetFromJsonAsync<UsersPageResponse>("admin/users?role=qa-lead", Json);
+        roleFilterRes.ShouldNotBeNull();
+        roleFilterRes.Data.Count.ShouldBe(1);
+        roleFilterRes.Data[0].Email.ShouldBe("tester1@test.local");
+
+        var noRoleRes = await client.GetFromJsonAsync<UsersPageResponse>("admin/users?role=ghost-role", Json);
+        noRoleRes.ShouldNotBeNull();
+        noRoleRes.Data.Count.ShouldBe(0);
+    }
+
     private static async Task<HeadlessAdminTestHost> StartAsync()
     {
         var connection = new SqliteConnection("DataSource=:memory:");

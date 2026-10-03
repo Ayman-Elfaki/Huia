@@ -1,5 +1,4 @@
 param(
-    [string]$Target,
     [string]$Version,
     [string]$Remote = 'origin',
     [switch]$Force
@@ -7,40 +6,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$targets = [ordered]@{
-    'dotnet' = @{ Prefix = 'v'; Package = $null }
-    'nuxt-oidc' = @{ Prefix = 'nuxt-v'; Package = 'src/javascript/nuxt/nuxt-huia-oidc/package.json'; Lock = 'src/javascript/nuxt/nuxt-huia-oidc/package-lock.json' }
-    'nuxt-headless' = @{ Prefix = 'nuxt-headless-v'; Package = 'src/javascript/nuxt/nuxt-huia-headless/package.json'; Lock = 'src/javascript/nuxt/nuxt-huia-headless/package-lock.json' }
-    'next-oidc' = @{ Prefix = 'next-oidc-v'; Package = 'src/javascript/next/next-huia-oidc/package.json'; Lock = 'src/javascript/next/next-huia-oidc/package-lock.json' }
-    'next-headless' = @{ Prefix = 'next-headless-v'; Package = 'src/javascript/next/next-huia-headless/package.json'; Lock = 'src/javascript/next/next-huia-headless/package-lock.json' }
-    'core' = @{ Prefix = 'core-v'; Package = 'src/javascript/shared/huia-auth-core/package.json'; Lock = 'src/javascript/shared/huia-auth-core/package-lock.json' }
-}
-
-if (-not $Target) {
-    Write-Host 'Select the package to publish:'
-    $names = @($targets.Keys)
-    for ($index = 0; $index -lt $names.Count; $index++) {
-        Write-Host "  $($index + 1). $($names[$index])"
-    }
-
-    $selection = Read-Host 'Package'
-    if ($selection -as [int] -and [int]$selection -ge 1 -and [int]$selection -le $names.Count) {
-        $Target = $names[[int]$selection - 1]
-    } else {
-        $Target = $selection
-    }
-}
-
-if (-not $targets.Contains($Target)) {
-    throw "Unknown target '$Target'. Choose one of: $($targets.Keys -join ', ')."
-}
-
 if (-not $Version) {
-    $Version = Read-Host 'Version (for example 1.2.3 or 1.2.3-alpha.1)'
+    $Version = Read-Host 'Version to release (for example 1.0.0-alpha.16)'
 }
 
 if ($Version -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$') {
-    throw "Invalid version '$Version'. Use semantic versioning such as 1.2.3 or 1.2.3-alpha.1."
+    throw "Invalid version '$Version'. Use semantic versioning such as 1.0.0-alpha.16 or 1.0.0."
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -56,8 +27,7 @@ try {
         throw "Git remote '$Remote' was not found or is not reachable."
     }
 
-    $targetInfo = $targets[$Target]
-    $tag = "$($targetInfo.Prefix)$Version"
+    $tag = "v$Version"
     if ($Force) {
         git rev-parse --verify --quiet "refs/tags/$tag" | Out-Null
         if ($LASTEXITCODE -eq 0) {
@@ -86,37 +56,60 @@ try {
         }
     }
 
-    if ($targetInfo.Package) {
-        $packagePath = Join-Path $repoRoot $targetInfo.Package
+    $packages = @(
+        'src/javascript/shared/huia-auth-core',
+        'src/javascript/next/next-huia-oidc',
+        'src/javascript/next/next-huia-headless',
+        'src/javascript/nuxt/nuxt-huia-oidc',
+        'src/javascript/nuxt/nuxt-huia-headless'
+    )
+
+    $stagedFiles = @()
+
+    foreach ($pkg in $packages) {
+        $packagePath = Join-Path $repoRoot "$pkg/package.json"
+        $lockPath = Join-Path $repoRoot "$pkg/package-lock.json"
+
         $packageJson = Get-Content $packagePath -Raw | ConvertFrom-Json
-        $lockPath = Join-Path $repoRoot $targetInfo.Lock
-        $lockJson = Get-Content $lockPath -Raw | ConvertFrom-Json -AsHashtable
-
         $packageJson.version = $Version
-        $lockJson['version'] = $Version
-        $lockJson['packages']['']['version'] = $Version
-
         $packageJson | ConvertTo-Json -Depth 100 | Set-Content $packagePath
-        $lockJson | ConvertTo-Json -Depth 100 | Set-Content $lockPath
 
-        git add $targetInfo.Package $targetInfo.Lock
-        $stagedFiles = @(git diff --cached --name-only)
-        if ($stagedFiles | Where-Object { $_ -notin @($targetInfo.Package, $targetInfo.Lock) }) {
-            git reset $targetInfo.Package $targetInfo.Lock | Out-Null
-            throw 'Unrelated files are already staged; refusing to create a mixed release commit.'
+        if (Test-Path $lockPath) {
+            $lockJson = Get-Content $lockPath -Raw | ConvertFrom-Json -AsHashtable
+            $lockJson['version'] = $Version
+            if ($lockJson.ContainsKey('packages') -and $lockJson['packages'].ContainsKey('')) {
+                $lockJson['packages']['']['version'] = $Version
+            }
+            $lockJson | ConvertTo-Json -Depth 100 | Set-Content $lockPath
         }
-        git diff --cached --quiet
-        if ($LASTEXITCODE -eq 0) {
-            git reset $targetInfo.Package $targetInfo.Lock | Out-Null
-            if (-not $Force) {
-                throw "Package version is already '$Version' in '$($targetInfo.Package)'."
-            }
-        } else {
-            git commit -m "chore($Target): bump version to $Version"
-            git push $Remote HEAD
-            if ($LASTEXITCODE -ne 0) {
-                throw "Failed to push the version bump to '$Remote'; the tag was not created."
-            }
+
+        $relPkg = "$pkg/package.json"
+        $relLock = "$pkg/package-lock.json"
+        git add $relPkg $relLock
+        $stagedFiles += $relPkg
+        $stagedFiles += $relLock
+    }
+
+    $currentStaged = @(git diff --cached --name-only)
+    foreach ($file in $currentStaged) {
+        $normalized = $file.Replace('\', '/')
+        if ($normalized -notin $stagedFiles) {
+            git reset @stagedFiles | Out-Null
+            throw "Unrelated file '$file' is already staged; refusing to create a mixed release commit."
+        }
+    }
+
+    git diff --cached --quiet
+    if ($LASTEXITCODE -eq 0) {
+        git reset @stagedFiles | Out-Null
+        if (-not $Force) {
+            throw "All package versions are already '$Version'."
+        }
+    } else {
+        git commit -m "chore(release): bump version to $Version"
+        git push $Remote HEAD
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to push the version bump to '$Remote'; the tag was not created."
         }
     }
 
@@ -127,7 +120,7 @@ try {
         throw "Failed to push '$tag'; the local tag was removed."
     }
 
-    Write-Host "Published tag '$tag'. GitHub Actions will now handle the release."
+    Write-Host "Published unified tag '$tag'. GitHub Actions will now build, test, and publish all .NET and NPM packages."
 } finally {
     Pop-Location
 }

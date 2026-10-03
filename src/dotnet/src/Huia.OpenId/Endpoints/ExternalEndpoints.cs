@@ -217,7 +217,8 @@ internal static class ExternalEndpoints
 
         if (user is null && !string.IsNullOrWhiteSpace(email))
         {
-            var providerVouches = !string.Equals(emailVerified, "false", StringComparison.OrdinalIgnoreCase);
+            var providerVouches = string.Equals(emailVerified, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(emailVerified, "1", StringComparison.Ordinal);
             var accountLinkingEnabled = options.Tenants.TryGetValue(tenantId, out var tenant)
                 && tenant.Authentication.External?.AccountLinkingEnabled == true;
 
@@ -245,6 +246,8 @@ internal static class ExternalEndpoints
         // First time here — collect a name before creating the account.
         var flow = returnUrlProtector.Tokenize(new AuthFlowState
         {
+            TenantId = tenantId,
+            Verified = true,
             ReturnUrl = returnUrl,
             ExternalProvider = info.LoginProvider,
             ExternalProviderKey = info.ProviderKey,

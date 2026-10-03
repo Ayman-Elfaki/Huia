@@ -74,8 +74,28 @@ npm install && npm test && npm run build
    - C#: Formatted according to `.editorconfig` rules.
    - TypeScript: Follow existing module style conventions (`vitest`, standard ESLint).
 
+## Releasing and Versioning
+
+Huia uses a **unified versioning model**. All packages across the monorepo (.NET NuGet and NPM) share the same version number and are published in lockstep:
+- **.NET NuGet packages**: `Huia`, `Huia.OpenId`, `Huia.OpenId.EntityFrameworkCore`, `Huia.Headless`, `Huia.Headless.EntityFrameworkCore`
+- **NPM packages**: `huia-auth-core`, `next-huia-oidc`, `next-huia-headless`, `nuxt-huia-oidc`, `nuxt-huia-headless`
+
+### Creating a Release
+
+To publish a release across all packages:
+
+1. Run the publish script with the target version (e.g. `1.0.0-alpha.16` or `1.0.0`):
+   - **Bash**: `./scripts/publish.sh 1.0.0-alpha.16`
+   - **PowerShell**: `./scripts/publish.ps1 -Version 1.0.0-alpha.16`
+2. The script updates all `package.json` and `package-lock.json` files, commits `chore(release): bump version to <version>`, and creates git tag `v<version>`.
+3. Pushing the tag `v<version>` triggers the GitHub Actions `.github/workflows/release.yml` workflow, which:
+   - Builds, tests, and publishes all NuGet packages to NuGet.org.
+   - Builds, tests, and publishes all NPM packages to npm registry.
+   - Creates a consolidated GitHub Release with generated release notes and attached `.nupkg` artifacts.
+
 ## Reporting Bugs and Feature Requests
 
 - Check existing issues and PRs before creating a new issue to avoid duplicates.
 - Provide minimal reproduction steps and environment details (OS, .NET version, browser/Node version).
 - For security vulnerabilities, follow the guidelines in [SECURITY.md](SECURITY.md).
+

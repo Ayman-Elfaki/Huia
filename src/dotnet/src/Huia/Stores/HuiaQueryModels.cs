@@ -14,6 +14,36 @@ public sealed record HuiaUserQuery
     /// <summary>Free-text search applied to email, username, first name, last name, and phone number.</summary>
     public string? Search { get; init; }
 
+    /// <summary>Filter by username (contains match).</summary>
+    public string? UserName { get; init; }
+
+    /// <summary>Filter by first name (contains match).</summary>
+    public string? FirstName { get; init; }
+
+    /// <summary>Filter by last name (contains match).</summary>
+    public string? LastName { get; init; }
+
+    /// <summary>Filter by phone number (contains match).</summary>
+    public string? PhoneNumber { get; init; }
+
+    /// <summary>Filter by email address (contains match).</summary>
+    public string? Email { get; init; }
+
+    /// <summary>Filter by a single role name.</summary>
+    public string? Role { get; init; }
+
+    /// <summary>Filter by any of the specified role names.</summary>
+    public IReadOnlyCollection<string>? Roles { get; init; }
+
+    /// <summary>Filter by whether the user's email address is confirmed.</summary>
+    public bool? EmailConfirmed { get; init; }
+
+    /// <summary>Filter by whether the user's phone number is confirmed.</summary>
+    public bool? PhoneNumberConfirmed { get; init; }
+
+    /// <summary>Filter by whether the user is currently locked out.</summary>
+    public bool? IsLockedOut { get; init; }
+
     /// <summary>Maximum number of items per page. Defaults to 25, clamped 1–100.</summary>
     public int PageSize { get; init; } = 25;
 

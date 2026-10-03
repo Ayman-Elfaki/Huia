@@ -94,14 +94,40 @@ internal static partial class AdminEndpoints
         HttpContext context,
         IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
         string? tenant = null,
+        string? search = null,
+        string? username = null,
+        string? firstName = null,
+        string? lastName = null,
+        string? phoneNumber = null,
+        string? email = null,
+        string? role = null,
+        string? roles = null,
+        bool? emailConfirmed = null,
+        bool? phoneNumberConfirmed = null,
+        bool? isLockedOut = null,
         string? after = null,
         string? before = null,
-        int? size = 25)
+        int? size = null,
+        int? pageSize = null)
     {
+        var roleList = roles?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? (string.IsNullOrWhiteSpace(role) ? null : [role.Trim()]);
+
         var query = new HuiaUserQuery
         {
             TenantId = string.IsNullOrEmpty(tenant) ? null : tenant,
-            PageSize = Math.Clamp(size ?? 25, 1, 100),
+            Search = search,
+            UserName = username,
+            FirstName = firstName,
+            LastName = lastName,
+            PhoneNumber = phoneNumber,
+            Email = email,
+            Role = role,
+            Roles = roleList,
+            EmailConfirmed = emailConfirmed,
+            PhoneNumberConfirmed = phoneNumberConfirmed,
+            IsLockedOut = isLockedOut,
+            PageSize = Math.Clamp(size ?? pageSize ?? 25, 1, 100),
             After = after,
             Before = before,
         };
@@ -110,7 +136,7 @@ internal static partial class AdminEndpoints
 
         var byUser = await store.GetRolesByUserIdsAsync([.. result.Data.Select(u => u.Id)], context.RequestAborted);
         var data = result.Data.Select(u => new UserDto(u.Id, u.TenantId, u.UserName, u.Email, u.EmailConfirmed,
-            u.PhoneNumber, u.PhoneNumberConfirmed, u.LockoutEnabled, u.LockoutEnd,
+            u.PhoneNumber, u.PhoneNumberConfirmed, u.FirstName, u.LastName, u.LockoutEnabled, u.LockoutEnd,
             byUser.GetValueOrDefault(u.Id, []))).ToList();
 
         return Results.Ok(new { data, result.HasNext, result.HasPrevious, result.NextCursor, result.PreviousCursor });
@@ -382,6 +408,8 @@ internal static partial class AdminEndpoints
         bool EmailConfirmed,
         string? PhoneNumber,
         bool PhoneNumberConfirmed,
+        string FirstName,
+        string LastName,
         bool LockoutEnabled,
         DateTimeOffset? LockoutEnd,
         string[] Roles);

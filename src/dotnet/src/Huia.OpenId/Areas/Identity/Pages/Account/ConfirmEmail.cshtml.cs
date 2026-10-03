@@ -43,11 +43,18 @@ public sealed class ConfirmEmailModel(
         var user = await userManager.FindByIdAsync(userId);
         if (user is not null)
         {
-            var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
-            Confirmed = (await userManager.ConfirmEmailAsync(user, token)).Succeeded;
-            if (Confirmed)
+            try
             {
-                await events.PublishAsync(new UserUpdatedEvent(user.TenantId, user.Id, timeProvider.GetUtcNow()));
+                var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+                Confirmed = (await userManager.ConfirmEmailAsync(user, token)).Succeeded;
+                if (Confirmed)
+                {
+                    await events.PublishAsync(new UserUpdatedEvent(user.TenantId, user.Id, timeProvider.GetUtcNow()));
+                }
+            }
+            catch (FormatException)
+            {
+                Confirmed = false;
             }
         }
 

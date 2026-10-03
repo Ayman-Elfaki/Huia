@@ -237,6 +237,40 @@ describe('HuiaHeadlessClient', () => {
       expect(fetch.mock.calls[0][1].headers.authorization).toBe('Bearer tok')
     })
 
+    it('adminListUsers sends all filter parameters including names, phone, roles, and status', async () => {
+      const page: HeadlessAdminUsersPage = {
+        data: [mockUser], totalCount: 1, page: 1, pageSize: 20, hasNext: false, hasPrevious: false,
+      }
+      const fetch = mockFetch(page)
+      globalThis.fetch = fetch
+      const client = new HuiaHeadlessClient({ baseUrl: 'https://id.test' })
+
+      await client.adminListUsers('tok', {
+        username: 'bob',
+        firstName: 'Robert',
+        lastName: 'Smith',
+        phoneNumber: '+15005550001',
+        email: 'bob@example.com',
+        role: 'editor',
+        roles: ['admin', 'manager'],
+        emailConfirmed: true,
+        phoneNumberConfirmed: false,
+        isLockedOut: false,
+      })
+
+      const url = fetch.mock.calls[0][0] as string
+      expect(url).toContain('username=bob')
+      expect(url).toContain('firstName=Robert')
+      expect(url).toContain('lastName=Smith')
+      expect(url).toContain('phoneNumber=%2B15005550001')
+      expect(url).toContain('email=bob%40example.com')
+      expect(url).toContain('role=editor')
+      expect(url).toContain('roles=admin%2Cmanager')
+      expect(url).toContain('emailConfirmed=true')
+      expect(url).toContain('phoneNumberConfirmed=false')
+      expect(url).toContain('isLockedOut=false')
+    })
+
     it('adminGetUser calls GET /admin/users/:id', async () => {
       const fetch = mockFetch(mockUser)
       globalThis.fetch = fetch

@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Huia.OpenId.Identity;
 using Huia.OpenId.UI;
-using Huia.OpenId.EntityFrameworkCore.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore.Multitenancy;
@@ -57,7 +56,17 @@ public sealed class ResetPasswordModel(
         var user = await userManager.FindByIdAsync(Input.UserId);
         if (user is not null)
         {
-            var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Input.Code));
+            string token;
+            try
+            {
+                token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Input.Code));
+            }
+            catch (FormatException)
+            {
+                ErrorMessage = "Invalid token.";
+                return Page();
+            }
+
             var result = await userManager.ResetPasswordAsync(user, token, Input.Password);
             if (result.Succeeded)
             {

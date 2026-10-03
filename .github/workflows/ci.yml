@@ -1,9 +1,6 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch: {}
 
 env:
@@ -69,7 +66,7 @@ jobs:
       - working-directory: samples/Todo/Todo.Admin
         run: npm ci && npm run build
       # Build the nuxt-huia-oidc playground .output for HuiaNuxtPlaygroundFixture.
-      - working-directory: src/nuxt/nuxt-huia-oidc
+      - working-directory: src/javascript/nuxt/nuxt-huia-oidc
         run: npm ci && npm run dev:build
       # Build Shop.Nuxt's .output for ShopStackFixture.
       - working-directory: samples/Shop/Shop.Nuxt
@@ -77,12 +74,12 @@ jobs:
       # Build Todo.Next and Shop.Next production outputs for NextFrontEndFixture.
       - name: Build Shared Core & Next.js libraries
         run: |
-          npm --prefix src/shared/huia-auth-core install
-          npm --prefix src/shared/huia-auth-core run build
-          npm --prefix src/next/next-huia-oidc install
-          npm --prefix src/next/next-huia-oidc run build
-          npm --prefix src/next/next-huia-headless install
-          npm --prefix src/next/next-huia-headless run build
+          npm --prefix src/javascript/shared/huia-auth-core install
+          npm --prefix src/javascript/shared/huia-auth-core run build
+          npm --prefix src/javascript/next/next-huia-oidc install
+          npm --prefix src/javascript/next/next-huia-oidc run build
+          npm --prefix src/javascript/next/next-huia-headless install
+          npm --prefix src/javascript/next/next-huia-headless run build
       - working-directory: samples/Todo/Todo.Next
         run: npm install && npm run build
       - working-directory: samples/Shop/Shop.Next
@@ -122,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: src/shared/huia-auth-core
+        working-directory: src/javascript/shared/huia-auth-core
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -140,8 +137,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
-      - working-directory: src/next/next-huia-oidc
+      - run: npm --prefix src/javascript/shared/huia-auth-core install && npm --prefix src/javascript/shared/huia-auth-core run build
+      - working-directory: src/javascript/next/next-huia-oidc
         run: |
           npm install
           npm test
@@ -155,8 +152,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
-      - working-directory: src/next/next-huia-headless
+      - run: npm --prefix src/javascript/shared/huia-auth-core install && npm --prefix src/javascript/shared/huia-auth-core run build
+      - working-directory: src/javascript/next/next-huia-headless
         run: |
           npm install
           npm test
@@ -170,8 +167,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
-      - working-directory: src/nuxt/nuxt-huia-oidc
+      - run: npm --prefix src/javascript/shared/huia-auth-core install && npm --prefix src/javascript/shared/huia-auth-core run build
+      - working-directory: src/javascript/nuxt/nuxt-huia-oidc
         run: |
           npm install
           npm run dev:prepare
@@ -187,8 +184,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: npm --prefix src/shared/huia-auth-core install && npm --prefix src/shared/huia-auth-core run build
-      - working-directory: src/nuxt/nuxt-huia-headless
+      - run: npm --prefix src/javascript/shared/huia-auth-core install && npm --prefix src/javascript/shared/huia-auth-core run build
+      - working-directory: src/javascript/nuxt/nuxt-huia-headless
         run: |
           npm install
           npm run dev:prepare

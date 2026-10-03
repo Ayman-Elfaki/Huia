@@ -163,7 +163,7 @@ public sealed class LoginModel(
 
         var user = await flowIdentity.Create(HuiaAuthFlow.PhoneLogin).UserManager.FindByPhoneNumberAsync(e164);
 
-        var state = new AuthFlowState { ReturnUrl = ReturnUrl, PhoneNumber = e164 };
+        var state = new AuthFlowState { TenantId = tenantId, ReturnUrl = ReturnUrl, PhoneNumber = e164, Verified = false };
         var maskedForEvent = phoneNumbers.Mask(e164);
         bool delivered;
 

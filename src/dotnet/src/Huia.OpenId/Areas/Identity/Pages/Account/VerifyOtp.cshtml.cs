@@ -64,8 +64,9 @@ public sealed class VerifyOtpModel(
         Flow = flow ?? string.Empty;
         Resent = resent;
 
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
         var state = returnUrlProtector.Read(Flow);
-        if (!IsPhoneLoginEnabled || state is null)
+        if (!IsPhoneLoginEnabled || state is null || (state.TenantId is not null && !string.Equals(state.TenantId, tenantId, StringComparison.Ordinal)))
         {
             return NotFound();
         }
@@ -84,15 +85,15 @@ public sealed class VerifyOtpModel(
             return NotFound();
         }
 
+        var tenantId = tenantAccessor.RequireCurrentTenantId();
         var state = returnUrlProtector.Read(Flow);
-        if (state is null)
+        if (state is null || (state.TenantId is not null && !string.Equals(state.TenantId, tenantId, StringComparison.Ordinal)))
         {
             return NotFound();
         }
 
         MaskedPhoneNumber = state.PhoneNumber is { } number ? phoneNumbers.Mask(number) : null;
         var options = PhoneOptions;
-        var tenantId = tenantAccessor.RequireCurrentTenantId();
         var returnUrl = returnUrlProtector.SanitizeReturnUrl(state.ReturnUrl, HttpContext);
 
         if (!ModelState.IsValid)
@@ -112,7 +113,7 @@ public sealed class VerifyOtpModel(
             await events.PublishAsync(new OtpVerifiedEvent(tenantId, null, MaskFor(state), timeProvider.GetUtcNow()));
             return RedirectToPage("./CompleteProfile", new
             {
-                flow = returnUrlProtector.Tokenize(new AuthFlowState { ReturnUrl = returnUrl, PhoneNumber = state.PhoneNumber, PendingSignupId = pendingId }),
+                flow = returnUrlProtector.Tokenize(new AuthFlowState { TenantId = tenantId, ReturnUrl = returnUrl, PhoneNumber = state.PhoneNumber, PendingSignupId = pendingId, Verified = true }),
             });
         }
 
@@ -145,7 +146,7 @@ public sealed class VerifyOtpModel(
         {
             return RedirectToPage("./CompleteProfile", new
             {
-                flow = returnUrlProtector.Tokenize(new AuthFlowState { ReturnUrl = returnUrl, UserId = user.Id, PhoneNumber = state.PhoneNumber }),
+                flow = returnUrlProtector.Tokenize(new AuthFlowState { TenantId = tenantId, ReturnUrl = returnUrl, UserId = user.Id, PhoneNumber = state.PhoneNumber, Verified = true }),
             });
         }
 

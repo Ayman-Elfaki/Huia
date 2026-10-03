@@ -98,6 +98,9 @@ internal static class ExternalEndpoints
         var providerKey = info.ProviderKey;
 
         var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+        var emailVerified = info.Principal.FindFirstValue("email_verified") ?? info.Principal.FindFirstValue("verified_email");
+        var providerVouches = string.Equals(emailVerified, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(emailVerified, "1", StringComparison.Ordinal);
         var displayName = info.Principal.FindFirstValue(ClaimTypes.Name) ?? info.ProviderDisplayName ?? schemeName;
         var givenName = info.Principal.FindFirstValue(ClaimTypes.GivenName);
         var familyName = info.Principal.FindFirstValue(ClaimTypes.Surname);
@@ -113,7 +116,7 @@ internal static class ExternalEndpoints
         if (user is null && !string.IsNullOrWhiteSpace(email))
         {
             var (outcome, linked) = await userManager.TryLinkExternalByEmailAsync(
-                email, providerVouches: true, external.AccountLinkingEnabled, schemeName, providerKey, displayName);
+                email, providerVouches, external.AccountLinkingEnabled, schemeName, providerKey, displayName);
 
             switch (outcome)
             {

@@ -59,15 +59,39 @@ public static partial class AdminEndpoints
         HuiaUserManager userManager,
         IHuiaStore<HuiaUser, HuiaRole> store,
         int? page = 1,
-        int? pageSize = 20,
+        int? pageSize = null,
+        int? size = null,
         string? search = null,
+        string? username = null,
+        string? firstName = null,
+        string? lastName = null,
+        string? phoneNumber = null,
+        string? email = null,
+        string? role = null,
+        string? roles = null,
+        bool? emailConfirmed = null,
+        bool? phoneNumberConfirmed = null,
+        bool? isLockedOut = null,
         string? after = null,
         string? before = null)
     {
+        var roleList = roles?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? (string.IsNullOrWhiteSpace(role) ? null : [role.Trim()]);
+
         var query = new HuiaUserQuery
         {
             Search = search,
-            PageSize = Math.Clamp(pageSize ?? 20, 1, 100),
+            UserName = username,
+            FirstName = firstName,
+            LastName = lastName,
+            PhoneNumber = phoneNumber,
+            Email = email,
+            Role = role,
+            Roles = roleList,
+            EmailConfirmed = emailConfirmed,
+            PhoneNumberConfirmed = phoneNumberConfirmed,
+            IsLockedOut = isLockedOut,
+            PageSize = Math.Clamp(pageSize ?? size ?? 20, 1, 100),
             After = after,
             Before = before,
             Page = Math.Max(1, page ?? 1),
@@ -78,8 +102,8 @@ public static partial class AdminEndpoints
         var userDtos = new List<HeadlessUserDto>(result.Data.Count);
         foreach (var u in result.Data)
         {
-            var roles = await userManager.GetRolesAsync(u);
-            userDtos.Add(ToDto(u, roles));
+            var userRoles = await userManager.GetRolesAsync(u);
+            userDtos.Add(ToDto(u, userRoles));
         }
 
         return Results.Ok(new

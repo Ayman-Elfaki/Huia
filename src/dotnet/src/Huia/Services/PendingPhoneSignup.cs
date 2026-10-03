@@ -7,7 +7,8 @@ namespace Huia.Services;
 /// <param name="Id">Opaque identifier carried in the flow token.</param>
 /// <param name="TenantId">The tenant the sign-in is running in.</param>
 /// <param name="PhoneNumber">The E.164 number.</param>
-public sealed record PendingPhoneSignupRecord(string Id, string TenantId, string PhoneNumber);
+/// <param name="Verified">Whether the one-time code for this record has been verified.</param>
+public sealed record PendingPhoneSignupRecord(string Id, string TenantId, string PhoneNumber, bool Verified = false);
 
 /// <summary>
 /// Holds hashed one-time codes for numbers with no account, so auto-provisioning never writes a
@@ -60,7 +61,7 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
         var (hash, salt) = OtpHashing.Create(code);
         _entries[id] = new Entry(tenantId, phoneNumber, hash, salt,
             timeProvider.GetUtcNow().Add(options.CodeLifetime),
-            timeProvider.GetUtcNow().Add(options.PendingSignupLifetime), 0);
+            timeProvider.GetUtcNow().Add(options.PendingSignupLifetime), 0, false);
         return id;
     }
 
@@ -78,12 +79,13 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
             Salt = salt,
             CodeExpiresUtc = timeProvider.GetUtcNow().Add(options.CodeLifetime),
             Attempts = 0,
+            Verified = false,
         };
         return true;
     }
 
     public PendingPhoneSignupRecord? Get(string id) =>
-        TryGetLive(id, out var entry) ? new PendingPhoneSignupRecord(id, entry.TenantId, entry.PhoneNumber) : null;
+        TryGetLive(id, out var entry) ? new PendingPhoneSignupRecord(id, entry.TenantId, entry.PhoneNumber, entry.Verified) : null;
 
     public OtpVerifyResult Verify(string id, string code, PhoneAuthenticationMethod options)
     {
@@ -100,6 +102,7 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
 
         if (OtpHashing.Verify(code, entry.Hash, entry.Salt))
         {
+            _entries[id] = entry with { Verified = true };
             return OtpVerifyResult.Success;
         }
 
@@ -147,5 +150,6 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
         string Salt,
         DateTimeOffset CodeExpiresUtc,
         DateTimeOffset RecordExpiresUtc,
-        int Attempts);
+        int Attempts,
+        bool Verified);
 }

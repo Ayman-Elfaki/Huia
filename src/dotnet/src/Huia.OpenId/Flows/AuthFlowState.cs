@@ -7,6 +7,12 @@ namespace Huia.OpenId.Flows;
 /// </summary>
 public sealed record AuthFlowState
 {
+    /// <summary>The tenant the sign-in flow was initiated for.</summary>
+    public string? TenantId { get; init; }
+
+    /// <summary>Whether the phone one-time code or external sign-in has been successfully verified.</summary>
+    public bool Verified { get; init; }
+
     /// <summary>Where to send the browser once the flow completes (a local URL).</summary>
     public string? ReturnUrl { get; init; }
 

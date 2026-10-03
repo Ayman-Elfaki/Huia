@@ -178,4 +178,98 @@ public sealed class AdminEndpointsTests : IAsyncLifetime
 
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.Forbidden, HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task Users_can_be_filtered_by_search_term()
+    {
+        using var client = await AdminApiAsync();
+
+        var res = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&search=peon");
+        res.GetProperty("data").GetArrayLength().ShouldBe(1);
+        res.GetProperty("data")[0].GetProperty("email").GetString().ShouldBe("peon@acme.test");
+    }
+
+    [Fact]
+    public async Task Users_can_be_filtered_by_username_and_names_and_phone()
+    {
+        using var client = await AdminApiAsync();
+
+        var create = await client.PostAsJsonAsync("/master/admin/users", new
+        {
+            tenant = "acme",
+            email = "filtertest@acme.test",
+            password = "Password1!",
+            firstName = "UniqueFirst",
+            lastName = "UniqueLast",
+            emailConfirmed = true,
+        });
+        create.EnsureSuccessStatusCode();
+
+        var createPhone = await client.PostAsJsonAsync("/master/admin/users", new
+        {
+            tenant = "acme",
+            phoneNumber = "+15005559876",
+            firstName = "Phone",
+            lastName = "User",
+        });
+        createPhone.EnsureSuccessStatusCode();
+
+        var byUser = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&username=filtertest");
+        byUser.GetProperty("data").GetArrayLength().ShouldBe(1);
+        byUser.GetProperty("data")[0].GetProperty("email").GetString().ShouldBe("filtertest@acme.test");
+        byUser.GetProperty("data")[0].GetProperty("firstName").GetString().ShouldBe("UniqueFirst");
+        byUser.GetProperty("data")[0].GetProperty("lastName").GetString().ShouldBe("UniqueLast");
+
+        var byFirst = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&firstName=UniqueFirst");
+        byFirst.GetProperty("data").GetArrayLength().ShouldBe(1);
+
+        var byLast = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&lastName=UniqueLast");
+        byLast.GetProperty("data").GetArrayLength().ShouldBe(1);
+
+        var byPhone = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&phoneNumber=9876");
+        byPhone.GetProperty("data").GetArrayLength().ShouldBe(1);
+        byPhone.GetProperty("data")[0].GetProperty("phoneNumber").GetString().ShouldBe("+15005559876");
+    }
+
+    [Fact]
+    public async Task Users_can_be_filtered_by_role()
+    {
+        using var client = await AdminApiAsync();
+
+        var adminUsers = await client.GetFromJsonAsync<JsonElement>($"/master/admin/users?tenant=master&role={HuiaConstants.Roles.Administrator}");
+        adminUsers.GetProperty("data").GetArrayLength().ShouldBe(1);
+        adminUsers.GetProperty("data")[0].GetProperty("email").GetString().ShouldBe("root@master.test");
+
+        var noUsers = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=master&role=nonexistent-role");
+        noUsers.GetProperty("data").GetArrayLength().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Users_can_be_filtered_by_confirmation_and_lockout()
+    {
+        using var client = await AdminApiAsync();
+
+        var create = await client.PostAsJsonAsync("/master/admin/users", new
+        {
+            tenant = "acme",
+            email = "unconfirmed@acme.test",
+            password = "Password1!",
+            firstName = "Unconf",
+            lastName = "User",
+            emailConfirmed = false,
+        });
+        create.EnsureSuccessStatusCode();
+        var id = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+
+        var unconfirmedUsers = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&emailConfirmed=false");
+        unconfirmedUsers.GetProperty("data").EnumerateArray().Any(u => u.GetProperty("email").GetString() == "unconfirmed@acme.test").ShouldBeTrue();
+
+        (await client.PostAsync($"/master/admin/users/{id}/lock", null)).EnsureSuccessStatusCode();
+
+        var lockedUsers = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&isLockedOut=true");
+        lockedUsers.GetProperty("data").EnumerateArray().Any(u => u.GetProperty("id").GetString() == id).ShouldBeTrue();
+
+        var unlockedUsers = await client.GetFromJsonAsync<JsonElement>("/master/admin/users?tenant=acme&isLockedOut=false");
+        unlockedUsers.GetProperty("data").EnumerateArray().Any(u => u.GetProperty("id").GetString() == id).ShouldBeFalse();
+    }
 }

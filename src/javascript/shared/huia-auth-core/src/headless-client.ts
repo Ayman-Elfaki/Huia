@@ -163,11 +163,47 @@ export class HuiaHeadlessClient {
     })
   }
 
-  adminListUsers(accessToken: string, params?: { page?: number, pageSize?: number, search?: string }): Promise<HeadlessAdminUsersPage> {
+  adminListUsers(accessToken: string, params?: {
+    page?: number
+    pageSize?: number
+    size?: number
+    search?: string
+    username?: string
+    firstName?: string
+    lastName?: string
+    phoneNumber?: string
+    email?: string
+    role?: string
+    roles?: string | string[]
+    emailConfirmed?: boolean
+    phoneNumberConfirmed?: boolean
+    isLockedOut?: boolean
+    after?: string
+    before?: string
+  }): Promise<HeadlessAdminUsersPage> {
     const q = new URLSearchParams()
     if (params?.page) q.set('page', String(params.page))
     if (params?.pageSize) q.set('pageSize', String(params.pageSize))
+    if (params?.size) q.set('size', String(params.size))
     if (params?.search) q.set('search', params.search)
+    if (params?.username) q.set('username', params.username)
+    if (params?.firstName) q.set('firstName', params.firstName)
+    if (params?.lastName) q.set('lastName', params.lastName)
+    if (params?.phoneNumber) q.set('phoneNumber', params.phoneNumber)
+    if (params?.email) q.set('email', params.email)
+    if (params?.role) q.set('role', params.role)
+    if (params?.roles) {
+      if (Array.isArray(params.roles)) {
+        q.set('roles', params.roles.join(','))
+      } else {
+        q.set('roles', params.roles)
+      }
+    }
+    if (params?.emailConfirmed !== undefined) q.set('emailConfirmed', String(params.emailConfirmed))
+    if (params?.phoneNumberConfirmed !== undefined) q.set('phoneNumberConfirmed', String(params.phoneNumberConfirmed))
+    if (params?.isLockedOut !== undefined) q.set('isLockedOut', String(params.isLockedOut))
+    if (params?.after) q.set('after', params.after)
+    if (params?.before) q.set('before', params.before)
     const qs = q.toString() ? `?${q}` : ''
     return this.call<HeadlessAdminUsersPage>(`/admin/users${qs}`, {
       method: 'GET',
