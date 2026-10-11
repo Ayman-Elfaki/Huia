@@ -2,6 +2,7 @@ using Huia.DependencyInjection;
 using Huia.OpenId.Entities;
 using Huia.OpenId.EntityFrameworkCore.Stores;
 using Huia.Stores;
+using Huia.Tenants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -81,6 +82,11 @@ public static class HuiaOpenIdEntityFrameworkCoreServiceCollectionExtensions
             sp.GetRequiredService<TContext>(), sp.GetRequiredService<IPaginationService>()));
         services.AddScoped<IHuiaOpenIddictAdminStore>(sp => new HuiaOpenIdEfCoreOpenIddictAdminStore<TContext>(
             sp.GetRequiredService<TContext>(), sp.GetRequiredService<IPaginationService>()));
+        services.TryAddSingleton<HuiaTenantSerializer>();
+        services.AddScoped<IHuiaTenantStore>(sp => new HuiaOpenIdEfCoreTenantStore<TContext>(
+            sp.GetRequiredService<TContext>(),
+            sp.GetRequiredService<HuiaTenantSerializer>(),
+            sp.GetService<TimeProvider>() ?? TimeProvider.System));
         services.AddScoped<IHuiaPhoneLookupStore>(sp => new HuiaOpenIdEfCorePhoneLookupStore<TContext, TUser>(
             sp.GetRequiredService<TContext>()));
         services.AddScoped<IHuiaDatabaseProbe>(sp => new HuiaOpenIdEfCoreDatabaseProbe<TContext>(

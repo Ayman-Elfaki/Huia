@@ -49,6 +49,18 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Added
 
+- **`Huia` / `Huia.OpenId.EntityFrameworkCore`** — Persisted tenants (storage layer only). `IHuiaTenantStore`
+  (list / find / save / delete) with an EF implementation over a new `HuiaTenants` table
+  (`HuiaTenantRecord`: `TenantId` key, protected `Payload`, `Version` concurrency token, timestamps).
+  `HuiaTenantSerializer` validates a tenant and stores it as an explicit, versioned `HuiaTenantDocument`
+  protected with Data Protection (it carries client and SMTP / SMS secrets). The document covers email /
+  password, phone and passkey sign-in, branding, email / SMS overrides, roles, scopes and OAuth applications;
+  external-provider login stays code-defined. `AddPersistedTenants()` swaps `IHuiaTenantProvider` for a
+  snapshot of the code-first tenants plus the stored ones (code-first wins on an id clash), refreshed at
+  start-up, on `IHuiaTenantRefresher.RefreshAsync()` and every minute. Hosts own the migration for the new
+  table. **Not yet live end to end:** registration-time wiring (Finbuckle store, per-tenant Identity / passkey
+  options) still reads the options tree, so a persisted tenant is visible to the provider but is not yet
+  routable.
 - **`Huia`** — `HuiaTenantAuthenticationOptions.DisableRegistration()` turns off every anonymous
   account-creation path in one call: `EmailAndPassword.AllowSelfServiceRegistration` and, when the
   phone flow is enabled, `Phone.AllowAutoProvisioning` (left untouched — not implicitly enabling the

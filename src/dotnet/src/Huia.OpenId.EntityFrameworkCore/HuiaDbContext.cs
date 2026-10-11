@@ -50,6 +50,9 @@ public class HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUs
     /// the key services filter it by <c>TenantId</c> explicitly, so the jobs can run with no tenant in scope.</summary>
     public DbSet<HuiaSigningKey> SigningKeys => Set<HuiaSigningKey>();
 
+    /// <summary>Persisted, runtime-defined tenants.</summary>
+    public DbSet<HuiaTenantRecord> TenantRecords => Set<HuiaTenantRecord>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -61,6 +64,7 @@ public class HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUs
         ApplyTenantScopedIndexes(builder);
         MakePasskeysMultiTenant(builder);
         ConfigureSigningKeys(builder);
+        ConfigureTenantRecords(builder);
     }
 
     /// <summary>
@@ -146,6 +150,18 @@ public class HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUs
         {
             b.Property(r => r.TenantId).HasMaxLength(64).IsRequired();
             b.HasIndex(r => new { r.TenantId, r.NormalizedName }, "IX_HuiaRoles_Tenant_Name").IsUnique();
+        });
+    }
+
+    private static void ConfigureTenantRecords(ModelBuilder builder)
+    {
+        builder.Entity<HuiaTenantRecord>(b =>
+        {
+            b.ToTable("HuiaTenants");
+            b.HasKey(t => t.TenantId);
+            b.Property(t => t.TenantId).HasMaxLength(64);
+            b.Property(t => t.Payload).IsRequired();
+            b.Property(t => t.Version).IsConcurrencyToken();
         });
     }
 
