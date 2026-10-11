@@ -132,13 +132,8 @@ internal static partial class AdminEndpoints
                 return CodeDefinedRoleProblem();
             }
 
-            var result = await roleManager.SetRoleNameAsync(role, body.Name);
-            if (result.Succeeded)
-            {
-                result = await roleManager.UpdateAsync(role);
-            }
-
-            return result.Succeeded ? Results.NoContent() : IdentityProblem(result);
+            var renamed = await HuiaUserAdministration.RenameRoleAsync(roleManager, role, body.Name);
+            return renamed.IsSuccess ? Results.NoContent() : ToProblem(renamed);
         });
     }
 

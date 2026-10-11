@@ -46,44 +46,27 @@ internal static partial class AdminEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }
 
-        var hasPassword = !string.IsNullOrWhiteSpace(body.Password);
-        var hasEmail = !string.IsNullOrWhiteSpace(body.Email);
-        var hasPhone = !string.IsNullOrWhiteSpace(body.PhoneNumber);
-
-        if (hasPhone && (hasEmail || hasPassword))
+        if (!HuiaUserAdministration.TryPlanUserCreation(
+                body.Email, body.Password, body.PhoneNumber, body.EmailConfirmed, body.PhoneNumberConfirmed,
+                body.FirstName, body.LastName, out var plan, out var problem))
         {
-            return ContactProblem("A phone-login account cannot also have an email address or a password.");
-        }
-
-        if (!hasPhone && !(hasEmail && hasPassword))
-        {
-            return ContactProblem("Provide an email address with a password, or a phone number.");
+            return ToProblem(problem);
         }
 
         return await WithTenantScopeAsync(context, body.Tenant, async services =>
         {
             var userManager = services.GetRequiredService<HuiaUserManager>();
-            var userName = (hasEmail ? body.Email! : body.PhoneNumber!).Trim();
 
-            if (await userManager.FindByNameAsync(userName) is not null)
+            if (await userManager.FindByNameAsync(plan.UserName) is not null)
             {
-                return Results.Conflict(new { message = $"A user '{userName}' already exists in tenant '{body.Tenant}'." });
+                return Results.Conflict(new { message = $"A user '{plan.UserName}' already exists in tenant '{body.Tenant}'." });
             }
 
-            var user = new HuiaUser
-            {
-                TenantId = body.Tenant,
-                UserName = userName,
-                Email = hasEmail ? body.Email!.Trim() : null,
-                EmailConfirmed = hasEmail && (body.EmailConfirmed ?? false),
-                PhoneNumber = hasPhone ? body.PhoneNumber!.Trim() : null,
-                PhoneNumberConfirmed = hasPhone && (body.PhoneNumberConfirmed ?? true),
-                FirstName = body.FirstName?.Trim() ?? string.Empty,
-                LastName = body.LastName?.Trim() ?? string.Empty,
-            };
+            var user = new HuiaUser { TenantId = body.Tenant };
+            plan.ApplyTo(user);
 
-            var result = hasPassword
-                ? await userManager.CreateAsync(user, body.Password!)
+            var result = plan.HasPassword
+                ? await userManager.CreateAsync(user, plan.Password!)
                 : await userManager.CreateAsync(user);
             if (!result.Succeeded)
             {
@@ -111,13 +94,12 @@ internal static partial class AdminEndpoints
 
             var events = services.GetRequiredService<IHuiaEventPublisher>();
             var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            var method = hasPassword ? HuiaConstants.AuthenticationMethods.Password : HuiaConstants.AuthenticationMethods.Sms;
             await events.PublishAsync(new UserRegisteredEvent(
                 body.Tenant,
                 user.Id,
                 user.UserName!,
                 user.Email,
-                method,
+                plan.AuthenticationMethod,
                 timeProvider.GetUtcNow()));
 
             return Results.Created(
@@ -711,9 +693,6 @@ internal static partial class AdminEndpoints
             return await work(scope.ServiceProvider);
         }
     }
-
-    private static IResult ContactProblem(string message)
-        => Results.ValidationProblem(new Dictionary<string, string[]> { ["contact"] = [message] });
 
     /// <summary>Maps a failed shared admin outcome to this flavor's problem response.</summary>
     private static IResult ToProblem(HuiaAdminOutcome outcome) => outcome.Kind switch

@@ -139,39 +139,23 @@ public static partial class AdminEndpoints
         TimeProvider timeProvider,
         CreateHeadlessUserRequest body)
     {
-        var hasPassword = !string.IsNullOrWhiteSpace(body.Password);
-        var hasEmail = !string.IsNullOrWhiteSpace(body.Email);
-        var hasPhone = !string.IsNullOrWhiteSpace(body.PhoneNumber);
-
-        if (hasPhone && (hasEmail || hasPassword))
+        if (!HuiaUserAdministration.TryPlanUserCreation(
+                body.Email, body.Password, body.PhoneNumber, body.EmailConfirmed, body.PhoneNumberConfirmed,
+                body.FirstName, body.LastName, out var plan, out var problem))
         {
-            return ContactProblem("A phone-login account cannot also have an email address or a password.");
+            return ToProblem(problem);
         }
 
-        if (!hasPhone && !(hasEmail && hasPassword))
+        if (await userManager.FindByNameAsync(plan.UserName) is not null)
         {
-            return ContactProblem("Provide an email address with a password, or a phone number.");
+            return Results.Conflict(new { message = $"A user '{plan.UserName}' already exists." });
         }
 
-        var userName = (hasEmail ? body.Email! : body.PhoneNumber!).Trim();
-        if (await userManager.FindByNameAsync(userName) is not null)
-        {
-            return Results.Conflict(new { message = $"A user '{userName}' already exists." });
-        }
+        var user = new HuiaUser();
+        plan.ApplyTo(user);
 
-        var user = new HuiaUser
-        {
-            UserName = userName,
-            Email = hasEmail ? body.Email!.Trim() : null,
-            EmailConfirmed = hasEmail && (body.EmailConfirmed ?? false),
-            PhoneNumber = hasPhone ? body.PhoneNumber!.Trim() : null,
-            PhoneNumberConfirmed = hasPhone && (body.PhoneNumberConfirmed ?? true),
-            FirstName = body.FirstName?.Trim() ?? string.Empty,
-            LastName = body.LastName?.Trim() ?? string.Empty,
-        };
-
-        var result = hasPassword
-            ? await userManager.CreateAsync(user, body.Password!)
+        var result = plan.HasPassword
+            ? await userManager.CreateAsync(user, plan.Password!)
             : await userManager.CreateAsync(user);
 
         if (!result.Succeeded)
@@ -192,13 +176,12 @@ public static partial class AdminEndpoints
             }
         }
 
-        var method = hasPassword ? HuiaConstants.AuthenticationMethods.Password : HuiaConstants.AuthenticationMethods.Sms;
         await events.PublishAsync(new UserRegisteredEvent(
             tenantContext.CurrentTenantId,
             user.Id,
             user.UserName!,
             user.Email,
-            method,
+            plan.AuthenticationMethod,
             timeProvider.GetUtcNow()));
 
         var roles = await userManager.GetRolesAsync(user);
@@ -524,15 +507,10 @@ public static partial class AdminEndpoints
             return StaticRoleConflict();
         }
 
-        var result = await roleManager.SetRoleNameAsync(role, body.Name);
-        if (result.Succeeded)
-        {
-            result = await roleManager.UpdateAsync(role);
-        }
-
-        return result.Succeeded
+        var renamed = await HuiaUserAdministration.RenameRoleAsync(roleManager, role, body.Name);
+        return renamed.IsSuccess
             ? Results.Ok(new HeadlessRoleDto(role.Id, role.Name, role.Origin))
-            : IdentityProblem(result);
+            : ToProblem(renamed);
     }
 
     private static async Task<IResult> DeleteRoleAsync(
@@ -559,9 +537,6 @@ public static partial class AdminEndpoints
         new(user.Id, user.UserName, user.Email, user.EmailConfirmed,
             user.PhoneNumber, user.PhoneNumberConfirmed, user.FirstName, user.LastName,
             user.LockoutEnabled, user.LockoutEnd, [.. roles]);
-
-    private static IResult ContactProblem(string message) =>
-        Results.ValidationProblem(new Dictionary<string, string[]> { ["contact"] = [message] });
 
     private static IResult StaticRoleConflict() =>
         Results.Problem(

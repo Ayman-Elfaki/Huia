@@ -54,6 +54,41 @@ public readonly record struct HuiaAdminOutcome(
         new(HuiaAdminOutcomeKind.IdentityFailed, Identity: result);
 }
 
+/// <summary>The normalized account an admin "create user" request describes.</summary>
+/// <param name="UserName">The sign-in name (the email, or the phone number for a phone account).</param>
+/// <param name="Email">The email address, if any.</param>
+/// <param name="EmailConfirmed">Whether the email starts out confirmed.</param>
+/// <param name="PhoneNumber">The phone number, if any.</param>
+/// <param name="PhoneNumberConfirmed">Whether the phone number starts out confirmed.</param>
+/// <param name="FirstName">The first name (empty when not supplied).</param>
+/// <param name="LastName">The last name (empty when not supplied).</param>
+/// <param name="Password">The password, for an email-and-password account.</param>
+public sealed record HuiaNewUserPlan(
+    string UserName, string? Email, bool EmailConfirmed, string? PhoneNumber, bool PhoneNumberConfirmed,
+    string FirstName, string LastName, string? Password)
+{
+    /// <summary>Whether this is an email-and-password account (otherwise a phone account).</summary>
+    public bool HasPassword => Password is not null;
+
+    /// <summary>The <see cref="HuiaConstants.AuthenticationMethods"/> value the registration event reports.</summary>
+    public string AuthenticationMethod => HasPassword
+        ? HuiaConstants.AuthenticationMethods.Password
+        : HuiaConstants.AuthenticationMethods.Sms;
+
+    /// <summary>Copies the planned values onto <paramref name="user"/>.</summary>
+    public void ApplyTo(Entities.HuiaUser user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        user.UserName = UserName;
+        user.Email = Email;
+        user.EmailConfirmed = EmailConfirmed;
+        user.PhoneNumber = PhoneNumber;
+        user.PhoneNumberConfirmed = PhoneNumberConfirmed;
+        user.FirstName = FirstName;
+        user.LastName = LastName;
+    }
+}
+
 /// <summary>A claim as supplied in an admin request, before validation.</summary>
 /// <param name="Type">The claim type.</param>
 /// <param name="Value">The claim value.</param>
@@ -209,6 +244,59 @@ public static partial class HuiaUserAdministration
         }
 
         return HuiaAdminOutcome.Changed;
+    }
+
+    /// <summary>
+    /// Validates the contact details of an admin "create user" request and normalizes them into a
+    /// <see cref="HuiaNewUserPlan"/>: either an email with a password, or a phone number alone (never both).
+    /// </summary>
+    public static bool TryPlanUserCreation(
+        string? email, string? password, string? phoneNumber, bool? emailConfirmed, bool? phoneNumberConfirmed,
+        string? firstName, string? lastName, out HuiaNewUserPlan plan, out HuiaAdminOutcome problem)
+    {
+        var hasPassword = !string.IsNullOrWhiteSpace(password);
+        var hasEmail = !string.IsNullOrWhiteSpace(email);
+        var hasPhone = !string.IsNullOrWhiteSpace(phoneNumber);
+
+        plan = default!;
+        problem = default;
+
+        if (hasPhone && (hasEmail || hasPassword))
+        {
+            problem = HuiaAdminOutcome.Invalid("contact", "A phone-login account cannot also have an email address or a password.");
+            return false;
+        }
+
+        if (!hasPhone && !(hasEmail && hasPassword))
+        {
+            problem = HuiaAdminOutcome.Invalid("contact", "Provide an email address with a password, or a phone number.");
+            return false;
+        }
+
+        plan = new HuiaNewUserPlan(
+            UserName: (hasEmail ? email! : phoneNumber!).Trim(),
+            Email: hasEmail ? email!.Trim() : null,
+            EmailConfirmed: hasEmail && (emailConfirmed ?? false),
+            PhoneNumber: hasPhone ? phoneNumber!.Trim() : null,
+            PhoneNumberConfirmed: hasPhone && (phoneNumberConfirmed ?? true),
+            FirstName: firstName?.Trim() ?? string.Empty,
+            LastName: lastName?.Trim() ?? string.Empty,
+            Password: hasPassword ? password : null);
+        return true;
+    }
+
+    /// <summary>Renames a role (name validation is the caller's job; see <see cref="IsValidRoleName"/>).</summary>
+    public static async Task<HuiaAdminOutcome> RenameRoleAsync<TRole>(
+        RoleManager<TRole> roleManager, TRole role, string newName)
+        where TRole : class
+    {
+        var result = await roleManager.SetRoleNameAsync(role, newName);
+        if (result.Succeeded)
+        {
+            result = await roleManager.UpdateAsync(role);
+        }
+
+        return result.Succeeded ? HuiaAdminOutcome.Changed : HuiaAdminOutcome.Failed(result);
     }
 
     /// <summary>Clears the lockout.</summary>
