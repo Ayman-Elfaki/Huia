@@ -5,6 +5,7 @@ using Huia.OpenId.OpenIddict.Handlers;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using OpenIddict.Client;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -23,7 +24,6 @@ internal static class HuiaOpenIddictConfiguration
         this IServiceCollection services, HuiaOptions options, HuiaOpenIdConfigurationBuilder? configBuilder = null)
     {
         var relaxTransport = options.DisableTransportSecurityRequirement;
-        var anyExternalLogin = options.Tenants.Values.Any(t => t.Authentication.IsExternalLoginEnabled);
 
         var builder = services.AddOpenIddict();
 
@@ -142,7 +142,8 @@ internal static class HuiaOpenIddictConfiguration
             }
         });
 
-        if (anyExternalLogin || (configBuilder?.OpenIddictClientConfigurations.Count > 0))
+        // The client is always registered: tenants (including runtime ones) can add external providers at any
+        // time, and with none configured it has no registrations and does nothing.
         {
             builder.AddClient(client =>
             {
@@ -166,7 +167,10 @@ internal static class HuiaOpenIddictConfiguration
                     clientAspNetCore.DisableTransportSecurityRequirement();
                 }
 
-                RegisterExternalProviders(client, options);
+                // Registers the web-provider integration (it completes each provider registration — issuer,
+                // endpoints, defaults — when the options are built), so registrations produced at runtime by
+                // HuiaExternalLoginRegistrations are processed exactly like start-up ones.
+                client.UseWebProviders();
 
                 if (configBuilder is not null)
                 {
@@ -176,6 +180,10 @@ internal static class HuiaOpenIddictConfiguration
                     }
                 }
             });
+
+            // External-login registrations are produced from the tenant provider each time the client options
+            // are (re)built, so tenants created at runtime are picked up when the options cache is cleared.
+            services.AddSingleton<IConfigureOptions<OpenIddictClientOptions>, HuiaExternalLoginRegistrations>();
 
             services.ConfigureAll<HttpClientFactoryOptions>(httpOptions =>
             {
@@ -195,9 +203,10 @@ internal static class HuiaOpenIddictConfiguration
     /// <summary>
     /// Adds one OpenIddict client registration per (tenant, provider).
     /// </summary>
-    private static void RegisterExternalProviders(OpenIddictClientBuilder client, HuiaOptions options)
+    internal static void RegisterExternalProviders(
+        OpenIddictClientBuilder client, IEnumerable<KeyValuePair<string, HuiaTenant>> tenants)
     {
-        foreach (var (tenantId, tenant) in options.Tenants)
+        foreach (var (tenantId, tenant) in tenants)
         {
             var external = tenant.Authentication.Find<ExternalLoginAuthenticationMethod>();
             if (external is null)

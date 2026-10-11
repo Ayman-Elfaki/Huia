@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OpenIddict.Client;
 
 namespace Huia.IntegrationTests;
 
@@ -105,6 +107,53 @@ public sealed class AdminTenantsTests : IAsyncLifetime
         (await client.GetAsync("/master/admin/tenants/initech")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await _host.Client.GetAsync("/initech/.well-known/openid-configuration")).StatusCode
             .ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task A_tenant_can_carry_external_providers_whose_secrets_are_redacted_and_kept()
+    {
+        using var client = await AdminApiAsync();
+        var monitor = _host.Services.GetRequiredService<IOptionsMonitor<OpenIddictClientOptions>>();
+
+        object WithGoogle(string? secret) => new
+        {
+            displayName = "Initech",
+            emailPassword = new { },
+            externalLogin = new
+            {
+                allowedReturnUrlPrefixes = new[] { "https://initech.test/" },
+                providers = new[]
+                {
+                    new { kind = "google", name = "Google", clientId = "google-client", clientSecret = secret },
+                },
+            },
+        };
+
+        (await client.PostAsJsonAsync("/master/admin/tenants", new { tenantId = "initech", document = WithGoogle("google-secret") }))
+            .StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        monitor.CurrentValue.Registrations.Single(r => r.RegistrationId == "initech:Google")
+            .ClientId.ShouldBe("google-client");
+
+        var read = await client.GetFromJsonAsync<JsonElement>("/master/admin/tenants/initech");
+        var provider = read.GetProperty("document").GetProperty("externalLogin").GetProperty("providers")[0];
+        provider.GetProperty("clientId").GetString().ShouldBe("google-client");
+        provider.GetProperty("clientSecret").ValueKind.ShouldBe(JsonValueKind.Null);
+
+        // Update without the secret: it is kept, and the listed row reports external login as enabled.
+        (await client.PutAsJsonAsync("/master/admin/tenants/initech", new { document = WithGoogle(null) }))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var list = await client.GetFromJsonAsync<JsonElement>("/master/admin/tenants");
+        list.EnumerateArray().Single(t => t.GetProperty("tenantId").GetString() == "initech")
+            .GetProperty("externalLoginEnabled").GetBoolean().ShouldBeTrue();
+
+        // An external provider without a secret on create does not validate.
+        (await client.PostAsJsonAsync("/master/admin/tenants", new { tenantId = "nosecret", document = WithGoogle(null) }))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        (await client.DeleteAsync("/master/admin/tenants/initech")).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        monitor.CurrentValue.Registrations.Any(r => r.RegistrationId == "initech:Google").ShouldBeFalse();
     }
 
     [Fact]

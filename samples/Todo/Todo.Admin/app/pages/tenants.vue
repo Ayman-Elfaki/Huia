@@ -31,7 +31,23 @@ interface ScopeDoc {
   resources: string[]
 }
 
+interface ExternalProviderDoc {
+  kind: 'google' | 'github' | 'microsoft' | 'oidc'
+  name: string
+  clientId: string
+  clientSecret?: string | null
+  authority?: string | null
+  scopes: string[]
+  [key: string]: unknown
+}
+
 interface TenantDocument {
+  externalLogin?: {
+    accountLinkingEnabled: boolean
+    allowedReturnUrlPrefixes: string[]
+    providers: ExternalProviderDoc[]
+    [key: string]: unknown
+  } | null
   displayName?: string | null
   branding: { accentColor?: string | null, logoUrl?: string | null, [key: string]: unknown }
   emailPassword?: { minimumLength: number, requireConfirmedEmail: boolean, allowSelfServiceRegistration: boolean, [key: string]: unknown } | null
@@ -54,6 +70,7 @@ function blankDocument(): TenantDocument {
     emailPassword: { minimumLength: 8, requireConfirmedEmail: false, allowSelfServiceRegistration: true },
     phone: null,
     passkey: null,
+    externalLogin: null,
     roles: [],
     scopes: [],
     applications: [],
@@ -136,6 +153,43 @@ function parseList(text: string) {
   return text.split(',').map(v => v.trim()).filter(Boolean)
 }
 
+const providerDefaultNames: Record<string, string> = {
+  google: 'Google',
+  github: 'GitHub',
+  microsoft: 'Microsoft',
+  oidc: 'Partner',
+}
+
+function addProvider() {
+  doc.value.externalLogin ??= { accountLinkingEnabled: false, allowedReturnUrlPrefixes: [], providers: [] }
+  doc.value.externalLogin.providers.push({
+    kind: 'google',
+    name: 'Google',
+    clientId: '',
+    clientSecret: '',
+    authority: '',
+    scopes: [],
+  })
+}
+
+function removeProvider(index: number) {
+  const login = doc.value.externalLogin
+  if (!login) {
+    return
+  }
+  login.providers.splice(index, 1)
+  if (login.providers.length === 0) {
+    doc.value.externalLogin = null
+  }
+}
+
+function onProviderKind(provider: ExternalProviderDoc) {
+  // Keep the default provider name in step with the kind unless the admin renamed it.
+  if (Object.values(providerDefaultNames).includes(provider.name) || !provider.name) {
+    provider.name = providerDefaultNames[provider.kind] ?? provider.name
+  }
+}
+
 function addApplication() {
   doc.value.applications.push({ kind: 'm2m', clientId: '', clientSecret: '', redirectUris: [] })
 }
@@ -161,6 +215,10 @@ function cleanedDocument(): TenantDocument {
   copy.branding.accentColor = copy.branding.accentColor || null
   if (copy.phone) {
     copy.phone.defaultCountry = copy.phone.defaultCountry || null
+  }
+  for (const provider of copy.externalLogin?.providers ?? []) {
+    provider.clientSecret = provider.clientSecret || null
+    provider.authority = provider.kind === 'oidc' ? (provider.authority || null) : null
   }
   // An empty secret means "keep the stored one" on update; the server treats null that way.
   for (const app of copy.applications) {
@@ -293,7 +351,84 @@ async function remove(row: TenantRow) {
               <input v-model="passkeyEnabled" type="checkbox" data-testid="tenant-passkey">
               Passkeys
             </label>
-            <p class="text-xs text-muted-foreground">External-provider login (Google, GitHub, …) is configured in code, not here.</p>
+          </fieldset>
+
+          <fieldset class="flex flex-col gap-3 rounded-md border p-4">
+            <legend class="px-1 text-sm font-medium">External login providers</legend>
+            <div
+              v-for="(provider, i) in doc.externalLogin?.providers ?? []"
+              :key="`provider-${i}`"
+              class="flex flex-col gap-3 rounded-md bg-muted/40 p-3"
+            >
+              <div class="grid gap-3 sm:grid-cols-3">
+                <div class="flex flex-col gap-1.5">
+                  <Label :for="`provider-kind-${i}`">Provider</Label>
+                  <Select
+                    :id="`provider-kind-${i}`"
+                    v-model="provider.kind"
+                    :data-testid="`tenant-provider-kind-${i}`"
+                    @change="onProviderKind(provider)"
+                  >
+                    <option value="google">Google</option>
+                    <option value="github">GitHub</option>
+                    <option value="microsoft">Microsoft</option>
+                    <option value="oidc">OpenID Connect</option>
+                  </Select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label :for="`provider-name-${i}`">Name</Label>
+                  <Input :id="`provider-name-${i}`" v-model="provider.name" :data-testid="`tenant-provider-name-${i}`" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label :for="`provider-client-${i}`">Client id</Label>
+                  <Input :id="`provider-client-${i}`" v-model="provider.clientId" :data-testid="`tenant-provider-client-${i}`" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label :for="`provider-secret-${i}`">Client secret</Label>
+                  <Input
+                    :id="`provider-secret-${i}`"
+                    v-model="provider.clientSecret"
+                    type="password"
+                    autocomplete="new-password"
+                    :data-testid="`tenant-provider-secret-${i}`"
+                    :placeholder="form.mode === 'edit' ? 'unchanged' : ''"
+                  />
+                </div>
+                <div v-if="provider.kind === 'oidc'" class="flex flex-col gap-1.5 sm:col-span-2">
+                  <Label :for="`provider-authority-${i}`">Authority (issuer URL)</Label>
+                  <Input
+                    :id="`provider-authority-${i}`"
+                    v-model="provider.authority"
+                    :data-testid="`tenant-provider-authority-${i}`"
+                    placeholder="https://login.example.com/"
+                  />
+                </div>
+              </div>
+              <div>
+                <Button type="button" variant="ghost" size="sm" @click="removeProvider(i)">Remove provider</Button>
+              </div>
+            </div>
+            <div v-if="doc.externalLogin" class="grid gap-3 sm:grid-cols-2">
+              <div class="flex flex-col gap-1.5">
+                <Label for="tenant-return-prefixes">Allowed return URL prefixes (comma separated)</Label>
+                <Input
+                  id="tenant-return-prefixes"
+                  :model-value="listText(doc.externalLogin.allowedReturnUrlPrefixes)"
+                  data-testid="tenant-return-prefixes"
+                  placeholder="https://app.example.com/"
+                  @update:model-value="(v: string | number) => (doc.externalLogin!.allowedReturnUrlPrefixes = parseList(String(v)))"
+                />
+              </div>
+              <label class="flex items-center gap-2 self-end text-sm">
+                <input v-model="doc.externalLogin.accountLinkingEnabled" type="checkbox" data-testid="tenant-account-linking">
+                Link to existing accounts with the same verified email
+              </label>
+            </div>
+            <div>
+              <Button type="button" variant="outline" size="sm" data-testid="tenant-add-provider" @click="addProvider">
+                Add provider
+              </Button>
+            </div>
           </fieldset>
 
           <fieldset class="flex flex-col gap-3 rounded-md border p-4">

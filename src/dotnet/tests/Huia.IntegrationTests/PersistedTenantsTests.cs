@@ -3,6 +3,8 @@ using Huia.IntegrationTests.Infrastructure;
 using Huia.Options;
 using Huia.Stores;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OpenIddict.Client;
 
 namespace Huia.IntegrationTests;
 
@@ -173,5 +175,62 @@ public sealed class PersistedTenantsTests : IAsyncLifetime
             }));
 
         response.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_runtime_tenants_external_providers_follow_its_create_edit_and_delete()
+    {
+        var monitor = _host.Services.GetRequiredService<IOptionsMonitor<OpenIddictClientOptions>>();
+        OpenIddictClientRegistration? Find(string id) =>
+            monitor.CurrentValue.Registrations.SingleOrDefault(r => r.RegistrationId == id);
+
+        Find("initech:Google").ShouldBeNull();
+
+        HuiaTenant WithProviders(string googleClientId)
+        {
+            var tenant = NewTenant();
+            tenant.Authentication.UseExternalLogin(external =>
+            {
+                external.AddGoogle(googleClientId, "google-secret-value");
+                external.AddOpenIdConnect("Partner", "partner-client", "partner-secret", "https://partner.example/");
+                external.AllowReturnUrlPrefix("https://initech.test/");
+            });
+            return tenant;
+        }
+
+        var refresher = _host.Services.GetRequiredService<IHuiaTenantRefresher>();
+        await using (var scope = _host.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IHuiaTenantStore>()
+                .SaveAsync("initech", WithProviders("google-client-1"));
+        }
+
+        await refresher.RefreshAsync();
+
+        var google = Find("initech:Google");
+        google.ShouldNotBeNull();
+        google.ClientId.ShouldBe("google-client-1");
+        google.Issuer.ShouldBe(new Uri("https://accounts.google.com/"));
+        Find("initech:Partner").ShouldNotBeNull().Issuer.ShouldBe(new Uri("https://partner.example/"));
+
+        // Editing the tenant rebuilds its registrations.
+        await using (var scope = _host.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IHuiaTenantStore>()
+                .SaveAsync("initech", WithProviders("google-client-2"));
+        }
+
+        await refresher.RefreshAsync();
+        Find("initech:Google")!.ClientId.ShouldBe("google-client-2");
+
+        // Deleting it removes them.
+        await using (var scope = _host.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IHuiaTenantStore>().DeleteAsync("initech");
+        }
+
+        await refresher.RefreshAsync();
+        Find("initech:Google").ShouldBeNull();
+        Find("initech:Partner").ShouldBeNull();
     }
 }

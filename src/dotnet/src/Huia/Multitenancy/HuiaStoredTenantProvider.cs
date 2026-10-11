@@ -28,6 +28,15 @@ public interface IHuiaTenantChangeListener
 {
     /// <summary>Called with the ids of tenants that were not in the previous snapshot.</summary>
     Task OnTenantsAddedAsync(IReadOnlyCollection<string> tenantIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Called with the ids of persisted tenants whose stored configuration was saved again, and of persisted
+    /// tenants that were removed. Does nothing unless overridden.
+    /// </summary>
+    Task OnTenantsChangedAsync(
+        IReadOnlyCollection<string> changedTenantIds,
+        IReadOnlyCollection<string> removedTenantIds,
+        CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>Convenience for start-up code that must see persisted tenants before it iterates them.</summary>
@@ -59,6 +68,7 @@ internal sealed partial class HuiaStoredTenantProvider(
     private readonly SemaphoreSlim _gate = new(1, 1);
     private volatile IReadOnlyDictionary<string, HuiaTenant> _snapshot = BuildSnapshot(options, []);
     private bool _loaded;
+    private IReadOnlyDictionary<string, long> _versions = new Dictionary<string, long>();
 
     /// <summary>Installs this provider behind the shared holder so registration-time wiring sees stored tenants.</summary>
     public void Install() => holder.Use(this);
@@ -93,6 +103,8 @@ internal sealed partial class HuiaStoredTenantProvider(
     {
         await _gate.WaitAsync(cancellationToken);
         IReadOnlyList<string> added;
+        IReadOnlyList<string> changed;
+        IReadOnlyList<string> removed;
         try
         {
             IReadOnlyList<HuiaStoredTenant> stored;
@@ -108,6 +120,13 @@ internal sealed partial class HuiaStoredTenantProvider(
 
             // The first load is silent (see IHuiaTenantRefresher.EnsureLoadedAsync).
             added = _loaded ? [.. next.Keys.Where(id => !previous.ContainsKey(id))] : [];
+
+            var versions = stored.ToDictionary(t => t.TenantId, t => t.Version, StringComparer.Ordinal);
+            changed = _loaded
+                ? [.. versions.Where(kv => _versions.TryGetValue(kv.Key, out var old) && old != kv.Value).Select(kv => kv.Key)]
+                : [];
+            removed = _loaded ? [.. _versions.Keys.Where(id => !versions.ContainsKey(id))] : [];
+            _versions = versions;
             _loaded = true;
             LogRefreshed(stored.Count);
         }
@@ -116,9 +135,9 @@ internal sealed partial class HuiaStoredTenantProvider(
             _gate.Release();
         }
 
-        if (added.Count > 0)
+        if (added.Count > 0 || changed.Count > 0 || removed.Count > 0)
         {
-            await NotifyAsync(added, cancellationToken);
+            await NotifyAsync(added, changed, removed, cancellationToken);
         }
     }
 
@@ -147,18 +166,28 @@ internal sealed partial class HuiaStoredTenantProvider(
         while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task NotifyAsync(IReadOnlyList<string> added, CancellationToken cancellationToken)
+    private async Task NotifyAsync(
+        IReadOnlyList<string> added, IReadOnlyList<string> changed, IReadOnlyList<string> removed,
+        CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         foreach (var listener in scope.ServiceProvider.GetServices<IHuiaTenantChangeListener>())
         {
             try
             {
-                await listener.OnTenantsAddedAsync(added, cancellationToken);
+                if (added.Count > 0)
+                {
+                    await listener.OnTenantsAddedAsync(added, cancellationToken);
+                }
+
+                if (changed.Count > 0 || removed.Count > 0)
+                {
+                    await listener.OnTenantsChangedAsync(changed, removed, cancellationToken);
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                LogListenerFailed(ex, string.Join(", ", added));
+                LogListenerFailed(ex, string.Join(", ", added.Concat(changed).Concat(removed)));
             }
         }
     }

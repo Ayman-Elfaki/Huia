@@ -6,8 +6,7 @@ namespace Huia.Tenants;
 /// The persisted shape of a runtime-defined tenant: an explicit, versioned document rather than a reflection
 /// dump of <see cref="HuiaTenant"/>, so the stored format is a deliberate contract. It carries email /
 /// password, phone and passkey sign-in, branding, email / SMS overrides, roles, scopes and OAuth
-/// applications. External-provider login is intentionally absent — it is registered with OpenIddict at
-/// start-up and stays code-defined.
+/// applications, plus external-provider login (Google, GitHub, Microsoft, generic OpenID Connect).
 /// </summary>
 public sealed class HuiaTenantDocument
 {
@@ -37,6 +36,9 @@ public sealed class HuiaTenantDocument
 
     /// <summary>Passkey sign-in, when enabled.</summary>
     public PasskeyDocument? Passkey { get; set; }
+
+    /// <summary>External-provider sign-in, when any provider is configured.</summary>
+    public ExternalLoginDocument? ExternalLogin { get; set; }
 
     /// <summary>Role names.</summary>
     public List<string> Roles { get; set; } = [];
@@ -160,6 +162,16 @@ public sealed class HuiaTenantDocument
             };
         }
 
+        if (tenant.Authentication.External is { IsEnabled: true, Providers.Count: > 0 } external)
+        {
+            document.ExternalLogin = new ExternalLoginDocument
+            {
+                AccountLinkingEnabled = external.AccountLinkingEnabled,
+                AllowedReturnUrlPrefixes = [.. external.AllowedReturnUrlPrefixes],
+                Providers = [.. external.Providers.Select(ExternalProviderDocument.From)],
+            };
+        }
+
         foreach (var application in tenant.Applications)
         {
             document.Applications.Add(ApplicationDocument.From(application));
@@ -190,6 +202,11 @@ public sealed class HuiaTenantDocument
             application.ClientSecret = null;
         }
 
+        foreach (var provider in ExternalLogin?.Providers ?? [])
+        {
+            provider.ClientSecret = null;
+        }
+
         return this;
     }
 
@@ -210,6 +227,13 @@ public sealed class HuiaTenantDocument
         {
             Sms.ApiKey ??= existing.Sms.ApiKey;
             Sms.ApiSecret ??= existing.Sms.ApiSecret;
+        }
+
+        foreach (var provider in (ExternalLogin?.Providers ?? []).Where(p => string.IsNullOrEmpty(p.ClientSecret)))
+        {
+            provider.ClientSecret = existing.ExternalLogin?.Providers
+                .FirstOrDefault(p => string.Equals(p.Name, provider.Name, StringComparison.OrdinalIgnoreCase))
+                ?.ClientSecret;
         }
 
         foreach (var application in Applications.Where(a => string.IsNullOrEmpty(a.ClientSecret)))
@@ -345,6 +369,23 @@ public sealed class HuiaTenantDocument
                 }
 
                 p.AuthenticatorTimeout = passkey.AuthenticatorTimeout;
+            });
+        }
+
+        if (ExternalLogin is { Providers.Count: > 0 } externalLogin)
+        {
+            tenant.Authentication.UseExternalLogin(external =>
+            {
+                external.AccountLinkingEnabled = externalLogin.AccountLinkingEnabled;
+                foreach (var prefix in externalLogin.AllowedReturnUrlPrefixes)
+                {
+                    external.AllowedReturnUrlPrefixes.Add(prefix);
+                }
+
+                foreach (var provider in externalLogin.Providers)
+                {
+                    external.Providers.Add(provider.ToProvider());
+                }
             });
         }
 
@@ -547,6 +588,109 @@ public sealed class HuiaTenantDocument
 
         /// <summary>Ceremony timeout.</summary>
         public TimeSpan AuthenticatorTimeout { get; set; } = TimeSpan.FromMinutes(2);
+    }
+
+    /// <summary>External-provider sign-in settings.</summary>
+    public sealed class ExternalLoginDocument
+    {
+        /// <summary>Link an external login to an existing account with the same verified email.</summary>
+        public bool AccountLinkingEnabled { get; set; }
+
+        /// <summary>URL prefixes a post-login return URL may point at.</summary>
+        public List<string> AllowedReturnUrlPrefixes { get; set; } = [];
+
+        /// <summary>The configured providers.</summary>
+        public List<ExternalProviderDocument> Providers { get; set; } = [];
+    }
+
+    /// <summary>One external identity provider.</summary>
+    public sealed class ExternalProviderDocument
+    {
+        /// <summary>One of <c>google</c>, <c>github</c>, <c>microsoft</c>, <c>oidc</c>.</summary>
+        public string Kind { get; set; } = string.Empty;
+
+        /// <summary>The provider name, unique within the tenant (it appears in the sign-in URL).</summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>The label shown on the sign-in button.</summary>
+        public string? DisplayName { get; set; }
+
+        /// <summary>The OAuth client id registered with the provider.</summary>
+        public string ClientId { get; set; } = string.Empty;
+
+        /// <summary>The OAuth client secret registered with the provider.</summary>
+        public string? ClientSecret { get; set; }
+
+        /// <summary>The relative redirect URI override (for example <c>signin-google</c>).</summary>
+        public string? RedirectUri { get; set; }
+
+        /// <summary>Extra scopes to request.</summary>
+        public List<string> Scopes { get; set; } = [];
+
+        /// <summary>The issuer URL (generic OpenID Connect providers only).</summary>
+        public string? Authority { get; set; }
+
+        internal static ExternalProviderDocument From(ExternalIdentityProvider provider)
+        {
+            var document = new ExternalProviderDocument
+            {
+                Name = provider.Name,
+                DisplayName = provider.DisplayName,
+                ClientId = provider.ClientId,
+                ClientSecret = provider.ClientSecret,
+                RedirectUri = provider.RedirectUri?.ToString(),
+                Scopes = [.. provider.Scopes],
+            };
+
+            switch (provider)
+            {
+                case GoogleExternalProvider:
+                    document.Kind = "google";
+                    break;
+                case GitHubExternalProvider:
+                    document.Kind = "github";
+                    break;
+                case MicrosoftExternalProvider:
+                    document.Kind = "microsoft";
+                    break;
+                case OpenIdConnectExternalProvider oidc:
+                    document.Kind = "oidc";
+                    document.Authority = oidc.Authority;
+                    break;
+                default:
+                    throw new NotSupportedException(
+                        $"External provider type '{provider.GetType().Name}' cannot be persisted in a tenant document.");
+            }
+
+            return document;
+        }
+
+        internal ExternalIdentityProvider ToProvider()
+        {
+            ExternalIdentityProvider provider = Kind switch
+            {
+                "google" => new GoogleExternalProvider(ClientId, ClientSecret ?? string.Empty),
+                "github" => new GitHubExternalProvider(ClientId, ClientSecret ?? string.Empty),
+                "microsoft" => new MicrosoftExternalProvider(ClientId, ClientSecret ?? string.Empty),
+                "oidc" => new OpenIdConnectExternalProvider(
+                    Name, ClientId, ClientSecret ?? string.Empty, Authority ?? string.Empty),
+                _ => throw new InvalidOperationException($"Unknown external provider kind '{Kind}'."),
+            };
+
+            if (!string.IsNullOrWhiteSpace(Name))
+            {
+                provider.Name = Name;
+            }
+
+            provider.DisplayName = DisplayName ?? provider.DisplayName;
+            provider.RedirectUri = string.IsNullOrWhiteSpace(RedirectUri) ? null : new Uri(RedirectUri, UriKind.Relative);
+            foreach (var scope in Scopes)
+            {
+                provider.Scopes.Add(scope);
+            }
+
+            return provider;
+        }
     }
 
     /// <summary>A scope.</summary>

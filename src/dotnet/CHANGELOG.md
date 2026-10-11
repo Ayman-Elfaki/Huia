@@ -69,8 +69,15 @@ All notable changes to Huia are documented here. The format is based on
   Identity, passkey and flow-identity options now read through `IHuiaTenantProvider`), and when it appears
   after start-up a bootstrap listener mints its signing key and seeds its roles, scopes and clients. Start-up
   seeders and the key bootstrapper wait for the first load (`EnsureTenantsLoadedAsync`), so
-  `PruneRemovedStaticEntities` never prunes a persisted tenant's entities. External-provider login is still
-  registered with OpenIddict at start-up, so a persisted tenant cannot use it.
+  `PruneRemovedStaticEntities` never prunes a persisted tenant's entities.
+- **`Huia.OpenId`** — External-provider login for runtime tenants. `HuiaTenantDocument` gains an
+  `externalLogin` section (Google, GitHub, Microsoft, generic OpenID Connect; secrets redacted on read and kept
+  when omitted on update). OpenIddict client registrations are now produced from `IHuiaTenantProvider` each
+  time the client options are built (`HuiaExternalLoginRegistrations`), and
+  `IHuiaTenantChangeListener.OnTenantsChangedAsync` (new, with a default no-op) lets the options cache be
+  cleared when a persisted tenant is added, edited or removed, so its providers take effect without a restart.
+  The OpenIddict client is now always registered (it has no registrations and no effect until a tenant adds a
+  provider).
 - **`Huia`** — `HuiaTenantAuthenticationOptions.DisableRegistration()` turns off every anonymous
   account-creation path in one call: `EmailAndPassword.AllowSelfServiceRegistration` and, when the
   phone flow is enabled, `Phone.AllowAutoProvisioning` (left untouched — not implicitly enabling the

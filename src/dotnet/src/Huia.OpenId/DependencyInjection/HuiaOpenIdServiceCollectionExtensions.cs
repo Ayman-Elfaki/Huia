@@ -112,6 +112,7 @@ public static class HuiaOpenIdServiceCollectionExtensions
         services.AddHostedService(sp => sp.GetRequiredService<HuiaScopeSeeder>());
         services.AddHostedService(sp => sp.GetRequiredService<HuiaRoleSeeder>());
         services.AddSingleton<IHuiaTenantChangeListener, HuiaTenantBootstrapListener>();
+        services.AddSingleton<IHuiaTenantChangeListener, HuiaExternalLoginRefreshListener>();
 
         services.AddScoped<HuiaCspNonce>();
         services.AddScoped<IHuiaCspNonce>(sp => sp.GetRequiredService<HuiaCspNonce>());
