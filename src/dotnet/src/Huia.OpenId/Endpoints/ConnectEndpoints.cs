@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Security.Claims;
 using Huia.OpenId.Entities;
 using Huia.Events;
@@ -395,7 +396,7 @@ internal static class ConnectEndpoints
         SignInManager<HuiaUser> signInManager,
         IMultiTenantContextAccessor tenantAccessor,
         IOpenIddictApplicationManager applicationManager,
-        HuiaOptions huiaOptions)
+        IHuiaTenantProvider tenants)
     {
         var request = context.GetOpenIddictServerRequest();
 
@@ -406,7 +407,7 @@ internal static class ConnectEndpoints
         await signInManager.SignOutAsync();
 
         var finalRedirect =
-            await ResolveFinalLogoutRedirectAsync(context, tenantAccessor, applicationManager, huiaOptions, request);
+            await ResolveFinalLogoutRedirectAsync(context, tenantAccessor, applicationManager, tenants, request);
 
         if (externalIdp is not null)
         {
@@ -459,7 +460,7 @@ internal static class ConnectEndpoints
         HttpContext context,
         IMultiTenantContextAccessor tenantAccessor,
         IOpenIddictApplicationManager applicationManager,
-        HuiaOptions huiaOptions,
+        IHuiaTenantProvider tenants,
         OpenIddictRequest? request)
     {
         var postLogout = request?.PostLogoutRedirectUri;
@@ -478,7 +479,7 @@ internal static class ConnectEndpoints
             else
             {
                 var tenantId = tenantAccessor.CurrentTenantId();
-                if (tenantId is not null && huiaOptions.Tenants.TryGetValue(tenantId, out var tenant))
+                if (tenantId is not null && tenants.TryGetValue(tenantId, out var tenant))
                 {
                     foreach (var client in tenant.Applications.OfType<InteractiveClientApplication>())
                     {
@@ -495,14 +496,14 @@ internal static class ConnectEndpoints
             }
         }
 
-        return await ResolveLogoutFallbackAsync(context, tenantAccessor, applicationManager, huiaOptions, request);
+        return await ResolveLogoutFallbackAsync(context, tenantAccessor, applicationManager, tenants, request);
     }
 
     private static async Task<string> ResolveLogoutFallbackAsync(
         HttpContext context,
         IMultiTenantContextAccessor tenantAccessor,
         IOpenIddictApplicationManager applicationManager,
-        HuiaOptions huiaOptions,
+        IHuiaTenantProvider tenants,
         OpenIddictRequest? request)
     {
         var clientId = request?.ClientId;
@@ -528,7 +529,7 @@ internal static class ConnectEndpoints
         // No client identified (for example an RP that sent an empty id_token_hint): fall back to a
         // configured client's home / post-logout URL for this tenant rather than the identity server's
         // own tenant root, which has nothing to serve and would just bounce to sign-in.
-        if (tenantId is not null && huiaOptions.Tenants.TryGetValue(tenantId, out var tenant)
+        if (tenantId is not null && tenants.TryGetValue(tenantId, out var tenant)
                                  && TenantClientHome.Resolve(tenant) is { } appUri)
         {
             return appUri;

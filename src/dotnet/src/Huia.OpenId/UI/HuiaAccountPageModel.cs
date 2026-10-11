@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Flows;
 using Huia.OpenId.Multitenancy;
@@ -21,9 +22,9 @@ public abstract class HuiaAccountPageModel : PageModel
     {
         get
         {
-            var options = (HuiaOptions?)HttpContext.RequestServices.GetService(typeof(HuiaOptions));
+            var tenants = (IHuiaTenantProvider?)HttpContext.RequestServices.GetService(typeof(IHuiaTenantProvider));
             var tenantId = TenantId;
-            return options is not null && tenantId is not null && options.Tenants.TryGetValue(tenantId, out var tenant)
+            return tenants is not null && tenantId is not null && tenants.TryGetValue(tenantId, out var tenant)
                 ? tenant
                 : null;
         }

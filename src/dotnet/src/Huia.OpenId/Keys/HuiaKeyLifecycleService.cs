@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.OpenId.Entities;
 using Huia.Options;
 using Huia.Stores;
@@ -15,13 +16,14 @@ internal sealed partial class HuiaKeyLifecycleService(
     HuiaSigningKeyFactory keyFactory,
     IHuiaKeyRing keyRing,
     HuiaOptions options,
+    IHuiaTenantProvider tenants,
     TimeProvider timeProvider,
     ILogger<HuiaKeyLifecycleService> logger)
 {
     /// <summary>Guarantees every configured tenant has a usable signing key. Run once at start-up.</summary>
     public async Task EnsureBootstrappedAsync(CancellationToken cancellationToken)
     {
-        foreach (var tenantId in options.Tenants.Keys)
+        foreach (var tenantId in tenants.Keys)
         {
             var usable = await keyStore.QueryAsync(
                 new HuiaSigningKeyFilter
@@ -49,7 +51,7 @@ internal sealed partial class HuiaKeyLifecycleService(
     {
         var now = timeProvider.GetUtcNow();
 
-        foreach (var tenantId in options.Tenants.Keys)
+        foreach (var tenantId in tenants.Keys)
         {
             var keys = await keyStore.QueryAsync(new HuiaSigningKeyFilter { TenantId = tenantId }, cancellationToken);
 

@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Security.Claims;
 using Huia.Identity;
 using Huia.OpenId.Flows;
@@ -60,12 +61,12 @@ internal static class ExternalEndpoints
         IAntiforgery antiforgery,
         IMultiTenantContextAccessor tenantAccessor,
         IReturnUrlProtector returnUrlProtector,
-        HuiaOptions options)
+        IHuiaTenantProvider tenants)
     {
         await antiforgery.ValidateRequestAsync(context);
 
         var tenantId = tenantAccessor.RequireCurrentTenantId();
-        if (!TryFindProvider(options, tenantId, provider, out var registered))
+        if (!TryFindProvider(tenants, tenantId, provider, out var registered))
         {
             return Results.NotFound();
         }
@@ -95,10 +96,10 @@ internal static class ExternalEndpoints
         HttpContext context,
         string provider,
         IMultiTenantContextAccessor tenantAccessor,
-        HuiaOptions options)
+        IHuiaTenantProvider tenants)
     {
         var tenantId = tenantAccessor.RequireCurrentTenantId();
-        if (!TryFindProvider(options, tenantId, provider, out var registered))
+        if (!TryFindProvider(tenants, tenantId, provider, out var registered))
         {
             return Results.NotFound();
         }
@@ -157,7 +158,7 @@ internal static class ExternalEndpoints
         IMultiTenantContextAccessor tenantAccessor,
         IReturnUrlProtector returnUrlProtector,
         IHuiaEventPublisher events,
-        HuiaOptions options,
+        IHuiaTenantProvider tenants,
         TimeProvider timeProvider)
     {
         var external = flowIdentity.Create(HuiaAuthFlow.ExternalLogin);
@@ -219,7 +220,7 @@ internal static class ExternalEndpoints
         {
             var providerVouches = string.Equals(emailVerified, "true", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(emailVerified, "1", StringComparison.Ordinal);
-            var accountLinkingEnabled = options.Tenants.TryGetValue(tenantId, out var tenant)
+            var accountLinkingEnabled = tenants.TryGetValue(tenantId, out var tenant)
                 && tenant.Authentication.External?.AccountLinkingEnabled == true;
 
             var (outcome, linked) = await userManager.TryLinkExternalByEmailAsync(
@@ -285,10 +286,10 @@ internal static class ExternalEndpoints
         await events.PublishAsync(new UserLoggedInEvent(tenantId, user.Id, providerName, null, timeProvider.GetUtcNow()));
     }
 
-    private static bool TryFindProvider(HuiaOptions options, string tenantId, string providerName, out ExternalIdentityProvider provider)
+    private static bool TryFindProvider(IHuiaTenantProvider tenants, string tenantId, string providerName, out ExternalIdentityProvider provider)
     {
         provider = null!;
-        if (!options.Tenants.TryGetValue(tenantId, out var tenant))
+        if (!tenants.TryGetValue(tenantId, out var tenant))
         {
             return false;
         }

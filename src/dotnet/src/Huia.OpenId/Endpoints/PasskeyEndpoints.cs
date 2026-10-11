@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Text.Json;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Flows;
@@ -53,9 +54,9 @@ internal static class PasskeyEndpoints
 
     private static async Task<IResult> AssertionOptionsAsync(
         HttpContext context, HuiaSignInManager signInManager, IAntiforgery antiforgery,
-        IMultiTenantContextAccessor tenantAccessor, HuiaOptions options)
+        IMultiTenantContextAccessor tenantAccessor, IHuiaTenantProvider tenants)
     {
-        if (!PasskeyEnabled(options, tenantAccessor))
+        if (!PasskeyEnabled(tenants, tenantAccessor))
         {
             return Results.NotFound();
         }
@@ -72,9 +73,9 @@ internal static class PasskeyEndpoints
     private static async Task<IResult> AssertionAsync(
         HttpContext context, HuiaSignInManager signInManager, IAntiforgery antiforgery,
         IMultiTenantContextAccessor tenantAccessor, IReturnUrlProtector returnUrlProtector,
-        IHuiaEventPublisher events, TimeProvider timeProvider, HuiaOptions options, PasskeyAssertionRequest body)
+        IHuiaEventPublisher events, TimeProvider timeProvider, IHuiaTenantProvider tenants, PasskeyAssertionRequest body)
     {
-        if (!PasskeyEnabled(options, tenantAccessor))
+        if (!PasskeyEnabled(tenants, tenantAccessor))
         {
             return Results.NotFound();
         }
@@ -106,16 +107,16 @@ internal static class PasskeyEndpoints
             tenantId, user.Id, HuiaConstants.AuthenticationMethods.Passkey, null, timeProvider.GetUtcNow()));
 
         var returnUrl = returnUrlProtector.SanitizeReturnUrl(body.ReturnUrl, context);
-        return Results.Ok(new { redirectUrl = ResolveRedirect(context, returnUrl, options, tenantId) });
+        return Results.Ok(new { redirectUrl = ResolveRedirect(context, returnUrl, tenants, tenantId) });
     }
 
     // ---- token-protected: credential management ------------------------------------------------
 
     private static async Task<IResult> CreationOptionsAsync(
         HttpContext context, HuiaSignInManager signInManager, HuiaUserManager userManager,
-        IMultiTenantContextAccessor tenantAccessor, HuiaOptions options)
+        IMultiTenantContextAccessor tenantAccessor, IHuiaTenantProvider tenants)
     {
-        if (!PasskeyEnabled(options, tenantAccessor))
+        if (!PasskeyEnabled(tenants, tenantAccessor))
         {
             return Results.NotFound();
         }
@@ -139,9 +140,9 @@ internal static class PasskeyEndpoints
 
     private static async Task<IResult> RegisterAsync(
         HttpContext context, HuiaUserManager userManager, HuiaPasskeyRegistrar registrar,
-        IMultiTenantContextAccessor tenantAccessor, HuiaOptions options, PasskeyRegistrationRequest body)
+        IMultiTenantContextAccessor tenantAccessor, IHuiaTenantProvider tenants, PasskeyRegistrationRequest body)
     {
-        if (!PasskeyEnabled(options, tenantAccessor))
+        if (!PasskeyEnabled(tenants, tenantAccessor))
         {
             return Results.NotFound();
         }
@@ -234,11 +235,11 @@ internal static class PasskeyEndpoints
 
     // ---- helpers -------------------------------------------------------------------------------
 
-    private static bool PasskeyEnabled(HuiaOptions options, IMultiTenantContextAccessor tenantAccessor)
+    private static bool PasskeyEnabled(IHuiaTenantProvider tenants, IMultiTenantContextAccessor tenantAccessor)
     {
         var tenantId = tenantAccessor.CurrentTenantId();
         return tenantId is not null
-            && options.Tenants.TryGetValue(tenantId, out var tenant)
+            && tenants.TryGetValue(tenantId, out var tenant)
             && tenant.Authentication.Passkey is not null;
     }
 
@@ -255,7 +256,7 @@ internal static class PasskeyEndpoints
         }
     }
 
-    private static string ResolveRedirect(HttpContext context, string returnUrl, HuiaOptions options, string tenantId)
+    private static string ResolveRedirect(HttpContext context, string returnUrl, IHuiaTenantProvider tenants, string tenantId)
     {
         var pathBase = context.Request.PathBase.HasValue ? context.Request.PathBase.Value! : string.Empty;
         var tenantRoot = pathBase.Length == 0 ? "/" : pathBase + "/";
@@ -267,7 +268,7 @@ internal static class PasskeyEndpoints
             return returnUrl;
         }
 
-        var tenant = options.Tenants.TryGetValue(tenantId, out var value) ? value : null;
+        var tenant = tenants.TryGetValue(tenantId, out var value) ? value : null;
         return TenantClientHome.Resolve(tenant) ?? returnUrl;
     }
 

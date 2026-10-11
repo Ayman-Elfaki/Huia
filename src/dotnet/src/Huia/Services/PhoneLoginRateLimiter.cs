@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Collections.Concurrent;
 using Huia.Options;
 
@@ -37,7 +38,7 @@ public interface IPhoneLoginRateLimiter
 /// check (<see cref="CanRecordLogin"/>) from the consuming record (<see cref="TryRecordLogin"/>). A
 /// distributed deployment swaps this for a store-backed one.
 /// </summary>
-internal sealed class InMemoryPhoneLoginRateLimiter(HuiaOptions options, TimeProvider timeProvider) : IPhoneLoginRateLimiter
+internal sealed class InMemoryPhoneLoginRateLimiter(IHuiaTenantProvider tenants, TimeProvider timeProvider) : IPhoneLoginRateLimiter
 {
     private readonly ConcurrentDictionary<Key, Bucket> _buckets = new();
 
@@ -93,7 +94,7 @@ internal sealed class InMemoryPhoneLoginRateLimiter(HuiaOptions options, TimePro
     }
 
     private PhoneAuthenticationMethod PhoneOptionsFor(string tenantId) =>
-        options.Tenants.TryGetValue(tenantId, out var tenant)
+        tenants.TryGetValue(tenantId, out var tenant)
             ? tenant.Authentication.Find<PhoneAuthenticationMethod>() ?? new PhoneAuthenticationMethod()
             : new PhoneAuthenticationMethod();
 

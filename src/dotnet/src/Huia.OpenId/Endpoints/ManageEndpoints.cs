@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Security.Claims;
 using System.Text;
 using Huia.Identity;
@@ -51,7 +52,7 @@ internal static class ManageEndpoints
     }
 
     private static async Task<IResult> GetExternalLoginsAsync(
-        HttpContext context, HuiaUserManager userManager, IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions)
+        HttpContext context, HuiaUserManager userManager, IMultiTenantContextAccessor tenantAccessor, IHuiaTenantProvider tenants)
     {
         var user = await ResolveUserAsync(context, userManager);
         if (user is null)
@@ -62,7 +63,7 @@ internal static class ManageEndpoints
         var logins = await userManager.GetLoginsAsync(user);
         var linkedIds = logins.Select(l => l.LoginProvider).ToHashSet(StringComparer.Ordinal);
         var tenantId = tenantAccessor.RequireCurrentTenantId();
-        var configured = huiaOptions.Tenants.TryGetValue(tenantId, out var tenant)
+        var configured = tenants.TryGetValue(tenantId, out var tenant)
             ? tenant.Authentication.External?.Providers ?? []
             : [];
 
@@ -276,7 +277,7 @@ internal static class ManageEndpoints
 
     private static async Task<IResult> StartPhoneChangeAsync(
         HttpContext context, HuiaUserManager userManager, IOtpService<HuiaUser> otpService, ISmsSender smsSender,
-        IPhoneNumberService phoneNumbers, IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions,
+        IPhoneNumberService phoneNumbers, IMultiTenantContextAccessor tenantAccessor, IHuiaTenantProvider tenants,
         IHuiaEventPublisher events, TimeProvider timeProvider, ChangePhoneRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
@@ -294,7 +295,7 @@ internal static class ManageEndpoints
         }
 
         var tenantId = tenantAccessor.RequireCurrentTenantId();
-        var options = PhoneOptions(huiaOptions, tenantId);
+        var options = PhoneOptions(tenants, tenantId);
 
         if (!phoneNumbers.TryNormalize(body.PhoneNumber, null, out var e164))
         {
@@ -311,7 +312,7 @@ internal static class ManageEndpoints
 
     private static async Task<IResult> ConfirmPhoneChangeAsync(
         HttpContext context, HuiaUserManager userManager, IOtpService<HuiaUser> otpService, IPhoneNumberService phoneNumbers,
-        IMultiTenantContextAccessor tenantAccessor, HuiaOptions huiaOptions, IHuiaEventPublisher events, TimeProvider timeProvider,
+        IMultiTenantContextAccessor tenantAccessor, IHuiaTenantProvider tenants, IHuiaEventPublisher events, TimeProvider timeProvider,
         ConfirmPhoneRequest body)
     {
         var user = await ResolveUserAsync(context, userManager);
@@ -330,7 +331,7 @@ internal static class ManageEndpoints
         }
 
         var tenantId = tenantAccessor.RequireCurrentTenantId();
-        var options = PhoneOptions(huiaOptions, tenantId);
+        var options = PhoneOptions(tenants, tenantId);
 
         var pending = await userManager.GetAuthenticationTokenAsync(user, HuiaConstants.PasswordlessLoginProvider, PendingPhoneToken);
         if (string.IsNullOrEmpty(pending))
@@ -410,8 +411,8 @@ internal static class ManageEndpoints
         return subject is null ? null : await userManager.FindByIdAsync(subject);
     }
 
-    private static PhoneAuthenticationMethod PhoneOptions(HuiaOptions options, string tenantId) =>
-        options.Tenants.TryGetValue(tenantId, out var tenant)
+    private static PhoneAuthenticationMethod PhoneOptions(IHuiaTenantProvider tenants, string tenantId) =>
+        tenants.TryGetValue(tenantId, out var tenant)
             ? tenant.Authentication.Phone ?? new PhoneAuthenticationMethod()
             : new PhoneAuthenticationMethod();
 

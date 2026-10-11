@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.OpenId.Entities;
 using Huia.Options;
 using Huia.Stores;
@@ -17,7 +18,7 @@ internal sealed class HuiaReadinessHealthCheck(
     IHuiaSigningKeyStore signingKeys,
     IOpenIddictApplicationManager applicationManager,
     IOpenIddictScopeManager scopeManager,
-    HuiaOptions options) : IHealthCheck
+    IHuiaTenantProvider tenants) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
@@ -36,7 +37,7 @@ internal sealed class HuiaReadinessHealthCheck(
                 cancellationToken);
             var keyedTenants = usableKeys.Select(k => k.TenantId).Distinct(StringComparer.Ordinal).ToList();
 
-            var missingKeys = options.Tenants.Keys
+            var missingKeys = tenants.Keys
                 .Where(tenantId => !keyedTenants.Contains(tenantId, StringComparer.Ordinal))
                 .ToList();
 
@@ -44,7 +45,7 @@ internal sealed class HuiaReadinessHealthCheck(
             var clientCount = 0;
             var missingScopes = new List<string>();
             var scopeCount = 0;
-            foreach (var tenant in options.Tenants.Values)
+            foreach (var tenant in tenants.Values)
             {
                 foreach (var client in tenant.Applications)
                 {
@@ -68,7 +69,7 @@ internal sealed class HuiaReadinessHealthCheck(
             if (missingKeys.Count == 0 && missingClients.Count == 0 && missingScopes.Count == 0)
             {
                 return HealthCheckResult.Healthy(
-                    $"Database reachable; {options.Tenants.Count} tenant(s) keyed; {clientCount} client(s), {scopeCount} scope(s) seeded.");
+                    $"Database reachable; {tenants.Count} tenant(s) keyed; {clientCount} client(s), {scopeCount} scope(s) seeded.");
             }
 
             var data = new Dictionary<string, object>(StringComparer.Ordinal);

@@ -23,11 +23,11 @@ namespace Huia.OpenId.Identity;
 /// static role that still has members is skipped (and logged) rather than force-deleted.
 /// </remarks>
 internal sealed partial class HuiaRoleSeeder(
-    IServiceProvider services, HuiaOptions options, ILogger<HuiaRoleSeeder> logger) : IHostedService
+    IServiceProvider services, HuiaOptions options, IHuiaTenantProvider tenants, ILogger<HuiaRoleSeeder> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        foreach (var (tenantId, tenant) in options.Tenants)
+        foreach (var (tenantId, tenant) in tenants)
         {
             if (tenant.Roles.Count == 0)
             {
@@ -83,7 +83,7 @@ internal sealed partial class HuiaRoleSeeder(
 
             foreach (var role in staticRoles)
             {
-                var stillDeclared = options.Tenants.TryGetValue(role.TenantId, out var tenant)
+                var stillDeclared = tenants.TryGetValue(role.TenantId, out var tenant)
                     && tenant.Roles.Contains(role.Name ?? string.Empty, StringComparer.Ordinal);
                 if (stillDeclared)
                 {

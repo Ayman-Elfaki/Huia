@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Security.Cryptography;
 using Huia.Options;
 using Microsoft.AspNetCore.Http;
@@ -11,7 +12,7 @@ namespace Huia.OpenId.Security;
 /// only when <c>AddHuiaSecurityHeaders()</c> was called; it sits right after tenant resolution and
 /// before routing so a per-tenant policy could be built from branding.
 /// </summary>
-internal sealed class HuiaSecurityHeadersMiddleware(RequestDelegate next, IOptions<HuiaSecurityHeadersOptions> options, HuiaOptions huiaOptions)
+internal sealed class HuiaSecurityHeadersMiddleware(RequestDelegate next, IOptions<HuiaSecurityHeadersOptions> options, HuiaOptions huiaOptions, IHuiaTenantProvider tenants)
 {
     private readonly HuiaSecurityHeadersOptions _options = options.Value;
 
@@ -20,7 +21,7 @@ internal sealed class HuiaSecurityHeadersMiddleware(RequestDelegate next, IOptio
     // configured client and provider origin has to be allowed by `form-action` or Chromium blocks it.
     private readonly string[] _clientFormActionOrigins =
     [
-        .. huiaOptions.Tenants.Values
+        .. tenants.Values
             .SelectMany(tenant => tenant.Applications.OfType<InteractiveClientApplication>()
                 .SelectMany(client => client.RedirectUris.Concat(client.PostLogoutRedirectUris).Concat(client.HomeUris))
                 .Concat(tenant.Authentication.External?.Providers

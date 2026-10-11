@@ -110,7 +110,7 @@ public static class HuiaEndpointRouteBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
-        endpoints.MapGet("/", (Http.HttpContext context, Finbuckle.MultiTenant.Abstractions.IMultiTenantContextAccessor tenantAccessor, Huia.Options.HuiaOptions options) =>
+        endpoints.MapGet("/", (Http.HttpContext context, Finbuckle.MultiTenant.Abstractions.IMultiTenantContextAccessor tenantAccessor, Huia.Multitenancy.IHuiaTenantProvider tenants) =>
         {
             // Already at a tenant root (/{tenant}/ after base-path rebasing). Redirecting to /{tenant}/
             // again would loop, so hand off to the account UI instead: an anonymous caller to sign-in, an
@@ -134,7 +134,7 @@ public static class HuiaEndpointRouteBuilderExtensions
 
             var tenant = tenantAccessor.CurrentTenantId()
                 ?? fallbackTenantId
-                ?? options.Tenants.Keys.FirstOrDefault();
+                ?? tenants.Keys.FirstOrDefault();
             return tenant is null ? Http.Results.NotFound() : Http.Results.Redirect($"/{tenant}/");
         }).WithName(HuiaConstants.Endpoints.Root);
 

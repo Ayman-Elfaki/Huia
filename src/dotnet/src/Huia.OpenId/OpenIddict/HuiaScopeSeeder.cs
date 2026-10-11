@@ -20,11 +20,11 @@ namespace Huia.OpenId.OpenIddict;
 /// name, so at worst a client still requesting it gets <c>invalid_scope</c> afterwards.
 /// </remarks>
 internal sealed partial class HuiaScopeSeeder(
-    IServiceProvider services, HuiaOptions options, ILogger<HuiaScopeSeeder> logger) : IHostedService
+    IServiceProvider services, HuiaOptions options, IHuiaTenantProvider tenants, ILogger<HuiaScopeSeeder> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        foreach (var (tenantId, tenant) in options.Tenants)
+        foreach (var (tenantId, tenant) in tenants)
         {
             if (tenant.Scopes.Count == 0)
             {
@@ -87,7 +87,7 @@ internal sealed partial class HuiaScopeSeeder(
             var name = await manager.GetNameAsync(existing, cancellationToken);
 
             var stillDeclared = tenantId is not null
-                && options.Tenants.TryGetValue(tenantId, out var tenant)
+                && tenants.TryGetValue(tenantId, out var tenant)
                 && tenant.Scopes.Any(s => string.Equals(s.Name, name, StringComparison.Ordinal));
             if (stillDeclared)
             {

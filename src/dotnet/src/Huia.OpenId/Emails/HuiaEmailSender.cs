@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Globalization;
 using Huia.OpenId.Entities;
 using Finbuckle.MultiTenant.Abstractions;
@@ -36,6 +37,7 @@ public interface IHuiaEmailSender
 internal sealed partial class HuiaEmailSender(
     RazorEmailRenderer renderer,
     HuiaOptions options,
+    IHuiaTenantProvider tenants,
     IMultiTenantContextAccessor tenantAccessor,
     IStringLocalizer<SharedResource> localizer,
     ILogger<HuiaEmailSender> logger) : IHuiaEmailSender
@@ -55,7 +57,7 @@ internal sealed partial class HuiaEmailSender(
         }
 
         var tenantId = tenantAccessor.CurrentTenantId();
-        var tenant = tenantId is not null && options.Tenants.TryGetValue(tenantId, out var t) ? t : null;
+        var tenant = tenantId is not null && tenants.TryGetValue(tenantId, out var t) ? t : null;
         var email = options.Email.MergedWith(tenant?.Email);
         var culture = CultureInfo.CurrentUICulture;
 

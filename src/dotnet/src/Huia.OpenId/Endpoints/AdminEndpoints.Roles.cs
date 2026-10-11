@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.Admin;
 using Huia.Events;
 using Huia.OpenId.Entities;
@@ -67,10 +68,10 @@ internal static partial class AdminEndpoints
 
     private static async Task<IResult> CreateRoleAsync(
         HttpContext context,
-        HuiaOptions options,
+        IHuiaTenantProvider tenants,
         CreateRoleRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Tenant) || !options.Tenants.ContainsKey(body.Tenant))
+        if (string.IsNullOrWhiteSpace(body.Tenant) || !tenants.ContainsKey(body.Tenant))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }

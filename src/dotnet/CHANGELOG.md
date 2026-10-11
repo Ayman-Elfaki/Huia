@@ -7,6 +7,12 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Changed
 
+- **`Huia`** — New `Huia.Multitenancy.IHuiaTenantProvider`, a read-only dictionary of the tenants Huia serves
+  (default: the code-first `HuiaOptions.Tenants`). The endpoints, seeders, key-lifecycle service, email / SMS
+  senders, readiness check, security-headers middleware and account UI now read tenants from it instead of
+  `HuiaOptions.Tenants`, so the tenant list can later come from a runtime-editable store. No behavior change.
+  Registration-time wiring (per-tenant Identity / passkey / cookie options, the Finbuckle store and the
+  OpenIddict external-login registrations) still reads the options tree at start-up.
 - **`Huia`** — New `Huia.Admin.HuiaUserAdministration`: the claim, role-assignment, lock / unlock and
   email-verification rules the Headless and OpenId admin APIs both implement now live here once and report an
   HTTP-agnostic `HuiaAdminOutcome`. Each flavor's endpoints keep their own routes, DTOs, status codes and

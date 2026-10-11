@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.Options;
 using Microsoft.Extensions.Logging;
 
@@ -23,14 +24,14 @@ public interface ISmsSender
 /// logs a stub, and it only logs the actual code when <see cref="SmsOptions.LogCodesToLogger"/> is set.
 /// Hosts replace this with a provider-specific implementation.
 /// </summary>
-internal sealed partial class HuiaSmsSender(HuiaOptions options, ILogger<HuiaSmsSender> logger) : ISmsSender
+internal sealed partial class HuiaSmsSender(HuiaOptions options, IHuiaTenantProvider tenants, ILogger<HuiaSmsSender> logger) : ISmsSender
 {
     public bool IsConfigured => options.Sms.IsConfigured;
 
     public Task<bool> SendOtpAsync(string tenantId, string phoneNumber, string code, CancellationToken cancellationToken = default)
     {
         var effective = options.Sms.MergedWith(
-            options.Tenants.TryGetValue(tenantId, out var tenant) ? tenant.Sms : null);
+            tenants.TryGetValue(tenantId, out var tenant) ? tenant.Sms : null);
 
         var mask = phoneNumber.Length <= 4 ? phoneNumber : "••••" + phoneNumber[^4..];
 

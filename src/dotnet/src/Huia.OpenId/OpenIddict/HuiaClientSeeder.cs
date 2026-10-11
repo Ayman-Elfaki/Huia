@@ -20,11 +20,11 @@ namespace Huia.OpenId.OpenIddict;
 /// and tokens first, so revoking a client that has issued tokens is safe.
 /// </remarks>
 internal sealed partial class HuiaClientSeeder(
-    IServiceProvider services, HuiaOptions options, ILogger<HuiaClientSeeder> logger) : IHostedService
+    IServiceProvider services, HuiaOptions options, IHuiaTenantProvider tenants, ILogger<HuiaClientSeeder> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        foreach (var (tenantId, tenant) in options.Tenants)
+        foreach (var (tenantId, tenant) in tenants)
         {
             if (tenant.Applications.Count == 0)
             {
@@ -89,7 +89,7 @@ internal sealed partial class HuiaClientSeeder(
             var clientId = await manager.GetClientIdAsync(existing, cancellationToken);
 
             var stillDeclared = tenantId is not null
-                && options.Tenants.TryGetValue(tenantId, out var tenant)
+                && tenants.TryGetValue(tenantId, out var tenant)
                 && tenant.Applications.Any(c => string.Equals(c.ClientId, clientId, StringComparison.Ordinal));
             if (stillDeclared)
             {

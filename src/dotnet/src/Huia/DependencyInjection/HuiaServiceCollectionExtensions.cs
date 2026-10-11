@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.Configuration;
 using Huia.DependencyInjection;
 using Huia.Localization;
@@ -30,6 +31,7 @@ internal static class HuiaServiceCollectionExtensions
 
         services.AddSingleton(options);
         services.AddSingleton(Options.Options.Create(options));
+        services.AddSingleton<IHuiaTenantProvider, HuiaOptionsTenantProvider>();
 
         services.AddHuiaCookieHardening(requireSecure: !options.DisableTransportSecurityRequirement);
         services.AddHuiaLocalization();

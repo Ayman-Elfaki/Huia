@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using System.Text.Json;
 using Huia.OpenId.Multitenancy;
 using Huia.OpenId.Entities;
@@ -70,9 +71,9 @@ internal static partial class AdminEndpoints
         return group;
     }
 
-    private static IResult ListTenants(HuiaOptions options)
+    private static IResult ListTenants(IHuiaTenantProvider tenantProvider)
     {
-        var tenants = options.Tenants
+        var listed = tenantProvider
             .Select(kvp => new TenantDto(
                 kvp.Key,
                 kvp.Value.Branding.DisplayName ?? kvp.Value.DisplayName ?? kvp.Key,
@@ -83,7 +84,7 @@ internal static partial class AdminEndpoints
             .OrderBy(t => t.TenantId, StringComparer.Ordinal)
             .ToList();
 
-        return Results.Ok(tenants);
+        return Results.Ok(listed);
     }
 
     private static async Task<IResult> ListUsersAsync(
@@ -188,10 +189,10 @@ internal static partial class AdminEndpoints
     private static async Task<IResult> CreateScopeAsync(
         HttpContext context,
         IOpenIddictScopeManager manager,
-        HuiaOptions options,
+        IHuiaTenantProvider tenants,
         CreateScopeRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Tenant) || !options.Tenants.ContainsKey(body.Tenant))
+        if (string.IsNullOrWhiteSpace(body.Tenant) || !tenants.ContainsKey(body.Tenant))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }

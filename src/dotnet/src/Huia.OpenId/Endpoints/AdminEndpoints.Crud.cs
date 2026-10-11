@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.Admin;
 using Huia.Events;
 using Huia.Identity;
@@ -38,9 +39,9 @@ internal static partial class AdminEndpoints
             user.PhoneNumber, user.PhoneNumberConfirmed, user.FirstName, user.LastName, user.LockoutEnabled, user.LockoutEnd, roles));
     }
 
-    private static async Task<IResult> CreateUserAsync(HttpContext context, HuiaOptions options, CreateUserRequest body)
+    private static async Task<IResult> CreateUserAsync(HttpContext context, IHuiaTenantProvider tenants, CreateUserRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Tenant) || !options.Tenants.ContainsKey(body.Tenant))
+        if (string.IsNullOrWhiteSpace(body.Tenant) || !tenants.ContainsKey(body.Tenant))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }
@@ -370,9 +371,9 @@ internal static partial class AdminEndpoints
     }
 
     private static async Task<IResult> CreateClientAsync(
-        HttpContext context, IOpenIddictApplicationManager manager, HuiaOptions options, ClientWriteRequest body)
+        HttpContext context, IOpenIddictApplicationManager manager, IHuiaTenantProvider tenants, ClientWriteRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Tenant) || !options.Tenants.ContainsKey(body.Tenant))
+        if (string.IsNullOrWhiteSpace(body.Tenant) || !tenants.ContainsKey(body.Tenant))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }
@@ -595,9 +596,9 @@ internal static partial class AdminEndpoints
 
     private static async Task<IResult> CreateKeyAsync(
         HttpContext context, IHuiaSigningKeyStore keys, HuiaSigningKeyFactory factory, IHuiaKeyRing keyRing,
-        HuiaOptions options, TimeProvider timeProvider, CreateKeyRequest body)
+        HuiaOptions options, IHuiaTenantProvider tenants, TimeProvider timeProvider, CreateKeyRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Tenant) || !options.Tenants.ContainsKey(body.Tenant))
+        if (string.IsNullOrWhiteSpace(body.Tenant) || !tenants.ContainsKey(body.Tenant))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }
