@@ -9,6 +9,10 @@
         </p>
     }
 
+    <p class="huia-muted huia-verify-change">
+        <a asp-page="./Login" data-testid="verify-otp-change-number">@Localizer["VerifyOtp.ChangeNumber"]</a>
+    </p>
+
     @if (Model.Resent)
     {
         <div class="alert" role="status" data-testid="otp-resent">@Localizer["VerifyOtp.Sent"]</div>
@@ -44,7 +48,7 @@
         <form method="post" asp-page-handler="Resend" data-testid="verify-otp-resend-form">
             <input type="hidden" asp-for="Flow" />
             <button type="submit" class="huia-linkbtn" data-testid="verify-otp-resend"
-                    data-cooldown="@Model.ResendCooldownSeconds"
+                    data-cooldown="@Model.ResendAvailableInSeconds"
                     data-label="@Localizer["VerifyOtp.Resend"].Value"
                     data-countdown-label="@Localizer["VerifyOtp.ResendIn"].Value">@Localizer["VerifyOtp.Resend"]</button>
         </form>

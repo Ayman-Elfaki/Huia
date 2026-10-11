@@ -37,6 +37,7 @@ async function buildHandler() {
   app.use('/auth/logout', (await import('../../src/runtime/server/routes/auth/logout.post')).default)
   app.use('/auth/session', (await import('../../src/runtime/server/routes/auth/session.get')).default)
   app.use('/auth/phone/start', (await import('../../src/runtime/server/routes/auth/phone/start.post')).default)
+  app.use('/auth/phone/resend', (await import('../../src/runtime/server/routes/auth/phone/resend.post')).default)
   app.use('/auth/phone/verify', (await import('../../src/runtime/server/routes/auth/phone/verify.post')).default)
   app.use('/auth/phone/complete-profile', (await import('../../src/runtime/server/routes/auth/phone/complete-profile.post')).default)
   app.use('/auth/external-exchange', (await import('../../src/runtime/server/routes/auth/external/exchange.post')).default)
@@ -116,10 +117,20 @@ beforeEach(async () => {
     if (path === '/identity/phone/start' && method === 'POST') {
       const body = JSON.parse(String(init?.body))
       if (body.phoneNumber === '+15005551234') {
-        return Response.json({ flowId: 'flow-existing' })
+        return Response.json({ flowId: 'flow-existing', maskedPhoneNumber: '••••1234', codeLength: 6, expiresInSeconds: 300, resendAvailableInSeconds: 30 })
       }
       if (body.phoneNumber === '+15005559999') {
-        return Response.json({ flowId: 'flow-new' })
+        return Response.json({ flowId: 'flow-new', maskedPhoneNumber: '••••9999', codeLength: 6, expiresInSeconds: 300, resendAvailableInSeconds: 30 })
+      }
+      return Response.json({ error: 'invalid' }, { status: 400 })
+    }
+    if (path === '/identity/phone/resend' && method === 'POST') {
+      const body = JSON.parse(String(init?.body))
+      if (body.flowId === 'flow-cooling') {
+        return Response.json({ error: 'resend_too_soon', retryAfterSeconds: 12 }, { status: 429 })
+      }
+      if (body.flowId === 'flow-existing') {
+        return Response.json({ flowId: 'flow-existing', maskedPhoneNumber: '••••1234', codeLength: 6, expiresInSeconds: 300, resendAvailableInSeconds: 30 })
       }
       return Response.json({ error: 'invalid' }, { status: 400 })
     }
@@ -132,7 +143,7 @@ beforeEach(async () => {
         return Response.json({ tokenType: 'Bearer', accessToken: 'at-phone-1', expiresIn: 3600, refreshToken: 'rt-phone-1' })
       }
       if (body.flowId === 'flow-new') {
-        return Response.json({ flowId: 'flow-new', requiresProfile: true })
+        return Response.json({ status: 'requires_profile', flowId: 'flow-new', maskedPhoneNumber: '••••9999' })
       }
       return Response.json({ error: 'invalid' }, { status: 400 })
     }
@@ -270,8 +281,10 @@ describe('phone login: start → verify → (complete-profile) → session', () 
       headers: { ...H, 'content-type': 'application/json' },
       body: JSON.stringify({ phoneNumber: '+15005551234' }),
     }))
-    const { flowId } = await start.json() as { flowId: string }
+    const startBody = await start.json() as { flowId: string, codeLength: number, resendAvailableInSeconds: number, maskedPhoneNumber: string }
+    const { flowId } = startBody
     expect(flowId).toBe('flow-existing')
+    expect(startBody).toMatchObject({ codeLength: 6, resendAvailableInSeconds: 30, maskedPhoneNumber: '••••1234' })
 
     const verify = await handler(new Request('https://localhost/auth/phone/verify', {
       method: 'POST',
@@ -300,7 +313,7 @@ describe('phone login: start → verify → (complete-profile) → session', () 
       body: JSON.stringify({ flowId, code: '123456' }),
     }))
     const verifyBody = await verify.json() as { requiresProfile?: true, flowId?: string }
-    expect(verifyBody).toEqual({ requiresProfile: true, flowId: 'flow-new' })
+    expect(verifyBody).toEqual({ requiresProfile: true, flowId: 'flow-new', maskedPhoneNumber: '••••9999' })
     expect(cookieOf(verify, '__Host-huia_headless_sess')).toBeNull()
 
     const complete = await handler(new Request('https://localhost/auth/phone/complete-profile', {
@@ -310,6 +323,34 @@ describe('phone login: start → verify → (complete-profile) → session', () 
     }))
     expect(complete.status).toBe(200)
     expect(cookieOf(complete, '__Host-huia_headless_sess')).not.toBeNull()
+  })
+})
+
+describe('phone login: resend', () => {
+  const post = (handler: Awaited<ReturnType<typeof buildHandler>>, body: unknown) => handler(new Request('https://localhost/auth/phone/resend', {
+    method: 'POST',
+    headers: { ...H, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }))
+
+  it('proxies a resend and returns the refreshed code metadata', async () => {
+    const handler = await buildHandler()
+
+    const response = await post(handler, { flowId: 'flow-existing' })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ flowId: 'flow-existing', resendAvailableInSeconds: 30 })
+  })
+
+  it('surfaces the backend cooldown problem with its status and retry-after', async () => {
+    const handler = await buildHandler()
+
+    const response = await post(handler, { flowId: 'flow-cooling' })
+
+    expect(response.status).toBe(429)
+    const body = await response.json() as { statusMessage: string, data: { error: string, retryAfterSeconds: number } }
+    expect(body.statusMessage).toBe('phone_resend_failed')
+    expect(body.data).toEqual({ error: 'resend_too_soon', retryAfterSeconds: 12 })
   })
 })
 

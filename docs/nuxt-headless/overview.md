@@ -48,7 +48,7 @@ mechanics to `nuxt-huia-oidc`.
 | `POST /auth/refresh` | manual refresh (usually unnecessary — `getUserSession` refreshes transparently) |
 | `GET /auth/session` | the sanitised `{ user, loggedIn, expiresAt }` — never a token |
 | `GET /auth/confirm-email`, `POST /auth/resend-confirmation`, `/auth/forgot-password`, `/auth/reset-password` | thin proxies to the matching `Huia.Headless` endpoints |
-| `POST /auth/phone/start`, `/verify`, `/complete-profile` | passwordless SMS one-time-code login |
+| `POST /auth/phone/start`, `/resend`, `/verify`, `/complete-profile` | passwordless SMS one-time-code login |
 | `GET /auth/external/{provider}` | starts an external-login redirect (a link, not a `fetch` call — see below) |
 | `POST /auth/external-exchange`, `/auth/external-complete-profile` | completes external login after the provider's callback |
 

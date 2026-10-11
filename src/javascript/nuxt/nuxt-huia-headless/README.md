@@ -44,16 +44,26 @@ const { user, loggedIn, logout } = useHuia()
 </script>
 ```
 
-Passwordless SMS is a two- or three-step flow — `verifyPhoneLogin` returns the bearer session
-directly for a returning, complete-profile account, or `{ requiresProfile: true, flowId }` for a
-first-time number that still needs a name:
+Passwordless SMS is a two- or three-step flow. `startPhoneLogin` returns everything a code-entry screen needs
+(`flowId`, `maskedPhoneNumber`, `codeLength`, `expiresInSeconds`, `resendAvailableInSeconds`);
+`resendPhoneLogin` sends a fresh code for the same flow (the backend enforces the cooldown and answers
+`resend_too_soon` + `retryAfterSeconds` when it is too early). `verifyPhoneLogin` returns the bearer session
+directly for a returning, complete-profile account, or `{ requiresProfile: true, flowId }` for a first-time
+number that still needs a name. Failed calls carry the backend problem in `error`:
+`{ error: 'invalid' | 'expired' | 'too_many_attempts' | 'rate_limited' | 'daily_limit' | 'resend_too_soon',
+retryAfterSeconds?, attemptsRemaining? }`.
 
 ```vue
 <script setup lang="ts">
-const { startPhoneLogin, verifyPhoneLogin, completePhoneProfile } = useHuia()
+const { startPhoneLogin, resendPhoneLogin, verifyPhoneLogin, completePhoneProfile } = useHuia()
 
-const { flowId } = await startPhoneLogin({ phoneNumber: '+12025550123' })
-const result = await verifyPhoneLogin({ flowId, code })
+const started = await startPhoneLogin({ phoneNumber: '+12025550123' })
+if (!started.ok) return // started.error.error === 'rate_limited', ...
+
+// ... after started.resendAvailableInSeconds:
+await resendPhoneLogin({ flowId: started.flowId! })
+
+const result = await verifyPhoneLogin({ flowId: started.flowId!, code })
 if (result.requiresProfile) {
   await completePhoneProfile({ flowId: result.flowId, firstName, lastName })
 }

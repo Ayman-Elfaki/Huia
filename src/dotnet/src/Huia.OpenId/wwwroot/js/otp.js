@@ -52,8 +52,9 @@
   });
 })();
 
-// "Send a new code" cooldown counter. The button starts disabled on arrival (a code was just sent),
-// counts down, then re-enables. The deadline is kept in sessionStorage so a refresh keeps counting.
+// "Send a new code" cooldown counter. The server renders the seconds still remaining (derived from when
+// the last code was sent), so a refresh or a second tab can never reset the countdown; the handler
+// enforces the same cooldown regardless of this script.
 (() => {
   document.querySelectorAll("[data-cooldown]").forEach((button) => {
     const seconds = parseInt(button.dataset.cooldown, 10);
@@ -61,32 +62,9 @@
       return;
     }
 
-    const form = button.closest("form");
     const label = button.dataset.label || button.textContent;
     const countdownLabel = button.dataset.countdownLabel || "{0}";
-    const flow = (form && form.querySelector('[name="Flow"]') && form.querySelector('[name="Flow"]').value) || "";
-    const storeKey = "huia-otp-cooldown:" + flow.slice(0, 40);
-
-    const read = () => {
-      try {
-        return parseInt(sessionStorage.getItem(storeKey) || "0", 10) || 0;
-      } catch {
-        return 0;
-      }
-    };
-    const write = (value) => {
-      try {
-        sessionStorage.setItem(storeKey, String(value));
-      } catch {
-        /* private mode */
-      }
-    };
-
-    let deadline = read();
-    if (!deadline || deadline < Date.now()) {
-      deadline = Date.now() + seconds * 1000;
-      write(deadline);
-    }
+    const deadline = Date.now() + seconds * 1000;
 
     let timer;
     const tick = () => {
@@ -103,9 +81,5 @@
 
     tick();
     timer = window.setInterval(tick, 1000);
-
-    if (form) {
-      form.addEventListener("submit", () => write(Date.now() + seconds * 1000));
-    }
   });
 })();

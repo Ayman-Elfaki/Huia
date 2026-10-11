@@ -130,6 +130,13 @@ export class HuiaHeadlessClient {
     })
   }
 
+  phoneResend(body: { flowId: string, captchaResponse?: string }): Promise<BackendPhoneStartResponse> {
+    return this.call<BackendPhoneStartResponse>('/identity/phone/resend', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  }
+
   phoneVerify(body: { flowId: string, code: string }): Promise<BackendPhoneVerifyResponse> {
     return this.call<BackendPhoneVerifyResponse>('/identity/phone/verify', {
       method: 'POST',

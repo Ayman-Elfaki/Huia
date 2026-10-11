@@ -9,8 +9,8 @@ export default defineEventHandler(async (event) => {
 
   try {
     const result = await phoneVerifyAsync(cfg, body)
-    if (result.requiresProfile) {
-      return { flowId: result.flowId, requiresProfile: true as const }
+    if (result.status === 'requires_profile') {
+      return { flowId: result.flowId, maskedPhoneNumber: result.maskedPhoneNumber, requiresProfile: true as const }
     }
 
     const me = await meAsync(cfg, result.accessToken)

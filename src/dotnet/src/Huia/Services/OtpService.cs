@@ -25,6 +25,22 @@ public enum OtpVerifyResult
     TooManyAttempts = 4,
 }
 
+/// <summary>A verification outcome plus how many wrong guesses remain before the code is invalidated.</summary>
+/// <param name="Result">The outcome.</param>
+/// <param name="AttemptsRemaining">
+/// Guesses left, populated on <see cref="OtpVerifyResult.Invalid"/> only; <see langword="null"/> otherwise.
+/// </param>
+public readonly record struct OtpVerifyOutcome(OtpVerifyResult Result, int? AttemptsRemaining = null)
+{
+    /// <summary>Whether the code matched.</summary>
+    public bool Succeeded => Result == OtpVerifyResult.Success;
+
+    /// <summary>Wraps a bare result with no attempts information.</summary>
+    /// <param name="result">The outcome.</param>
+    /// <returns>The outcome.</returns>
+    public static OtpVerifyOutcome Of(OtpVerifyResult result) => new(result);
+}
+
 /// <summary>Issues and verifies single-use SMS one-time codes for existing accounts.</summary>
 /// <typeparam name="TUser">The flavor's concrete user type.</typeparam>
 public interface IOtpService<TUser> where TUser : HuiaUser
@@ -45,7 +61,7 @@ public interface IOtpService<TUser> where TUser : HuiaUser
     /// <param name="code">The candidate code.</param>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns>The verification outcome.</returns>
-    Task<OtpVerifyResult> VerifyAsync(TUser user, string code, PhoneAuthenticationMethod options);
+    Task<OtpVerifyOutcome> VerifyAsync(TUser user, string code, PhoneAuthenticationMethod options);
 }
 
 /// <summary>
@@ -80,7 +96,7 @@ internal sealed class OtpService<TUser>(UserManager<TUser> userManager, TimeProv
         return code;
     }
 
-    public async Task<OtpVerifyResult> VerifyAsync(TUser user, string code, PhoneAuthenticationMethod options)
+    public async Task<OtpVerifyOutcome> VerifyAsync(TUser user, string code, PhoneAuthenticationMethod options)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(options);
@@ -88,7 +104,7 @@ internal sealed class OtpService<TUser>(UserManager<TUser> userManager, TimeProv
         var stored = await userManager.GetAuthenticationTokenAsync(user, Provider, TokenName);
         if (string.IsNullOrEmpty(stored))
         {
-            return OtpVerifyResult.NotFound;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.NotFound);
         }
 
         OtpEnvelope? envelope;
@@ -104,31 +120,31 @@ internal sealed class OtpService<TUser>(UserManager<TUser> userManager, TimeProv
         if (envelope is null)
         {
             await userManager.RemoveAuthenticationTokenAsync(user, Provider, TokenName);
-            return OtpVerifyResult.NotFound;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.NotFound);
         }
 
         if (timeProvider.GetUtcNow() >= envelope.ExpiresUtc)
         {
             await userManager.RemoveAuthenticationTokenAsync(user, Provider, TokenName);
-            return OtpVerifyResult.Expired;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.Expired);
         }
 
         if (OtpHashing.Verify(code, envelope.Hash, envelope.Salt))
         {
             await userManager.RemoveAuthenticationTokenAsync(user, Provider, TokenName);
-            return OtpVerifyResult.Success;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.Success);
         }
 
         var attempts = envelope.Attempts + 1;
         if (attempts >= options.MaxVerificationAttempts)
         {
             await userManager.RemoveAuthenticationTokenAsync(user, Provider, TokenName);
-            return OtpVerifyResult.TooManyAttempts;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.TooManyAttempts);
         }
 
         await userManager.SetAuthenticationTokenAsync(user, Provider, TokenName,
             JsonSerializer.Serialize(envelope with { Attempts = attempts }));
-        return OtpVerifyResult.Invalid;
+        return new OtpVerifyOutcome(OtpVerifyResult.Invalid, options.MaxVerificationAttempts - attempts);
     }
 }
 

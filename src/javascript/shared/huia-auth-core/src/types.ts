@@ -109,20 +109,27 @@ export interface BackendMeResponse {
   [key: string]: unknown
 }
 
+/** `POST identity/phone/start` / `identity/phone/resend` response. */
 export interface BackendPhoneStartResponse {
   flowId: string
+  /** The destination number, masked for display. */
+  maskedPhoneNumber: string
+  /** How many digits the one-time code has. */
+  codeLength: number
+  /** How long the code stays valid. */
   expiresInSeconds: number
-  status?: string
+  /** How long until a resend is accepted. */
+  resendAvailableInSeconds: number
 }
 
+/** `POST identity/phone/verify` response: a bearer token body, or `status: 'requires_profile'`. */
 export interface BackendPhoneVerifyResponse {
   accessToken?: string
   refreshToken?: string
   expiresIn?: number
-  requiresProfile?: boolean
+  status?: 'requires_profile'
   flowId?: string
-  firstName?: string | null
-  lastName?: string | null
+  maskedPhoneNumber?: string
 }
 
 export interface BackendExternalExchangeResponse {

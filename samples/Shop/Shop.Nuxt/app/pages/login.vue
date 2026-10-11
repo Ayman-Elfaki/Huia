@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
-const { login, register, startPhoneLogin, verifyPhoneLogin, completePhoneProfile, externalLoginHref } = useHuia()
+const { login, register, startPhoneLogin, resendPhoneLogin, verifyPhoneLogin, completePhoneProfile, externalLoginHref } = useHuia()
 
 const tab = ref<'password' | 'phone'>('password')
 const mode = ref<'login' | 'register'>('login')
@@ -48,6 +48,47 @@ const phoneStep = ref<'number' | 'code' | 'profile'>('number')
 const phoneNumber = ref('')
 const code = ref('')
 const flowId = ref('')
+const maskedPhone = ref('')
+const codeLength = ref(6)
+const resendIn = ref(0)
+let resendTimer: ReturnType<typeof setInterval> | undefined
+
+type PhoneProblem = { error?: string, retryAfterSeconds?: number | null, attemptsRemaining?: number | null }
+
+function problemOf(err: unknown): PhoneProblem {
+  return (err && typeof err === 'object' ? err : {}) as PhoneProblem
+}
+
+function describe(err: unknown, fallback: string): string {
+  const p = problemOf(err)
+  switch (p.error) {
+    case 'rate_limited':
+      return p.retryAfterSeconds ? `Too many attempts. Try again in ${p.retryAfterSeconds}s.` : 'Too many attempts. Try again shortly.'
+    case 'daily_limit':
+      return 'This number has reached its daily sign-in limit. Try again tomorrow.'
+    case 'resend_too_soon':
+      return `Please wait ${p.retryAfterSeconds ?? 'a few'}s before requesting a new code.`
+    case 'expired':
+      return 'That code has expired. Send a new one.'
+    case 'too_many_attempts':
+      return 'Too many incorrect attempts. Send a new code.'
+    case 'invalid':
+      return p.attemptsRemaining != null ? `That code is not correct. ${p.attemptsRemaining} attempts left.` : 'That code is not correct.'
+    default:
+      return fallback
+  }
+}
+
+function startCountdown(seconds: number) {
+  clearInterval(resendTimer)
+  resendIn.value = seconds
+  if (seconds <= 0) return
+  resendTimer = setInterval(() => {
+    resendIn.value = Math.max(0, resendIn.value - 1)
+    if (resendIn.value === 0) clearInterval(resendTimer)
+  }, 1000)
+}
+onBeforeUnmount(() => clearInterval(resendTimer))
 
 async function onPhoneStart() {
   busy.value = true
@@ -55,11 +96,39 @@ async function onPhoneStart() {
   const result = await startPhoneLogin({ phoneNumber: phoneNumber.value })
   busy.value = false
   if (!result.ok || !result.flowId) {
-    error.value = 'Could not send a code. Check the number.'
+    error.value = describe(result.error, 'Could not send a code. Check the number.')
     return
   }
   flowId.value = result.flowId
+  maskedPhone.value = result.maskedPhoneNumber ?? phoneNumber.value
+  codeLength.value = result.codeLength ?? 6
+  startCountdown(result.resendAvailableInSeconds ?? 0)
+  code.value = ''
   phoneStep.value = 'code'
+}
+
+async function onPhoneResend() {
+  busy.value = true
+  error.value = null
+  info.value = null
+  const result = await resendPhoneLogin({ flowId: flowId.value })
+  busy.value = false
+  if (!result.ok) {
+    const retry = problemOf(result.error).retryAfterSeconds
+    if (retry) startCountdown(retry)
+    error.value = describe(result.error, 'Could not send a new code.')
+    return
+  }
+  startCountdown(result.resendAvailableInSeconds ?? 0)
+  info.value = 'We sent you a new code.'
+}
+
+function onChangeNumber() {
+  clearInterval(resendTimer)
+  error.value = null
+  info.value = null
+  code.value = ''
+  phoneStep.value = 'number'
 }
 
 async function onPhoneVerify() {
@@ -68,7 +137,7 @@ async function onPhoneVerify() {
   const result = await verifyPhoneLogin({ flowId: flowId.value, code: code.value })
   busy.value = false
   if (!result.ok) {
-    error.value = 'That code did not work.'
+    error.value = describe(result.error, 'That code did not work.')
     return
   }
   if (result.requiresProfile) {
@@ -165,14 +234,31 @@ async function onPhoneCompleteProfile() {
 
         <form v-else-if="phoneStep === 'code'" class="space-y-3" @submit.prevent="onPhoneVerify">
           <p class="text-sm text-muted">
-            We sent a code to {{ phoneNumber }}.
+            We sent a {{ codeLength }}-digit code to {{ maskedPhone }}.
           </p>
           <UFormField label="Code">
-            <UInput v-model="code" type="text" inputmode="numeric" placeholder="123456" autocomplete="one-time-code" required class="w-full" />
+            <UInput
+              v-model="code"
+              type="text"
+              inputmode="numeric"
+              :maxlength="codeLength"
+              :placeholder="'0'.repeat(codeLength)"
+              autocomplete="one-time-code"
+              required
+              class="w-full"
+            />
           </UFormField>
           <UButton type="submit" block :loading="busy">
             Verify
           </UButton>
+          <div class="flex justify-between">
+            <UButton type="button" variant="link" color="neutral" size="sm" @click="onChangeNumber">
+              Use a different number
+            </UButton>
+            <UButton type="button" variant="link" size="sm" :disabled="busy || resendIn > 0" @click="onPhoneResend">
+              {{ resendIn > 0 ? `Send a new code in ${resendIn}s` : 'Send a new code' }}
+            </UButton>
+          </div>
         </form>
 
         <form v-else class="space-y-3" @submit.prevent="onPhoneCompleteProfile">

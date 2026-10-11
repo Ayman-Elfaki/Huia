@@ -14,7 +14,9 @@ public sealed record PhoneLoginFlow(
     string PhoneNumber,
     string? UserId,
     string? PendingSignupId,
-    bool Verified);
+    bool Verified,
+    DateTimeOffset LastSentUtc,
+    int ResendCount);
 
 /// <summary>See <see cref="PhoneLoginFlow"/>.</summary>
 public interface IPhoneLoginFlowStore
@@ -30,6 +32,13 @@ public interface IPhoneLoginFlowStore
     /// <param name="id">The flow id.</param>
     /// <returns>The flow or <see langword="null"/>.</returns>
     PhoneLoginFlow? Get(string id);
+
+    /// <summary>
+    /// Records that a fresh code was just sent for the flow: stamps <see cref="PhoneLoginFlow.LastSentUtc"/>,
+    /// bumps <see cref="PhoneLoginFlow.ResendCount"/> and restarts the flow's lifetime.
+    /// </summary>
+    /// <param name="id">The flow id.</param>
+    void MarkSent(string id);
 
     /// <summary>
     /// Marks a flow verified in place (the code has been checked) — used when the matching account or
@@ -53,8 +62,9 @@ internal sealed class PhoneLoginFlowStore(TimeProvider timeProvider) : IPhoneLog
     {
         Sweep();
         var id = Guid.CreateVersion7().ToString("N");
+        var now = timeProvider.GetUtcNow();
         _entries[id] = new Entry(phoneNumber, userId, pendingSignupId, Verified: false,
-            timeProvider.GetUtcNow().Add(Lifetime));
+            now.Add(Lifetime), now, ResendCount: 0);
         return id;
     }
 
@@ -66,7 +76,17 @@ internal sealed class PhoneLoginFlowStore(TimeProvider timeProvider) : IPhoneLog
             return null;
         }
 
-        return new PhoneLoginFlow(id, entry.PhoneNumber, entry.UserId, entry.PendingSignupId, entry.Verified);
+        return new PhoneLoginFlow(id, entry.PhoneNumber, entry.UserId, entry.PendingSignupId, entry.Verified,
+            entry.LastSentUtc, entry.ResendCount);
+    }
+
+    public void MarkSent(string id)
+    {
+        if (_entries.TryGetValue(id, out var entry))
+        {
+            var now = timeProvider.GetUtcNow();
+            _entries[id] = entry with { LastSentUtc = now, ResendCount = entry.ResendCount + 1, ExpiresUtc = now.Add(Lifetime) };
+        }
     }
 
     public void MarkVerified(string id)
@@ -96,5 +116,7 @@ internal sealed class PhoneLoginFlowStore(TimeProvider timeProvider) : IPhoneLog
         string? UserId,
         string? PendingSignupId,
         bool Verified,
-        DateTimeOffset ExpiresUtc);
+        DateTimeOffset ExpiresUtc,
+        DateTimeOffset LastSentUtc,
+        int ResendCount);
 }

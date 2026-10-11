@@ -51,6 +51,12 @@ public sealed class VerifyOtpModel(
     public int ResendCooldownSeconds =>
         (int)Math.Ceiling((Tenant?.Authentication.Phone?.ResendCooldown ?? TimeSpan.FromSeconds(30)).TotalSeconds);
 
+    /// <summary>
+    /// Seconds until a new code may be requested, derived from when the last one was sent (so a page reload
+    /// cannot reset the countdown).
+    /// </summary>
+    public int ResendAvailableInSeconds { get; private set; }
+
     private PhoneAuthenticationMethod PhoneOptions =>
         Tenant?.Authentication.Phone ?? throw new InvalidOperationException("Phone login is not enabled.");
 
@@ -72,6 +78,7 @@ public sealed class VerifyOtpModel(
         }
 
         MaskedPhoneNumber = state.PhoneNumber is { } number ? phoneNumbers.Mask(number) : null;
+        ResendAvailableInSeconds = CooldownRemaining(state);
         return Page();
     }
 
@@ -93,6 +100,7 @@ public sealed class VerifyOtpModel(
         }
 
         MaskedPhoneNumber = state.PhoneNumber is { } number ? phoneNumbers.Mask(number) : null;
+        ResendAvailableInSeconds = CooldownRemaining(state);
         var options = PhoneOptions;
         var returnUrl = returnUrlProtector.SanitizeReturnUrl(state.ReturnUrl, HttpContext);
 
@@ -104,9 +112,9 @@ public sealed class VerifyOtpModel(
         if (state.PendingSignupId is { } pendingId)
         {
             var pendingResult = pendingSignups.Verify(pendingId, Input.Code, options);
-            if (pendingResult != OtpVerifyResult.Success)
+            if (!pendingResult.Succeeded)
             {
-                ErrorMessage = localizer["VerifyOtp.Invalid"].Value;
+                ErrorMessage = DescribeFailure(pendingResult);
                 return Page();
             }
 
@@ -126,9 +134,9 @@ public sealed class VerifyOtpModel(
         }
 
         var result = await otpService.VerifyAsync(user, Input.Code, options);
-        if (result != OtpVerifyResult.Success)
+        if (!result.Succeeded)
         {
-            ErrorMessage = localizer["VerifyOtp.Invalid"].Value;
+            ErrorMessage = DescribeFailure(result);
             return Page();
         }
 
@@ -187,6 +195,13 @@ public sealed class VerifyOtpModel(
         var options = PhoneOptions;
         var tenantId = tenantAccessor.RequireCurrentTenantId();
 
+        // The cooldown is enforced here, not just by the button's countdown, so a scripted client
+        // cannot hammer the SMS provider by posting straight to the handler.
+        if (CooldownRemaining(state) > 0)
+        {
+            return RedirectToPage(new { flow = Flow });
+        }
+
         if (rateLimiter.TryAcquire(tenantId, state.PhoneNumber))
         {
             if (state.PendingSignupId is { } pendingId)
@@ -207,8 +222,29 @@ public sealed class VerifyOtpModel(
             await events.PublishAsync(new OtpRequestedEvent(tenantId, state.UserId, MaskFor(state), true, timeProvider.GetUtcNow()));
         }
 
-        return RedirectToPage(new { flow = Flow, resent = true });
+        var refreshed = returnUrlProtector.Tokenize(state with { CodeSentUtc = timeProvider.GetUtcNow() });
+        return RedirectToPage(new { flow = refreshed, resent = true });
     }
+
+    private int CooldownRemaining(AuthFlowState state)
+    {
+        if (state.CodeSentUtc is not { } sent)
+        {
+            return 0;
+        }
+
+        var remaining = sent.Add(PhoneOptions.ResendCooldown) - timeProvider.GetUtcNow();
+        return remaining > TimeSpan.Zero ? (int)Math.Ceiling(remaining.TotalSeconds) : 0;
+    }
+
+    private string DescribeFailure(OtpVerifyOutcome outcome) => outcome.Result switch
+    {
+        OtpVerifyResult.Expired => localizer["VerifyOtp.Expired"].Value,
+        OtpVerifyResult.TooManyAttempts => localizer["VerifyOtp.TooManyAttempts"].Value,
+        OtpVerifyResult.Invalid when outcome.AttemptsRemaining is { } left =>
+            string.Format(System.Globalization.CultureInfo.CurrentCulture, localizer["VerifyOtp.AttemptsLeft"].Value, left),
+        _ => localizer["VerifyOtp.Invalid"].Value,
+    };
 
     private string MaskFor(AuthFlowState state) =>
         state.PhoneNumber is null ? "••••" : phoneNumbers.Mask(state.PhoneNumber);

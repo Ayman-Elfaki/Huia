@@ -39,6 +39,36 @@ public sealed class HeadlessStoresUnitTests
     }
 
     [Fact]
+    public void PhoneLoginFlowStore_MarkSent_stamps_the_send_time_counts_resends_and_extends_the_lifetime()
+    {
+        var time = new TestTimeProvider(DateTimeOffset.UtcNow);
+        var store = new PhoneLoginFlowStore(time);
+        var id = store.Create("+15551112222", "user-1", null);
+        var created = store.Get(id)!;
+        created.ResendCount.ShouldBe(0);
+        created.LastSentUtc.ShouldBe(time.GetUtcNow());
+
+        time.Advance(TimeSpan.FromMinutes(9));
+        store.MarkSent(id);
+
+        var resent = store.Get(id)!;
+        resent.ResendCount.ShouldBe(1);
+        resent.LastSentUtc.ShouldBe(time.GetUtcNow());
+
+        // The original 10-minute lifetime would have lapsed by now; the resend restarted it.
+        time.Advance(TimeSpan.FromMinutes(5));
+        store.Get(id).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void PhoneLoginFlowStore_MarkSent_on_an_unknown_flow_is_a_no_op()
+    {
+        var store = new PhoneLoginFlowStore(new TestTimeProvider(DateTimeOffset.UtcNow));
+
+        Should.NotThrow(() => store.MarkSent("missing"));
+    }
+
+    [Fact]
     public void PhoneLoginFlowStore_expires_after_ttl()
     {
         var time = new TestTimeProvider(DateTimeOffset.UtcNow);

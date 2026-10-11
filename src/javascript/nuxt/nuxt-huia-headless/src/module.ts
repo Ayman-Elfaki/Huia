@@ -38,6 +38,7 @@ export interface ModuleOptions {
     forgotPassword?: string
     resetPassword?: string
     phoneStart?: string
+    phoneResend?: string
     phoneVerify?: string
     phoneCompleteProfile?: string
     /** Prefix the external-login challenge redirects from; the provider name is appended (`{prefix}/{provider}`). */
@@ -85,6 +86,7 @@ const defaults = {
     forgotPassword: '/auth/forgot-password',
     resetPassword: '/auth/reset-password',
     phoneStart: '/auth/phone/start',
+    phoneResend: '/auth/phone/resend',
     phoneVerify: '/auth/phone/verify',
     phoneCompleteProfile: '/auth/phone/complete-profile',
     externalLogin: '/auth/external',
@@ -136,6 +138,7 @@ export default defineNuxtModule<ModuleOptions>({
         sessionPath: opts.routes.session,
         loginPage: opts.loginPage,
         phoneStartPath: opts.routes.phoneStart,
+        phoneResendPath: opts.routes.phoneResend,
         phoneVerifyPath: opts.routes.phoneVerify,
         phoneCompleteProfilePath: opts.routes.phoneCompleteProfile,
         externalLoginPath: opts.routes.externalLogin,
@@ -161,6 +164,7 @@ export default defineNuxtModule<ModuleOptions>({
           opts.routes.forgotPassword,
           opts.routes.resetPassword,
           opts.routes.phoneStart,
+          opts.routes.phoneResend,
           opts.routes.phoneVerify,
           opts.routes.phoneCompleteProfile,
           `${opts.routes.externalLogin}/**`,
@@ -210,6 +214,7 @@ export default defineNuxtModule<ModuleOptions>({
     addServerHandler({ route: opts.routes.forgotPassword, method: 'post', handler: resolve('runtime/server/routes/auth/forgot-password.post') })
     addServerHandler({ route: opts.routes.resetPassword, method: 'post', handler: resolve('runtime/server/routes/auth/reset-password.post') })
     addServerHandler({ route: opts.routes.phoneStart, method: 'post', handler: resolve('runtime/server/routes/auth/phone/start.post') })
+    addServerHandler({ route: opts.routes.phoneResend, method: 'post', handler: resolve('runtime/server/routes/auth/phone/resend.post') })
     addServerHandler({ route: opts.routes.phoneVerify, method: 'post', handler: resolve('runtime/server/routes/auth/phone/verify.post') })
     addServerHandler({ route: opts.routes.phoneCompleteProfile, method: 'post', handler: resolve('runtime/server/routes/auth/phone/complete-profile.post') })
     addServerHandler({ route: `${opts.routes.externalLogin}/:provider`, method: 'get', handler: resolve('runtime/server/routes/auth/external/[provider].get') })

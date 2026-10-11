@@ -109,6 +109,13 @@ export function phoneStartAsync(
   return call<BackendPhoneStartResponse>(cfg, '/identity/phone/start', { method: 'POST', body: JSON.stringify(body) })
 }
 
+export function phoneResendAsync(
+  cfg: ResolvedAuthConfig,
+  body: { flowId: string, captchaResponse?: string },
+): Promise<BackendPhoneStartResponse> {
+  return call<BackendPhoneStartResponse>(cfg, '/identity/phone/resend', { method: 'POST', body: JSON.stringify(body) })
+}
+
 export function phoneVerifyAsync(cfg: ResolvedAuthConfig, body: { flowId: string, code: string }): Promise<BackendPhoneVerifyResponse> {
   return call<BackendPhoneVerifyResponse>(cfg, '/identity/phone/verify', { method: 'POST', body: JSON.stringify(body) })
 }

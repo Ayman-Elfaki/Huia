@@ -46,6 +46,7 @@ export default defineNuxtConfig({
     routes: {
       // ...register/login/logout/refresh/session/confirmEmail/resendConfirmation/forgotPassword/resetPassword
       phoneStart: '/auth/phone/start',
+      phoneResend: '/auth/phone/resend',
       phoneVerify: '/auth/phone/verify',
       phoneCompleteProfile: '/auth/phone/complete-profile',
       externalLogin: '/auth/external',            // + '/{provider}'
@@ -107,10 +108,14 @@ logout()   // purely local: clears the session cookie + stored tokens, no server
 `login()` also accepts `twoFactorCode`/`twoFactorRecoveryCode` for accounts with 2FA enabled.
 
 ```ts
-const { startPhoneLogin, verifyPhoneLogin, completePhoneProfile, externalLoginHref, exchangeExternalCode, completeExternalProfile } = useHuia()
+const { startPhoneLogin, resendPhoneLogin, verifyPhoneLogin, completePhoneProfile, externalLoginHref, exchangeExternalCode, completeExternalProfile } = useHuia()
 
-const { flowId } = await startPhoneLogin({ phoneNumber: '+12025550123' })
-const verified = await verifyPhoneLogin({ flowId, code })
+// started: { ok, flowId, maskedPhoneNumber, codeLength, expiresInSeconds, resendAvailableInSeconds }
+// on failure `error` is the backend problem: { error: 'rate_limited' | 'daily_limit' | ..., retryAfterSeconds? }
+const started = await startPhoneLogin({ phoneNumber: '+12025550123' })
+const { flowId } = started
+await resendPhoneLogin({ flowId })   // 429 resend_too_soon (+ retryAfterSeconds) inside the cooldown
+const verified = await verifyPhoneLogin({ flowId, code })   // wrong code: error.attemptsRemaining
 if (verified.requiresProfile) {
   await completePhoneProfile({ flowId: verified.flowId, firstName, lastName })
 }

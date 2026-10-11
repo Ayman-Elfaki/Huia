@@ -73,12 +73,16 @@ export interface BackendMeResponse {
 /** `POST identity/phone/start`'s response. */
 export interface BackendPhoneStartResponse {
   flowId: string
+  maskedPhoneNumber: string
+  codeLength: number
+  expiresInSeconds: number
+  resendAvailableInSeconds: number
 }
 
 /** `POST identity/phone/verify` or `.../complete-profile`'s response — either shape, never both. */
 export type BackendPhoneVerifyResponse =
-  | (BackendTokenResponse & { requiresProfile?: never })
-  | { flowId: string, requiresProfile: true }
+  | (BackendTokenResponse & { status?: never })
+  | { status: 'requires_profile', flowId: string, maskedPhoneNumber: string }
 
 /** `POST identity/account/external/exchange` or `.../complete-profile`'s response — either shape. */
 export type BackendExternalExchangeResponse =

@@ -12,8 +12,27 @@ export interface HuiaLoginResult {
 /** Either a completed sign-in, or a first-time sign-up still needing a first/last name. */
 export type HuiaFlowResult =
   | { ok: true, requiresProfile: false, user: UserClaims }
-  | { ok: true, requiresProfile: true, flowId: string, email?: string | null, firstName?: string | null, lastName?: string | null }
+  | { ok: true, requiresProfile: true, flowId: string, maskedPhoneNumber?: string, email?: string | null, firstName?: string | null, lastName?: string | null }
   | { ok: false, requiresProfile: false, error: unknown }
+
+/**
+ * What `startPhoneLogin` / `resendPhoneLogin` return. On success everything a code-entry screen needs;
+ * on failure `error` is the backend problem, `{ error: 'rate_limited' | 'daily_limit' | 'resend_too_soon' | 'invalid' | ...,
+ * retryAfterSeconds? }`, or a `{ errors }` validation body.
+ */
+export interface HuiaPhoneCodeResult {
+  ok: boolean
+  flowId?: string
+  /** The destination number, masked for display. */
+  maskedPhoneNumber?: string
+  /** How many digits the code has. */
+  codeLength?: number
+  /** How long the code stays valid. */
+  expiresInSeconds?: number
+  /** How long until `resendPhoneLogin` is accepted. */
+  resendAvailableInSeconds?: number
+  error?: unknown
+}
 
 export function useHuia() {
   const { user, loggedIn, session, hasRole, hasAnyRole, fetch: fetchSession, clear } = useUserSession()
@@ -22,11 +41,28 @@ export function useHuia() {
     loginPath: string
     logoutPath: string
     phoneStartPath: string
+    phoneResendPath: string
     phoneVerifyPath: string
     phoneCompleteProfilePath: string
     externalLoginPath: string
     externalExchangePath: string
     externalCompleteProfilePath: string
+  }
+
+  async function sendPhoneCode(path: string, body: Record<string, unknown>): Promise<HuiaPhoneCodeResult> {
+    try {
+      const result = await useRequestFetch()(path, { method: 'POST', body }) as {
+        flowId: string
+        maskedPhoneNumber: string
+        codeLength: number
+        expiresInSeconds: number
+        resendAvailableInSeconds: number
+      }
+      return { ok: true, ...result }
+    }
+    catch (err) {
+      return { ok: false, error: problemData(err) }
+    }
   }
 
   return {
@@ -62,30 +98,36 @@ export function useHuia() {
     /** Local logout — clears the session cookie and the stored tokens. Never redirects. */
     logout: clear,
 
-    /** Sends a one-time SMS code and returns an opaque `flowId` — pass it to `verifyPhoneLogin`. */
-    async startPhoneLogin(opts: { phoneNumber: string, country?: string, captchaResponse?: string }): Promise<{ ok: boolean, flowId?: string, error?: unknown }> {
-      try {
-        const result = await useRequestFetch()(paths.phoneStartPath, { method: 'POST', body: opts }) as { flowId: string }
-        return { ok: true, flowId: result.flowId }
-      }
-      catch (err) {
-        return { ok: false, error: errorData(err) }
-      }
+    /**
+     * Sends a one-time SMS code and returns an opaque `flowId` — pass it to `verifyPhoneLogin` — along with
+     * what a code-entry screen needs: the masked number, the code length, and the expiry / resend windows.
+     * On failure `error` carries the backend's `{ error, retryAfterSeconds? }` problem.
+     */
+    async startPhoneLogin(opts: { phoneNumber: string, country?: string, captchaResponse?: string }): Promise<HuiaPhoneCodeResult> {
+      return sendPhoneCode(paths.phoneStartPath, opts)
+    },
+
+    /**
+     * Sends a fresh code for an in-progress flow. The backend enforces the resend cooldown: too early is
+     * `{ ok: false, error: { error: 'resend_too_soon', retryAfterSeconds } }`.
+     */
+    async resendPhoneLogin(opts: { flowId: string, captchaResponse?: string }): Promise<HuiaPhoneCodeResult> {
+      return sendPhoneCode(paths.phoneResendPath, opts)
     },
 
     /** Verifies a phone one-time code. Signs in directly, or reports a first-time sign-up needs a name. */
     async verifyPhoneLogin(opts: { flowId: string, code: string }): Promise<HuiaFlowResult> {
       try {
         const result = await useRequestFetch()(paths.phoneVerifyPath, { method: 'POST', body: opts }) as
-          { requiresProfile: true, flowId: string } | { user: UserClaims }
+          { requiresProfile: true, flowId: string, maskedPhoneNumber?: string } | { user: UserClaims }
         if ('requiresProfile' in result) {
-          return { ok: true, requiresProfile: true, flowId: result.flowId }
+          return { ok: true, requiresProfile: true, flowId: result.flowId, maskedPhoneNumber: result.maskedPhoneNumber }
         }
         await fetchSession()
         return { ok: true, requiresProfile: false, user: result.user }
       }
       catch (err) {
-        return { ok: false, requiresProfile: false, error: errorData(err) }
+        return { ok: false, requiresProfile: false, error: problemData(err) }
       }
     },
 
@@ -97,7 +139,7 @@ export function useHuia() {
         return { ok: true, user: result.user }
       }
       catch (err) {
-        return { ok: false, error: errorData(err) }
+        return { ok: false, error: problemData(err) }
       }
     },
 
@@ -139,6 +181,12 @@ export function useHuia() {
       }
     },
   }
+}
+
+/** The backend problem body (`{ error, retryAfterSeconds?, attemptsRemaining? }`) behind a failed BFF call. */
+function problemData(err: unknown): unknown {
+  const body = (err as { data?: { data?: unknown } } | undefined)?.data
+  return body?.data ?? body ?? err
 }
 
 function errorData(err: unknown): unknown {

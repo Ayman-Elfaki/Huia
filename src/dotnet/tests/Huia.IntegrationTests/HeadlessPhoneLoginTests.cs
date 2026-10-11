@@ -44,7 +44,7 @@ public sealed class HeadlessPhoneLoginTests
 
         var verify = await host.Client.PostAsJsonAsync("identity/phone/verify", new { flowId, code });
         verify.EnsureSuccessStatusCode();
-        (await verify.Content.ReadFromJsonAsync<VerifyResponse>(Json))!.RequiresProfile.ShouldBeTrue();
+        (await verify.Content.ReadFromJsonAsync<VerifyResponse>(Json))!.Status.ShouldBe("requires_profile");
 
         var complete = await host.Client.PostAsJsonAsync("identity/phone/complete-profile",
             new { flowId, firstName = "Percy", lastName = "Phone" });
@@ -77,7 +77,7 @@ public sealed class HeadlessPhoneLoginTests
         verify.EnsureSuccessStatusCode();
 
         // Already has a name — verify signs in directly (the response is the bearer token body, not
-        // {requiresProfile: true}).
+        // {status: "requires_profile"}).
         var tokens = await verify.Content.ReadFromJsonAsync<TokenResponse>(Json);
         tokens!.AccessToken.ShouldNotBeNullOrEmpty();
     }
@@ -107,7 +107,136 @@ public sealed class HeadlessPhoneLoginTests
         start.IsSuccessStatusCode.ShouldBeFalse();
     }
 
-    private static async Task<HeadlessTestHost> StartAsync()
+    [Fact]
+    public async Task Start_reports_the_code_length_expiry_and_resend_window_and_a_masked_number()
+    {
+        await using var host = await StartAsync(phone =>
+        {
+            phone.CodeLength = 8;
+            phone.CodeLifetime = TimeSpan.FromMinutes(3);
+            phone.ResendCooldown = TimeSpan.FromSeconds(45);
+        });
+        var number = FreshNumber();
+
+        var start = await host.Client.PostAsJsonAsync("identity/phone/start", new { phoneNumber = number });
+        start.EnsureSuccessStatusCode();
+        var body = (await start.Content.ReadFromJsonAsync<StartResponse>(Json))!;
+
+        body.CodeLength.ShouldBe(8);
+        body.ExpiresInSeconds.ShouldBe(180);
+        body.ResendAvailableInSeconds.ShouldBe(45);
+        body.MaskedPhoneNumber.ShouldNotContain(number);
+        body.MaskedPhoneNumber.ShouldEndWith(number[^4..]);
+        host.Sms.LastCode(number)!.Length.ShouldBe(8);
+    }
+
+    [Fact]
+    public async Task Resend_inside_the_cooldown_is_rejected_with_retry_after()
+    {
+        await using var host = await StartAsync();
+        var number = FreshNumber();
+        var start = await host.Client.PostAsJsonAsync("identity/phone/start", new { phoneNumber = number });
+        var flowId = (await start.Content.ReadFromJsonAsync<StartResponse>(Json))!.FlowId;
+
+        var resend = await host.Client.PostAsJsonAsync("identity/phone/resend", new { flowId });
+
+        resend.StatusCode.ShouldBe(System.Net.HttpStatusCode.TooManyRequests);
+        var problem = (await resend.Content.ReadFromJsonAsync<ProblemResponse>(Json))!;
+        problem.Error.ShouldBe("resend_too_soon");
+        problem.RetryAfterSeconds.ShouldNotBeNull();
+        problem.RetryAfterSeconds.Value.ShouldBeInRange(1, 30);
+    }
+
+    [Fact]
+    public async Task Resend_after_the_cooldown_issues_a_new_code_that_replaces_the_old_one()
+    {
+        await using var host = await StartAsync(phone => phone.ResendCooldown = TimeSpan.Zero);
+        var number = FreshNumber();
+        await host.SeedPhoneUserAsync(number, "Rita", "Resend");
+
+        var start = await host.Client.PostAsJsonAsync("identity/phone/start", new { phoneNumber = number });
+        var flowId = (await start.Content.ReadFromJsonAsync<StartResponse>(Json))!.FlowId;
+        var firstCode = host.Sms.LastCode(number)!;
+
+        var resend = await host.Client.PostAsJsonAsync("identity/phone/resend", new { flowId });
+        resend.EnsureSuccessStatusCode();
+        (await resend.Content.ReadFromJsonAsync<StartResponse>(Json))!.FlowId.ShouldBe(flowId);
+        var secondCode = host.Sms.LastCode(number)!;
+
+        if (secondCode != firstCode)
+        {
+            var stale = await host.Client.PostAsJsonAsync("identity/phone/verify", new { flowId, code = firstCode });
+            stale.IsSuccessStatusCode.ShouldBeFalse();
+        }
+
+        var verify = await host.Client.PostAsJsonAsync("identity/phone/verify", new { flowId, code = secondCode });
+        verify.EnsureSuccessStatusCode();
+        (await verify.Content.ReadFromJsonAsync<TokenResponse>(Json))!.AccessToken.ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Resend_re_uses_the_pending_signup_so_a_new_number_can_still_complete()
+    {
+        await using var host = await StartAsync(phone => phone.ResendCooldown = TimeSpan.Zero);
+        var number = FreshNumber();
+        var start = await host.Client.PostAsJsonAsync("identity/phone/start", new { phoneNumber = number });
+        var flowId = (await start.Content.ReadFromJsonAsync<StartResponse>(Json))!.FlowId;
+
+        (await host.Client.PostAsJsonAsync("identity/phone/resend", new { flowId })).EnsureSuccessStatusCode();
+
+        var verify = await host.Client.PostAsJsonAsync("identity/phone/verify", new { flowId, code = host.Sms.LastCode(number) });
+        verify.EnsureSuccessStatusCode();
+        (await verify.Content.ReadFromJsonAsync<VerifyResponse>(Json))!.Status.ShouldBe("requires_profile");
+    }
+
+    [Fact]
+    public async Task Resend_for_an_unknown_flow_is_rejected()
+    {
+        await using var host = await StartAsync();
+
+        var resend = await host.Client.PostAsJsonAsync("identity/phone/resend", new { flowId = "does-not-exist" });
+
+        resend.StatusCode.ShouldBe(System.Net.HttpStatusCode.BadRequest);
+        (await resend.Content.ReadFromJsonAsync<ProblemResponse>(Json))!.Error.ShouldBe("invalid");
+    }
+
+    [Fact]
+    public async Task A_wrong_code_reports_the_attempts_remaining()
+    {
+        await using var host = await StartAsync(phone => phone.MaxVerificationAttempts = 3);
+        var number = FreshNumber();
+        var start = await host.Client.PostAsJsonAsync("identity/phone/start", new { phoneNumber = number });
+        var flowId = (await start.Content.ReadFromJsonAsync<StartResponse>(Json))!.FlowId;
+        var wrongCode = host.Sms.LastCode(number) == "000000" ? "111111" : "000000";
+
+        var first = await host.Client.PostAsJsonAsync("identity/phone/verify", new { flowId, code = wrongCode });
+
+        first.StatusCode.ShouldBe(System.Net.HttpStatusCode.BadRequest);
+        var problem = (await first.Content.ReadFromJsonAsync<ProblemResponse>(Json))!;
+        problem.Error.ShouldBe("invalid");
+        problem.AttemptsRemaining.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task An_unknown_number_without_auto_provisioning_gets_the_same_start_shape_as_a_known_one()
+    {
+        await using var host = await StartAsync(phone => phone.AllowAutoProvisioning = false);
+        var known = FreshNumber();
+        var unknown = FreshNumber();
+        await host.SeedPhoneUserAsync(known, "Kim", "Known");
+
+        var knownBody = (await (await host.Client.PostAsJsonAsync("identity/phone/start", new { phoneNumber = known }))
+            .Content.ReadFromJsonAsync<StartResponse>(Json))!;
+        var unknownBody = (await (await host.Client.PostAsJsonAsync("identity/phone/start", new { phoneNumber = unknown }))
+            .Content.ReadFromJsonAsync<StartResponse>(Json))!;
+
+        unknownBody.CodeLength.ShouldBe(knownBody.CodeLength);
+        unknownBody.ExpiresInSeconds.ShouldBe(knownBody.ExpiresInSeconds);
+        unknownBody.ResendAvailableInSeconds.ShouldBe(knownBody.ResendAvailableInSeconds);
+        host.Sms.LastCode(unknown).ShouldBeNull();
+    }
+
+    private static async Task<HeadlessTestHost> StartAsync(Action<Huia.Options.PhoneAuthenticationMethod>? configurePhone = null)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync();
@@ -129,7 +258,11 @@ public sealed class HeadlessPhoneLoginTests
                         {
                             huia.UseIssuer("https://headless-phone.test");
                             huia.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false);
-                            huia.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
+                            huia.UsePhoneLogin(phone =>
+                            {
+                                phone.AllowAutoProvisioning = true;
+                                configurePhone?.Invoke(phone);
+                            });
                         })
                         .AddEntityFrameworkCoreStores<HuiaDbContext>();
                 });
@@ -176,9 +309,12 @@ public sealed class HeadlessPhoneLoginTests
         }
     }
 
-    private sealed record StartResponse(string FlowId);
+    private sealed record StartResponse(
+        string FlowId, string MaskedPhoneNumber, int CodeLength, int ExpiresInSeconds, int ResendAvailableInSeconds);
 
-    private sealed record VerifyResponse(string FlowId, bool RequiresProfile);
+    private sealed record VerifyResponse(string FlowId, string MaskedPhoneNumber, string Status);
+
+    private sealed record ProblemResponse(string Error, int? RetryAfterSeconds, int? AttemptsRemaining);
 
     private sealed record TokenResponse(string TokenType, string AccessToken, int ExpiresIn, string RefreshToken);
 

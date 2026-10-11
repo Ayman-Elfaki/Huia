@@ -7,6 +7,18 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Changed
 
+- **`Huia` / `Huia.Headless` / `Huia.OpenId`** — Phone login redesign. **Breaking:** `IOtpService<TUser>.VerifyAsync`
+  and `IPendingPhoneSignup.Verify` now return `OtpVerifyOutcome` (`Result` + `AttemptsRemaining`) instead of a bare
+  `OtpVerifyResult`. `Huia.Headless`: `POST identity/phone/start` now returns
+  `{ flowId, maskedPhoneNumber, codeLength, expiresInSeconds, resendAvailableInSeconds }`; new
+  `POST identity/phone/resend` re-sends on the same flow with a server-enforced `ResendCooldown` (`429
+  resend_too_soon`); `verify`'s "needs a name" response is now `{ status: "requires_profile", flowId,
+  maskedPhoneNumber }` (was `{ flowId, requiresProfile: true }`); error bodies gain `attemptsRemaining`.
+  `PhoneLoginFlow` gains `LastSentUtc` / `ResendCount` and `IPhoneLoginFlowStore` gains `MarkSent`.
+  `Huia.OpenId` Razor flow: the resend cooldown is enforced server-side (and survives a reload), wrong codes
+  show "N attempts left", expired / too-many-attempts have their own messages, and the code page links back to
+  change the number. The Nuxt / Next BFFs and `huia-auth-core` gain `resendPhoneLogin` / `phoneResend` and the new fields.
+
 - **`Huia`** — New `Huia.Multitenancy.IHuiaTenantProvider`, a read-only dictionary of the tenants Huia serves
   (default: the code-first `HuiaOptions.Tenants`). The endpoints, seeders, key-lifecycle service, email / SMS
   senders, readiness check, security-headers middleware and account UI now read tenants from it instead of

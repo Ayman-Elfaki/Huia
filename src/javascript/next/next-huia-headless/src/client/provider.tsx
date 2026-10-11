@@ -3,6 +3,20 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { UserSession, UserClaims, HuiaLoginResult, HuiaFlowResult } from '../types.js'
 
+/**
+ * What `startPhoneLogin` / `resendPhoneLogin` resolve to. On failure `error` is the backend problem,
+ * `{ error: 'rate_limited' | 'daily_limit' | 'resend_too_soon' | 'invalid' | ..., retryAfterSeconds? }`.
+ */
+export interface HuiaPhoneCodeResult {
+  ok: boolean
+  flowId?: string
+  maskedPhoneNumber?: string
+  codeLength?: number
+  expiresInSeconds?: number
+  resendAvailableInSeconds?: number
+  error?: unknown
+}
+
 export interface HuiaHeadlessContextValue {
   session: UserSession
   user: UserClaims | null
@@ -17,7 +31,8 @@ export interface HuiaHeadlessContextValue {
 
   register: (opts: { email: string; password: string; firstName?: string; lastName?: string; phoneNumber: string; country?: string }) => Promise<{ ok: boolean; error?: unknown }>
   login: (opts: { email: string; password: string; twoFactorCode?: string; twoFactorRecoveryCode?: string }) => Promise<HuiaLoginResult>
-  startPhoneLogin: (opts: { phoneNumber: string; country?: string; captchaResponse?: string }) => Promise<{ ok: boolean; flowId?: string; expiresInSeconds?: number; error?: unknown }>
+  startPhoneLogin: (opts: { phoneNumber: string; country?: string; captchaResponse?: string }) => Promise<HuiaPhoneCodeResult>
+  resendPhoneLogin: (opts: { flowId: string; captchaResponse?: string }) => Promise<HuiaPhoneCodeResult>
   verifyPhoneLogin: (opts: { flowId: string; code: string }) => Promise<HuiaFlowResult>
   completePhoneProfile: (opts: { flowId: string; firstName: string; lastName: string }) => Promise<HuiaLoginResult>
   externalLoginHref: (provider: string, returnTo?: string) => string
@@ -124,23 +139,40 @@ export function HuiaHeadlessProvider({
     [baseAuthPath, fetchSession],
   )
 
-  const startPhoneLogin = useCallback(
-    async (opts: { phoneNumber: string; country?: string; captchaResponse?: string }) => {
+  const sendPhoneCode = useCallback(
+    async (action: 'phone-start' | 'phone-resend', body: unknown): Promise<HuiaPhoneCodeResult> => {
       try {
-        const res = await fetch(`${baseAuthPath}/phone-start`, {
+        const res = await fetch(`${baseAuthPath}/${action}`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(opts),
+          body: JSON.stringify(body),
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) return { ok: false, error: data }
-        return { ok: true, flowId: data.flowId, expiresInSeconds: data.expiresInSeconds }
+        return {
+          ok: true,
+          flowId: data.flowId,
+          maskedPhoneNumber: data.maskedPhoneNumber,
+          codeLength: data.codeLength,
+          expiresInSeconds: data.expiresInSeconds,
+          resendAvailableInSeconds: data.resendAvailableInSeconds,
+        }
       }
       catch (error) {
         return { ok: false, error }
       }
     },
     [baseAuthPath],
+  )
+
+  const startPhoneLogin = useCallback(
+    (opts: { phoneNumber: string; country?: string; captchaResponse?: string }) => sendPhoneCode('phone-start', opts),
+    [sendPhoneCode],
+  )
+
+  const resendPhoneLogin = useCallback(
+    (opts: { flowId: string; captchaResponse?: string }) => sendPhoneCode('phone-resend', opts),
+    [sendPhoneCode],
   )
 
   const verifyPhoneLogin = useCallback(
@@ -159,8 +191,7 @@ export function HuiaHeadlessProvider({
             ok: true,
             requiresProfile: true,
             flowId: data.flowId ?? opts.flowId,
-            firstName: data.firstName,
-            lastName: data.lastName,
+            maskedPhoneNumber: data.maskedPhoneNumber,
           }
         }
 
@@ -289,6 +320,7 @@ export function HuiaHeadlessProvider({
         register,
         login,
         startPhoneLogin,
+        resendPhoneLogin,
         verifyPhoneLogin,
         completePhoneProfile,
         externalLoginHref,

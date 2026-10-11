@@ -95,5 +95,5 @@ export interface HuiaLoginResult {
 
 export type HuiaFlowResult =
   | { ok: true; requiresProfile: false; user: UserClaims }
-  | { ok: true; requiresProfile: true; flowId: string; email?: string | null; firstName?: string | null; lastName?: string | null }
+  | { ok: true; requiresProfile: true; flowId: string; maskedPhoneNumber?: string; email?: string | null; firstName?: string | null; lastName?: string | null }
   | { ok: false; requiresProfile: false; error: unknown }

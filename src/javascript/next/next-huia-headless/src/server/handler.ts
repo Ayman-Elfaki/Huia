@@ -45,6 +45,9 @@ export function createHuiaHeadlessHandler(configInput: HuiaHeadlessConfig) {
       if (method === 'POST' && action === 'phone-start') {
         return await handlePhoneStart(req)
       }
+      if (method === 'POST' && action === 'phone-resend') {
+        return await handlePhoneResend(req)
+      }
       if (method === 'POST' && action === 'phone-verify') {
         return await handlePhoneVerify(req)
       }
@@ -154,16 +157,21 @@ export function createHuiaHeadlessHandler(configInput: HuiaHeadlessConfig) {
     return NextResponse.json(result, { status: 200 })
   }
 
+  async function handlePhoneResend(req: NextRequest): Promise<NextResponse> {
+    const body = await req.json()
+    const result = await client.phoneResend(body)
+    return NextResponse.json(result, { status: 200 })
+  }
+
   async function handlePhoneVerify(req: NextRequest): Promise<NextResponse> {
     const body = await req.json()
     const result = await client.phoneVerify(body)
 
-    if (result.requiresProfile) {
+    if (result.status === 'requires_profile') {
       return NextResponse.json({
         requiresProfile: true,
         flowId: result.flowId ?? body.flowId,
-        firstName: result.firstName,
-        lastName: result.lastName,
+        maskedPhoneNumber: result.maskedPhoneNumber,
       }, { status: 200 })
     }
 

@@ -22,6 +22,9 @@ public sealed record AuthFlowState
     /// <summary>Identifier of a pending auto-provisioning record (number with no account yet).</summary>
     public string? PendingSignupId { get; init; }
 
+    /// <summary>When the one-time code for this flow was last sent; drives the server-enforced resend cooldown.</summary>
+    public DateTimeOffset? CodeSentUtc { get; init; }
+
     /// <summary>The existing user the flow resolved to (for example a blank-name account completing its profile).</summary>
     public string? UserId { get; init; }
 

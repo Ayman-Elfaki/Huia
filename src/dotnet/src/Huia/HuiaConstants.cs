@@ -343,6 +343,9 @@ public static class HuiaConstants
                 /// <summary>The headless phone sign-in start endpoint name.</summary>
                 public const string Start = "huia.headless.phone.start";
 
+                /// <summary>The headless phone sign-in resend-code endpoint name.</summary>
+                public const string Resend = "huia.headless.phone.resend";
+
                 /// <summary>The headless phone sign-in verify endpoint name.</summary>
                 public const string Verify = "huia.headless.phone.verify";
 

@@ -287,6 +287,18 @@
     color: var(--muted-foreground);
   }
 
+  .huia-verify-change {
+    margin: -0.5rem 0 0;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
+  .huia-verify-change a {
+    color: var(--muted-foreground);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .huia-verify-form {
     display: flex;
     flex-direction: column;

@@ -379,6 +379,18 @@
   <data name="VerifyOtp.RateLimitedDaily" xml:space="preserve">
     <value>This number has reached its daily sign-in limit. Please try again tomorrow.</value>
   </data>
+  <data name="VerifyOtp.Expired" xml:space="preserve">
+    <value>That code has expired. Send a new code to continue.</value>
+  </data>
+  <data name="VerifyOtp.TooManyAttempts" xml:space="preserve">
+    <value>Too many incorrect attempts. Send a new code to continue.</value>
+  </data>
+  <data name="VerifyOtp.AttemptsLeft" xml:space="preserve">
+    <value>That code is not correct. {0} attempts left.</value>
+  </data>
+  <data name="VerifyOtp.ChangeNumber" xml:space="preserve">
+    <value>Use a different number</value>
+  </data>
   <data name="CompleteProfile.Title" xml:space="preserve">
     <value>Complete your profile</value>
   </data>

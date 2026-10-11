@@ -42,7 +42,7 @@ public interface IPendingPhoneSignup
     /// <param name="code">The candidate code.</param>
     /// <param name="options">The tenant's phone-login options.</param>
     /// <returns>The verification outcome.</returns>
-    OtpVerifyResult Verify(string id, string code, PhoneAuthenticationMethod options);
+    OtpVerifyOutcome Verify(string id, string code, PhoneAuthenticationMethod options);
 
     /// <summary>Drops a record.</summary>
     /// <param name="id">The record id.</param>
@@ -87,34 +87,34 @@ internal sealed class PendingPhoneSignup(TimeProvider timeProvider) : IPendingPh
     public PendingPhoneSignupRecord? Get(string id) =>
         TryGetLive(id, out var entry) ? new PendingPhoneSignupRecord(id, entry.TenantId, entry.PhoneNumber, entry.Verified) : null;
 
-    public OtpVerifyResult Verify(string id, string code, PhoneAuthenticationMethod options)
+    public OtpVerifyOutcome Verify(string id, string code, PhoneAuthenticationMethod options)
     {
         if (!TryGetLive(id, out var entry))
         {
-            return OtpVerifyResult.NotFound;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.NotFound);
         }
 
         if (timeProvider.GetUtcNow() >= entry.CodeExpiresUtc)
         {
             _entries.TryRemove(id, out _);
-            return OtpVerifyResult.Expired;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.Expired);
         }
 
         if (OtpHashing.Verify(code, entry.Hash, entry.Salt))
         {
             _entries[id] = entry with { Verified = true };
-            return OtpVerifyResult.Success;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.Success);
         }
 
         var attempts = entry.Attempts + 1;
         if (attempts >= options.MaxVerificationAttempts)
         {
             _entries.TryRemove(id, out _);
-            return OtpVerifyResult.TooManyAttempts;
+            return OtpVerifyOutcome.Of(OtpVerifyResult.TooManyAttempts);
         }
 
         _entries[id] = entry with { Attempts = attempts };
-        return OtpVerifyResult.Invalid;
+        return new OtpVerifyOutcome(OtpVerifyResult.Invalid, options.MaxVerificationAttempts - attempts);
     }
 
     public void Remove(string id) => _entries.TryRemove(id, out _);

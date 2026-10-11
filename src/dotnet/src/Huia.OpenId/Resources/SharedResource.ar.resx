@@ -379,6 +379,18 @@
   <data name="VerifyOtp.RateLimitedDaily" xml:space="preserve">
     <value>وصل هذا الرقم إلى الحد اليومي لتسجيل الدخول. حاول مرة أخرى غدًا.</value>
   </data>
+  <data name="VerifyOtp.Expired" xml:space="preserve">
+    <value>انتهت صلاحية الرمز. أرسل رمزًا جديدًا للمتابعة.</value>
+  </data>
+  <data name="VerifyOtp.TooManyAttempts" xml:space="preserve">
+    <value>محاولات خاطئة كثيرة. أرسل رمزًا جديدًا للمتابعة.</value>
+  </data>
+  <data name="VerifyOtp.AttemptsLeft" xml:space="preserve">
+    <value>الرمز غير صحيح. المحاولات المتبقية: {0}.</value>
+  </data>
+  <data name="VerifyOtp.ChangeNumber" xml:space="preserve">
+    <value>استخدام رقم آخر</value>
+  </data>
   <data name="CompleteProfile.Title" xml:space="preserve">
     <value>أكمل ملفك الشخصي</value>
   </data>

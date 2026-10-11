@@ -59,6 +59,10 @@ sequenceDiagram
 
 Key points:
 
+- The resend cooldown (`ResendCooldown`) is enforced on the server: the Razor flow stamps `CodeSentUtc` into the
+  protected flow token and the JSON flow keeps `LastSentUtc` on the flow record, so a page reload or a scripted
+  client cannot bypass the button's countdown. A wrong code reports how many attempts remain
+  (`OtpVerifyOutcome.AttemptsRemaining`); `Expired` and `TooManyAttempts` have their own messages / error codes.
 - The account is **never created at code-request time** — a `IPendingPhoneSignup` record holds the
   hashed code until `CompleteProfile` calls `HuiaUserManager.CreatePhoneUserAsync`, so a blank-name
   user is never persisted.

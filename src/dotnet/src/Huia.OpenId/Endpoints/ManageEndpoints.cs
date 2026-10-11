@@ -340,9 +340,13 @@ internal static class ManageEndpoints
         }
 
         var verify = await otpService.VerifyAsync(user, body.Code, options);
-        if (verify != OtpVerifyResult.Success)
+        if (!verify.Succeeded)
         {
-            return Results.BadRequest(new { error = verify.ToString().ToLowerInvariant() });
+            return Results.BadRequest(new
+            {
+                error = verify.Result.ToString().ToLowerInvariant(),
+                attemptsRemaining = verify.AttemptsRemaining,
+            });
         }
 
         user.PhoneNumber = pending;

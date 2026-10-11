@@ -105,7 +105,8 @@ app.Run();
 | `/identity/login` | `POST` | Anonymous | Sign in with email and password, returning bearer token |
 | `/identity/refresh` | `POST` | Anonymous | Exchange a refresh token for fresh access/refresh tokens |
 | `/identity/me` | `GET` | Bearer | Current user profile (`sub`, `email`, `firstName`, `lastName`, `roles`) |
-| `/identity/phone/start` | `POST` | Anonymous | Request SMS OTP for a phone number |
+| `/identity/phone/start` | `POST` | Anonymous | Request SMS OTP for a phone number (returns `flowId`, `maskedPhoneNumber`, `codeLength`, `expiresInSeconds`, `resendAvailableInSeconds`) |
+| `/identity/phone/resend` | `POST` | Anonymous | Send a fresh code for an in-progress flow (server-enforced cooldown) |
 | `/identity/phone/verify` | `POST` | Anonymous | Verify SMS OTP code |
 | `/identity/phone/complete-profile` | `POST` | Anonymous | Complete first-time profile for phone signup |
 | `/identity/account/external/{provider}` | `GET` | Anonymous | Initiate external social login challenge |

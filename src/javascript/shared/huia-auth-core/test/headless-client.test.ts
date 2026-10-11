@@ -157,13 +157,28 @@ describe('HuiaHeadlessClient', () => {
 
   describe('phone flow', () => {
     it('phoneStart calls POST /identity/phone/start', async () => {
-      const startRes: BackendPhoneStartResponse = { flowId: 'f1', expiresInSeconds: 300 }
+      const startRes: BackendPhoneStartResponse = {
+        flowId: 'f1', maskedPhoneNumber: '••••7890', codeLength: 6, expiresInSeconds: 300, resendAvailableInSeconds: 30,
+      }
       const fetch = mockFetch(startRes)
       globalThis.fetch = fetch
       const client = new HuiaHeadlessClient({ baseUrl: 'https://id.test' })
 
       const result = await client.phoneStart({ phoneNumber: '+1234567890' })
       expect(result).toEqual(startRes)
+    })
+
+    it('phoneResend calls POST /identity/phone/resend', async () => {
+      const resendRes: BackendPhoneStartResponse = {
+        flowId: 'f1', maskedPhoneNumber: '••••7890', codeLength: 6, expiresInSeconds: 300, resendAvailableInSeconds: 30,
+      }
+      const fetch = mockFetch(resendRes)
+      globalThis.fetch = fetch
+      const client = new HuiaHeadlessClient({ baseUrl: 'https://id.test' })
+
+      const result = await client.phoneResend({ flowId: 'f1' })
+      expect(result).toEqual(resendRes)
+      expect(fetch.mock.calls[0][0]).toBe('https://id.test/identity/phone/resend')
     })
 
     it('phoneVerify calls POST /identity/phone/verify', async () => {

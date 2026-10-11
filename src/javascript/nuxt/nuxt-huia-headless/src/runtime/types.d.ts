@@ -48,6 +48,7 @@ declare module '@nuxt/schema' {
       sessionPath: string
       loginPage: string
       phoneStartPath: string
+      phoneResendPath: string
       phoneVerifyPath: string
       phoneCompleteProfilePath: string
       externalLoginPath: string
