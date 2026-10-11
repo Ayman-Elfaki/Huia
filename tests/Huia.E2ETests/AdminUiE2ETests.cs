@@ -108,6 +108,55 @@ public sealed class AdminUiE2ETests(AppHostFixture host)
         }
     }
 
+    [Fact]
+    public async Task Creates_edits_and_deletes_a_tenant_and_leaves_code_defined_tenants_locked()
+    {
+        await using var session = await BrowserSession.StartAsync();
+        var page = session.Page;
+        var console = CaptureConsole(page);
+
+        try
+        {
+            await SignInAsync(page);
+
+            await page.GotoAsync($"{host.AdminAppUrl}/tenants");
+            await Expect(page.Locator("[data-testid=tenant-table]")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+            await WaitForHydrationAsync(page);
+
+            // Tenants declared in code are listed as static and cannot be edited or deleted.
+            await Expect(page.GetByTestId("tenant-todo")).ToContainTextAsync("static", new() { Timeout = 10_000 });
+            await Expect(page.GetByTestId("tenant-edit-todo")).ToBeDisabledAsync();
+            await Expect(page.GetByTestId("tenant-delete-todo")).ToBeDisabledAsync();
+
+            // Create a dynamic tenant. Retry the click: the Nuxt dev server can still be hydrating.
+            await ClickUntilVisibleAsync(page, "[data-testid=tenant-create]", "[data-testid=tenant-form]");
+            await page.FillAsync("[data-testid=tenant-id]", "e2e-acme");
+            await page.FillAsync("[data-testid=tenant-display]", "E2E Acme");
+            await page.FillAsync("[data-testid=tenant-roles]", "support");
+            await page.ClickAsync("[data-testid=tenant-submit]");
+
+            var row = page.GetByTestId("tenant-e2e-acme");
+            await Expect(row).ToBeVisibleAsync(new() { Timeout = 10_000 });
+            await Expect(row).ToContainTextAsync("dynamic");
+            await Expect(row).ToContainTextAsync("E2E Acme");
+
+            // Edit it.
+            await ClickUntilVisibleAsync(page, "[data-testid=tenant-edit-e2e-acme]", "[data-testid=tenant-form]");
+            await page.FillAsync("[data-testid=tenant-display]", "E2E Acme Two");
+            await page.ClickAsync("[data-testid=tenant-submit]");
+            await Expect(row).ToContainTextAsync("E2E Acme Two", new() { Timeout = 10_000 });
+
+            // Delete it.
+            await page.GetByTestId("tenant-delete-e2e-acme").ClickAsync();
+            await page.GetByTestId("tenant-confirm-delete-e2e-acme").ClickAsync();
+            await Expect(row).ToHaveCountAsync(0, new() { Timeout = 10_000 });
+        }
+        catch (Exception ex)
+        {
+            throw await DiagnoseAsync(page, "tenants", console, ex);
+        }
+    }
+
     private async Task SignInAsync(IPage page)
     {
         await page.GotoAsync($"{host.AdminAppUrl}/", new() { Timeout = 60_000 });

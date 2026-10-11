@@ -93,6 +93,7 @@ huiaBuilder
         // Lower-level Finbuckle multitenancy hooks exposed directly to host applications
     })
     .AddEntityFrameworkCoreStores<IdentityHuiaDbContext, HuiaUser, HuiaRole>()
+    .AddPersistedTenants()
     .AddHuiaUi()
     .AddHuiaSecurityHeaders();
 

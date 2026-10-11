@@ -8,6 +8,7 @@ export interface TenantRow {
   phoneLoginEnabled: boolean
   externalLoginEnabled: boolean
   clientCount: number
+  origin: 'static' | 'dynamic'
 }
 
 export function useTenants() {
