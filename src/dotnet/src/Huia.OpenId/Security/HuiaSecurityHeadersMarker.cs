@@ -1,7 +1,7 @@
 namespace Huia.OpenId.Security;
 
 /// <summary>
-/// Presence marker. <c>AddHuiaSecurityHeaders()</c> registers it as a singleton; <c>UseHuia()</c> only
+/// Presence marker. <c>AddHuiaSecurityHeaders()</c> registers it as a singleton; <c>UseHuiaOpenId()</c> only
 /// inserts <see cref="HuiaSecurityHeadersMiddleware"/> when it can be resolved.
 /// </summary>
 internal sealed class HuiaSecurityHeadersMarker;

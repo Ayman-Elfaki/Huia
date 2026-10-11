@@ -7,7 +7,7 @@ NuGet packages across two authentication flavors:
 
 | Package | Contents |
 |---|---|
-| `Huia` | Domain model, options tree, eventing abstractions, store abstractions (`IHuiaStore`, `IHuiaOpenIdAdminStore`), constants. **No** ASP.NET Core / EF Core dependency. |
+| `Huia` | Domain model, options tree, eventing abstractions, store abstractions (`IHuiaStore`, `IHuiaOpenIdAdminStore`), constants. Uses the ASP.NET Core shared framework but has **no** EF Core, OpenIddict or Finbuckle dependency (enforced by a build guard). |
 | `Huia.OpenId.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId>`, `Huia*`-renamed entities, tenant-scoped Identity + OpenIddict stores, `AddEntityFrameworkCoreStores<...>()` with keyset pagination. Provider-agnostic; ships no migrations. |
 | `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()`, OpenIddict server + client, the Razor Pages account UI, passwordless SMS, key lifecycle jobs, security headers. |
 | `Huia.Headless.EntityFrameworkCore` | Generic single-tenant `HuiaDbContext<TUser,TRole,TId>`, `AddEntityFrameworkCoreStores<...>()` with `MR.AspNetCore.Pagination` keyset and offset pagination. |
@@ -28,16 +28,17 @@ builder.Services.AddHuiaOpenId(huia =>
 }).AddHuiaUi().AddHuiaSecurityHeaders();
 
 var app = builder.Build();
-app.UseHuia();          // exception handler -> localization -> multi-tenant -> security headers -> routing -> authn -> authz
+app.UseHuiaOpenId();    // exception handler -> localization -> multi-tenant -> security headers -> routing -> authn -> authz
 app.MapHuiaEndpoints(); // connect + manage + account UI + external login
-app.MapHuiaAdministrativeEndpoints()
+app.MapHuiaAdminEndpoints()
    .RequireAuthorization(p => p.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator));
 ```
 
 ## Highlights
 
-- **Tenant isolation without an ambient filter** — the custom EF Core stores append an explicit
-  `TenantId` predicate to every query.
+- **Tenant isolation** — Finbuckle's global query filter scopes Identity data, `SaveChanges` stamps and
+  rejects cross-tenant writes, and the OpenIddict, signing-key and admin stores add explicit
+  tenant predicates.
 - **Per-tenant signing keys** — each tenant signs with its own rotated RSA key; Quartz jobs drive the
   `pending → active → rotated → retired` lifecycle; private material is wrapped with Data Protection.
 - **Flows** — authorization code + PKCE (with optional pushed authorization requests), refresh, client credentials, device code, and

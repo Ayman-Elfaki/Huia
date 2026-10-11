@@ -155,7 +155,7 @@ public class HuiaOptionsValidationTests
     [Fact]
     public void Email_and_password_login_is_off_until_UseEmailAndPasswordLogin_is_called()
     {
-        var tenant = new TenantOptions();
+        var tenant = new HuiaTenant();
         tenant.Authentication.IsEmailAndPasswordLoginEnabled.ShouldBeFalse();
 
         tenant.Authentication.UseEmailAndPasswordLogin(password => password.MinimumLength = 12);
@@ -167,7 +167,7 @@ public class HuiaOptionsValidationTests
     [Fact]
     public void Self_service_registration_is_on_by_default_and_DisableRegistration_turns_it_off()
     {
-        var tenant = new TenantOptions();
+        var tenant = new HuiaTenant();
         tenant.Authentication.UseEmailAndPasswordLogin();
         tenant.Authentication.EmailAndPassword!.AllowSelfServiceRegistration.ShouldBeTrue();
 
@@ -179,7 +179,7 @@ public class HuiaOptionsValidationTests
     [Fact]
     public void DisableRegistration_does_not_enable_the_phone_flow_when_it_was_never_used()
     {
-        var tenant = new TenantOptions();
+        var tenant = new HuiaTenant();
 
         tenant.DisableRegistration();
 
@@ -189,7 +189,7 @@ public class HuiaOptionsValidationTests
     [Fact]
     public void DisableRegistration_also_turns_off_phone_auto_provisioning_when_the_phone_flow_is_enabled()
     {
-        var tenant = new TenantOptions();
+        var tenant = new HuiaTenant();
         tenant.Authentication.UseEmailAndPasswordLogin();
         tenant.Authentication.UsePhoneLogin(phone => phone.AllowAutoProvisioning = true);
 

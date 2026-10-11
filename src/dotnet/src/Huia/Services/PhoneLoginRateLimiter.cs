@@ -32,7 +32,7 @@ public interface IPhoneLoginRateLimiter
 
 /// <summary>
 /// In-memory <see cref="IPhoneLoginRateLimiter"/>: a short fixed window plus a rolling daily ceiling,
-/// bucketed by tenant + number and sized from the tenant's <see cref="PhoneOptions"/>. Uses the
+/// bucketed by tenant + number and sized from the tenant's <see cref="PhoneAuthenticationMethod"/>. Uses the
 /// injected <see cref="TimeProvider"/> so tests can drive the clock, and separates a non-consuming
 /// check (<see cref="CanRecordLogin"/>) from the consuming record (<see cref="TryRecordLogin"/>). A
 /// distributed deployment swaps this for a store-backed one.

@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Huia.OpenId reads internal option accessors (e.g. HuiaTenantAuthenticationOptions.Password). -->
+    <!-- Huia.OpenId reads internal option accessors (e.g. HuiaTenantAuthentication.External). -->
     <InternalsVisibleTo Include="Huia.OpenId" />
     <InternalsVisibleTo Include="Huia.Tests" />
     <InternalsVisibleTo Include="Huia.IntegrationTests" />

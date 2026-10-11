@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder;
 
-/// <summary>Maps the Huia HTTP endpoints. Call after <c>UseHuia()</c>.</summary>
+/// <summary>Maps the Huia HTTP endpoints. Call after <c>UseHuiaOpenId()</c>.</summary>
 public static class HuiaEndpointRouteBuilderExtensions
 {
     /// <summary>

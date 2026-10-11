@@ -8,7 +8,7 @@ using OpenIddict.Abstractions;
 namespace Huia.OpenId.OpenIddict;
 
 /// <summary>
-/// Upserts an OpenIddict application for every <see cref="HuiaClientDescriptor"/> in the options tree.
+/// Upserts an OpenIddict application for every <see cref="HuiaApplication"/> in the options tree.
 /// The tenant binding goes into <c>Properties["huia:tenant"]</c>, the home / client / logo URIs into
 /// the matching <c>huia:*</c> properties and the per-client token lifetimes into <c>Settings</c>.
 /// </summary>

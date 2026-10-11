@@ -67,7 +67,7 @@ app.MapHuiaAdminEndpoints()
 | `GET admin/tenants` | read-only — id, display name, sign-in methods, client count |
 | `admin/users` `GET/POST/PUT/DELETE` (+ `…/{id}/roles`, `…/{id}/claims`) | create a password **or** phone account; manage roles and claims; keyset paged; tenant filter |
 | `admin/roles` `GET/POST/PUT/DELETE` | per-tenant; a role with members cannot be deleted |
-| `admin/clients` `GET/POST/PUT/DELETE` | dynamic clients only — `409` on a static one; `HuiaClientDescriptor.Validate()` runs before the mapper |
+| `admin/clients` `GET/POST/PUT/DELETE` | dynamic clients only — `409` on a static one |
 | `admin/scopes` `GET/POST/PUT/DELETE` | dynamic scopes only |
 | `admin/keys` `GET/POST` + `POST admin/keys/{id}/revoke` + `DELETE` | mint pending/active (active demotes the current active to *rotated*); revoke → *retired* (`409` if it is the only active key); delete only a *retired* key |
 

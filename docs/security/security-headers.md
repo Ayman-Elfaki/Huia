@@ -10,7 +10,7 @@ To enable security headers, add the middleware to your ASP.NET Core service regi
 var builder = WebApplication.CreateBuilder(args);
 
 // Register Huia with security headers
-builder.Services.AddHuia(options => { ... })
+builder.Services.AddHuiaOpenId(options => { ... })
     .AddHuiaSecurityHeaders(options =>
     {
         // Custom header configuration (optional)
@@ -19,7 +19,7 @@ builder.Services.AddHuia(options => { ... })
 
 var app = builder.Build();
 
-app.UseHuia();
+app.UseHuiaOpenId();
 
 app.Run();
 ```

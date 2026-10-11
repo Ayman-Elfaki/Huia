@@ -95,7 +95,7 @@ navigation to carry state across steps).
 ## External login
 
 `Huia.OpenId`'s external login is built entirely on the OpenIddict client; `Huia.Headless` has zero
-dependency on OpenIddict, so it implements the same `ExternalLoginOptions`/`ExternalProviderRegistration`
+dependency on OpenIddict, so it implements the same `ExternalLoginAuthenticationMethod` / `ExternalIdentityProvider`
 configuration (shared with `Huia.OpenId` — `tenant.Authentication.UseExternalLogin(ext => ext.AddGoogle(...))`
 works for either flavor) through the classic ASP.NET Core remote-authentication handlers instead:
 `AddGoogle`, `AddMicrosoftAccount`, `AddOpenIdConnect`, and a generic `AddOAuth` for GitHub (no official

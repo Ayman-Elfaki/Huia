@@ -63,7 +63,7 @@ public static class HuiaHeadlessServiceCollectionExtensions
             if (external.AllowedReturnUrlPrefixes.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "Huia.Headless external login needs at least one ExternalLoginOptions.AllowReturnUrlPrefix(...) " +
+                    "Huia.Headless external login needs at least one ExternalLoginAuthenticationMethod.AllowReturnUrlPrefix(...) " +
                     "— the app's own origin(s) the challenge's returnUrl is allowed to point at.");
             }
 

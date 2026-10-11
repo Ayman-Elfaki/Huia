@@ -5,6 +5,15 @@ All notable changes to Huia are documented here. The format is based on
 
 ## [Unreleased]
 
+### Removed
+
+- **`Huia`** — **Breaking.** Dead legacy options types, none of which the live pipeline read:
+  `HuiaTenantAuthenticationOptions`, `EmailAndPasswordLoginOptions`, `ExternalLoginOptions` /
+  `ExternalProviderRegistration`, the `PhoneOptions` / `PasskeyOptions` shims, `TenantOptions` and
+  `HuiaClientDescriptor`. Use `HuiaTenant` (`tenant.Authentication` is a `HuiaTenantAuthentication`,
+  clients are `tenant.AddServerSideWebApplication(...)` etc.) and the `*AuthenticationMethod` /
+  `ExternalIdentityProvider` types instead.
+
 ### Added
 
 - **`Huia`** — `HuiaTenantAuthenticationOptions.DisableRegistration()` turns off every anonymous

@@ -1,12 +1,12 @@
 # Huia — Technical Specification
 
-> A multi-tenant **OpenID Connect / OAuth 2.0 Identity Provider** for ASP.NET Core, shipped as three
-> NuGet packages. Tenants are isolated over base-path routing (`/{tenant}/…`) with per-tenant signing
+> A multi-tenant **OpenID Connect / OAuth 2.0 Identity Provider** for ASP.NET Core, shipped as five
+> NuGet packages across two flavors (multi-tenant OpenIddict and single-tenant Headless). Tenants are isolated over base-path routing (`/{tenant}/…`) with per-tenant signing
 > keys, discovery documents and issuers, per-tenant Identity policy, and a batteries-included Razor
 > account UI.
 
 - **Target framework:** `net10.0` (C# 14, `LangVersion=latest`)
-- **Packages:** `Huia`, `Huia.OpenId.EntityFrameworkCore`, `Huia.OpenId`
+- **Packages:** `Huia`, `Huia.OpenId.EntityFrameworkCore`, `Huia.OpenId`, `Huia.Headless`, `Huia.Headless.EntityFrameworkCore`
 - **Core dependencies:** OpenIddict 7.x (server **and** client), Finbuckle.MultiTenant 10.x, EF Core /
   ASP.NET Core Identity 10.x, Quartz 3.x, `Microsoft.Extensions.Caching.Hybrid`
 - **Configuration section:** `Huia`
@@ -60,15 +60,15 @@ builder.Services.AddHuiaOpenId(huia =>
     .AddHuiaSecurityHeaders();
 
 var app = builder.Build();
-app.UseHuia();                     // pipeline order below
+app.UseHuiaOpenId();                // pipeline order below
 app.MapHuiaEndpoints();            // connect + manage + account UI + external login
 app.MapHuiaAdminEndpoints()
    .RequireAuthorization(p => p.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator));
 ```
 
-### 1.2 `UseHuia()` pipeline order
+### 1.2 `UseHuiaOpenId()` pipeline order
 
-`UseHuia()` fixes the middleware order (`HuiaApplicationBuilderExtensions.cs`):
+`UseHuiaOpenId()` fixes the middleware order (`HuiaApplicationBuilderExtensions.cs`):
 
 ```
 UseExceptionHandler("/identity/account/status/500")
@@ -118,11 +118,11 @@ write, auto-stamps `TenantId` on insert).
 
 | Package | Contents | Depends on |
 |---|---|---|
-| **`Huia`** | Domain model (`HuiaSigningKey` and value objects), the **options tree** (`HuiaOptions` → `TenantOptions` → …), eventing abstractions (`IHuiaEventPublisher`, `HuiaEvents`), constants (`HuiaConstants`). | Nothing framework-specific. A build `Target` fails the compile if an ASP.NET Core / EF Core `PackageReference` is added. |
+| **`Huia`** | Domain model (`HuiaSigningKey` and value objects), the **options tree** (`HuiaOptions` → `HuiaTenant` → …), eventing abstractions (`IHuiaEventPublisher`, `HuiaEvents`), constants (`HuiaConstants`). | The ASP.NET Core shared framework only. A build `Target` (`_HuiaCoreDependencyGuard`) fails the compile if an EF Core, OpenIddict or Finbuckle `PackageReference` is added. |
 | **`Huia.OpenId.EntityFrameworkCore`** | Generic `HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUser, TRole, string>`; `ModelBuilder.UseOpenIddict()`; every table renamed `Huia*` via `ToTable`; the named tenant-scoped composite indexes (`IX_HuiaUsers_Tenant_UserName` unique, `…_Tenant_Email`, `IX_HuiaRoles_Tenant_Name` unique) applied last in `OnModelCreating` (`ApplyTenantScopedIndexes`, superseding Finbuckle's `AdjustUniqueIndexes`); `IMultiTenantContextAccessor` extensions (`CurrentTenantId()` / `RequireCurrentTenantId()`); `HuiaTenantScope.Enter(...)` for seeding / admin. **Ships no migrations** — the consuming app owns the provider and the migration assembly. |
-| **`Huia.OpenId`** | `AddHuia()` / `UseHuia()` / `MapHuiaEndpoints()` / `MapHuiaAdminEndpoints()`; OpenIddict **server** + **client** config; the Razor Pages account UI (`Areas/Identity/Pages/Account/**`, en/ar, RTL, a committed JS bundle under `wwwroot/`); passwordless SMS (`IOtpService`, `IPhoneNumberService`, `IPendingPhoneSignup`, rate limiters); `HuiaUserManager`; the key-lifecycle Quartz jobs + `IHuiaKeyRing`; `AddHuiaSecurityHeaders()`; `IHuiaEmailSender` (MailKit) + Razor email rendering. |
+| **`Huia.OpenId`** | `AddHuiaOpenId()` / `UseHuiaOpenId()` / `MapHuiaEndpoints()` / `MapHuiaAdminEndpoints()`; OpenIddict **server** + **client** config; the Razor Pages account UI (`Areas/Identity/Pages/Account/**`, en/ar, RTL, a committed JS bundle under `wwwroot/`); passwordless SMS (`IOtpService`, `IPhoneNumberService`, `IPendingPhoneSignup`, rate limiters); `HuiaUserManager`; the key-lifecycle Quartz jobs + `IHuiaKeyRing`; `AddHuiaSecurityHeaders()`; `IHuiaEmailSender` (MailKit) + Razor email rendering. |
 
-`Huia` and `Huia.OpenId.EntityFrameworkCore` expose `internal` members to `Huia.OpenId` and the four test
+`Huia`, `Huia.OpenId.EntityFrameworkCore` and the Headless packages expose `internal` members to `Huia.OpenId` and the four test
 projects via `InternalsVisibleTo` in `src/Directory.Build.props`.
 
 ---
@@ -139,30 +139,31 @@ HuiaOptions                                     (root; bound from "Huia" or buil
 ├─ Email : EmailOptions                         root SMTP; per-tenant override merges over it
 ├─ Sms : SmsOptions                             root SMS;  per-tenant override merges over it
 ├─ Keys : KeyManagementOptions                  signing-key lifecycle (shared across tenants)
-└─ Tenants : IDictionary<string, TenantOptions> keyed by tenant id (also the base-path segment)
-   └─ TenantOptions
+└─ Tenants : IDictionary<string, HuiaTenant>    keyed by tenant id (also the base-path segment)
+   └─ HuiaTenant                               subclassable: override ConfigureBranding/Authentication/Applications/Scopes/Roles
       ├─ DisplayName : string?
-      ├─ Authentication : HuiaTenantAuthenticationOptions       ── fluent-only, see §3.2; each sign-in
-      │                                                            method carries its own lockout policy
+      ├─ Authentication : HuiaTenantAuthentication              ── a collection of HuiaAuthenticationMethod, see §3.2;
+      │                                                            each sign-in method carries its own lockout policy
       ├─ Branding : TenantBrandingOptions                       DisplayName / Logo / Favicon / Accent / Terms / Privacy / Support
       ├─ Email : EmailOptions?                                  merged over HuiaOptions.Email
       ├─ Sms : SmsOptions?                                      merged over HuiaOptions.Sms
-      ├─ Clients : IList<HuiaClientDescriptor>                  tenant.AddClient(id, kind) / AddServerSideWebApplication / …
+      ├─ Applications : HuiaApplicationCollection               tenant.AddServerSideWebApplication / AddSinglePageApplication / AddNativeApplication / AddMachineToMachineApplication / AddDevice
       └─ Scopes : IList<HuiaScopeDescriptor>                    tenant.AddScope(name, …)  (code-defined scopes are read-only in the admin UI)
 ```
 
-### 3.2 `HuiaTenantAuthenticationOptions` — fluent-only
+### 3.2 `HuiaTenantAuthentication` — fluent `Use*` methods over `HuiaAuthenticationMethod`s
 
-The email/password, phone and external option objects are **not public**. Configure exclusively
-through the three top-level `Use*` methods — there is no umbrella grouping phone and external
-together any more, each is a first-class call — and read enablement through the derived bools. Each
+Each sign-in method is a `HuiaAuthenticationMethod` subclass (`EmailPasswordAuthenticationMethod`,
+`PhoneAuthenticationMethod`, `PasskeyAuthenticationMethod`, `ExternalLoginAuthenticationMethod`).
+Configure through the `Use*` methods — each is a first-class call — and read enablement through the
+derived bools or `Find<T>()` / `Require<T>()`. Each
 method's options carry their own lockout policy (`MaxFailedAccessAttempts` / `LockoutDuration` /
 `AllowedForNewUsers`) — lockout is per **flow**, not per tenant, since a phone brute-force ceiling and
 a password brute-force ceiling are unrelated:
 
 ```csharp
 tenant.Authentication
-    .UseEmailAndPasswordLogin(p =>              // sets IsEmailAndPasswordLoginEnabled; p is EmailAndPasswordLoginOptions
+    .UseEmailAndPasswordLogin(p =>              // sets IsEmailAndPasswordLoginEnabled; p is EmailPasswordAuthenticationMethod
     {
         p.MinimumLength = 12;
         p.RequireNonAlphanumeric = true;
@@ -173,7 +174,7 @@ tenant.Authentication
         p.LockoutDuration = TimeSpan.FromMinutes(15);
         p.AllowedForNewUsers = true;
     })
-    .UsePhoneLogin(phone =>                     // sets IsPhoneLoginEnabled; phone is PhoneOptions
+    .UsePhoneLogin(phone =>                     // sets IsPhoneLoginEnabled; phone is PhoneAuthenticationMethod
     {
         phone.DefaultCountry = "SA";            // ISO 3166-1 alpha-2
         phone.AllowAutoProvisioning = true;
@@ -193,23 +194,25 @@ tenant.Authentication
     });
 
 // reads:
-tenant.Authentication.IsEmailAndPasswordLoginEnabled  // => EmailAndPasswordLoginOptions.Enabled
-tenant.Authentication.IsPhoneLoginEnabled             // => a PhoneOptions was created
-tenant.Authentication.IsExternalLoginEnabled          // => at least one provider registered
+tenant.Authentication.IsEmailAndPasswordLoginEnabled  // => EmailAndPassword is { IsEnabled: true }
+tenant.Authentication.IsPhoneLoginEnabled             // => Phone is { IsEnabled: true }
+tenant.Authentication.IsExternalLoginEnabled          // => External is enabled with at least one provider
 ```
 
 `Authentication.DisableRegistration()` turns off every anonymous account-creation path in one call:
 `EmailAndPassword.AllowSelfServiceRegistration` and, when the phone flow is enabled,
 `Phone.AllowAutoProvisioning` (untouched — not created — when the phone flow was never enabled, so
-this can't implicitly flip `IsPhoneLoginEnabled`). `TenantOptions.DisableRegistration()` delegates to it.
+this can't implicitly flip `IsPhoneLoginEnabled`). `HuiaTenant.DisableRegistration()` delegates to it.
 
-Framework code inside `Huia` / `Huia.OpenId` reads the full objects through the `internal`
-`Authentication.EmailAndPassword` / `Authentication.Phone` / `Authentication.External` accessors.
+Framework code reads the method objects through the public `Authentication.EmailAndPassword` /
+`Phone` / `Passkey` / `External` accessors.
 
-### 3.3 `HuiaClientDescriptor`
+### 3.3 `HuiaApplication` hierarchy
 
-`Kind` (`ServerSideWebApplication` | `SinglePageApplication` | `NativeApplication` | `MachineToMachine`)
-drives default grants + endpoint permissions. `RequirePkce`, `RequireConsent` are `bool` properties;
+The concrete type (`ServerSideWebApplication` | `SinglePageApplication` | `NativeApplication` |
+`MachineToMachineApplication` | `DeviceApplication`, reported by `Kind`) drives default grants + endpoint
+permissions. `RequireConsent` is a `bool` property on `HuiaApplication`; `RequirePkce` is a property on
+server-side and device apps (always on for SPA / native). On `ServerSideWebApplication`,
 `RequirePushedAuthorizationRequests()` is a **fluent method** (backing property
 `RequiresPushedAuthorizationRequests`) — it adds the OpenIddict `ft:par` requirement in
 `HuiaApplicationDescriptorMapper`; `ept:pushed_authorization` is granted to every interactive client
@@ -231,7 +234,7 @@ internal interface IHuiaOptionsSection
 
 `HuiaOptions.Validate()` (also called from `HuiaOptionsBuilder.Build()`) walks the whole tree —
 `Email` / `Sms` / `Keys`, each `Tenants:{id}` → `Authentication` (→ `EmailAndPassword` / `Phone?` /
-`External?` → `Providers[i]`) / `Branding` / `Clients[i]` / `Scopes[i]` — appending
+`External?` → `Providers[i]`) / `Branding` / `Applications[i]` / `Scopes[i]` — appending
 `"Huia:Tenants:acme:Authentication:Phone:DefaultCountry: must be a two-letter …"`-style messages,
 then throws `HuiaOptionsException(IReadOnlyList<string> Errors)` if any. Cross-field rules include
 "at least one sign-in method enabled per tenant", `PendingSignupLifetime >= CodeLifetime`,
@@ -361,14 +364,14 @@ its own brute-force ceiling, the phone path a confirmed phone and an unrelated c
 path neither confirmation nor any lockout at all. So `AddHuiaFlowIdentity` registers **one named
 `IdentityOptions` per flow** (`HuiaFlowIdentityOptions.NameFor` →
 `"huia:flow:{password|phone|external}"`, `Default` → the empty name), each built from that flow's own
-options object — `EmailAndPasswordLoginOptions` / `PhoneOptions` — with nothing shared between flows:
+options object — `EmailPasswordAuthenticationMethod` / `PhoneAuthenticationMethod` — with nothing shared between flows:
 
 - `EmailAndPasswordLogin` (`HuiaFlowIdentityConfiguration.ApplyEmailAndPasswordFlow`) — `Password.*`
   from the tenant's password-complexity fields, `Lockout.*` from that same options object's own
   `MaxFailedAccessAttempts` / `LockoutDuration` / `AllowedForNewUsers`, `User.RequireUniqueEmail`,
   and `SignIn.RequireConfirmedAccount = RequireConfirmedEmail`.
 - `PhoneLogin` (`ApplyPhoneFlow`) — its own `Lockout.*` (independent of the password flow's),
-  `SignIn.RequireConfirmedPhoneNumber` from `PhoneOptions.RequireConfirmedPhoneNumber` (default
+  `SignIn.RequireConfirmedPhoneNumber` from `PhoneAuthenticationMethod.RequireConfirmedPhoneNumber` (default
   `true`), everything else off.
 - `ExternalLogin` (`ApplyExternalFlow`) — no tenant-configurable policy at all: the upstream provider
   is the confirmed factor and there is no failed-attempt surface to lock out on, so every `SignIn.*`
@@ -420,14 +423,14 @@ strings: `ept:end_session` (not `logout`), `ept:device_authorization`, `ft:pkce`
 ### 6.3 PAR
 
 `SetPushedAuthorizationEndpointUris("connect/par")` — no global `RequirePushedAuthorizationRequests`.
-`HuiaClientDescriptor.RequirePushedAuthorizationRequests()` → the mapper adds `ft:par`
+`ServerSideWebApplication.RequirePushedAuthorizationRequests()` → the mapper adds `ft:par`
 (`Requirements.Features.PushedAuthorizationRequests`); `ept:pushed_authorization` is granted to every
 interactive client. OpenIddict 7.6+ handles the `/connect/par` endpoint internally — no ASP.NET
 passthrough. Advertised per tenant as `pushed_authorization_request_endpoint`.
 
 ### 6.4 Admin CRUD → OpenIddict application
 
-`HuiaApplicationDescriptorMapper.ToDescriptor(tenantId, HuiaClientDescriptor, origin)` is shared by
+`HuiaApplicationDescriptorMapper.ToDescriptor(tenantId, HuiaApplication, origin)` is shared by
 `HuiaClientSeeder` (options-tree clients, `origin = static`) and the admin API (`origin = dynamic`).
 It writes `Properties["huia:tenant"]`, `["huia:home_uris"]` (JSON), and maps `Token.*` to
 `Settings[OpenIddictConstants.Settings.TokenLifetimes.*]` via `TimeSpan.ToString("c", Invariant)`.
@@ -457,7 +460,7 @@ It writes `Properties["huia:tenant"]`, `["huia:home_uris"]` (JSON), and maps `To
 | **account UI** | `/identity/account/{login,register,verifyotp,completeprofile,forgotpassword,resetpassword,confirmemail,externallogins,status}` | cookie | Razor Pages, `Areas/Identity/Pages/Account`, en/ar RTL, one committed JS bundle |
 | **external** | `identity/account/external/{provider}`, `signin-{provider}`, `identity/account/externallogincallback`, `signout-callback-oidc` | mixed | OpenIddict-client challenge + dispatch |
 | **manage** (`/manage`) | `GET/PUT profile`, `PUT password`, `GET/PUT email` + `POST email/confirm`, `GET/PUT phone` + `POST phone/confirm` + `DELETE phone`, `GET/DELETE external-logins` | bearer (`HuiaConstants.Policies.Api`, pins `OpenIddictValidationAspNetCoreDefaults` scheme) | caller resolved from `sub`; `HuiaUserManager.GetUserTypeAsync` guards which contact detail each account type may change |
-| **admin** (`/master/admin`) | `GET tenants`; users / clients / scopes / keys `GET/POST/PUT/DELETE` | `RequireTenants("master").RequireRole(Administrator)` | keyset pagination (`MR.AspNetCore.Pagination`, `KeysetQueryModel` built from the query string); `409` on static clients/scopes; `HuiaClientDescriptor.Validate()` before the mapper |
+| **admin** (`/master/admin`) | `GET tenants`; users / clients / scopes / keys `GET/POST/PUT/DELETE` | `RequireTenants("master").RequireRole(Administrator)` | keyset pagination (`MR.AspNetCore.Pagination`, `KeysetQueryModel` built from the query string); `409` on static clients/scopes |
 | **home** | `/` | — | `MapHuiaHome("master")` bounces bare `/` to the master tenant |
 | **status** | `/identity/account/status/{code}` | — | `UseStatusCodePagesWithReExecute` target; styled pages for HTML, bare code for `/connect` `/manage` `/admin` `/.well-known` + JSON |
 

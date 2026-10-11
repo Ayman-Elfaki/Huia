@@ -293,6 +293,9 @@ internal static class HuiaOpenIddictConfiguration
         }
     }
 
+    // OpenIddict rejects any primary handler that isn't an HttpClientHandler, and HttpClientHandler doesn't
+    // expose ConnectCallback, so the inner SocketsHttpHandler is reached by reflection. Returning a bare
+    // SocketsHttpHandler instead throws "Only instances of type 'HttpClientHandler' can be used...".
     private static HttpClientHandler CreateRobustHttpClientHandler()
     {
         var handler = new HttpClientHandler();

@@ -8,7 +8,7 @@ namespace Huia.IntegrationTests;
 /// <summary>
 /// Covers the <em>successful</em>-sign-in throttle for phone login (distinct from code-request
 /// throttling): once per <c>SuccessfulLoginWindow</c> and an absolute daily ceiling, both configurable
-/// on <c>PhoneOptions</c>.
+/// on <c>PhoneAuthenticationMethod</c>.
 /// </summary>
 public sealed class PhoneLoginRateLimitTests
 {

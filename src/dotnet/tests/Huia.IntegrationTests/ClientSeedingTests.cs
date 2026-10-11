@@ -115,12 +115,7 @@ public sealed class ClientSeedingTests : IAsyncLifetime
     {
         await using var scope = _host.Services.CreateAsyncScope();
         var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
-        var client = new HuiaClientDescriptor
-        {
-            ClientId = clientId,
-            Kind = ClientKind.MachineToMachine,
-            ClientSecret = "ghost-secret-value",
-        };
+        var client = new MachineToMachineApplication(clientId, "ghost-secret-value");
         var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(tenantId, client, HuiaConstants.Origins.Static);
         await manager.CreateAsync(descriptor);
     }

@@ -112,7 +112,7 @@ internal sealed class HuiaSampleSeeder(
 
     /// <summary>
     /// Assigns the user (by username) to each role. The roles themselves are seeded declaratively via
-    /// <see cref="Huia.Options.TenantOptions.AddRoles"/> (see Program.cs), which runs before this
+    /// <see cref="Huia.Options.HuiaTenant.AddRoles"/> (see Program.cs), which runs before this
     /// hosted service (registration order) — so by the time this runs, they already exist.
     /// </summary>
     private Task AssignRolesAsync(string tenantId, string userName, params string[] roles) =>

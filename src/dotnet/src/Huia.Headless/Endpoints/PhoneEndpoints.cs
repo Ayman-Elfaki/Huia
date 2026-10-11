@@ -20,7 +20,7 @@ namespace Huia.Headless.Endpoints;
 /// page navigation to carry state across steps, so <see cref="IPhoneLoginFlowStore"/> plays the role
 /// <c>Huia.OpenId</c>'s encrypted flow token plays there: an opaque, server-held handle the client passes
 /// back on the next call. Every route 404s unless the host's one tenant has called
-/// <see cref="HuiaTenantAuthenticationOptions.UsePhoneLogin"/>.
+/// <see cref="HuiaTenantAuthentication.UsePhoneLogin"/>.
 /// </summary>
 internal static class PhoneEndpoints
 {

@@ -15,7 +15,7 @@ public sealed record ExternalLoginFlow(
     ExternalSignup? PendingSignup);
 
 /// <summary>Data carried forward from the provider callback for a first-time sign-up.</summary>
-/// <param name="LoginProvider">The provider registration name (matches <c>ExternalProviderRegistration.Name</c>).</param>
+/// <param name="LoginProvider">The provider registration name (matches <c>ExternalIdentityProvider.Name</c>).</param>
 /// <param name="ProviderKey">The provider's own subject identifier.</param>
 /// <param name="ProviderDisplayName">A friendly provider label, for the login attached to the new account.</param>
 /// <param name="Email">The provider-supplied email, if any.</param>

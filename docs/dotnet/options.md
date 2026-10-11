@@ -17,25 +17,25 @@ HuiaOptions
 ├─ Keys : KeyManagementOptions                  signing-key lifecycle (EnableBackgroundJobs, rotation windows)
 ├─ Seeding : SeedingOptions                     PruneRemovedStaticEntities (off by default) — see Pruning below
 ├─ Cleanup : CleanupOptions                     OpenIddict.Quartz pruning of authorizations/tokens — see Cleanup below
-└─ Tenants[id] : TenantOptions
+└─ Tenants[id] : HuiaTenant
    ├─ DisplayName : string?
-   ├─ Authentication : HuiaTenantAuthenticationOptions   — fluent-only, see below; each sign-in method
+   ├─ Authentication : HuiaTenantAuthentication          — fluent Use* methods, see below; each sign-in method
    │                                                       carries its own lockout policy, there is no
    │                                                       tenant-wide Lockout any more
    ├─ Branding : TenantBrandingOptions                   DisplayName, LogoUrl, FaviconUrl, AccentColor, TermsUrl, PrivacyUrl, SupportUrl
    ├─ Email : EmailOptions?
    ├─ Sms : SmsOptions?
-   ├─ Clients : IList<HuiaClientDescriptor>
+   ├─ Applications : HuiaApplicationCollection          AddServerSideWebApplication, AddSinglePageApplication, …
    ├─ Scopes : IList<HuiaScopeDescriptor>
    └─ Roles : IList<string>                             code-defined ("static") roles — see Roles below
 ```
 
-## Sign-in methods — fluent only
+## Sign-in methods — fluent `Use*` calls
 
-`tenant.Authentication` exposes **methods, not data properties**. `EmailAndPasswordLoginOptions`,
-`PhoneOptions` and `ExternalLoginOptions` are internal; configure them through `UseEmailAndPasswordLogin`
-/ `UsePhoneLogin` / `UseExternalLogin` — each is a top-level call, not nested under an umbrella — and
-read enablement through the derived bools. Each method's options carry their own **lockout** policy
+`tenant.Authentication` is a collection of `HuiaAuthenticationMethod`s (`EmailPasswordAuthenticationMethod`,
+`PhoneAuthenticationMethod`, `PasskeyAuthenticationMethod`, `ExternalLoginAuthenticationMethod`). Configure
+them through `UseEmailAndPasswordLogin` / `UsePhoneLogin` / `UsePasskeyLogin` / `UseExternalLogin` — each is
+a top-level call, not nested under an umbrella — and read enablement through the derived bools. Each method's options carry their own **lockout** policy
 (`MaxFailedAccessAttempts`, `LockoutDuration`, `AllowedForNewUsers`) — a phone brute-force ceiling has
 nothing to do with a password brute-force ceiling, so there is no tenant-wide lockout setting.
 
@@ -109,7 +109,7 @@ the framework's same-origin check. Every credential is a discoverable resident k
 
 `tenant.Authentication.DisableRegistration()` turns off every anonymous account-creation path in one
 call: `AllowSelfServiceRegistration` and, when the phone flow is enabled, `AllowAutoProvisioning` —
-only an administrator can create accounts afterwards. `TenantOptions.DisableRegistration()` is a
+only an administrator can create accounts afterwards. `HuiaTenant.DisableRegistration()` is a
 shortcut for the same call.
 
 ::: tip Migrating from an earlier version
@@ -120,7 +120,7 @@ shortcut for the same call.
 `.MaxFailedAccessAttempts = n` inside its `Use*` lambda (lockout is per sign-in method now, not per
 tenant). `tenant.Authentication.Password.RequireConfirmedEmail = false` →
 `tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false)`.
-`pwl.DefaultCountry` moved onto `PhoneOptions` — use `UsePhoneLogin(phone =>
+`pwl.DefaultCountry` moved onto `PhoneAuthenticationMethod` — use `UsePhoneLogin(phone =>
 phone.DefaultCountry = "SA")`. `ext.LinkExistingAccountsByEmail()` → `ext.EnableAccountsLinking()`.
 :::
 

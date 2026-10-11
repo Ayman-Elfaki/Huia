@@ -34,10 +34,10 @@ until it is called. `UsePhoneLogin()` / `UseExternalLogin()` are similarly off u
 - `AllowSelfServiceRegistration` (default `true`) — anonymous visitors may create their own account.
   Call `tenant.Authentication.DisableRegistration()` (or the `tenant.DisableRegistration()` shortcut)
   to turn it off (the account UI then hides the "create an account" link and the register page
-  returns 404) — it also turns off `PhoneOptions.AllowAutoProvisioning` when the phone flow is
+  returns 404) — it also turns off `PhoneAuthenticationMethod.AllowAutoProvisioning` when the phone flow is
   enabled, so every anonymous account-creation path is closed in one call.
 - `MaxFailedAccessAttempts` / `LockoutDuration` / `AllowedForNewUsers` — this flow's own lockout
-  policy. `PhoneOptions` carries the matching three properties for the phone flow, independently.
+  policy. `PhoneAuthenticationMethod` carries the matching three properties for the phone flow, independently.
 
 The non-interactive `password` grant (ROPC) is **not** supported — use the authorization-code or
 device-authorization flow instead.

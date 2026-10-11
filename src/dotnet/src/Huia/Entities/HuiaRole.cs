@@ -23,7 +23,7 @@ public class HuiaRole : IdentityRole<string>
     }
 
     /// <summary>
-    /// Whether this role was declared in code (<c>TenantOptions.AddRoles</c>, seeded by the role seeder and
+    /// Whether this role was declared in code (<c>HuiaTenant.AddRoles</c>, seeded by the role seeder and
     /// therefore read-only — cannot be renamed or deleted through the admin API) or created at runtime
     /// through the admin API. One of <see cref="HuiaConstants.Origins.Static"/> or
     /// <see cref="HuiaConstants.Origins.Dynamic"/>.

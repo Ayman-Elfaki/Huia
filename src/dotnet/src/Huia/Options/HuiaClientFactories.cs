@@ -1,6 +1,6 @@
 namespace Huia.Options;
 
-/// <summary>Factory methods for the supported OAuth client shapes on <see cref="HuiaTenant"/> and <see cref="TenantOptions"/>.</summary>
+/// <summary>Factory methods for the supported OAuth client shapes on <see cref="HuiaTenant"/>.</summary>
 public static class HuiaClientFactories
 {
     /// <summary>Adds a confidential server-rendered web application (authorization code + client secret).</summary>

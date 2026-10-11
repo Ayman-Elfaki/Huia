@@ -31,15 +31,14 @@ For integration testing recipes (e.g., `WebApplicationFactory`), see [Integratio
 Define a DbContext inheriting from `HuiaDbContext<HuiaUser, HuiaRole, string>`:
 
 ```csharp
+using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore;
 using Huia.OpenId.EntityFrameworkCore.Entities;
 using Microsoft.EntityFrameworkCore;
 
-public class IdentityHuiaDbContext : HuiaDbContext<HuiaUser, HuiaRole, string>
-{
-    public IdentityHuiaDbContext(DbContextOptions<IdentityHuiaDbContext> options)
-        : base(options) { }
-}
+public class IdentityHuiaDbContext(
+    IMultiTenantContextAccessor multiTenantContextAccessor, DbContextOptions<IdentityHuiaDbContext> options)
+    : HuiaDbContext<HuiaUser, HuiaRole, string>(multiTenantContextAccessor, options);
 ```
 
 Register EF Core with OpenIddict support in `Program.cs`:

@@ -87,7 +87,6 @@ internal static class HuiaApplicationDescriptorMapper
         ServerSideWebApplication web => web.ClientSecret,
         MachineToMachineApplication m2m => m2m.ClientSecret,
         DeviceApplication dev => dev.ClientSecret,
-        HuiaClientDescriptor desc => desc.ClientSecret,
         _ => null,
     };
 
@@ -97,14 +96,12 @@ internal static class HuiaApplicationDescriptorMapper
         SinglePageApplication => true,
         NativeApplication => true,
         DeviceApplication dev => dev.RequirePkce,
-        HuiaClientDescriptor desc => desc.RequirePkce || desc.IsPublic,
         _ => false,
     };
 
     private static bool GetRequiresPar(HuiaApplication client) => client switch
     {
         ServerSideWebApplication web => web.RequiresPushedAuthorizationRequests,
-        HuiaClientDescriptor desc => desc.RequiresPushedAuthorizationRequests,
         _ => false,
     };
 
