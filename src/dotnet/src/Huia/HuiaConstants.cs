@@ -183,6 +183,18 @@ public static class HuiaConstants
             {
                 /// <summary>The list tenants endpoint name.</summary>
                 public const string List = "huia.admin.tenants.list";
+
+                /// <summary>The get tenant endpoint name.</summary>
+                public const string Get = "huia.admin.tenants.get";
+
+                /// <summary>The create tenant endpoint name.</summary>
+                public const string Create = "huia.admin.tenants.create";
+
+                /// <summary>The update tenant endpoint name.</summary>
+                public const string Update = "huia.admin.tenants.update";
+
+                /// <summary>The delete tenant endpoint name.</summary>
+                public const string Delete = "huia.admin.tenants.delete";
             }
 
             /// <summary>Users administrative endpoint names.</summary>

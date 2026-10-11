@@ -168,6 +168,60 @@ public sealed class HuiaTenantDocument
         return document;
     }
 
+    /// <summary>
+    /// Clears every secret (client secrets, SMTP password, SMS credentials) so the document can be returned to an
+    /// administrator without leaking them. Returns this instance.
+    /// </summary>
+    public HuiaTenantDocument RedactSecrets()
+    {
+        if (Email is not null)
+        {
+            Email.Password = null;
+        }
+
+        if (Sms is not null)
+        {
+            Sms.ApiKey = null;
+            Sms.ApiSecret = null;
+        }
+
+        foreach (var application in Applications)
+        {
+            application.ClientSecret = null;
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Fills in secrets this (typically redacted-then-edited) document leaves unset from <paramref name="existing"/>,
+    /// so an update that omits a secret keeps the stored one instead of wiping it. Returns this instance.
+    /// </summary>
+    public HuiaTenantDocument PreserveSecretsFrom(HuiaTenantDocument existing)
+    {
+        ArgumentNullException.ThrowIfNull(existing);
+
+        if (Email is not null && existing.Email is not null)
+        {
+            Email.Password ??= existing.Email.Password;
+        }
+
+        if (Sms is not null && existing.Sms is not null)
+        {
+            Sms.ApiKey ??= existing.Sms.ApiKey;
+            Sms.ApiSecret ??= existing.Sms.ApiSecret;
+        }
+
+        foreach (var application in Applications.Where(a => string.IsNullOrEmpty(a.ClientSecret)))
+        {
+            application.ClientSecret = existing.Applications
+                .FirstOrDefault(a => string.Equals(a.ClientId, application.ClientId, StringComparison.Ordinal))
+                ?.ClientSecret;
+        }
+
+        return this;
+    }
+
     /// <summary>Builds the runtime tenant <paramref name="tenantId"/> from this document.</summary>
     public HuiaTenant ToTenant(string tenantId)
     {

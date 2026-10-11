@@ -50,6 +50,10 @@ public sealed class EndpointNamingTests : IAsyncLifetime
 
         // Verify Admin API endpoints
         Assert.Contains(HuiaConstants.Endpoints.Admin.Tenants.List, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Tenants.Get, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Tenants.Create, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Tenants.Update, namedEndpoints);
+        Assert.Contains(HuiaConstants.Endpoints.Admin.Tenants.Delete, namedEndpoints);
         Assert.Contains(HuiaConstants.Endpoints.Admin.Users.List, namedEndpoints);
         Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Get, namedEndpoints);
         Assert.Contains(HuiaConstants.Endpoints.Admin.Users.Create, namedEndpoints);

@@ -49,6 +49,12 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Added
 
+- **`Huia.OpenId`** — Tenant management in the admin API: `GET admin/tenants/{id}`, `POST admin/tenants`,
+  `PUT` and `DELETE admin/tenants/{id}`. The list gains an `origin` field (`static` / `dynamic`). Bodies are
+  `HuiaTenantDocument`s; secrets are redacted on read and kept when omitted on update; code-declared tenants
+  return `409`; the endpoints return `501` unless `AddPersistedTenants()` and a store adapter are registered.
+  A created tenant resolves from its path and is bootstrapped immediately. Tenant ids are validated by
+  `HuiaTenantIds` (lower-case letters, digits, hyphens; reserved route names rejected).
 - **`Huia` / `Huia.OpenId.EntityFrameworkCore`** — Persisted tenants (storage layer only). `IHuiaTenantStore`
   (list / find / save / delete) with an EF implementation over a new `HuiaTenants` table
   (`HuiaTenantRecord`: `TenantId` key, protected `Payload`, `Version` concurrency token, timestamps).

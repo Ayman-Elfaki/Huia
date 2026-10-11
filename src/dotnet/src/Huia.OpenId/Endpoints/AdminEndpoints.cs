@@ -28,6 +28,10 @@ internal static partial class AdminEndpoints
         var group = endpoints.MapGroup("admin");
 
         group.MapGet("tenants", ListTenants).WithName(HuiaConstants.Endpoints.Admin.Tenants.List);
+        group.MapGet("tenants/{id}", GetTenantAsync).WithName(HuiaConstants.Endpoints.Admin.Tenants.Get);
+        group.MapPost("tenants", CreateTenantAsync).WithName(HuiaConstants.Endpoints.Admin.Tenants.Create);
+        group.MapPut("tenants/{id}", UpdateTenantAsync).WithName(HuiaConstants.Endpoints.Admin.Tenants.Update);
+        group.MapDelete("tenants/{id}", DeleteTenantAsync).WithName(HuiaConstants.Endpoints.Admin.Tenants.Delete);
 
         group.MapGet("users", ListUsersAsync).WithName(HuiaConstants.Endpoints.Admin.Users.List);
         group.MapGet("users/{id}", GetUserAsync).WithName(HuiaConstants.Endpoints.Admin.Users.Get);
@@ -71,7 +75,7 @@ internal static partial class AdminEndpoints
         return group;
     }
 
-    private static IResult ListTenants(IHuiaTenantProvider tenantProvider)
+    private static IResult ListTenants(IHuiaTenantProvider tenantProvider, HuiaOptions options)
     {
         var listed = tenantProvider
             .Select(kvp => new TenantDto(
@@ -80,7 +84,8 @@ internal static partial class AdminEndpoints
                 kvp.Value.Authentication.IsEmailAndPasswordLoginEnabled,
                 kvp.Value.Authentication.IsPhoneLoginEnabled,
                 kvp.Value.Authentication.IsExternalLoginEnabled,
-                kvp.Value.Applications.Count))
+                kvp.Value.Applications.Count,
+                TenantOrigin(options, kvp.Key)))
             .OrderBy(t => t.TenantId, StringComparer.Ordinal)
             .ToList();
 
@@ -381,7 +386,8 @@ internal static partial class AdminEndpoints
         bool PasswordEnabled,
         bool PhoneLoginEnabled,
         bool ExternalLoginEnabled,
-        int ClientCount);
+        int ClientCount,
+        string Origin);
 
     private sealed record UserDto(
         string Id,
