@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using Huia.Admin;
 using Huia.Events;
 using Huia.Headless.Identity;
 using Huia.Multitenancy;
@@ -38,61 +38,19 @@ public static partial class AdminEndpoints
             return Results.NotFound();
         }
 
-        var claimsToAdd = new List<(string Type, string Value)>();
-        if (!string.IsNullOrWhiteSpace(body.Type))
+        var inputs = body.Claims?.Select(c => new HuiaClaimInput(c.Type, c.Value));
+        if (!HuiaUserAdministration.TryNormalizeClaims(body.Type, body.Value, inputs, out var claims, out var problem))
         {
-            claimsToAdd.Add((body.Type.Trim(), body.Value?.Trim() ?? string.Empty));
+            return ToProblem(problem);
         }
 
-        if (body.Claims is { Length: > 0 })
+        var outcome = await HuiaUserAdministration.AddClaimsAsync(userManager, user, claims);
+        if (!outcome.IsSuccess)
         {
-            foreach (var c in body.Claims)
-            {
-                if (string.IsNullOrWhiteSpace(c.Type))
-                {
-                    return Results.ValidationProblem(new Dictionary<string, string[]>
-                    {
-                        ["claims"] = ["Each claim must have a non-empty type."],
-                    });
-                }
-
-                claimsToAdd.Add((c.Type.Trim(), c.Value?.Trim() ?? string.Empty));
-            }
+            return ToProblem(outcome);
         }
 
-        if (claimsToAdd.Count == 0)
-        {
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["claims"] = ["At least one claim (type and value) must be provided."],
-            });
-        }
-
-        var existingClaims = await userManager.GetClaimsAsync(user);
-        var newlyAdded = false;
-
-        foreach (var (type, value) in claimsToAdd)
-        {
-            if (existingClaims.Any(c => c.Type == type && c.Value == value))
-            {
-                continue;
-            }
-
-            var result = await userManager.AddClaimAsync(user, new Claim(type, value));
-            if (!result.Succeeded)
-            {
-                return IdentityProblem(result);
-            }
-
-            newlyAdded = true;
-        }
-
-        if (newlyAdded)
-        {
-            await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id,
-                timeProvider.GetUtcNow()));
-        }
-
+        await PublishUserUpdatedAsync(outcome, events, tenantContext, user.Id, timeProvider);
         return Results.Ok();
     }
 
@@ -112,24 +70,13 @@ public static partial class AdminEndpoints
             return Results.NotFound();
         }
 
-        var existingClaims = await userManager.GetClaimsAsync(user);
-        var toRemove = existingClaims
-            .Where(c => c.Type == type && (value is null || c.Value == value))
-            .ToList();
-
-        if (toRemove.Count == 0)
+        var outcome = await HuiaUserAdministration.RemoveClaimsAsync(userManager, user, type, value);
+        if (!outcome.IsSuccess)
         {
-            return Results.NoContent();
+            return ToProblem(outcome);
         }
 
-        var result = await userManager.RemoveClaimsAsync(user, toRemove);
-        if (!result.Succeeded)
-        {
-            return IdentityProblem(result);
-        }
-
-        await events.PublishAsync(
-            new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        await PublishUserUpdatedAsync(outcome, events, tenantContext, user.Id, timeProvider);
         return Results.NoContent();
     }
 

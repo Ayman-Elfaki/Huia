@@ -7,6 +7,11 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Changed
 
+- **`Huia`** — New `Huia.Admin.HuiaUserAdministration`: the claim, role-assignment, lock / unlock and
+  email-verification rules the Headless and OpenId admin APIs both implement now live here once and report an
+  HTTP-agnostic `HuiaAdminOutcome`. Each flavor's endpoints keep their own routes, DTOs, status codes and
+  per-flavor behavior (Headless creates an unknown role on assignment, OpenId rejects it; only OpenId rotates
+  the security stamp on lock / unlock). No wire change. `HuiaTenant` role-name validation uses the same rule.
 - **`Huia.OpenId.EntityFrameworkCore`** — **Breaking (schema).** `HuiaApplications` and `HuiaScopes` gain a
   required `TenantId` column (max 64, default `''`), and OpenIddict's globally unique `ClientId` / `Name`
   indexes are replaced by `IX_HuiaApplications_Tenant_ClientId` and `IX_HuiaScopes_Tenant_Name`. The OpenIddict

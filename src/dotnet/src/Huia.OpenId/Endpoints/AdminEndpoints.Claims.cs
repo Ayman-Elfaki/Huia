@@ -1,5 +1,4 @@
-using System.Security.Claims;
-using Huia.Events;
+using Huia.Admin;
 using Huia.OpenId.Entities;
 using Huia.Stores;
 using Microsoft.AspNetCore.Http;
@@ -42,34 +41,10 @@ internal static partial class AdminEndpoints
         string id,
         AddUserClaimRequest body)
     {
-        var claimsToAdd = new List<(string Type, string Value)>();
-        if (!string.IsNullOrWhiteSpace(body.Type))
+        var inputs = body.Claims?.Select(c => new HuiaClaimInput(c.Type, c.Value));
+        if (!HuiaUserAdministration.TryNormalizeClaims(body.Type, body.Value, inputs, out var claims, out var problem))
         {
-            claimsToAdd.Add((body.Type.Trim(), body.Value?.Trim() ?? string.Empty));
-        }
-
-        if (body.Claims is { Length: > 0 })
-        {
-            foreach (var c in body.Claims)
-            {
-                if (string.IsNullOrWhiteSpace(c.Type))
-                {
-                    return Results.ValidationProblem(new Dictionary<string, string[]>
-                    {
-                        ["claims"] = ["Each claim must have a non-empty type."],
-                    });
-                }
-
-                claimsToAdd.Add((c.Type.Trim(), c.Value?.Trim() ?? string.Empty));
-            }
-        }
-
-        if (claimsToAdd.Count == 0)
-        {
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["claims"] = ["At least one claim (type and value) must be provided."],
-            });
+            return ToProblem(problem);
         }
 
         var tenantId = await store.GetUserTenantIdAsync(id, context.RequestAborted);
@@ -87,32 +62,13 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
-            var existingClaims = await userManager.GetClaimsAsync(user);
-            var newlyAdded = false;
-
-            foreach (var (type, value) in claimsToAdd)
+            var outcome = await HuiaUserAdministration.AddClaimsAsync(userManager, user, claims);
+            if (!outcome.IsSuccess)
             {
-                if (existingClaims.Any(c => c.Type == type && c.Value == value))
-                {
-                    continue;
-                }
-
-                var result = await userManager.AddClaimAsync(user, new Claim(type, value));
-                if (!result.Succeeded)
-                {
-                    return IdentityProblem(result);
-                }
-
-                newlyAdded = true;
+                return ToProblem(outcome);
             }
 
-            if (newlyAdded)
-            {
-                var events = services.GetRequiredService<IHuiaEventPublisher>();
-                var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-                await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
-            }
-
+            await PublishUserUpdatedAsync(outcome, services, tenantId, user.Id);
             return Results.NoContent();
         });
     }
@@ -139,25 +95,13 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
-            var existingClaims = await userManager.GetClaimsAsync(user);
-            var toRemove = existingClaims
-                .Where(c => c.Type == type && (value is null || c.Value == value))
-                .ToList();
-
-            if (toRemove.Count == 0)
+            var outcome = await HuiaUserAdministration.RemoveClaimsAsync(userManager, user, type, value);
+            if (!outcome.IsSuccess)
             {
-                return Results.NoContent();
+                return ToProblem(outcome);
             }
 
-            var result = await userManager.RemoveClaimsAsync(user, toRemove);
-            if (!result.Succeeded)
-            {
-                return IdentityProblem(result);
-            }
-
-            var events = services.GetRequiredService<IHuiaEventPublisher>();
-            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            await PublishUserUpdatedAsync(outcome, services, tenantId, user.Id);
             return Results.NoContent();
         });
     }

@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using Huia.Admin;
 using Huia.Events;
 using Huia.OpenId.Entities;
 using Huia.Options;
@@ -12,9 +12,6 @@ namespace Huia.OpenId.Endpoints;
 /// <summary>Per-tenant roles: CRUD plus assignment to users. See <see cref="AdminEndpoints"/>.</summary>
 internal static partial class AdminEndpoints
 {
-    [GeneratedRegex("^[A-Za-z0-9._:-]{1,256}$")]
-    private static partial Regex RoleNamePattern();
-
     private static async Task<IResult> ListRolesAsync(
         HttpContext context,
         IHuiaOpenIdAdminStore<HuiaUser, HuiaRole> store,
@@ -78,7 +75,7 @@ internal static partial class AdminEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["tenant"] = ["Unknown tenant."] });
         }
 
-        if (string.IsNullOrWhiteSpace(body.Name) || !RoleNamePattern().IsMatch(body.Name))
+        if (string.IsNullOrWhiteSpace(body.Name) || !HuiaUserAdministration.IsValidRoleName(body.Name))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -109,7 +106,7 @@ internal static partial class AdminEndpoints
         string id,
         UpdateRoleRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Name) || !RoleNamePattern().IsMatch(body.Name))
+        if (string.IsNullOrWhiteSpace(body.Name) || !HuiaUserAdministration.IsValidRoleName(body.Name))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["name"] = ["Invalid role name."] });
         }
@@ -228,25 +225,19 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
+            // OpenId only assigns roles that already exist in the tenant; it never creates one on the fly.
             if (!await roleManager.RoleExistsAsync(body.Role))
             {
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["role"] = ["Unknown role."] });
             }
 
-            if (await userManager.IsInRoleAsync(user, body.Role))
+            var outcome = await HuiaUserAdministration.AddToRoleAsync(userManager, user, body.Role);
+            if (!outcome.IsSuccess)
             {
-                return Results.NoContent();
+                return ToProblem(outcome);
             }
 
-            var result = await userManager.AddToRoleAsync(user, body.Role);
-            if (!result.Succeeded)
-            {
-                return IdentityProblem(result);
-            }
-
-            var events = services.GetRequiredService<IHuiaEventPublisher>();
-            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            await PublishUserUpdatedAsync(outcome, services, tenantId, user.Id);
             return Results.NoContent();
         });
     }
@@ -272,20 +263,13 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
-            if (!await userManager.IsInRoleAsync(user, role))
+            var outcome = await HuiaUserAdministration.RemoveFromRoleAsync(userManager, user, role);
+            if (!outcome.IsSuccess)
             {
-                return Results.NoContent();
+                return ToProblem(outcome);
             }
 
-            var result = await userManager.RemoveFromRoleAsync(user, role);
-            if (!result.Succeeded)
-            {
-                return IdentityProblem(result);
-            }
-
-            var events = services.GetRequiredService<IHuiaEventPublisher>();
-            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            await PublishUserUpdatedAsync(outcome, services, tenantId, user.Id);
             return Results.NoContent();
         });
     }

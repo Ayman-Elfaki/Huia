@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using Huia.Admin;
 using Huia.Entities;
 using Huia.Events;
 using Huia.Headless.Identity;
@@ -19,9 +19,6 @@ namespace Huia.Headless.Endpoints;
 /// </summary>
 public static partial class AdminEndpoints
 {
-    [GeneratedRegex("^[A-Za-z0-9._:-]{1,256}$")]
-    private static partial Regex RoleNamePattern();
-
     /// <summary>Maps the admin endpoint group under <c>admin/</c>.</summary>
     internal static RouteGroupBuilder MapHuiaHeadlessAdminEndpointsGroup(this IEndpointRouteBuilder endpoints)
     {
@@ -320,23 +317,19 @@ public static partial class AdminEndpoints
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["role"] = ["Role is required."] });
         }
 
-        if (await userManager.IsInRoleAsync(user, body.Role))
-        {
-            return Results.Ok();
-        }
-
-        if (!await roleManager.RoleExistsAsync(body.Role))
+        // Headless creates a role on first assignment (as a dynamic role) rather than rejecting an unknown one.
+        if (!await userManager.IsInRoleAsync(user, body.Role) && !await roleManager.RoleExistsAsync(body.Role))
         {
             await roleManager.CreateAsync(new HuiaRole(body.Role) { Origin = HuiaConstants.Origins.Dynamic });
         }
 
-        var result = await userManager.AddToRoleAsync(user, body.Role);
-        if (!result.Succeeded)
+        var outcome = await HuiaUserAdministration.AddToRoleAsync(userManager, user, body.Role);
+        if (!outcome.IsSuccess)
         {
-            return IdentityProblem(result);
+            return ToProblem(outcome);
         }
 
-        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        await PublishUserUpdatedAsync(outcome, events, tenantContext, user.Id, timeProvider);
         return Results.Ok();
     }
 
@@ -355,18 +348,13 @@ public static partial class AdminEndpoints
             return Results.NotFound();
         }
 
-        if (!await userManager.IsInRoleAsync(user, role))
+        var outcome = await HuiaUserAdministration.RemoveFromRoleAsync(userManager, user, role);
+        if (!outcome.IsSuccess)
         {
-            return Results.NoContent();
+            return ToProblem(outcome);
         }
 
-        var result = await userManager.RemoveFromRoleAsync(user, role);
-        if (!result.Succeeded)
-        {
-            return IdentityProblem(result);
-        }
-
-        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        await PublishUserUpdatedAsync(outcome, events, tenantContext, user.Id, timeProvider);
         return Results.NoContent();
     }
 
@@ -384,14 +372,14 @@ public static partial class AdminEndpoints
             return Results.NotFound();
         }
 
-        await userManager.SetLockoutEnabledAsync(user, true);
-        var result = await userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
-        if (!result.Succeeded)
+        var outcome = await HuiaUserAdministration.LockAsync(
+            userManager, user, DateTimeOffset.UtcNow.AddYears(100), updateSecurityStamp: false);
+        if (!outcome.IsSuccess)
         {
-            return IdentityProblem(result);
+            return ToProblem(outcome);
         }
 
-        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        await PublishUserUpdatedAsync(outcome, events, tenantContext, user.Id, timeProvider);
         return Results.Ok();
     }
 
@@ -409,13 +397,14 @@ public static partial class AdminEndpoints
             return Results.NotFound();
         }
 
-        var result = await userManager.SetLockoutEndDateAsync(user, null);
-        if (!result.Succeeded)
+        var outcome = await HuiaUserAdministration.UnlockAsync(
+            userManager, user, resetAccessFailedCount: false, updateSecurityStamp: false);
+        if (!outcome.IsSuccess)
         {
-            return IdentityProblem(result);
+            return ToProblem(outcome);
         }
 
-        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        await PublishUserUpdatedAsync(outcome, events, tenantContext, user.Id, timeProvider);
         return Results.Ok();
     }
 
@@ -433,27 +422,13 @@ public static partial class AdminEndpoints
             return Results.NotFound();
         }
 
-        if (await userManager.GetUserTypeAsync(user) != HuiaUserType.Password)
+        var outcome = await HuiaUserAdministration.VerifyEmailAsync(userManager, user);
+        if (!outcome.IsSuccess)
         {
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["email"] = ["Only an email-and-password account has an email address to verify."],
-            });
+            return ToProblem(outcome);
         }
 
-        if (user.EmailConfirmed)
-        {
-            return Results.NoContent();
-        }
-
-        user.EmailConfirmed = true;
-        var result = await userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            return IdentityProblem(result);
-        }
-
-        await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, user.Id, timeProvider.GetUtcNow()));
+        await PublishUserUpdatedAsync(outcome, events, tenantContext, user.Id, timeProvider);
         return Results.NoContent();
     }
 
@@ -507,7 +482,7 @@ public static partial class AdminEndpoints
         RoleManager<HuiaRole> roleManager,
         CreateHeadlessRoleRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Name) || !RoleNamePattern().IsMatch(body.Name))
+        if (string.IsNullOrWhiteSpace(body.Name) || !HuiaUserAdministration.IsValidRoleName(body.Name))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -533,7 +508,7 @@ public static partial class AdminEndpoints
         string id,
         UpdateHeadlessRoleRequest body)
     {
-        if (string.IsNullOrWhiteSpace(body.Name) || !RoleNamePattern().IsMatch(body.Name))
+        if (string.IsNullOrWhiteSpace(body.Name) || !HuiaUserAdministration.IsValidRoleName(body.Name))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]> { ["name"] = ["Invalid role name."] });
         }
@@ -592,6 +567,27 @@ public static partial class AdminEndpoints
         Results.Problem(
             statusCode: StatusCodes.Status409Conflict,
             title: "This role is defined in code and cannot be modified through the admin API.");
+
+    /// <summary>Maps a failed shared admin outcome to this flavor's problem response.</summary>
+    private static IResult ToProblem(HuiaAdminOutcome outcome) => outcome.Kind switch
+    {
+        HuiaAdminOutcomeKind.Invalid => Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            [outcome.Field!] = [outcome.Message!],
+        }),
+        HuiaAdminOutcomeKind.IdentityFailed => IdentityProblem(outcome.Identity!),
+        _ => throw new InvalidOperationException("Only a failed outcome maps to a problem response."),
+    };
+
+    private static async Task PublishUserUpdatedAsync(
+        HuiaAdminOutcome outcome, IHuiaEventPublisher events, IHuiaTenantContext tenantContext, string userId,
+        TimeProvider timeProvider)
+    {
+        if (outcome.IsChanged)
+        {
+            await events.PublishAsync(new UserUpdatedEvent(tenantContext.CurrentTenantId, userId, timeProvider.GetUtcNow()));
+        }
+    }
 
     private static IResult IdentityProblem(IdentityResult result)
     {

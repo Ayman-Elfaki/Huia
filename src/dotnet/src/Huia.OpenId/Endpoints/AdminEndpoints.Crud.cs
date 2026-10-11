@@ -1,3 +1,4 @@
+using Huia.Admin;
 using Huia.Events;
 using Huia.Identity;
 using Huia.OpenId.Identity;
@@ -90,7 +91,7 @@ internal static partial class AdminEndpoints
 
             foreach (var role in body.Roles ?? [])
             {
-                if (!RoleNamePattern().IsMatch(role))
+                if (!HuiaUserAdministration.IsValidRoleName(role))
                 {
                     return Results.ValidationProblem(new Dictionary<string, string[]>
                     {
@@ -254,18 +255,14 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
-            await userManager.SetLockoutEnabledAsync(user, true);
-            var result = await userManager.SetLockoutEndDateAsync(user, body?.Until ?? DateTimeOffset.MaxValue);
-            if (!result.Succeeded)
+            var outcome = await HuiaUserAdministration.LockAsync(
+                userManager, user, body?.Until ?? DateTimeOffset.MaxValue, updateSecurityStamp: true);
+            if (!outcome.IsSuccess)
             {
-                return IdentityProblem(result);
+                return ToProblem(outcome);
             }
 
-            await userManager.UpdateSecurityStampAsync(user);
-
-            var events = services.GetRequiredService<IHuiaEventPublisher>();
-            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            await PublishUserUpdatedAsync(outcome, services, tenantId, user.Id);
             return Results.NoContent();
         });
     }
@@ -291,18 +288,14 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
-            var result = await userManager.SetLockoutEndDateAsync(user, null);
-            if (!result.Succeeded)
+            var outcome = await HuiaUserAdministration.UnlockAsync(
+                userManager, user, resetAccessFailedCount: true, updateSecurityStamp: true);
+            if (!outcome.IsSuccess)
             {
-                return IdentityProblem(result);
+                return ToProblem(outcome);
             }
 
-            await userManager.ResetAccessFailedCountAsync(user);
-            await userManager.UpdateSecurityStampAsync(user);
-
-            var events = services.GetRequiredService<IHuiaEventPublisher>();
-            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            await PublishUserUpdatedAsync(outcome, services, tenantId, user.Id);
             return Results.NoContent();
         });
     }
@@ -328,29 +321,13 @@ internal static partial class AdminEndpoints
                 return Results.NotFound();
             }
 
-            if (await userManager.GetUserTypeAsync(user) != HuiaUserType.Password)
+            var outcome = await HuiaUserAdministration.VerifyEmailAsync(userManager, user);
+            if (!outcome.IsSuccess)
             {
-                return Results.ValidationProblem(new Dictionary<string, string[]>
-                {
-                    ["email"] = ["Only an email-and-password account has an email address to verify."],
-                });
+                return ToProblem(outcome);
             }
 
-            if (user.EmailConfirmed)
-            {
-                return Results.NoContent();
-            }
-
-            user.EmailConfirmed = true;
-            var result = await userManager.UpdateAsync(user);
-            if (!result.Succeeded)
-            {
-                return IdentityProblem(result);
-            }
-
-            var events = services.GetRequiredService<IHuiaEventPublisher>();
-            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            await events.PublishAsync(new UserUpdatedEvent(tenantId, user.Id, timeProvider.GetUtcNow()));
+            await PublishUserUpdatedAsync(outcome, services, tenantId, user.Id);
             return Results.NoContent();
         });
     }
@@ -736,6 +713,30 @@ internal static partial class AdminEndpoints
 
     private static IResult ContactProblem(string message)
         => Results.ValidationProblem(new Dictionary<string, string[]> { ["contact"] = [message] });
+
+    /// <summary>Maps a failed shared admin outcome to this flavor's problem response.</summary>
+    private static IResult ToProblem(HuiaAdminOutcome outcome) => outcome.Kind switch
+    {
+        HuiaAdminOutcomeKind.Invalid => Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            [outcome.Field!] = [outcome.Message!],
+        }),
+        HuiaAdminOutcomeKind.IdentityFailed => IdentityProblem(outcome.Identity!),
+        _ => throw new InvalidOperationException("Only a failed outcome maps to a problem response."),
+    };
+
+    private static async Task PublishUserUpdatedAsync(
+        HuiaAdminOutcome outcome, IServiceProvider services, string tenantId, string userId)
+    {
+        if (!outcome.IsChanged)
+        {
+            return;
+        }
+
+        var events = services.GetRequiredService<IHuiaEventPublisher>();
+        var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
+        await events.PublishAsync(new UserUpdatedEvent(tenantId, userId, timeProvider.GetUtcNow()));
+    }
 
     private static IResult IdentityProblem(IdentityResult result)
         => Results.ValidationProblem(new Dictionary<string, string[]>

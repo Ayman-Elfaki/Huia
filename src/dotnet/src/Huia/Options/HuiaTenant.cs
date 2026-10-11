@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 
 namespace Huia.Options;
 
@@ -8,8 +7,6 @@ namespace Huia.Options;
 /// </summary>
 public class HuiaTenant : IHuiaOptionsSection
 {
-    private static readonly Regex RoleNamePattern = new("^[A-Za-z0-9._:-]{1,256}$", RegexOptions.Compiled);
-
     /// <summary>The tenant identifier / base-path segment (e.g. "acme").</summary>
     public string Identifier { get; set; } = string.Empty;
 
@@ -147,7 +144,7 @@ public class HuiaTenant : IHuiaOptionsSection
                 continue;
             }
 
-            errors.Require(RoleNamePattern.IsMatch(Roles[i]), rolePath,
+            errors.Require(Admin.HuiaUserAdministration.IsValidRoleName(Roles[i]), rolePath,
                 "must be 1-256 characters of letters, digits, '.', '_', ':' or '-'.");
             errors.Require(seenRoleNames.Add(Roles[i]), rolePath,
                 $"role '{Roles[i]}' is declared more than once in this tenant.");
