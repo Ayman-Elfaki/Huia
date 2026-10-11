@@ -1,9 +1,8 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
-using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
-using Microsoft.EntityFrameworkCore;
+using Huia.OpenId.Entities;
+using Huia.Stores;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -64,15 +63,21 @@ internal sealed class HuiaKeyRing(
             static async (state, ct) =>
             {
                 await using var scope = state.scopeFactory.CreateAsyncScope();
-                var db = scope.ServiceProvider.GetRequiredService<HuiaDbContext>();
+                var store = scope.ServiceProvider.GetRequiredService<IHuiaSigningKeyStore>();
 
                 // SQLite cannot ORDER BY a DateTimeOffset; sort in memory.
-                var rows = await db.SigningKeys.AsNoTracking()
-                    .Where(k => k.TenantId == state.tenantId &&
-                                (k.Status == HuiaSigningKeyStatus.Pending ||
-                                 k.Status == HuiaSigningKeyStatus.Active ||
-                                 k.Status == HuiaSigningKeyStatus.Rotated))
-                    .ToListAsync(ct);
+                var rows = await store.QueryAsync(
+                    new HuiaSigningKeyFilter
+                    {
+                        TenantId = state.tenantId,
+                        Statuses =
+                        [
+                            HuiaSigningKeyStatus.Pending,
+                            HuiaSigningKeyStatus.Active,
+                            HuiaSigningKeyStatus.Rotated,
+                        ],
+                    },
+                    ct);
 
                 var records = rows
                     .OrderByDescending(k => k.CreatedAt)

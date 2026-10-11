@@ -1,6 +1,6 @@
 using Huia.OpenId.Multitenancy;
 using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

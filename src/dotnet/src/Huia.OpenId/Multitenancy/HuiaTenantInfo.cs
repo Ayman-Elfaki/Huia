@@ -1,6 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 
-namespace Huia.OpenId.EntityFrameworkCore.Multitenancy;
+namespace Huia.OpenId.Multitenancy;
 
 /// <summary>
 /// Finbuckle tenant descriptor. Finbuckle 10's <see cref="ITenantInfo"/> carries only an id and an

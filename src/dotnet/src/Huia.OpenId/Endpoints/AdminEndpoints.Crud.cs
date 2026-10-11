@@ -5,14 +5,12 @@ using Huia.OpenId.Keys;
 using Huia.OpenId.Multitenancy;
 using Huia.OpenId.OpenIddict;
 using Huia.Stores;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Abstractions;
-using OpenIddict.EntityFrameworkCore.Models;
 
 namespace Huia.OpenId.Endpoints;
 
@@ -362,10 +360,9 @@ internal static partial class AdminEndpoints
     // ---------------------------------------------------------------------------------------------
 
     private static async Task<IResult> GetClientAsync(
-        HttpContext context, HuiaDbContext db, IOpenIddictApplicationManager manager, string id)
+        HttpContext context, IHuiaOpenIddictAdminStore clients, IOpenIddictApplicationManager manager, string id)
     {
-        var propertiesJson = await db.Set<OpenIddictEntityFrameworkCoreApplication>().AsNoTracking()
-            .Where(a => a.Id == id).Select(a => a.Properties).FirstOrDefaultAsync(context.RequestAborted);
+        var propertiesJson = (await clients.FindClientAsync(id, context.RequestAborted))?.Properties;
         var tenant = ExtractTenant(propertiesJson);
         if (tenant is null)
         {
@@ -425,10 +422,9 @@ internal static partial class AdminEndpoints
     }
 
     private static async Task<IResult> UpdateClientAsync(
-        HttpContext context, HuiaDbContext db, IOpenIddictApplicationManager manager, string id, ClientWriteRequest body)
+        HttpContext context, IHuiaOpenIddictAdminStore clients, IOpenIddictApplicationManager manager, string id, ClientWriteRequest body)
     {
-        var row = await db.Set<OpenIddictEntityFrameworkCoreApplication>().AsNoTracking()
-            .Where(a => a.Id == id).Select(a => new { a.Properties, a.ClientId }).FirstOrDefaultAsync(context.RequestAborted);
+        var row = await clients.FindClientAsync(id, context.RequestAborted);
         var tenant = ExtractTenant(row?.Properties);
         if (row is null || tenant is null)
         {
@@ -462,10 +458,9 @@ internal static partial class AdminEndpoints
     }
 
     private static async Task<IResult> DeleteClientAsync(
-        HttpContext context, HuiaDbContext db, IOpenIddictApplicationManager manager, string id)
+        HttpContext context, IHuiaOpenIddictAdminStore clients, IOpenIddictApplicationManager manager, string id)
     {
-        var propertiesJson = await db.Set<OpenIddictEntityFrameworkCoreApplication>().AsNoTracking()
-            .Where(a => a.Id == id).Select(a => a.Properties).FirstOrDefaultAsync(context.RequestAborted);
+        var propertiesJson = (await clients.FindClientAsync(id, context.RequestAborted))?.Properties;
         var tenant = ExtractTenant(propertiesJson);
         if (tenant is null)
         {
@@ -615,14 +610,14 @@ internal static partial class AdminEndpoints
     // Signing keys
     // ---------------------------------------------------------------------------------------------
 
-    private static async Task<IResult> GetKeyAsync(HttpContext context, HuiaDbContext db, string id)
+    private static async Task<IResult> GetKeyAsync(HttpContext context, IHuiaSigningKeyStore keys, string id)
     {
-        var key = await db.SigningKeys.AsNoTracking().FirstOrDefaultAsync(k => k.Id == id, context.RequestAborted);
+        var key = await keys.FindAsync(id, context.RequestAborted);
         return key is null ? Results.NotFound() : Results.Ok(ToKeyDetail(key));
     }
 
     private static async Task<IResult> CreateKeyAsync(
-        HttpContext context, HuiaDbContext db, HuiaSigningKeyFactory factory, IHuiaKeyRing keyRing,
+        HttpContext context, IHuiaSigningKeyStore keys, HuiaSigningKeyFactory factory, IHuiaKeyRing keyRing,
         HuiaOptions options, TimeProvider timeProvider, CreateKeyRequest body)
     {
         if (string.IsNullOrWhiteSpace(body.Tenant) || !options.Tenants.ContainsKey(body.Tenant))
@@ -635,29 +630,29 @@ internal static partial class AdminEndpoints
         var status = activate ? HuiaSigningKeyStatus.Active : HuiaSigningKeyStatus.Pending;
         var key = factory.Create(body.Tenant, options.Keys, status, body.ActivateAt ?? now);
 
+        IReadOnlyList<HuiaSigningKey> demoted = [];
         if (activate)
         {
-            var current = await db.SigningKeys
-                .Where(k => k.TenantId == body.Tenant && k.Status == HuiaSigningKeyStatus.Active)
-                .ToListAsync(context.RequestAborted);
-            foreach (var demoted in current)
+            demoted = await keys.QueryAsync(
+                new HuiaSigningKeyFilter { TenantId = body.Tenant, Statuses = [HuiaSigningKeyStatus.Active] },
+                context.RequestAborted);
+            foreach (var current in demoted)
             {
-                demoted.Status = HuiaSigningKeyStatus.Rotated;
-                demoted.RotatedAt = now;
+                current.Status = HuiaSigningKeyStatus.Rotated;
+                current.RotatedAt = now;
             }
         }
 
-        db.SigningKeys.Add(key);
-        await db.SaveChangesAsync(context.RequestAborted);
+        await keys.SaveAsync([key], [.. demoted], [], context.RequestAborted);
         await keyRing.InvalidateAsync(body.Tenant);
 
         return Results.Created($"/admin/keys/{key.Id}", ToKeyDetail(key));
     }
 
     private static async Task<IResult> RevokeKeyAsync(
-        HttpContext context, HuiaDbContext db, IHuiaKeyRing keyRing, TimeProvider timeProvider, string id)
+        HttpContext context, IHuiaSigningKeyStore keys, IHuiaKeyRing keyRing, TimeProvider timeProvider, string id)
     {
-        var key = await db.SigningKeys.FirstOrDefaultAsync(k => k.Id == id, context.RequestAborted);
+        var key = await keys.FindAsync(id, context.RequestAborted);
         if (key is null)
         {
             return Results.NotFound();
@@ -670,11 +665,14 @@ internal static partial class AdminEndpoints
 
         if (key.Status == HuiaSigningKeyStatus.Active)
         {
-            var replacements = await db.SigningKeys.CountAsync(
-                k => k.TenantId == key.TenantId && k.Id != id
-                     && (k.Status == HuiaSigningKeyStatus.Active || k.Status == HuiaSigningKeyStatus.Pending),
+            var candidates = await keys.QueryAsync(
+                new HuiaSigningKeyFilter
+                {
+                    TenantId = key.TenantId,
+                    Statuses = [HuiaSigningKeyStatus.Active, HuiaSigningKeyStatus.Pending],
+                },
                 context.RequestAborted);
-            if (replacements == 0)
+            if (!candidates.Any(k => k.Id != id))
             {
                 return Results.Problem(
                     statusCode: StatusCodes.Status409Conflict,
@@ -684,16 +682,16 @@ internal static partial class AdminEndpoints
 
         key.Status = HuiaSigningKeyStatus.Retired;
         key.RetiredAt = timeProvider.GetUtcNow();
-        await db.SaveChangesAsync(context.RequestAborted);
+        await keys.SaveAsync([], [key], [], context.RequestAborted);
         await keyRing.InvalidateAsync(key.TenantId);
 
         return Results.NoContent();
     }
 
     private static async Task<IResult> DeleteKeyAsync(
-        HttpContext context, HuiaDbContext db, IHuiaKeyRing keyRing, string id)
+        HttpContext context, IHuiaSigningKeyStore keys, IHuiaKeyRing keyRing, string id)
     {
-        var key = await db.SigningKeys.FirstOrDefaultAsync(k => k.Id == id, context.RequestAborted);
+        var key = await keys.FindAsync(id, context.RequestAborted);
         if (key is null)
         {
             return Results.NotFound();
@@ -706,8 +704,7 @@ internal static partial class AdminEndpoints
                 title: "Only a retired key can be deleted. Revoke it first.");
         }
 
-        db.SigningKeys.Remove(key);
-        await db.SaveChangesAsync(context.RequestAborted);
+        await keys.SaveAsync([], [], [key], context.RequestAborted);
         await keyRing.InvalidateAsync(key.TenantId);
 
         return Results.NoContent();

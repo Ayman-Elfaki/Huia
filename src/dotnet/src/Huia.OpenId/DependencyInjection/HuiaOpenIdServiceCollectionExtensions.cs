@@ -1,7 +1,7 @@
 using Huia.DependencyInjection;
 using Huia.OpenId.Configuration;
 using Huia.OpenId.DependencyInjection;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.OpenId.Flows;
 using Huia.OpenId.HealthChecks;
 using Huia.OpenId.Identity;

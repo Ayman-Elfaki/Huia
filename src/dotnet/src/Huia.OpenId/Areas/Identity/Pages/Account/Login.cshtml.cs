@@ -4,16 +4,15 @@ using System.Security.Claims;
 using Huia.OpenId.Flows;
 using Huia.OpenId.Services;
 using Huia.OpenId.UI;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Events;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Identity;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Huia.Options;
 using Huia.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 
 namespace Huia.OpenId.Areas.Identity.Pages.Account;

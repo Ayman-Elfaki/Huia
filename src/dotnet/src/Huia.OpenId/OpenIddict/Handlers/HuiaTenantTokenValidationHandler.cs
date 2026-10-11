@@ -1,6 +1,6 @@
 using Huia.OpenId.Keys;
 using Finbuckle.MultiTenant.Abstractions;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Huia.Options;
 using OpenIddict.Validation;
 using static OpenIddict.Validation.OpenIddictValidationEvents;

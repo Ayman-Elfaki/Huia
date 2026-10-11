@@ -54,4 +54,10 @@ public interface IHuiaOpenIdAdminStore<TUser, TRole>
 
     /// <summary>Returns <c>true</c> if any user is assigned to the role with the given ID, bypassing query filters.</summary>
     Task<bool> IsRoleAssignedToAnyUserAsync(string roleId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns every role with the given <c>Origin</c> across all tenants, bypassing query filters
+    /// (used to discover code-declared roles that have since been removed from the options tree).
+    /// </summary>
+    Task<IReadOnlyList<TRole>> ListRolesByOriginAsync(string origin, CancellationToken ct = default);
 }

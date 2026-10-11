@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using Huia.OpenId.Emails;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 
 namespace Huia.IntegrationTests.Infrastructure;
 

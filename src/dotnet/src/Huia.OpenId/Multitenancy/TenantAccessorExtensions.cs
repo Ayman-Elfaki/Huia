@@ -1,6 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 
-namespace Huia.OpenId.EntityFrameworkCore.Multitenancy;
+namespace Huia.OpenId.Multitenancy;
 
 /// <summary>
 /// Convenience readers over Finbuckle's <see cref="IMultiTenantContextAccessor"/>: the identifier of the

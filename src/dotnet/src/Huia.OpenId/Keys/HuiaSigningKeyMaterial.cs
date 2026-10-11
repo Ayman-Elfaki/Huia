@@ -1,4 +1,4 @@
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Huia.OpenId.Keys;

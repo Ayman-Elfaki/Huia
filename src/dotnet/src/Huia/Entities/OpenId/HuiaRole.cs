@@ -1,4 +1,4 @@
-namespace Huia.OpenId.EntityFrameworkCore.Entities;
+namespace Huia.OpenId.Entities;
 
 /// <summary>
 /// A role. Belongs to exactly one tenant via <see cref="TenantId"/>; role-name uniqueness is scoped to

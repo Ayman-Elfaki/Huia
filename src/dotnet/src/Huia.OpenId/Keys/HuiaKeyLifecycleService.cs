@@ -1,7 +1,6 @@
-using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
-using Microsoft.EntityFrameworkCore;
+using Huia.Stores;
 using Microsoft.Extensions.Logging;
 
 namespace Huia.OpenId.Keys;
@@ -12,7 +11,7 @@ namespace Huia.OpenId.Keys;
 /// code runs on SQLite, which cannot translate <see cref="DateTimeOffset"/> comparisons.
 /// </summary>
 internal sealed partial class HuiaKeyLifecycleService(
-    HuiaDbContext dbContext,
+    IHuiaSigningKeyStore keyStore,
     HuiaSigningKeyFactory keyFactory,
     IHuiaKeyRing keyRing,
     HuiaOptions options,
@@ -24,20 +23,22 @@ internal sealed partial class HuiaKeyLifecycleService(
     {
         foreach (var tenantId in options.Tenants.Keys)
         {
-            var hasUsableKey = await dbContext.SigningKeys.AnyAsync(
-                k => k.TenantId == tenantId &&
-                     (k.Status == HuiaSigningKeyStatus.Active || k.Status == HuiaSigningKeyStatus.Pending),
+            var usable = await keyStore.QueryAsync(
+                new HuiaSigningKeyFilter
+                {
+                    TenantId = tenantId,
+                    Statuses = [HuiaSigningKeyStatus.Active, HuiaSigningKeyStatus.Pending],
+                },
                 cancellationToken);
 
-            if (hasUsableKey)
+            if (usable.Count > 0)
             {
                 continue;
             }
 
             var now = timeProvider.GetUtcNow();
             var key = keyFactory.Create(tenantId, options.Keys, HuiaSigningKeyStatus.Active, now);
-            dbContext.SigningKeys.Add(key);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await keyStore.SaveAsync([key], [], [], cancellationToken);
             await keyRing.InvalidateAsync(tenantId);
             LogBootstrapped(tenantId, key.KeyId);
         }
@@ -50,9 +51,7 @@ internal sealed partial class HuiaKeyLifecycleService(
 
         foreach (var tenantId in options.Tenants.Keys)
         {
-            var keys = await dbContext.SigningKeys
-                .Where(k => k.TenantId == tenantId)
-                .ToListAsync(cancellationToken);
+            var keys = await keyStore.QueryAsync(new HuiaSigningKeyFilter { TenantId = tenantId }, cancellationToken);
 
             if (keys.Any(k => k.Status == HuiaSigningKeyStatus.Pending))
             {
@@ -70,8 +69,7 @@ internal sealed partial class HuiaKeyLifecycleService(
             }
 
             var successor = keyFactory.Create(tenantId, options.Keys, HuiaSigningKeyStatus.Pending, now + options.Keys.ActivationDelay);
-            dbContext.SigningKeys.Add(successor);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await keyStore.SaveAsync([successor], [], [], cancellationToken);
             await keyRing.InvalidateAsync(tenantId);
             LogRotated(tenantId, successor.KeyId, successor.ActivateAt);
         }
@@ -82,17 +80,16 @@ internal sealed partial class HuiaKeyLifecycleService(
     {
         var now = timeProvider.GetUtcNow();
 
-        var pending = await dbContext.SigningKeys
-            .Where(k => k.Status == HuiaSigningKeyStatus.Pending)
-            .ToListAsync(cancellationToken);
+        var pending = await keyStore.QueryAsync(
+            new HuiaSigningKeyFilter { Statuses = [HuiaSigningKeyStatus.Pending] }, cancellationToken);
 
         foreach (var group in pending.Where(k => k.ActivateAt <= now).GroupBy(k => k.TenantId))
         {
             var promote = group.OrderBy(k => k.ActivateAt).First();
 
-            var currentActive = await dbContext.SigningKeys
-                .Where(k => k.TenantId == group.Key && k.Status == HuiaSigningKeyStatus.Active)
-                .ToListAsync(cancellationToken);
+            var currentActive = await keyStore.QueryAsync(
+                new HuiaSigningKeyFilter { TenantId = group.Key, Statuses = [HuiaSigningKeyStatus.Active] },
+                cancellationToken);
 
             foreach (var key in currentActive)
             {
@@ -101,7 +98,7 @@ internal sealed partial class HuiaKeyLifecycleService(
             }
 
             promote.Status = HuiaSigningKeyStatus.Active;
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await keyStore.SaveAsync([], [.. currentActive, promote], [], cancellationToken);
             await keyRing.InvalidateAsync(group.Key);
             LogActivated(group.Key, promote.KeyId);
         }
@@ -112,19 +109,30 @@ internal sealed partial class HuiaKeyLifecycleService(
     {
         var now = timeProvider.GetUtcNow();
 
-        var rotated = await dbContext.SigningKeys
-            .Where(k => k.Status == HuiaSigningKeyStatus.Rotated)
-            .ToListAsync(cancellationToken);
+        var rotated = await keyStore.QueryAsync(
+            new HuiaSigningKeyFilter { Statuses = [HuiaSigningKeyStatus.Rotated] }, cancellationToken);
 
-        foreach (var key in rotated.Where(k => k.RotatedAt is { } r && now - r >= options.Keys.RetentionPeriod))
+        var due = rotated
+            .Where(k => k.RotatedAt is { } r && now - r >= options.Keys.RetentionPeriod)
+            .ToList();
+        if (due.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var key in due)
         {
             key.Status = HuiaSigningKeyStatus.Retired;
             key.RetiredAt = now;
+        }
+
+        await keyStore.SaveAsync([], due, [], cancellationToken);
+
+        foreach (var key in due)
+        {
             await keyRing.InvalidateAsync(key.TenantId);
             LogRetired(key.TenantId, key.KeyId);
         }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>Permanently deletes retired keys after the grace period.</summary>
@@ -132,9 +140,8 @@ internal sealed partial class HuiaKeyLifecycleService(
     {
         var now = timeProvider.GetUtcNow();
 
-        var retired = await dbContext.SigningKeys
-            .Where(k => k.Status == HuiaSigningKeyStatus.Retired)
-            .ToListAsync(cancellationToken);
+        var retired = await keyStore.QueryAsync(
+            new HuiaSigningKeyFilter { Statuses = [HuiaSigningKeyStatus.Retired] }, cancellationToken);
 
         var expired = retired
             .Where(k => k.RetiredAt is { } r && now - r >= options.Keys.RetiredKeyGracePeriod)
@@ -145,8 +152,7 @@ internal sealed partial class HuiaKeyLifecycleService(
             return;
         }
 
-        dbContext.SigningKeys.RemoveRange(expired);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await keyStore.SaveAsync([], [], expired, cancellationToken);
         foreach (var tenantId in expired.Select(k => k.TenantId).Distinct())
         {
             await keyRing.InvalidateAsync(tenantId);

@@ -1,7 +1,7 @@
 using Finbuckle.MultiTenant.Extensions;
 using Huia.OpenId.Identity;
-using Huia.OpenId.EntityFrameworkCore.Entities;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Entities;
+using Huia.OpenId.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,10 +1,10 @@
 using Huia.OpenId.Keys;
 using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using HuiaDbContext = Huia.OpenId.EntityFrameworkCore.HuiaDbContext<Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser, Huia.OpenId.EntityFrameworkCore.Entities.HuiaRole, string>;
+using HuiaDbContext = Huia.OpenId.EntityFrameworkCore.HuiaDbContext<Huia.OpenId.Entities.HuiaUser, Huia.OpenId.Entities.HuiaRole, string>;
 
 namespace Huia.IntegrationTests;
 

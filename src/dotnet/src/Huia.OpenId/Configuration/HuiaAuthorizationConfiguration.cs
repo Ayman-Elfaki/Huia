@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using MR.AspNetCore.Pagination;
 using OpenIddict.Validation.AspNetCore;
 
 namespace Huia.OpenId.Configuration;
@@ -21,7 +20,6 @@ internal static class HuiaAuthorizationConfiguration
                 policy.RequireAuthenticatedUser();
             });
 
-        services.AddPagination();
         return services;
     }
 }

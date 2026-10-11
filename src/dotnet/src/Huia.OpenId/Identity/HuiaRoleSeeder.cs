@@ -1,9 +1,8 @@
 using Huia.Multitenancy;
-using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
+using Huia.Stores;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -79,10 +78,8 @@ internal sealed partial class HuiaRoleSeeder(
         var candidates = new List<(HuiaRole Role, bool HasMembers)>();
         await using (var readScope = services.CreateAsyncScope())
         {
-            var db = readScope.ServiceProvider.GetRequiredService<HuiaDbContext>();
-            var staticRoles = await db.Set<HuiaRole>().IgnoreQueryFilters()
-                .Where(r => r.Origin == HuiaConstants.Origins.Static)
-                .ToListAsync(cancellationToken);
+            var store = readScope.ServiceProvider.GetRequiredService<IHuiaOpenIdAdminStore<HuiaUser, HuiaRole>>();
+            var staticRoles = await store.ListRolesByOriginAsync(HuiaConstants.Origins.Static, cancellationToken);
 
             foreach (var role in staticRoles)
             {
@@ -93,8 +90,7 @@ internal sealed partial class HuiaRoleSeeder(
                     continue;
                 }
 
-                var hasMembers = await db.Set<IdentityUserRole<string>>().IgnoreQueryFilters()
-                    .AnyAsync(ur => ur.RoleId == role.Id, cancellationToken);
+                var hasMembers = await store.IsRoleAssignedToAnyUserAsync(role.Id, cancellationToken);
                 candidates.Add((role, hasMembers));
             }
         }
@@ -110,9 +106,14 @@ internal sealed partial class HuiaRoleSeeder(
             await using var scope = services.CreateAsyncScope();
             using (scope.ServiceProvider.GetRequiredService<IHuiaTenantContext>().EnterTenantScope(scope.ServiceProvider, role.TenantId))
             {
-                var db = scope.ServiceProvider.GetRequiredService<HuiaDbContext>();
-                db.Remove(role);
-                await db.SaveChangesAsync(cancellationToken);
+                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<HuiaRole>>();
+                var result = await roleManager.DeleteAsync(role);
+                if (!result.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        $"Could not prune role '{role.Name}' for tenant '{role.TenantId}': " +
+                        string.Join("; ", result.Errors.Select(e => e.Description)));
+                }
             }
 
             LogPruned(role.Name ?? role.Id, role.TenantId);

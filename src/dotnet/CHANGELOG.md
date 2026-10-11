@@ -5,6 +5,20 @@ All notable changes to Huia are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+
+- **`Huia.OpenId`** — **Breaking.** The package no longer references `Huia.OpenId.EntityFrameworkCore`. A host
+  must add `Huia.OpenId.EntityFrameworkCore` (or another store adapter) itself. The server now talks to persistence
+  only through ports in `Huia.Stores`: `IHuiaSigningKeyStore`, `IHuiaOpenIddictAdminStore`,
+  `IHuiaPhoneLookupStore`, `IHuiaDatabaseProbe`, plus the existing `IHuiaOpenIdAdminStore`
+  (`ListRolesByOriginAsync` added). The EF package registers all of them from `AddEntityFrameworkCoreStores`.
+- **`Huia`** — **Breaking.** The tenant-aware entities moved out of `Huia.OpenId.EntityFrameworkCore` into the
+  core package under the `Huia.OpenId.Entities` namespace (`HuiaUser`, `HuiaRole`, `HuiaSigningKey`,
+  `HuiaSigningKeyStatus`), and `HuiaTenantInfo` / `TenantAccessorExtensions` moved to `Huia.OpenId.Multitenancy`
+  in `Huia.OpenId`. Update `using Huia.OpenId.EntityFrameworkCore.Entities;` /
+  `...EntityFrameworkCore.Multitenancy;` accordingly. The `admin/clients` and `admin/keys` list responses are now
+  `{ data, hasNext, hasPrevious, nextCursor, previousCursor }`.
+
 ### Removed
 
 - **`Huia`** — **Breaking.** Dead legacy options types, none of which the live pipeline read:

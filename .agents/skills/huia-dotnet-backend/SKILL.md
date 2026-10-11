@@ -33,7 +33,7 @@ Define a DbContext inheriting from `HuiaDbContext<HuiaUser, HuiaRole, string>`:
 ```csharp
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Microsoft.EntityFrameworkCore;
 
 public class IdentityHuiaDbContext(
@@ -54,7 +54,7 @@ builder.Services.AddDbContext<IdentityHuiaDbContext>(options =>
 ```csharp
 using Huia;
 using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
 
 var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>

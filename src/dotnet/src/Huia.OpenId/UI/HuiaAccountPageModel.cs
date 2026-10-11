@@ -1,6 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Flows;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -90,7 +90,7 @@ public abstract class HuiaAccountPageModel : PageModel
     /// </summary>
     /// <param name="user">The account that just signed in.</param>
     /// <param name="returnUrl">A return URL already sanitized by <c>IReturnUrlProtector</c>.</param>
-    protected async Task<IActionResult> ResolvePostSignUpRedirectAsync(EntityFrameworkCore.Entities.HuiaUser user, string returnUrl)
+    protected async Task<IActionResult> ResolvePostSignUpRedirectAsync(Entities.HuiaUser user, string returnUrl)
     {
         ArgumentNullException.ThrowIfNull(user);
 

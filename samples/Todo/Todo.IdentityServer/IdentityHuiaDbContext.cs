@@ -1,7 +1,7 @@
 using System;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Todo.IdentityServer;

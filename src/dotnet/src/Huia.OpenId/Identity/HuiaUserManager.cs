@@ -1,6 +1,7 @@
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Huia.Stores;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -20,16 +21,18 @@ public class HuiaUserManager(
     ILogger<UserManager<HuiaUser>> logger) : Huia.Identity.HuiaUserManager<HuiaUser>(store, optionsAccessor,
     passwordHasher, userValidators, passwordValidators, keyNormalizer, errors, services, logger)
 {
+    private readonly IServiceProvider _services = services;
+
     /// <summary>Stamps the tenant a freshly created phone/external-login account belongs to.</summary>
     protected override void OnUserCreating(HuiaUser user, string tenantId) => user.TenantId = tenantId;
 
     /// <summary>
     /// Finds an account by its phone number (the <c>PhoneNumber</c> column, not the username). Scoped
-    /// to the current tenant by <c>HuiaDbContext</c>'s global query filter.
+    /// to the current tenant by the store's global query filter.
     /// </summary>
     public Task<HuiaUser?> FindByPhoneNumberAsync(string phoneNumber)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(phoneNumber);
-        return Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber, CancellationToken);
+        return _services.GetRequiredService<IHuiaPhoneLookupStore>().FindByPhoneNumberAsync(phoneNumber, CancellationToken);
     }
 }

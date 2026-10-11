@@ -1,7 +1,7 @@
 using System.Globalization;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Finbuckle.MultiTenant.Abstractions;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Huia.Options;
 using MailKit.Net.Smtp;
 using MailKit.Security;

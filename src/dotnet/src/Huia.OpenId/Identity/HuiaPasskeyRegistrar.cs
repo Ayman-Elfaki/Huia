@@ -1,6 +1,6 @@
 using Huia.Events;
 using Huia.Multitenancy;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 
 namespace Huia.OpenId.Identity;
 

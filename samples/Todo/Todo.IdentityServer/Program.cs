@@ -1,6 +1,6 @@
 using Huia;
 using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Todo.IdentityServer;
 using Todo.IdentityServer.Tenants;
 using Huia.Options;

@@ -1,7 +1,7 @@
 using Huia.OpenId.Flows;
 using Huia.OpenId.Identity;
 using Huia.OpenId.UI;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;

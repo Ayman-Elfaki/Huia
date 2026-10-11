@@ -3,8 +3,7 @@ using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Identity;
 using Huia.OpenId.Multitenancy;
 using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Entities;
 using Huia.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -20,7 +19,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
-using HuiaDbContext = Huia.OpenId.EntityFrameworkCore.HuiaDbContext<Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser, Huia.OpenId.EntityFrameworkCore.Entities.HuiaRole, string>;
+using HuiaDbContext = Huia.OpenId.EntityFrameworkCore.HuiaDbContext<Huia.OpenId.Entities.HuiaUser, Huia.OpenId.Entities.HuiaRole, string>;
 
 namespace Huia.IntegrationTests.Infrastructure;
 

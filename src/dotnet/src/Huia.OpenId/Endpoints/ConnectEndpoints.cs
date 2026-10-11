@@ -1,11 +1,11 @@
 using System.Security.Claims;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Events;
 using Huia.Localization;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Flows;
 using Huia.OpenId.Identity;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Huia.Options;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Antiforgery;

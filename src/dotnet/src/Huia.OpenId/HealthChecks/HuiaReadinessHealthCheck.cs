@@ -1,7 +1,6 @@
-using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
-using Microsoft.EntityFrameworkCore;
+using Huia.Stores;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenIddict.Abstractions;
 
@@ -14,7 +13,8 @@ namespace Huia.OpenId.HealthChecks;
 /// piece — or an unreachable / unmigrated database — is <see cref="HealthStatus.Unhealthy"/>.
 /// </summary>
 internal sealed class HuiaReadinessHealthCheck(
-    HuiaDbContext dbContext,
+    IHuiaDatabaseProbe databaseProbe,
+    IHuiaSigningKeyStore signingKeys,
     IOpenIddictApplicationManager applicationManager,
     IOpenIddictScopeManager scopeManager,
     HuiaOptions options) : IHealthCheck
@@ -23,16 +23,18 @@ internal sealed class HuiaReadinessHealthCheck(
     {
         try
         {
-            if (!await dbContext.Database.CanConnectAsync(cancellationToken))
+            if (!await databaseProbe.CanConnectAsync(cancellationToken))
             {
                 return HealthCheckResult.Unhealthy("The Huia database is unreachable.");
             }
 
-            var keyedTenants = await dbContext.SigningKeys
-                .Where(k => k.Status == HuiaSigningKeyStatus.Active || k.Status == HuiaSigningKeyStatus.Pending)
-                .Select(k => k.TenantId)
-                .Distinct()
-                .ToListAsync(cancellationToken);
+            var usableKeys = await signingKeys.QueryAsync(
+                new HuiaSigningKeyFilter
+                {
+                    Statuses = [HuiaSigningKeyStatus.Active, HuiaSigningKeyStatus.Pending],
+                },
+                cancellationToken);
+            var keyedTenants = usableKeys.Select(k => k.TenantId).Distinct(StringComparer.Ordinal).ToList();
 
             var missingKeys = options.Tenants.Keys
                 .Where(tenantId => !keyedTenants.Contains(tenantId, StringComparer.Ordinal))

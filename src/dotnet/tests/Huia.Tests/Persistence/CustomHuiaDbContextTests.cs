@@ -1,9 +1,9 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.Entities;
 using Huia.Headless.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
-using OpenIdHuiaRole = Huia.OpenId.EntityFrameworkCore.Entities.HuiaRole;
-using OpenIdHuiaUser = Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser;
+using Huia.OpenId.Multitenancy;
+using OpenIdHuiaRole = Huia.OpenId.Entities.HuiaRole;
+using OpenIdHuiaUser = Huia.OpenId.Entities.HuiaUser;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

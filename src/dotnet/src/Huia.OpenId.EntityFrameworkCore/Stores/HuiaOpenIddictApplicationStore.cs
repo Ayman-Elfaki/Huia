@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Finbuckle.MultiTenant.Abstractions;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using OpenIddict.EntityFrameworkCore;

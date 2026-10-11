@@ -2,7 +2,7 @@ using Huia;
 using Huia.OpenId.Endpoints;
 using Huia.OpenId.HealthChecks;
 using Huia.OpenId.UI;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,5 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Huia.OpenId.Multitenancy;

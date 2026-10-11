@@ -1,4 +1,4 @@
-namespace Huia.OpenId.EntityFrameworkCore.Entities;
+namespace Huia.OpenId.Entities;
 
 /// <summary>The lifecycle stage of a tenant signing key.</summary>
 public enum HuiaSigningKeyStatus

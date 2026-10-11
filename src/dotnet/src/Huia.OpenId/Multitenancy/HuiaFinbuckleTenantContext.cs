@@ -1,6 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.Multitenancy;
-using Huia.OpenId.EntityFrameworkCore.Multitenancy;
+using Huia.OpenId.Multitenancy;
 
 namespace Huia.OpenId.Multitenancy;
 

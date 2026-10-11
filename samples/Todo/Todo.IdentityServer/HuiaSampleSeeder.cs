@@ -1,7 +1,7 @@
 using Huia;
 using Huia.OpenId.Emails;
 using Huia.OpenId.Multitenancy;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Todo.IdentityServer;

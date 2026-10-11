@@ -23,7 +23,7 @@ Entity Framework Core persistence for the Huia identity provider:
   application's `Properties["huia:tenant"]` and is enforced by `HuiaOpenIddict{Application,Scope}Store`
   (which read `IMultiTenantContextAccessor`).
 - `IMultiTenantContextAccessor` extensions `CurrentTenantId()` / `RequireCurrentTenantId()`
-  (`Huia.OpenId.EntityFrameworkCore.Multitenancy.TenantAccessorExtensions`) for reads.
+  (`Huia.OpenId.Multitenancy.TenantAccessorExtensions`) for reads.
 
 This package is provider-agnostic and **ships no migrations**. The host application owns the provider
 package (for example `Npgsql.EntityFrameworkCore.PostgreSQL`), the migrations, and the design-time

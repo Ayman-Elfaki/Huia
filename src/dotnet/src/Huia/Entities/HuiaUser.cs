@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Huia.Entities;
 
 /// <summary>
-/// A user account. Not multi-tenant — <c>Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser</c> subclasses
+/// A user account. Not multi-tenant — <c>Huia.OpenId.Entities.HuiaUser</c> subclasses
 /// this to add a <c>TenantId</c> for the multi-tenant flavor; a single-tenant host uses this type directly.
 /// </summary>
 public class HuiaUser : IdentityUser<string>

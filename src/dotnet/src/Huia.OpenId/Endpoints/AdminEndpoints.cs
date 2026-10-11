@@ -1,17 +1,13 @@
 using System.Text.Json;
 using Huia.OpenId.Multitenancy;
-using Huia.OpenId.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
 using Huia.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
-using MR.AspNetCore.Pagination;
 using OpenIddict.Abstractions;
-using OpenIddict.EntityFrameworkCore.Models;
 
 namespace Huia.OpenId.Endpoints;
 
@@ -142,50 +138,43 @@ internal static partial class AdminEndpoints
         return Results.Ok(new { data, result.HasNext, result.HasPrevious, result.NextCursor, result.PreviousCursor });
     }
 
-    private static async Task<IResult> ListClientsAsync(HttpContext context, HuiaDbContext db,
-        IPaginationService pagination)
+    private static async Task<IResult> ListClientsAsync(HttpContext context, IHuiaOpenIddictAdminStore store)
     {
-        var result = await pagination.KeysetPaginateAsync(
-            db.Set<OpenIddictEntityFrameworkCoreApplication>().AsNoTracking(),
-            builder => builder.Ascending(a => a.Id!),
-            async id => await db.Set<OpenIddictEntityFrameworkCoreApplication>()
-                .FindAsync([id], context.RequestAborted),
-            apps => apps.Select(a => new ClientDto(a.Id, a.ClientId, a.DisplayName, a.ClientType,
-                ExtractTenant(a.Properties), ExtractOrigin(a.Properties))),
-            ReadQuery(context));
+        var (size, after, before) = ReadPaging(context);
+        var page = await store.ListClientsAsync(
+            new HuiaClientQuery { PageSize = size, After = after, Before = before }, context.RequestAborted);
 
-        return Results.Ok(result);
+        var data = page.Data.Select(a => new ClientDto(a.Id, a.ClientId, a.DisplayName, a.ClientType,
+            ExtractTenant(a.Properties), ExtractOrigin(a.Properties))).ToList();
+
+        return Results.Ok(new { data, page.HasNext, page.HasPrevious, page.NextCursor, page.PreviousCursor });
     }
 
-    private static async Task<IResult> ListKeysAsync(HttpContext context, HuiaDbContext db,
-        IPaginationService pagination)
+    private static async Task<IResult> ListKeysAsync(HttpContext context, IHuiaSigningKeyStore keys)
     {
         var tenant = context.Request.Query["tenant"].ToString();
-        var source = db.SigningKeys.AsNoTracking();
-        if (!string.IsNullOrEmpty(tenant))
-        {
-            source = source.Where(k => k.TenantId == tenant);
-        }
+        var (size, after, before) = ReadPaging(context);
+        var page = await keys.ListAsync(
+            new HuiaSigningKeyQuery
+            {
+                TenantId = string.IsNullOrEmpty(tenant) ? null : tenant,
+                PageSize = size,
+                After = after,
+                Before = before,
+            },
+            context.RequestAborted);
 
-        var result = await pagination.KeysetPaginateAsync(
-            source,
-            builder => builder.Ascending(k => k.Id),
-            async id => await db.SigningKeys.FindAsync([id], context.RequestAborted),
-            keys => keys.Select(k =>
-                new KeyDto(k.Id, k.TenantId, k.KeyId, k.Algorithm, k.Status.ToString(), k.CreatedAt)),
-            ReadQuery(context));
+        var data = page.Data.Select(k =>
+            new KeyDto(k.Id, k.TenantId, k.KeyId, k.Algorithm, k.Status.ToString(), k.CreatedAt)).ToList();
 
-        return Results.Ok(result);
+        return Results.Ok(new { data, page.HasNext, page.HasPrevious, page.NextCursor, page.PreviousCursor });
     }
 
-    private static async Task<IResult> ListScopesAsync(HttpContext context, HuiaDbContext db)
+    private static async Task<IResult> ListScopesAsync(HttpContext context, IHuiaOpenIddictAdminStore store)
     {
         var tenant = context.Request.Query["tenant"].ToString();
 
-        var rows = await db.Set<OpenIddictEntityFrameworkCoreScope>().AsNoTracking()
-            .OrderBy(s => s.Name)
-            .Select(s => new { s.Id, s.Name, s.DisplayName, s.Description, s.Properties })
-            .ToListAsync(context.RequestAborted);
+        var rows = await store.ListScopesAsync(context.RequestAborted);
 
         var scopes = rows
             .Select(s => new ScopeDto(s.Id, s.Name, s.DisplayName, s.Description, ExtractTenant(s.Properties),
@@ -321,21 +310,14 @@ internal static partial class AdminEndpoints
         return Results.NoContent();
     }
 
-    private static KeysetQueryModel ReadQuery(HttpContext context)
+    private static (int Size, string? After, string? Before) ReadPaging(HttpContext context)
     {
         var query = context.Request.Query;
         var after = query["after"].ToString();
         var before = query["before"].ToString();
         var size = int.TryParse(query["size"], out var parsed) ? Math.Clamp(parsed, 1, 100) : 25;
 
-        return new KeysetQueryModel
-        {
-            Size = size,
-            After = string.IsNullOrEmpty(after) ? null : after,
-            Before = string.IsNullOrEmpty(before) ? null : before,
-            First = string.IsNullOrEmpty(after) && string.IsNullOrEmpty(before),
-            Last = false,
-        };
+        return (size, string.IsNullOrEmpty(after) ? null : after, string.IsNullOrEmpty(before) ? null : before);
     }
 
     private static string? ExtractTenant(string? propertiesJson)

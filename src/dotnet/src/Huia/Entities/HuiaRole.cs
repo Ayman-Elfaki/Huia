@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Huia.Entities;
 
 /// <summary>
-/// A role. Not multi-tenant — <c>Huia.OpenId.EntityFrameworkCore.Entities.HuiaRole</c> subclasses this to
+/// A role. Not multi-tenant — <c>Huia.OpenId.Entities.HuiaRole</c> subclasses this to
 /// add a <c>TenantId</c> for the multi-tenant flavor; a single-tenant host uses this type directly.
 /// </summary>
 public class HuiaRole : IdentityRole<string>

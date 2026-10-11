@@ -1,5 +1,5 @@
 using Finbuckle.MultiTenant.Identity.EntityFrameworkCore;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -206,6 +206,11 @@ internal sealed class HuiaOpenIdEfCoreAdminStore<TContext, TUser, TRole>(
     public Task<bool> IsRoleAssignedToAnyUserAsync(string roleId, CancellationToken ct)
         => db.Set<IdentityUserRole<string>>().IgnoreQueryFilters().AsNoTracking()
             .AnyAsync(ur => ur.RoleId == roleId, ct);
+
+    public async Task<IReadOnlyList<TRole>> ListRolesByOriginAsync(string origin, CancellationToken ct)
+        => await db.Set<TRole>().IgnoreQueryFilters().AsNoTracking()
+            .Where(r => r.Origin == origin)
+            .ToListAsync(ct);
 
     // -----------------------------------------------------------------------------------------
     // Helpers

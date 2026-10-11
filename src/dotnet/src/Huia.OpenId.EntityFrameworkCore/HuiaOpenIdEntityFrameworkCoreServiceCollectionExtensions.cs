@@ -1,5 +1,5 @@
 using Huia.DependencyInjection;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.OpenId.EntityFrameworkCore.Stores;
 using Huia.Stores;
 using Microsoft.AspNetCore.Identity;
@@ -75,6 +75,16 @@ public static class HuiaOpenIdEntityFrameworkCoreServiceCollectionExtensions
             new HuiaOpenIdEfCoreAdminStore<TContext, TUser, TRole>(
                 sp.GetRequiredService<TContext>(),
                 sp.GetRequiredService<IPaginationService>()));
+
+        // Signing-key persistence, cross-tenant OpenIddict admin reads and the readiness probe
+        services.AddScoped<IHuiaSigningKeyStore>(sp => new HuiaOpenIdEfCoreSigningKeyStore<TContext>(
+            sp.GetRequiredService<TContext>(), sp.GetRequiredService<IPaginationService>()));
+        services.AddScoped<IHuiaOpenIddictAdminStore>(sp => new HuiaOpenIdEfCoreOpenIddictAdminStore<TContext>(
+            sp.GetRequiredService<TContext>(), sp.GetRequiredService<IPaginationService>()));
+        services.AddScoped<IHuiaPhoneLookupStore>(sp => new HuiaOpenIdEfCorePhoneLookupStore<TContext, TUser>(
+            sp.GetRequiredService<TContext>()));
+        services.AddScoped<IHuiaDatabaseProbe>(sp => new HuiaOpenIdEfCoreDatabaseProbe<TContext>(
+            sp.GetRequiredService<TContext>()));
 
         return builder;
     }

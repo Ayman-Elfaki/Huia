@@ -85,7 +85,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Huia\Huia.csproj" />
-    <ProjectReference Include="..\Huia.OpenId.EntityFrameworkCore\Huia.OpenId.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

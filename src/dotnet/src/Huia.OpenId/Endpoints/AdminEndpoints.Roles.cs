@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 using Huia.Events;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
 using Huia.Stores;
 using Microsoft.AspNetCore.Http;

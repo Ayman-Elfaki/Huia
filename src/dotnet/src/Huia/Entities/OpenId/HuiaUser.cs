@@ -1,4 +1,4 @@
-namespace Huia.OpenId.EntityFrameworkCore.Entities;
+namespace Huia.OpenId.Entities;
 
 /// <summary>
 /// A user account. Belongs to exactly one tenant via <see cref="TenantId"/>; uniqueness of the user name

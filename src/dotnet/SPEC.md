@@ -119,7 +119,7 @@ write, auto-stamps `TenantId` on insert).
 | Package | Contents | Depends on |
 |---|---|---|
 | **`Huia`** | Domain model (`HuiaSigningKey` and value objects), the **options tree** (`HuiaOptions` → `HuiaTenant` → …), eventing abstractions (`IHuiaEventPublisher`, `HuiaEvents`), constants (`HuiaConstants`). | The ASP.NET Core shared framework only. A build `Target` (`_HuiaCoreDependencyGuard`) fails the compile if an EF Core, OpenIddict or Finbuckle `PackageReference` is added. |
-| **`Huia.OpenId.EntityFrameworkCore`** | Generic `HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUser, TRole, string>`; `ModelBuilder.UseOpenIddict()`; every table renamed `Huia*` via `ToTable`; the named tenant-scoped composite indexes (`IX_HuiaUsers_Tenant_UserName` unique, `…_Tenant_Email`, `IX_HuiaRoles_Tenant_Name` unique) applied last in `OnModelCreating` (`ApplyTenantScopedIndexes`, superseding Finbuckle's `AdjustUniqueIndexes`); `IMultiTenantContextAccessor` extensions (`CurrentTenantId()` / `RequireCurrentTenantId()`); `HuiaTenantScope.Enter(...)` for seeding / admin. **Ships no migrations** — the consuming app owns the provider and the migration assembly. |
+| **`Huia.OpenId.EntityFrameworkCore`** | Generic `HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUser, TRole, string>`; `ModelBuilder.UseOpenIddict()`; every table renamed `Huia*` via `ToTable`; the named tenant-scoped composite indexes (`IX_HuiaUsers_Tenant_UserName` unique, `…_Tenant_Email`, `IX_HuiaRoles_Tenant_Name` unique) applied last in `OnModelCreating` (`ApplyTenantScopedIndexes`, superseding Finbuckle's `AdjustUniqueIndexes`); the `IHuiaSigningKeyStore`, `IHuiaOpenIddictAdminStore`, `IHuiaPhoneLookupStore`, `IHuiaDatabaseProbe` and `IHuiaOpenIdAdminStore` adapters (the ports live in `Huia`; `Huia.OpenId` depends only on those, never on this package). **Ships no migrations** — the consuming app owns the provider and the migration assembly. |
 | **`Huia.OpenId`** | `AddHuiaOpenId()` / `UseHuiaOpenId()` / `MapHuiaEndpoints()` / `MapHuiaAdminEndpoints()`; OpenIddict **server** + **client** config; the Razor Pages account UI (`Areas/Identity/Pages/Account/**`, en/ar, RTL, a committed JS bundle under `wwwroot/`); passwordless SMS (`IOtpService`, `IPhoneNumberService`, `IPendingPhoneSignup`, rate limiters); `HuiaUserManager`; the key-lifecycle Quartz jobs + `IHuiaKeyRing`; `AddHuiaSecurityHeaders()`; `IHuiaEmailSender` (MailKit) + Razor email rendering. |
 
 `Huia`, `Huia.OpenId.EntityFrameworkCore` and the Headless packages expose `internal` members to `Huia.OpenId` and the four test
@@ -296,7 +296,7 @@ Only `EmailOptions` and `SmsOptions` have `MergedWith(tenant?)`:
 ### 5.1 Entities
 
 `HuiaUser : IdentityUser<string>` and `HuiaRole : IdentityRole<string>` (in
-`Huia.OpenId.EntityFrameworkCore.Entities`) add `TenantId`, `FirstName`, `LastName`, and
+`Huia.OpenId.Entities`) add `TenantId`, `FirstName`, `LastName`, and
 `HasCompleteProfile`. The confirmed-email vs confirmed-phone split is handled by per-flow
 `IdentityOptions` (§5.6) and the stock `DefaultUserConfirmation`, not a custom `IUserConfirmation`.
 

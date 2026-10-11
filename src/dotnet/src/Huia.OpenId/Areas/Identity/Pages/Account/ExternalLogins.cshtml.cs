@@ -1,7 +1,7 @@
 using Huia.Events;
 using Huia.OpenId.Identity;
 using Huia.OpenId.UI;
-using Huia.OpenId.EntityFrameworkCore.Entities;
+using Huia.OpenId.Entities;
 using Huia.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

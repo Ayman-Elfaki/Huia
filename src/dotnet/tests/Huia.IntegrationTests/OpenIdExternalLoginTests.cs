@@ -13,8 +13,8 @@ using OpenIddict.Client;
 using OpenIddict.Client.AspNetCore;
 using Shouldly;
 using Xunit;
-using HuiaUser = Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser;
-using HuiaUserManager = Huia.Identity.HuiaUserManager<Huia.OpenId.EntityFrameworkCore.Entities.HuiaUser>;
+using HuiaUser = Huia.OpenId.Entities.HuiaUser;
+using HuiaUserManager = Huia.Identity.HuiaUserManager<Huia.OpenId.Entities.HuiaUser>;
 
 namespace Huia.IntegrationTests;
 
