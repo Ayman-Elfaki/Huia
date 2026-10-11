@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Huia.Multitenancy;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -23,39 +24,42 @@ internal sealed partial class HuiaScopeSeeder(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await using var scope = services.CreateAsyncScope();
-        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
-
         foreach (var (tenantId, tenant) in options.Tenants)
         {
-            foreach (var descriptor in tenant.Scopes)
+            if (tenant.Scopes.Count == 0)
             {
-                var existing = await manager.FindByNameAsync(descriptor.Name, cancellationToken);
-                if (existing is not null
-                    && ExtractProperty(await manager.GetPropertiesAsync(existing, cancellationToken),
-                        HuiaConstants.ApplicationProperties.Tenant) is { } owner
-                    && !string.Equals(owner, tenantId, StringComparison.Ordinal))
-                {
-                    LogNameClash(descriptor.Name, tenantId, owner);
-                    continue;
-                }
+                continue;
+            }
 
-                var model = BuildDescriptor(tenantId, descriptor);
-                if (existing is null)
+            // A fresh scope per tenant, with the tenant entered before the manager is resolved: scope names
+            // are unique per tenant, so the lookup only sees this tenant's scopes.
+            await using var tenantScope = services.CreateAsyncScope();
+            using (tenantScope.ServiceProvider.GetRequiredService<IHuiaTenantContext>()
+                       .EnterTenantScope(tenantScope.ServiceProvider, tenantId))
+            {
+                var manager = tenantScope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
+                foreach (var descriptor in tenant.Scopes)
                 {
-                    await manager.CreateAsync(model, cancellationToken);
-                    LogSeeded(descriptor.Name, tenantId);
-                }
-                else
-                {
-                    await manager.UpdateAsync(existing, model, cancellationToken);
-                    LogUpdated(descriptor.Name, tenantId);
+                    var existing = await manager.FindByNameAsync(descriptor.Name, cancellationToken);
+                    var model = BuildDescriptor(tenantId, descriptor);
+                    if (existing is null)
+                    {
+                        await manager.CreateAsync(model, cancellationToken);
+                        LogSeeded(descriptor.Name, tenantId);
+                    }
+                    else
+                    {
+                        await manager.UpdateAsync(existing, model, cancellationToken);
+                        LogUpdated(descriptor.Name, tenantId);
+                    }
                 }
             }
         }
 
         if (options.Seeding.PruneRemovedStaticEntities)
         {
+            await using var pruneScope = services.CreateAsyncScope();
+            var manager = pruneScope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
             await PruneRemovedScopesAsync(manager, cancellationToken);
         }
     }
@@ -127,10 +131,6 @@ internal sealed partial class HuiaScopeSeeder(
 
     [LoggerMessage(LogLevel.Information, "Updated OAuth scope {ScopeName} for tenant {TenantId}.")]
     partial void LogUpdated(string scopeName, string tenantId);
-
-    [LoggerMessage(LogLevel.Warning,
-        "OAuth scope {ScopeName} for tenant {TenantId} was skipped: the name is already owned by tenant {OwnerTenantId}.")]
-    partial void LogNameClash(string scopeName, string tenantId, string ownerTenantId);
 
     [LoggerMessage(LogLevel.Information, "Pruned OAuth scope {ScopeName} for tenant {TenantId}: no longer declared in code.")]
     partial void LogPruned(string scopeName, string tenantId);

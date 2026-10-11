@@ -12,8 +12,9 @@ namespace Huia.OpenId.EntityFrameworkCore;
 /// The Huia database context. Derives from Finbuckle's <see cref="MultiTenantIdentityDbContext{TUser,TRole,TKey}"/>
 /// so every Identity entity carries a <c>TenantId</c>, is filtered by the ambient tenant on read, and is
 /// rejected on write when it belongs to a different tenant (or none). The OpenIddict entities are layered
-/// on top via <c>ModelBuilder.UseOpenIddict()</c> and stay tenant-agnostic — a client's tenant lives in
-/// its <c>Properties["huia:tenant"]</c> entry and is enforced by the custom OpenIddict stores.
+/// on top via <c>ModelBuilder.UseOpenIddict()</c>. Applications and scopes get a real <c>TenantId</c> column
+/// (a shadow property) with a unique <c>{TenantId, ClientId}</c> / <c>{TenantId, Name}</c> index, filtered by
+/// the custom OpenIddict stores; authorizations and tokens are scoped through their application.
 /// </summary>
 /// <remarks>
 /// Two deliberate departures from the defaults:
@@ -87,10 +88,37 @@ public class HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUs
 
     private static void RenameOpenIddictTables(ModelBuilder builder)
     {
-        builder.Entity<OpenIddictEntityFrameworkCoreApplication>().ToTable("HuiaApplications");
+        builder.Entity<OpenIddictEntityFrameworkCoreApplication>(b =>
+        {
+            b.ToTable("HuiaApplications");
+            ScopeUniqueIndexToTenant(b.Metadata, nameof(OpenIddictEntityFrameworkCoreApplication.ClientId));
+            b.Property<string>("TenantId").HasMaxLength(64).IsRequired().HasDefaultValue(string.Empty);
+            b.HasIndex("TenantId", nameof(OpenIddictEntityFrameworkCoreApplication.ClientId))
+                .IsUnique().HasDatabaseName("IX_HuiaApplications_Tenant_ClientId");
+        });
         builder.Entity<OpenIddictEntityFrameworkCoreAuthorization>().ToTable("HuiaAuthorizations");
-        builder.Entity<OpenIddictEntityFrameworkCoreScope>().ToTable("HuiaScopes");
+        builder.Entity<OpenIddictEntityFrameworkCoreScope>(b =>
+        {
+            b.ToTable("HuiaScopes");
+            ScopeUniqueIndexToTenant(b.Metadata, nameof(OpenIddictEntityFrameworkCoreScope.Name));
+            b.Property<string>("TenantId").HasMaxLength(64).IsRequired().HasDefaultValue(string.Empty);
+            b.HasIndex("TenantId", nameof(OpenIddictEntityFrameworkCoreScope.Name))
+                .IsUnique().HasDatabaseName("IX_HuiaScopes_Tenant_Name");
+        });
         builder.Entity<OpenIddictEntityFrameworkCoreToken>().ToTable("HuiaTokens");
+    }
+
+    // OpenIddict declares a globally unique index on ClientId / Name; with a tenant column the same value may
+    // legitimately exist once per tenant, so the single-column index is replaced by a {TenantId, value} one.
+    private static void ScopeUniqueIndexToTenant(
+        Microsoft.EntityFrameworkCore.Metadata.IMutableEntityType entity, string propertyName)
+    {
+        foreach (var index in entity.GetIndexes()
+                     .Where(i => i.IsUnique && i.Properties.Count == 1 && i.Properties[0].Name == propertyName)
+                     .ToList())
+        {
+            entity.RemoveIndex(index);
+        }
     }
 
     private static void ApplyTenantScopedIndexes(ModelBuilder builder)

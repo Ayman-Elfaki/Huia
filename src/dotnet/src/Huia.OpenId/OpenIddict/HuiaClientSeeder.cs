@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Huia.Multitenancy;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -23,31 +24,44 @@ internal sealed partial class HuiaClientSeeder(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await using var scope = services.CreateAsyncScope();
-        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
-
         foreach (var (tenantId, tenant) in options.Tenants)
         {
-            foreach (var client in tenant.Applications)
+            if (tenant.Applications.Count == 0)
             {
-                var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(
-                    tenantId, client, HuiaConstants.Origins.Static);
-                var existing = await manager.FindByClientIdAsync(client.ClientId, cancellationToken);
-                if (existing is null)
+                continue;
+            }
+
+            // A fresh scope per tenant, with the tenant entered before the manager is resolved, so the
+            // lookup below only ever sees this tenant's clients (the same client_id may exist in another).
+            await using var tenantScope = services.CreateAsyncScope();
+            using (tenantScope.ServiceProvider.GetRequiredService<IHuiaTenantContext>()
+                       .EnterTenantScope(tenantScope.ServiceProvider, tenantId))
+            {
+                var manager = tenantScope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+                foreach (var client in tenant.Applications)
                 {
-                    await manager.CreateAsync(descriptor, cancellationToken);
-                    LogSeeded(client.ClientId, tenantId);
-                }
-                else
-                {
-                    await manager.UpdateAsync(existing, descriptor, cancellationToken);
-                    LogUpdated(client.ClientId, tenantId);
+                    var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(
+                        tenantId, client, HuiaConstants.Origins.Static);
+                    var existing = await manager.FindByClientIdAsync(client.ClientId, cancellationToken);
+                    if (existing is null)
+                    {
+                        await manager.CreateAsync(descriptor, cancellationToken);
+                        LogSeeded(client.ClientId, tenantId);
+                    }
+                    else
+                    {
+                        await manager.UpdateAsync(existing, descriptor, cancellationToken);
+                        LogUpdated(client.ClientId, tenantId);
+                    }
                 }
             }
         }
 
         if (options.Seeding.PruneRemovedStaticEntities)
         {
+            // Pruning is a cross-tenant sweep: no tenant in scope, so the manager lists every row.
+            await using var pruneScope = services.CreateAsyncScope();
+            var manager = pruneScope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
             await PruneRemovedClientsAsync(manager, cancellationToken);
         }
     }

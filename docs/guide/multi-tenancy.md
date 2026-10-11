@@ -33,9 +33,10 @@ using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
 }
 ```
 
-The OpenIddict entities stay tenant-agnostic: a client's or scope's tenant lives in its
-`Properties["huia:tenant"]` entry, and `HuiaOpenIddictApplicationStore` / `HuiaOpenIddictScopeStore`
-make rows from other tenants invisible on the lookups the authorize / token endpoints depend on.
+OpenIddict applications and scopes carry a real `TenantId` column, unique together with the client id /
+scope name, and `HuiaOpenIddictApplicationStore` / `HuiaOpenIddictScopeStore` filter on it — rows from other
+tenants are invisible on the lookups the authorize / token endpoints depend on, and two tenants may each
+declare a client or scope with the same identifier.
 `HuiaSigningKey` also keeps a plain `TenantId` column (not a multi-tenant entity) so the key
 lifecycle jobs can run with no tenant in scope.
 

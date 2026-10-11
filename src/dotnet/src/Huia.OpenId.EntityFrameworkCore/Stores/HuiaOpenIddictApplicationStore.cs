@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using OpenIddict.EntityFrameworkCore;
@@ -8,20 +9,21 @@ using OpenIddict.EntityFrameworkCore.Models;
 namespace Huia.OpenId.EntityFrameworkCore.Stores;
 
 /// <summary>
-/// An OpenIddict application store that makes clients belonging to other tenants invisible. The tenant a
-/// client is bound to lives in its <c>Properties["huia:tenant"]</c> entry (there is no tenant column on the
-/// stock OpenIddict entities); this store checks that entry on the two lookups the authorize/token
-/// endpoints depend on. When no tenant is in scope (seeding, administration) no scoping is applied.
+/// OpenIddict application store that scopes lookups to the tenant currently in scope using the
+/// <c>TenantId</c> column on the application row (a shadow property configured by
+/// <see cref="HuiaDbContext{TUser, TRole, TId}"/>), so one tenant's clients are invisible to another and the
+/// same <c>client_id</c> may exist in several tenants. With no tenant in scope (start-up seeding, admin
+/// listing) lookups are unfiltered.
 /// </summary>
 public sealed class HuiaOpenIddictApplicationStore : OpenIddictEntityFrameworkCoreApplicationStore
 {
+    /// <summary>The name of the shadow property holding the owning tenant.</summary>
+    internal const string TenantIdProperty = "TenantId";
+
     private readonly IMultiTenantContextAccessor _tenantAccessor;
+    private readonly IOpenIddictEntityFrameworkCoreContext _context;
 
     /// <summary>Creates the store.</summary>
-    /// <param name="cache">OpenIddict's entity cache.</param>
-    /// <param name="context">The OpenIddict EF Core context wrapper.</param>
-    /// <param name="options">OpenIddict EF Core options.</param>
-    /// <param name="tenantAccessor">Supplies the tenant lookups are scoped to.</param>
     public HuiaOpenIddictApplicationStore(
         IMemoryCache cache,
         IOpenIddictEntityFrameworkCoreContext context,
@@ -29,41 +31,83 @@ public sealed class HuiaOpenIddictApplicationStore : OpenIddictEntityFrameworkCo
         IMultiTenantContextAccessor tenantAccessor)
         : base(cache, context, options)
     {
+        _context = context ?? throw new ArgumentNullException(nameof(context));
         _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
+    }
+
+    /// <inheritdoc />
+    public override async ValueTask CreateAsync(
+        OpenIddictEntityFrameworkCoreApplication application, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(application);
+
+        var db = await _context.GetDbContextAsync(cancellationToken);
+        db.Entry(application).Property<string>(TenantIdProperty).CurrentValue =
+            TenantStamp.Resolve(application.Properties, _tenantAccessor.CurrentTenantId());
+
+        await base.CreateAsync(application, cancellationToken);
     }
 
     /// <inheritdoc />
     public override async ValueTask<OpenIddictEntityFrameworkCoreApplication?> FindByClientIdAsync(
         string identifier, CancellationToken cancellationToken)
     {
-        var application = await base.FindByClientIdAsync(identifier, cancellationToken);
-        return application is not null && await BelongsToCurrentTenantAsync(application, cancellationToken)
-            ? application
-            : null;
+        ArgumentException.ThrowIfNullOrEmpty(identifier);
+        var query = await ScopedAsync(cancellationToken);
+        return await query.FirstOrDefaultAsync(a => a.ClientId == identifier, cancellationToken);
     }
 
     /// <inheritdoc />
     public override async ValueTask<OpenIddictEntityFrameworkCoreApplication?> FindByIdAsync(
         string identifier, CancellationToken cancellationToken)
     {
-        var application = await base.FindByIdAsync(identifier, cancellationToken);
-        return application is not null && await BelongsToCurrentTenantAsync(application, cancellationToken)
-            ? application
-            : null;
+        ArgumentException.ThrowIfNullOrEmpty(identifier);
+        var query = await ScopedAsync(cancellationToken);
+        return await query.FirstOrDefaultAsync(a => a.Id == identifier, cancellationToken);
     }
 
-    private async ValueTask<bool> BelongsToCurrentTenantAsync(
-        OpenIddictEntityFrameworkCoreApplication application, CancellationToken cancellationToken)
+    private async Task<IQueryable<OpenIddictEntityFrameworkCoreApplication>> ScopedAsync(CancellationToken cancellationToken)
     {
-        var currentTenant = _tenantAccessor.CurrentTenantId();
-        if (currentTenant is null)
+        var db = await _context.GetDbContextAsync(cancellationToken);
+        IQueryable<OpenIddictEntityFrameworkCoreApplication> query =
+            db.Set<OpenIddictEntityFrameworkCoreApplication>().AsTracking();
+
+        var tenant = _tenantAccessor.CurrentTenantId();
+        return tenant is null
+            ? query
+            : query.Where(a => EF.Property<string>(a, TenantIdProperty) == tenant);
+    }
+}
+
+/// <summary>Resolves the tenant to stamp on a new OpenIddict row.</summary>
+internal static class TenantStamp
+{
+    /// <summary>
+    /// Returns the tenant recorded in the row's <c>Properties</c> JSON (<c>huia:tenant</c>, written by Huia's
+    /// descriptor mapper and the admin API), falling back to the tenant in scope, then to the empty string
+    /// (a row no tenant can see).
+    /// </summary>
+    public static string Resolve(string? propertiesJson, string? currentTenant)
+    {
+        if (!string.IsNullOrWhiteSpace(propertiesJson))
         {
-            return true;
+            try
+            {
+                using var document = JsonDocument.Parse(propertiesJson);
+                if (document.RootElement.ValueKind == JsonValueKind.Object
+                    && document.RootElement.TryGetProperty(HuiaConstants.ApplicationProperties.Tenant, out var value)
+                    && value.ValueKind == JsonValueKind.String
+                    && value.GetString() is { Length: > 0 } tenant)
+                {
+                    return tenant;
+                }
+            }
+            catch (JsonException)
+            {
+                // Malformed properties never carry a tenant; fall through.
+            }
         }
 
-        var properties = await GetPropertiesAsync(application, cancellationToken);
-        return properties.TryGetValue(HuiaConstants.ApplicationProperties.Tenant, out var value)
-               && value.ValueKind == JsonValueKind.String
-               && string.Equals(value.GetString(), currentTenant, StringComparison.Ordinal);
+        return currentTenant ?? string.Empty;
     }
 }

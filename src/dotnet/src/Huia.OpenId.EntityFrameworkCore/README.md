@@ -19,9 +19,9 @@ Entity Framework Core persistence for the Huia identity provider:
   (`IX_HuiaUsers_Tenant_UserName` unique, `IX_HuiaUsers_Tenant_Email`, `IX_HuiaRoles_Tenant_Name`
   unique), superseding Finbuckle's `AdjustUniqueIndexes`.
 - `HuiaSigningKey` is **not** multi-tenant (it carries a manual `TenantId`), so the key-lifecycle
-  jobs run with no tenant scope. OpenIddict entities are stock; the tenant binding lives in each
-  application's `Properties["huia:tenant"]` and is enforced by `HuiaOpenIddict{Application,Scope}Store`
-  (which read `IMultiTenantContextAccessor`).
+  jobs run with no tenant scope. OpenIddict applications and scopes carry a `TenantId` shadow column with
+  unique `{TenantId, ClientId}` / `{TenantId, Name}` indexes, enforced by
+  `HuiaOpenIddict{Application,Scope}Store` (which read `IMultiTenantContextAccessor`).
 - `IMultiTenantContextAccessor` extensions `CurrentTenantId()` / `RequireCurrentTenantId()`
   (`Huia.OpenId.Multitenancy.TenantAccessorExtensions`) for reads.
 

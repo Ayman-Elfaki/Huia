@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using OpenIddict.EntityFrameworkCore;
@@ -10,20 +10,17 @@ using OpenIddict.EntityFrameworkCore.Models;
 namespace Huia.OpenId.EntityFrameworkCore.Stores;
 
 /// <summary>
-/// An OpenIddict scope store that makes scopes belonging to other tenants invisible. The owning tenant
-/// lives in the scope's <c>Properties["huia:tenant"]</c> entry (there is no tenant column on the stock
-/// OpenIddict entities); this store checks that entry on the name lookups the authorize endpoint depends
-/// on. When no tenant is in scope (seeding, administration) no scoping is applied.
+/// OpenIddict scope store that scopes lookups to the tenant currently in scope using the <c>TenantId</c>
+/// column on the scope row (a shadow property configured by <see cref="HuiaDbContext{TUser, TRole, TId}"/>),
+/// so one tenant's scopes are invisible to another and the same scope name may exist in several tenants.
+/// With no tenant in scope (start-up seeding, admin listing) lookups are unfiltered.
 /// </summary>
 public sealed class HuiaOpenIddictScopeStore : OpenIddictEntityFrameworkCoreScopeStore
 {
     private readonly IMultiTenantContextAccessor _tenantAccessor;
+    private readonly IOpenIddictEntityFrameworkCoreContext _context;
 
     /// <summary>Creates the store.</summary>
-    /// <param name="cache">OpenIddict's entity cache.</param>
-    /// <param name="context">The OpenIddict EF Core context wrapper.</param>
-    /// <param name="options">OpenIddict EF Core options.</param>
-    /// <param name="tenantAccessor">Supplies the tenant lookups are scoped to.</param>
     public HuiaOpenIddictScopeStore(
         IMemoryCache cache,
         IOpenIddictEntityFrameworkCoreContext context,
@@ -31,50 +28,67 @@ public sealed class HuiaOpenIddictScopeStore : OpenIddictEntityFrameworkCoreScop
         IMultiTenantContextAccessor tenantAccessor)
         : base(cache, context, options)
     {
+        _context = context ?? throw new ArgumentNullException(nameof(context));
         _tenantAccessor = tenantAccessor ?? throw new ArgumentNullException(nameof(tenantAccessor));
+    }
+
+    /// <inheritdoc />
+    public override async ValueTask CreateAsync(
+        OpenIddictEntityFrameworkCoreScope scope, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        var db = await _context.GetDbContextAsync(cancellationToken);
+        db.Entry(scope).Property<string>(HuiaOpenIddictApplicationStore.TenantIdProperty).CurrentValue =
+            TenantStamp.Resolve(scope.Properties, _tenantAccessor.CurrentTenantId());
+
+        await base.CreateAsync(scope, cancellationToken);
     }
 
     /// <inheritdoc />
     public override async ValueTask<OpenIddictEntityFrameworkCoreScope?> FindByIdAsync(
         string identifier, CancellationToken cancellationToken)
     {
-        var scope = await base.FindByIdAsync(identifier, cancellationToken);
-        return scope is not null && await BelongsToCurrentTenantAsync(scope, cancellationToken) ? scope : null;
+        ArgumentException.ThrowIfNullOrEmpty(identifier);
+        var query = await ScopedAsync(cancellationToken);
+        return await query.FirstOrDefaultAsync(s => s.Id == identifier, cancellationToken);
     }
 
     /// <inheritdoc />
     public override async ValueTask<OpenIddictEntityFrameworkCoreScope?> FindByNameAsync(
         string name, CancellationToken cancellationToken)
     {
-        var scope = await base.FindByNameAsync(name, cancellationToken);
-        return scope is not null && await BelongsToCurrentTenantAsync(scope, cancellationToken) ? scope : null;
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        var query = await ScopedAsync(cancellationToken);
+        return await query.FirstOrDefaultAsync(s => s.Name == name, cancellationToken);
     }
 
     /// <inheritdoc />
     public override async IAsyncEnumerable<OpenIddictEntityFrameworkCoreScope> FindByNamesAsync(
         ImmutableArray<string> names, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var scope in base.FindByNamesAsync(names, cancellationToken).WithCancellation(cancellationToken))
+        if (names.IsDefaultOrEmpty)
         {
-            if (await BelongsToCurrentTenantAsync(scope, cancellationToken))
-            {
-                yield return scope;
-            }
+            yield break;
+        }
+
+        var wanted = names.ToList();
+        var query = await ScopedAsync(cancellationToken);
+        await foreach (var scope in query.Where(s => wanted.Contains(s.Name!))
+                           .AsAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            yield return scope;
         }
     }
 
-    private async ValueTask<bool> BelongsToCurrentTenantAsync(
-        OpenIddictEntityFrameworkCoreScope scope, CancellationToken cancellationToken)
+    private async Task<IQueryable<OpenIddictEntityFrameworkCoreScope>> ScopedAsync(CancellationToken cancellationToken)
     {
-        var currentTenant = _tenantAccessor.CurrentTenantId();
-        if (currentTenant is null)
-        {
-            return true;
-        }
+        var db = await _context.GetDbContextAsync(cancellationToken);
+        IQueryable<OpenIddictEntityFrameworkCoreScope> query = db.Set<OpenIddictEntityFrameworkCoreScope>().AsTracking();
 
-        var properties = await GetPropertiesAsync(scope, cancellationToken);
-        return properties.TryGetValue(HuiaConstants.ApplicationProperties.Tenant, out var value)
-               && value.ValueKind == JsonValueKind.String
-               && string.Equals(value.GetString(), currentTenant, StringComparison.Ordinal);
+        var tenant = _tenantAccessor.CurrentTenantId();
+        return tenant is null
+            ? query
+            : query.Where(s => EF.Property<string>(s, HuiaOpenIddictApplicationStore.TenantIdProperty) == tenant);
     }
 }

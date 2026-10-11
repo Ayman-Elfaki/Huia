@@ -7,6 +7,14 @@ All notable changes to Huia are documented here. The format is based on
 
 ### Changed
 
+- **`Huia.OpenId.EntityFrameworkCore`** — **Breaking (schema).** `HuiaApplications` and `HuiaScopes` gain a
+  required `TenantId` column (max 64, default `''`), and OpenIddict's globally unique `ClientId` / `Name`
+  indexes are replaced by `IX_HuiaApplications_Tenant_ClientId` and `IX_HuiaScopes_Tenant_Name`. The OpenIddict
+  stores now filter on the column instead of parsing `Properties["huia:tenant"]` per row, so the same client id
+  or scope name may exist in two tenants, and the client/scope seeders look rows up inside the owning tenant
+  (the cross-tenant scope-name clash warning is gone). Existing rows must be backfilled from the JSON, e.g.
+  `UPDATE "HuiaApplications" SET "TenantId" = <the huia:tenant value of Properties>` (same for `HuiaScopes`),
+  and the old unique indexes dropped, in your own migration — Huia ships none.
 - **`Huia.OpenId`** — **Breaking.** The package no longer references `Huia.OpenId.EntityFrameworkCore`. A host
   must add `Huia.OpenId.EntityFrameworkCore` (or another store adapter) itself. The server now talks to persistence
   only through ports in `Huia.Stores`: `IHuiaSigningKeyStore`, `IHuiaOpenIddictAdminStore`,

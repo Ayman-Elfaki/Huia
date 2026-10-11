@@ -266,9 +266,12 @@ Only `EmailOptions` and `SmsOptions` have `MergedWith(tenant?)`:
   tenantId)`). The global filter **NREs** (not "returns nothing") when `TenantInfo` is null — any
   cross-tenant query (admin `ListUsers`, some test helpers) must `.IgnoreQueryFilters()`.
 - **`HuiaSigningKey` is NOT `IsMultiTenant()`** — a plain entity with a manual `TenantId`, so the key
-  jobs run with no tenant scope. OpenIddict entities are stock (`ToTable("Huia…")` only); the tenant
-  binding lives in `Properties["huia:tenant"]` and is enforced at the endpoint / seed layer by
-  `HuiaOpenIddict{Application,Scope}Store`.
+  jobs run with no tenant scope. OpenIddict applications and scopes carry a real `TenantId` column
+  (a shadow property, max 64) with unique `{TenantId, ClientId}` / `{TenantId, Name}` indexes replacing
+  OpenIddict's global unique ones, so the same `client_id` or scope name may exist in several tenants;
+  `HuiaOpenIddict{Application,Scope}Store` filter on the column (no tenant in scope → unfiltered, for
+  seeders' prune sweep and admin listing). Authorizations and tokens stay stock and are isolated through
+  their application. `Properties["huia:tenant"]` is still written as the source the column is stamped from.
 - **Per-tenant `IdentityOptions`** — `HuiaMultiTenancyConfiguration` projects the resolved tenant's
   `Authentication.EmailAndPassword.*` password fields (and `RequireUniqueEmail`) onto the default
   (empty-name) `IdentityOptions` via a scoped `IOptions<IdentityOptions>` (Finbuckle
