@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,8 @@ internal sealed partial class HuiaKeyBootstrapper(IServiceProvider services, ILo
     {
         try
         {
+            await services.EnsureTenantsLoadedAsync(cancellationToken);
+
             await using var scope = services.CreateAsyncScope();
             var lifecycle = scope.ServiceProvider.GetRequiredService<HuiaKeyLifecycleService>();
             await lifecycle.EnsureBootstrappedAsync(cancellationToken);

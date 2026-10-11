@@ -20,20 +20,11 @@ namespace Huia.OpenId.Configuration;
 internal static class HuiaMultiTenancyConfiguration
 {
     public static IServiceCollection AddHuiaMultiTenancy(
-        this IServiceCollection services, HuiaOptions options, HuiaOpenIdConfigurationBuilder? configBuilder = null)
+        this IServiceCollection services, IHuiaTenantProvider tenants, HuiaOpenIdConfigurationBuilder? configBuilder = null)
     {
-        var tenants = options.Tenants.Keys.Select(id => new HuiaTenantInfo(id)).ToList();
-
         var builder = services.AddMultiTenant<HuiaTenantInfo>()
             .WithBasePathStrategy(strategy => strategy.RebaseAspNetCorePathBase = true)
-            .WithInMemoryStore(store =>
-            {
-                store.IsCaseSensitive = true;
-                foreach (var tenant in tenants)
-                {
-                    store.Tenants.Add(tenant);
-                }
-            });
+            .WithStore<HuiaProviderTenantStore>(ServiceLifetime.Singleton, tenants);
 
         if (configBuilder is not null)
         {
@@ -76,7 +67,7 @@ internal static class HuiaMultiTenancyConfiguration
     /// <summary>
     /// Projects each tenant's passkey policy onto <see cref="IdentityPasskeyOptions"/>.
     /// </summary>
-    public static IServiceCollection AddHuiaPerTenantPasskeyOptions(this IServiceCollection services, HuiaOptions options)
+    public static IServiceCollection AddHuiaPerTenantPasskeyOptions(this IServiceCollection services, IHuiaTenantProvider tenants)
     {
         services.Configure<IdentityPasskeyOptions>(identity => identity.ResidentKeyRequirement = "required");
 
@@ -85,7 +76,7 @@ internal static class HuiaMultiTenancyConfiguration
             {
                 passkey.ResidentKeyRequirement = "required";
 
-                if (!options.Tenants.TryGetValue(tenant.Identifier, out var config) || config.Authentication.Find<PasskeyAuthenticationMethod>() is not { } policy)
+                if (!tenants.TryGetValue(tenant.Identifier, out var config) || config.Authentication.Find<PasskeyAuthenticationMethod>() is not { } policy)
                 {
                     return;
                 }
@@ -145,12 +136,12 @@ internal static class HuiaMultiTenancyConfiguration
     /// Projects each tenant's password-complexity policy (and the opt-in unique-email rule) onto the
     /// default <see cref="IdentityOptions"/> for that tenant.
     /// </summary>
-    public static IServiceCollection AddHuiaPerTenantIdentityOptions(this IServiceCollection services, HuiaOptions options)
+    public static IServiceCollection AddHuiaPerTenantIdentityOptions(this IServiceCollection services, IHuiaTenantProvider tenants)
     {
         services.AddOptions<IdentityOptions>()
             .ConfigurePerTenant<IdentityOptions, HuiaTenantInfo>((identity, tenant) =>
             {
-                if (!options.Tenants.TryGetValue(tenant.Identifier, out var config))
+                if (!tenants.TryGetValue(tenant.Identifier, out var config))
                 {
                     return;
                 }

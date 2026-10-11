@@ -31,7 +31,9 @@ internal static class HuiaServiceCollectionExtensions
 
         services.AddSingleton(options);
         services.AddSingleton(Options.Options.Create(options));
-        services.AddSingleton<IHuiaTenantProvider, HuiaOptionsTenantProvider>();
+        var tenantProvider = new HuiaTenantProviderHolder(new HuiaOptionsTenantProvider(options));
+        services.AddSingleton(tenantProvider);
+        services.AddSingleton<IHuiaTenantProvider>(tenantProvider);
 
         services.AddHuiaCookieHardening(requireSecure: !options.DisableTransportSecurityRequirement);
         services.AddHuiaLocalization();
@@ -47,6 +49,6 @@ internal static class HuiaServiceCollectionExtensions
             routing.LowercaseQueryStrings = false;
         });
 
-        return new HuiaBuilder(services, options);
+        return new HuiaBuilder(services, options, tenantProvider);
     }
 }

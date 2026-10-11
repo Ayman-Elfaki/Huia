@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Finbuckle.MultiTenant.Extensions;
 using Huia.OpenId.Identity;
 using Huia.OpenId.Entities;
@@ -19,13 +20,13 @@ namespace Huia.OpenId.Configuration;
 /// </summary>
 internal static class HuiaFlowIdentityConfiguration
 {
-    public static IServiceCollection AddHuiaFlowIdentity(this IServiceCollection services, HuiaOptions options)
+    public static IServiceCollection AddHuiaFlowIdentity(this IServiceCollection services, IHuiaTenantProvider tenants)
     {
         services.AddOptions<IdentityOptions>(HuiaFlowIdentityOptions.EmailAndPassword)
             .Configure(ApplyDefaultTokenProviders)
             .ConfigurePerTenant<IdentityOptions, HuiaTenantInfo>((identity, tenant) =>
             {
-                if (options.Tenants.TryGetValue(tenant.Identifier, out var config))
+                if (tenants.TryGetValue(tenant.Identifier, out var config))
                 {
                     ApplyEmailAndPasswordFlow(identity, config.Authentication.Find<EmailPasswordAuthenticationMethod>() ?? new EmailPasswordAuthenticationMethod());
                 }
@@ -35,7 +36,7 @@ internal static class HuiaFlowIdentityConfiguration
             .Configure(ApplyDefaultTokenProviders)
             .ConfigurePerTenant<IdentityOptions, HuiaTenantInfo>((identity, tenant) =>
             {
-                if (options.Tenants.TryGetValue(tenant.Identifier, out var config) && config.Authentication.Find<PhoneAuthenticationMethod>() is { } phone)
+                if (tenants.TryGetValue(tenant.Identifier, out var config) && config.Authentication.Find<PhoneAuthenticationMethod>() is { } phone)
                 {
                     ApplyPhoneFlow(identity, phone);
                 }

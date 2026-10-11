@@ -41,3 +41,33 @@ internal sealed class HuiaOptionsTenantProvider(HuiaOptions options) : IHuiaTena
 
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }
+
+/// <summary>
+/// The one <see cref="IHuiaTenantProvider"/> instance that exists from the first line of registration: it
+/// delegates to whichever provider is currently installed (the options tree until
+/// <c>AddPersistedTenants</c> installs a store-backed one at start-up). Registration-time wiring such as the
+/// Finbuckle store and the per-tenant option lambdas capture this holder, so they see runtime tenants too.
+/// </summary>
+internal sealed class HuiaTenantProviderHolder(IHuiaTenantProvider initial) : IHuiaTenantProvider
+{
+    private volatile IHuiaTenantProvider _inner = initial;
+
+    /// <summary>Installs <paramref name="provider"/> as the source of tenants.</summary>
+    public void Use(IHuiaTenantProvider provider) => _inner = provider;
+
+    public HuiaTenant this[string key] => _inner[key];
+
+    public IEnumerable<string> Keys => _inner.Keys;
+
+    public IEnumerable<HuiaTenant> Values => _inner.Values;
+
+    public int Count => _inner.Count;
+
+    public bool ContainsKey(string key) => _inner.ContainsKey(key);
+
+    public bool TryGetValue(string key, out HuiaTenant value) => _inner.TryGetValue(key, out value!);
+
+    public IEnumerator<KeyValuePair<string, HuiaTenant>> GetEnumerator() => _inner.GetEnumerator();
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+}

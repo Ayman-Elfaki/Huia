@@ -21,9 +21,10 @@ internal sealed partial class HuiaKeyLifecycleService(
     ILogger<HuiaKeyLifecycleService> logger)
 {
     /// <summary>Guarantees every configured tenant has a usable signing key. Run once at start-up.</summary>
-    public async Task EnsureBootstrappedAsync(CancellationToken cancellationToken)
+    public async Task EnsureBootstrappedAsync(
+        CancellationToken cancellationToken, IEnumerable<string>? onlyTenants = null)
     {
-        foreach (var tenantId in tenants.Keys)
+        foreach (var tenantId in onlyTenants?.ToList() ?? [.. tenants.Keys])
         {
             var usable = await keyStore.QueryAsync(
                 new HuiaSigningKeyFilter

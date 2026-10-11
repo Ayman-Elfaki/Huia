@@ -58,9 +58,12 @@ All notable changes to Huia are documented here. The format is based on
   external-provider login stays code-defined. `AddPersistedTenants()` swaps `IHuiaTenantProvider` for a
   snapshot of the code-first tenants plus the stored ones (code-first wins on an id clash), refreshed at
   start-up, on `IHuiaTenantRefresher.RefreshAsync()` and every minute. Hosts own the migration for the new
-  table. **Not yet live end to end:** registration-time wiring (Finbuckle store, per-tenant Identity / passkey
-  options) still reads the options tree, so a persisted tenant is visible to the provider but is not yet
-  routable.
+  table. A persisted tenant is fully live: it resolves from `/{tenant}/…` (Finbuckle's store and the per-tenant
+  Identity, passkey and flow-identity options now read through `IHuiaTenantProvider`), and when it appears
+  after start-up a bootstrap listener mints its signing key and seeds its roles, scopes and clients. Start-up
+  seeders and the key bootstrapper wait for the first load (`EnsureTenantsLoadedAsync`), so
+  `PruneRemovedStaticEntities` never prunes a persisted tenant's entities. External-provider login is still
+  registered with OpenIddict at start-up, so a persisted tenant cannot use it.
 - **`Huia`** — `HuiaTenantAuthenticationOptions.DisableRegistration()` turns off every anonymous
   account-creation path in one call: `EmailAndPassword.AllowSelfServiceRegistration` and, when the
   phone flow is enabled, `Phone.AllowAutoProvisioning` (left untouched — not implicitly enabling the

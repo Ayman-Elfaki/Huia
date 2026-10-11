@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,9 +19,13 @@ public interface IHuiaBuilder
 }
 
 /// <summary>Default <see cref="IHuiaBuilder"/> implementation.</summary>
-internal sealed class HuiaBuilder(IServiceCollection services, HuiaOptions options) : IHuiaBuilder
+internal sealed class HuiaBuilder(
+    IServiceCollection services, HuiaOptions options, IHuiaTenantProvider tenantProvider) : IHuiaBuilder
 {
     public IServiceCollection Services { get; } = services;
+
+    /// <summary>The shared tenant provider that registration-time wiring should read tenants through.</summary>
+    internal IHuiaTenantProvider TenantProvider { get; } = tenantProvider;
 
     public HuiaOptions Options { get; } = options;
 }

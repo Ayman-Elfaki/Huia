@@ -24,10 +24,14 @@ public static class HuiaPersistedTenantsExtensions
         var services = builder.Services;
         services.TryAddSingleton<HuiaTenantSerializer>();
 
-        // Replace the default options-tree provider with the store-backed one, as a single shared instance.
-        services.RemoveAll<IHuiaTenantProvider>();
-        services.AddSingleton<HuiaStoredTenantProvider>();
-        services.AddSingleton<IHuiaTenantProvider>(sp => sp.GetRequiredService<HuiaStoredTenantProvider>());
+        // The shared IHuiaTenantProvider is a holder that registration-time wiring already captured; the
+        // store-backed provider installs itself behind it the moment it is constructed (at host start).
+        services.AddSingleton<HuiaStoredTenantProvider>(sp =>
+        {
+            var provider = ActivatorUtilities.CreateInstance<HuiaStoredTenantProvider>(sp);
+            provider.Install();
+            return provider;
+        });
         services.AddSingleton<IHuiaTenantRefresher>(sp => sp.GetRequiredService<HuiaStoredTenantProvider>());
         services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<HuiaStoredTenantProvider>());
 

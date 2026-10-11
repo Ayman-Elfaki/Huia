@@ -134,4 +134,44 @@ public sealed class PersistedTenantsTests : IAsyncLifetime
         initech!.DisplayName.ShouldBe("Initech");
         provider["master"].DisplayName.ShouldNotBe("Not the real master");
     }
+
+    [Fact]
+    public async Task A_tenant_saved_at_runtime_resolves_from_its_base_path()
+    {
+        // Before it exists the path is unknown.
+        (await _host.Client.GetAsync("/initech/.well-known/openid-configuration")).StatusCode
+            .ShouldBe(System.Net.HttpStatusCode.NotFound);
+
+        await using (var scope = _host.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IHuiaTenantStore>().SaveAsync("initech", NewTenant());
+        }
+
+        await _host.Services.GetRequiredService<IHuiaTenantRefresher>().RefreshAsync();
+
+        var discovery = await _host.Client.GetAsync("/initech/.well-known/openid-configuration");
+        discovery.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
+        (await discovery.Content.ReadAsStringAsync()).ShouldContain("/initech");
+    }
+
+    [Fact]
+    public async Task A_tenant_saved_at_runtime_can_issue_a_client_credentials_token()
+    {
+        await using (var scope = _host.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IHuiaTenantStore>().SaveAsync("initech", NewTenant());
+        }
+
+        await _host.Services.GetRequiredService<IHuiaTenantRefresher>().RefreshAsync();
+
+        var response = await _host.Client.PostAsync("/initech/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                ["grant_type"] = "client_credentials",
+                ["client_id"] = "initech-worker",
+                ["client_secret"] = "worker-secret-value",
+            }));
+
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+    }
 }

@@ -27,38 +27,46 @@ internal sealed partial class HuiaRoleSeeder(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        await services.EnsureTenantsLoadedAsync(cancellationToken);
+
         foreach (var (tenantId, tenant) in tenants)
         {
-            if (tenant.Roles.Count == 0)
-            {
-                continue;
-            }
-
-            // A fresh scope per tenant, with the tenant entered BEFORE RoleManager (and hence
-            // HuiaDbContext) is resolved — HuiaDbContext snapshots its tenant at construction. The
-            // seeder is a singleton IHostedService, so IHuiaTenantContext (scoped) is resolved from
-            // the fresh scope rather than injected into the constructor — a captive-dependency trap.
-            await using var scope = services.CreateAsyncScope();
-            using (scope.ServiceProvider.GetRequiredService<IHuiaTenantContext>().EnterTenantScope(scope.ServiceProvider, tenantId))
-            {
-                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<HuiaRole>>();
-                foreach (var roleName in tenant.Roles)
-                {
-                    if (await roleManager.RoleExistsAsync(roleName))
-                    {
-                        continue;
-                    }
-
-                    await roleManager.CreateAsync(
-                        new HuiaRole(roleName) { TenantId = tenantId, Origin = HuiaConstants.Origins.Static });
-                    LogSeeded(roleName, tenantId);
-                }
-            }
+            await SeedTenantAsync(tenantId, tenant, cancellationToken);
         }
 
         if (options.Seeding.PruneRemovedStaticEntities)
         {
             await PruneRemovedRolesAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>Creates the roles declared by one tenant that do not exist yet (idempotent).</summary>
+    public async Task SeedTenantAsync(string tenantId, HuiaTenant tenant, CancellationToken cancellationToken)
+    {
+        if (tenant.Roles.Count == 0)
+        {
+            return;
+        }
+
+        // A fresh scope per tenant, with the tenant entered BEFORE RoleManager (and hence
+        // HuiaDbContext) is resolved — HuiaDbContext snapshots its tenant at construction. The
+        // seeder is a singleton IHostedService, so IHuiaTenantContext (scoped) is resolved from
+        // the fresh scope rather than injected into the constructor — a captive-dependency trap.
+        await using var scope = services.CreateAsyncScope();
+        using (scope.ServiceProvider.GetRequiredService<IHuiaTenantContext>().EnterTenantScope(scope.ServiceProvider, tenantId))
+        {
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<HuiaRole>>();
+            foreach (var roleName in tenant.Roles)
+            {
+                if (await roleManager.RoleExistsAsync(roleName))
+                {
+                    continue;
+                }
+
+                await roleManager.CreateAsync(
+                    new HuiaRole(roleName) { TenantId = tenantId, Origin = HuiaConstants.Origins.Static });
+                LogSeeded(roleName, tenantId);
+            }
         }
     }
 

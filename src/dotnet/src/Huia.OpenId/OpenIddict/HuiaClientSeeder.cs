@@ -24,37 +24,11 @@ internal sealed partial class HuiaClientSeeder(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        await services.EnsureTenantsLoadedAsync(cancellationToken);
+
         foreach (var (tenantId, tenant) in tenants)
         {
-            if (tenant.Applications.Count == 0)
-            {
-                continue;
-            }
-
-            // A fresh scope per tenant, with the tenant entered before the manager is resolved, so the
-            // lookup below only ever sees this tenant's clients (the same client_id may exist in another).
-            await using var tenantScope = services.CreateAsyncScope();
-            using (tenantScope.ServiceProvider.GetRequiredService<IHuiaTenantContext>()
-                       .EnterTenantScope(tenantScope.ServiceProvider, tenantId))
-            {
-                var manager = tenantScope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
-                foreach (var client in tenant.Applications)
-                {
-                    var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(
-                        tenantId, client, HuiaConstants.Origins.Static);
-                    var existing = await manager.FindByClientIdAsync(client.ClientId, cancellationToken);
-                    if (existing is null)
-                    {
-                        await manager.CreateAsync(descriptor, cancellationToken);
-                        LogSeeded(client.ClientId, tenantId);
-                    }
-                    else
-                    {
-                        await manager.UpdateAsync(existing, descriptor, cancellationToken);
-                        LogUpdated(client.ClientId, tenantId);
-                    }
-                }
-            }
+            await SeedTenantAsync(tenantId, tenant, cancellationToken);
         }
 
         if (options.Seeding.PruneRemovedStaticEntities)
@@ -63,6 +37,40 @@ internal sealed partial class HuiaClientSeeder(
             await using var pruneScope = services.CreateAsyncScope();
             var manager = pruneScope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
             await PruneRemovedClientsAsync(manager, cancellationToken);
+        }
+    }
+
+    /// <summary>Upserts the OpenIddict applications declared by one tenant (idempotent).</summary>
+    public async Task SeedTenantAsync(string tenantId, HuiaTenant tenant, CancellationToken cancellationToken)
+    {
+        if (tenant.Applications.Count == 0)
+        {
+            return;
+        }
+
+        // A fresh scope per tenant, with the tenant entered before the manager is resolved, so the
+        // lookup below only ever sees this tenant's clients (the same client_id may exist in another).
+        await using var tenantScope = services.CreateAsyncScope();
+        using (tenantScope.ServiceProvider.GetRequiredService<IHuiaTenantContext>()
+                   .EnterTenantScope(tenantScope.ServiceProvider, tenantId))
+        {
+            var manager = tenantScope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+            foreach (var client in tenant.Applications)
+            {
+                var descriptor = HuiaApplicationDescriptorMapper.ToDescriptor(
+                    tenantId, client, HuiaConstants.Origins.Static);
+                var existing = await manager.FindByClientIdAsync(client.ClientId, cancellationToken);
+                if (existing is null)
+                {
+                    await manager.CreateAsync(descriptor, cancellationToken);
+                    LogSeeded(client.ClientId, tenantId);
+                }
+                else
+                {
+                    await manager.UpdateAsync(existing, descriptor, cancellationToken);
+                    LogUpdated(client.ClientId, tenantId);
+                }
+            }
         }
     }
 

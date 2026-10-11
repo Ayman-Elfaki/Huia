@@ -1,3 +1,4 @@
+using Huia.Multitenancy;
 using Huia.DependencyInjection;
 using Huia.OpenId.Configuration;
 using Huia.OpenId.DependencyInjection;
@@ -6,6 +7,7 @@ using Huia.OpenId.Flows;
 using Huia.OpenId.HealthChecks;
 using Huia.OpenId.Identity;
 using Huia.OpenId.Keys;
+using Huia.OpenId.Multitenancy;
 using Huia.OpenId.OpenIddict;
 using Huia.OpenId.Security;
 using Huia.OpenId.Services;
@@ -41,10 +43,11 @@ public static class HuiaOpenIdServiceCollectionExtensions
         configure(configBuilder);
         var options = configBuilder.Build();
 
-        services.AddHuiaCore(options);
+        var core = (HuiaBuilder)services.AddHuiaCore(options);
+        var tenants = core.TenantProvider;
         var openIdBuilder = new HuiaOpenIdBuilder(services, options);
 
-        services.AddHuiaMultiTenancy(options, configBuilder);
+        services.AddHuiaMultiTenancy(tenants, configBuilder);
 
         // The cookie-based authentication scheme.
         var authBuilder = services.AddAuthentication(o =>
@@ -84,9 +87,9 @@ public static class HuiaOpenIdServiceCollectionExtensions
         });
 
         services.AddHuiaPerTenantAuthentication();
-        services.AddHuiaPerTenantIdentityOptions(options);
-        services.AddHuiaPerTenantPasskeyOptions(options);
-        services.AddHuiaFlowIdentity(options);
+        services.AddHuiaPerTenantIdentityOptions(tenants);
+        services.AddHuiaPerTenantPasskeyOptions(tenants);
+        services.AddHuiaFlowIdentity(tenants);
         services.AddHuiaOpenIddict(options, configBuilder);
         services.AddHuiaKeyManagement(options);
 
@@ -101,9 +104,14 @@ public static class HuiaOpenIdServiceCollectionExtensions
             });
         }
 
-        services.AddHostedService<HuiaClientSeeder>();
-        services.AddHostedService<HuiaScopeSeeder>();
-        services.AddHostedService<HuiaRoleSeeder>();
+        // Seeders are singletons so the tenant bootstrap listener can run them for a tenant that appears later.
+        services.AddSingleton<HuiaClientSeeder>();
+        services.AddSingleton<HuiaScopeSeeder>();
+        services.AddSingleton<HuiaRoleSeeder>();
+        services.AddHostedService(sp => sp.GetRequiredService<HuiaClientSeeder>());
+        services.AddHostedService(sp => sp.GetRequiredService<HuiaScopeSeeder>());
+        services.AddHostedService(sp => sp.GetRequiredService<HuiaRoleSeeder>());
+        services.AddSingleton<IHuiaTenantChangeListener, HuiaTenantBootstrapListener>();
 
         services.AddScoped<HuiaCspNonce>();
         services.AddScoped<IHuiaCspNonce>(sp => sp.GetRequiredService<HuiaCspNonce>());
