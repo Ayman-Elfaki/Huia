@@ -1,0 +1,69 @@
+# Huia
+
+> Multi-tenant OpenID Connect / OAuth 2.0 (Huia.OpenId) and single-tenant bearer-token (Huia.Headless) identity for ASP.NET Core, with first-party Next.js and Nuxt 4 client libraries.
+
+Huia provides end-to-end identity infrastructure spanning backend (.NET 10 / OpenIddict / EF Core) and frontend (Next.js 14/15 and Nuxt 4), with strict tenant isolation, automated key rotation, and secure encrypted session management.
+
+## Documentation
+
+### Overview
+- [Huia Overview & Features](/index): Huia Overview & Features documentation
+
+### Guide
+- [Getting started (OpenID)](/guide/getting-started): Getting started (OpenID) documentation
+- [Getting started (Headless)](/guide/getting-started-headless): Getting started (Headless) documentation
+- [Configuration](/guide/configuration): Configuration documentation
+- [Multi-tenancy](/guide/multi-tenancy): Multi-tenancy documentation
+- [Pushed authorization (PAR)](/guide/pushed-authorization): Pushed authorization (PAR) documentation
+- [Admin console](/guide/admin-ui): Admin console documentation
+- [Email testing](/guide/email-testing): Email testing documentation
+
+### .NET reference — Huia.OpenId
+- [Options reference](/dotnet/options): Options reference documentation
+- [HuiaUserManager & user types](/dotnet/user-manager): HuiaUserManager & user types documentation
+- [Endpoints](/dotnet/endpoints): Endpoints documentation
+- [Passwordless SMS](/dotnet/passwordless-sms): Passwordless SMS documentation
+- [Passkeys](/dotnet/passkeys): Passkeys documentation
+- [External login](/dotnet/external-login): External login documentation
+- [Events](/dotnet/events): Events documentation
+
+### .NET reference — Huia.Headless
+- [Huia.Headless](/dotnet/headless): Huia.Headless documentation
+
+### Shared Core (huia-auth-core)
+- [Overview](/core/overview): Overview documentation
+
+### Next.js library — OIDC (next-huia-oidc)
+- [Overview](/next/overview): Overview documentation
+- [Configuration](/next/configuration): Configuration documentation
+- [Session model & security](/next/session-model): Session model & security documentation
+- [Route protection](/next/route-protection): Route protection documentation
+- [Migrating from NextAuth](/next/migrating): Migrating from NextAuth documentation
+
+### Next.js library — Headless (next-huia-headless)
+- [Overview](/next-headless/overview): Overview documentation
+- [Configuration](/next-headless/configuration): Configuration documentation
+
+### Nuxt module — OIDC (nuxt-huia-oidc)
+- [Overview](/nuxt/overview): Overview documentation
+- [Configuration](/nuxt/configuration): Configuration documentation
+- [Session model & security](/nuxt/session-model): Session model & security documentation
+- [Route protection](/nuxt/route-protection): Route protection documentation
+- [Migrating from nuxt-oidc-auth](/nuxt/migrating): Migrating from nuxt-oidc-auth documentation
+
+### Nuxt module — Headless (nuxt-huia-headless)
+- [Overview](/nuxt-headless/overview): Overview documentation
+- [Configuration](/nuxt-headless/configuration): Configuration documentation
+
+### Architecture
+- [Overview](/architecture/overview): Overview documentation
+- [Request & token flow](/architecture/request-flow): Request & token flow documentation
+- [Key management](/architecture/key-management): Key management documentation
+
+### Security
+- [Overview](/security/index): Overview documentation
+- [Security headers](/security/security-headers): Security headers documentation
+
+## Optional
+
+- [Full Documentation](/llms-full.txt): Complete concatenated documentation for LLM consumption in a single file

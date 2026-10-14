@@ -1,0 +1,3407 @@
+# Huia — Complete Documentation
+
+> Multi-tenant OpenID Connect / OAuth 2.0 (`Huia.OpenId`) and single-tenant bearer-token (`Huia.Headless`) identity for ASP.NET Core, with first-party Next.js (`next-huia-*`) and Nuxt 4 (`nuxt-huia-*`) client libraries.
+
+This document contains the complete official documentation for the Huia identity framework, formatted for consumption by Large Language Models (LLMs).
+
+---
+
+## Table of Contents
+
+### Overview
+- [Huia Overview & Features](#overview---huia-overview-features)
+
+### Guide
+- [Getting started (OpenID)](#guide---getting-started-openid)
+- [Getting started (Headless)](#guide---getting-started-headless)
+- [Configuration](#guide---configuration)
+- [Multi-tenancy](#guide---multi-tenancy)
+- [Pushed authorization (PAR)](#guide---pushed-authorization-par)
+- [Admin console](#guide---admin-console)
+- [Email testing](#guide---email-testing)
+
+### .NET reference — Huia.OpenId
+- [Options reference](#net-reference-huiaopenid---options-reference)
+- [HuiaUserManager & user types](#net-reference-huiaopenid---huiausermanager-user-types)
+- [Endpoints](#net-reference-huiaopenid---endpoints)
+- [Passwordless SMS](#net-reference-huiaopenid---passwordless-sms)
+- [Passkeys](#net-reference-huiaopenid---passkeys)
+- [External login](#net-reference-huiaopenid---external-login)
+- [Events](#net-reference-huiaopenid---events)
+
+### .NET reference — Huia.Headless
+- [Huia.Headless](#net-reference-huiaheadless---huiaheadless)
+
+### Shared Core (huia-auth-core)
+- [Overview](#shared-core-huia-auth-core---overview)
+
+### Next.js library — OIDC (next-huia-oidc)
+- [Overview](#nextjs-library-oidc-next-huia-oidc---overview)
+- [Configuration](#nextjs-library-oidc-next-huia-oidc---configuration)
+- [Session model & security](#nextjs-library-oidc-next-huia-oidc---session-model-security)
+- [Route protection](#nextjs-library-oidc-next-huia-oidc---route-protection)
+- [Migrating from NextAuth](#nextjs-library-oidc-next-huia-oidc---migrating-from-nextauth)
+
+### Next.js library — Headless (next-huia-headless)
+- [Overview](#nextjs-library-headless-next-huia-headless---overview)
+- [Configuration](#nextjs-library-headless-next-huia-headless---configuration)
+
+### Nuxt module — OIDC (nuxt-huia-oidc)
+- [Overview](#nuxt-module-oidc-nuxt-huia-oidc---overview)
+- [Configuration](#nuxt-module-oidc-nuxt-huia-oidc---configuration)
+- [Session model & security](#nuxt-module-oidc-nuxt-huia-oidc---session-model-security)
+- [Route protection](#nuxt-module-oidc-nuxt-huia-oidc---route-protection)
+- [Migrating from nuxt-oidc-auth](#nuxt-module-oidc-nuxt-huia-oidc---migrating-from-nuxt-oidc-auth)
+
+### Nuxt module — Headless (nuxt-huia-headless)
+- [Overview](#nuxt-module-headless-nuxt-huia-headless---overview)
+- [Configuration](#nuxt-module-headless-nuxt-huia-headless---configuration)
+
+### Architecture
+- [Overview](#architecture---overview)
+- [Request & token flow](#architecture---request-token-flow)
+- [Key management](#architecture---key-management)
+
+### Security
+- [Overview](#security---overview)
+- [Security headers](#security---security-headers)
+
+---
+
+<!-- anchor: overview---huia-overview-features -->
+## [Overview] Huia Overview & Features
+_Source: docs/index.md_
+
+# Huia
+> Huia.OpenId — multi-tenant, base-path routing, per-tenant signing keys, passwordless SMS, an opinionated account UI. Huia.Headless — single-tenant bearer tokens, no redirects, bring your own login form. Two first-party Nuxt 4 client modules to match.
+
+### Key Features
+
+- **Tenant isolation (Huia.OpenId)**: HuiaDbContext derives from Finbuckle's MultiTenantIdentityDbContext — a global query filter on read, write-time enforcement on save, and named tenant-scoped composite indexes.
+- **Per-tenant keys (Huia.OpenId)**: Each tenant signs with its own rotated RSA key; Quartz jobs drive the pending → active → rotated → retired lifecycle, and custom OpenIddict handlers inject the tenant key + issuer.
+- **Flows (Huia.OpenId)**: Authorization code + PKCE (with optional PAR), refresh, client credentials, device code, passwordless SMS one-time codes, and external login through the OpenIddict client.
+- **Bearer-token API (Huia.Headless)**: Single-tenant JSON register/login/passkey endpoints via ASP.NET Core Identity's MapIdentityApi — no OpenIddict, no redirects, for apps that own their own login form.
+- **Two first-party Nuxt modules**: nuxt-huia-oidc runs the OIDC relying-party flow on the Nitro server; nuxt-huia-headless drives the JSON register/login API. Both keep every token off the browser via a dual-layer session.
+
+---
+
+<!-- anchor: guide---getting-started-openid -->
+## [Guide] Getting started (OpenID)
+_Source: docs/guide/getting-started.md_
+
+# Getting started
+
+Huia ships five NuGet packages across two authentication flavors — a multi-tenant OpenID Connect
+provider (`Huia.OpenId`) and a single-tenant bearer-token API (`Huia.Headless`) — over a shared core:
+
+| Package | Contents |
+|---|---|
+| `Huia` | Domain model, options tree, eventing, store abstractions, constants. No EF Core / OpenIddict / Finbuckle dependency. |
+| `Huia.OpenId.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId> : MultiTenantIdentityDbContext`, tenant-scoped stores, `AddEntityFrameworkCoreStores<...>()`. Ships no migrations. |
+| `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()`, OpenIddict, the Razor account UI, key jobs. |
+| `Huia.Headless.EntityFrameworkCore` | Generic single-tenant `HuiaDbContext<TUser,TRole,TId> : IdentityDbContext<TUser,TRole,string>`, `AddEntityFrameworkCoreStores<...>()` with `MR.AspNetCore.Pagination`. |
+| `Huia.Headless` | `AddHuiaHeadless()` / `MapHuiaHeadlessEndpoints()` — store-agnostic, bearer tokens via `MapIdentityApi`, no OpenIddict, no multi-tenancy. |
+
+This page covers `Huia.OpenId`. For the headless flavor, see the
+[Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api) and the
+[`nuxt-huia-headless`](https://github.com/Ayman-Elfaki/Huia/tree/main/src/nuxt/nuxt-huia-headless)
+module it pairs with.
+
+```csharp
+builder.Services.AddDbContext<HuiaDbContext>(o => o.UseNpgsql(connectionString).UseOpenIddict());
+
+builder.Services.AddHuiaOpenId(huia =>
+{
+    huia.UseIssuer("https://id.example.com");
+    huia.AddTenant("acme", tenant =>
+    {
+        tenant.Authentication.UseEmailAndPasswordLogin();
+        tenant.AddServerSideWebApplication("acme-web", "secret", client =>
+            client.RedirectUris.Add(new Uri("https://acme.example.com/callback")));
+    });
+})
+    .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
+    .AddHuiaUi();
+
+var app = builder.Build();
+app.UseHuiaOpenId();
+app.MapHuiaEndpoints();
+```
+
+## Health probes
+
+`MapHuiaEndpoints()` also maps two anonymous probes at the application root:
+
+| Route | Meaning |
+|---|---|
+| `/health/live` | Process liveness. Runs no checks; `200` whenever the app is up. |
+| `/health/ready` | Readiness. `503` until the database is reachable **and** start-up seeding has completed (every configured tenant has a signing key and every configured client exists), `200` afterwards. |
+
+Point an orchestrator's readiness probe (Kubernetes, .NET Aspire, a load balancer) at `/health/ready`.
+
+See [Configuration](/guide/configuration) for the full options tree.
+
+---
+
+<!-- anchor: guide---getting-started-headless -->
+## [Guide] Getting started (Headless)
+_Source: docs/guide/getting-started-headless.md_
+
+# Getting Started — Huia.Headless
+
+`Huia.Headless` is a lightweight, single-tenant authentication API for ASP.NET Core applications. Unlike `Huia.OpenId`, which provides OAuth 2.0 / OpenID Connect redirection flows with Razor UI, `Huia.Headless` is a 100% JSON-driven API that issues opaque bearer tokens. It is designed for applications where the frontend owns the login forms and UI directly.
+
+---
+
+## 1. Package Installation
+
+Install the core headless packages:
+
+```bash
+dotnet add package Huia.Headless
+dotnet add package Huia.Headless.EntityFrameworkCore
+```
+
+---
+
+## 2. Configure the Database Context
+
+`Huia.Headless.EntityFrameworkCore` provides a single-tenant `HuiaDbContext` without multi-tenant schema additions:
+
+```csharp
+using Huia.Entities;
+using Huia.Headless.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+// Register DbContext with your preferred provider (SQLite, PostgreSQL, SQL Server)
+builder.Services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(options =>
+{
+    options.UseSqlite(builder.Configuration.GetConnectionString("huia"));
+});
+```
+
+---
+
+## 3. Register Headless Services
+
+Configure `AddHuiaHeadless` in `Program.cs`. Direct methods on the builder enable specific login flows:
+
+```csharp
+using Huia.Entities;
+using Huia.Headless;
+using Huia.Headless.EntityFrameworkCore;
+
+builder.Services
+    .AddHuiaHeadless(huia =>
+    {
+        // 1. Set the issuer URI
+        huia.UseIssuer("https://api.example.com");
+
+        // 2. Enable email & password authentication
+        huia.UseEmailAndPasswordLogin(password =>
+        {
+            password.RequireConfirmedEmail = false;
+        });
+
+        // 3. Optional: Enable passwordless SMS OTP login
+        huia.UsePhoneLogin(phone =>
+        {
+            phone.DefaultCountry = "US";
+            phone.OtpLifetime = TimeSpan.FromMinutes(5);
+        });
+
+        // 4. Optional: Enable external social providers
+        huia.UseExternalLogin(external =>
+        {
+            external.AddGoogle("google-client-id", "google-client-secret");
+            external.AllowReturnUrlPrefix("https://app.example.com/");
+        });
+    })
+    .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>();
+```
+
+---
+
+## 4. Map Endpoints in HTTP Pipeline
+
+In single-tenant headless mode, standard ASP.NET Core authentication and authorization middleware are used directly:
+
+```csharp
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Maps identity/register, identity/login, identity/me, phone, and passkey routes
+app.MapHuiaHeadlessEndpoints();
+
+// Optional: Map administrative endpoints under /admin/*
+app.MapHuiaHeadlessAdminEndpointsGroup()
+   .RequireAuthorization(policy => policy.RequireRole("Administrator"));
+
+app.Run();
+```
+
+---
+
+## 5. Endpoints Overview
+
+`MapHuiaHeadlessEndpoints()` automatically exposes the following JSON endpoints:
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/identity/register` | `POST` | Anonymous | Register account (`email`, `password`, `firstName`, `lastName`) |
+| `/identity/login` | `POST` | Anonymous | Sign in with email and password, returning bearer token |
+| `/identity/refresh` | `POST` | Anonymous | Exchange a refresh token for fresh access/refresh tokens |
+| `/identity/me` | `GET` | Bearer | Current user profile (`sub`, `email`, `firstName`, `lastName`, `roles`) |
+| `/identity/phone/start` | `POST` | Anonymous | Request SMS OTP for a phone number (returns `flowId`, `maskedPhoneNumber`, `codeLength`, `expiresInSeconds`, `resendAvailableInSeconds`) |
+| `/identity/phone/resend` | `POST` | Anonymous | Send a fresh code for an in-progress flow (server-enforced cooldown) |
+| `/identity/phone/verify` | `POST` | Anonymous | Verify SMS OTP code |
+| `/identity/phone/complete-profile` | `POST` | Anonymous | Complete first-time profile for phone signup |
+| `/identity/account/external/{provider}` | `GET` | Anonymous | Initiate external social login challenge |
+| `/identity/account/external/exchange` | `POST` | Anonymous | Exchange one-time external code for bearer tokens |
+
+---
+
+## 6. Frontend Clients
+
+Rather than hand-crafting HTTP requests, first-party frontend packages integrate seamlessly with `Huia.Headless`:
+
+- **Shared TypeScript**: [`huia-auth-core`](/core/overview) exports `HuiaHeadlessClient`.
+- **Next.js**: [`next-huia-headless`](/next-headless/overview) provides server route handlers and client React hooks.
+- **Nuxt.js**: [`nuxt-huia-headless`](/nuxt-headless/overview) provides Nuxt composables (`useHuia()`) and SSR session handling.
+
+---
+
+<!-- anchor: guide---configuration -->
+## [Guide] Configuration
+_Source: docs/guide/configuration.md_
+
+# Configuration
+
+The options tree is rooted at `HuiaOptions` and validated in one pass before anything is registered.
+
+- `Issuer` / `PublicUrl` / `DisableTransportSecurityRequirement`
+- `Email` / `Sms` — root delivery settings, merged per tenant
+- `Keys` — the signing-key lifecycle (`RotationInterval`, `ActivationDelay`, `RetentionPeriod`, ...)
+- `Tenants[id]` — `Authentication` (email/password, phone, external — each with its own lockout
+  policy), `Branding`, `Clients`
+
+Every node exposes `Validate()`; failures throw `HuiaOptionsException` with a path-prefixed list.
+
+## Sign-in methods
+
+All three sign-in methods are opt-in and independent — a tenant with none of them fails validation:
+
+```csharp
+tenant.Authentication.UseEmailAndPasswordLogin();          // interactive email + password
+tenant.Authentication.UseEmailAndPasswordLogin(p =>         // …with a stricter policy
+    p.MinimumLength = 12);
+tenant.Authentication.UsePhoneLogin();                      // passwordless SMS one-time code
+tenant.Authentication.UseExternalLogin(ext => ext.AddGoogle("client-id", "client-secret"));
+```
+
+`UseEmailAndPasswordLogin()` sets `Authentication.EmailAndPassword.Enabled`; that flag is `false`
+until it is called. `UsePhoneLogin()` / `UseExternalLogin()` are similarly off until called.
+
+### Email/password-flow policy
+
+`Authentication.EmailAndPassword` also carries the per-tenant sign-in policy:
+
+- `RequireConfirmedEmail` (default `true`) — an interactive password sign-in needs a confirmed email.
+- `RequireUniqueEmail` (default `false`) — add Identity's tenant-scoped email-uniqueness check.
+- `AllowSelfServiceRegistration` (default `true`) — anonymous visitors may create their own account.
+  Call `tenant.Authentication.DisableRegistration()` (or the `tenant.DisableRegistration()` shortcut)
+  to turn it off (the account UI then hides the "create an account" link and the register page
+  returns 404) — it also turns off `PhoneAuthenticationMethod.AllowAutoProvisioning` when the phone flow is
+  enabled, so every anonymous account-creation path is closed in one call.
+- `MaxFailedAccessAttempts` / `LockoutDuration` / `AllowedForNewUsers` — this flow's own lockout
+  policy. `PhoneAuthenticationMethod` carries the matching three properties for the phone flow, independently.
+
+The non-interactive `password` grant (ROPC) is **not** supported — use the authorization-code or
+device-authorization flow instead.
+
+## Custom scopes
+
+Beyond the standard OIDC scopes, a tenant can declare its own. They are seeded at start-up and
+isolated per tenant (a client in one tenant cannot request a scope owned by another):
+
+```csharp
+tenant.AddScope("reports:read", scope =>
+{
+    scope.DisplayName = "Read reports";
+    scope.Resources.Add("reports-api");   // audience granted by the scope
+});
+```
+
+Scopes can also be managed at runtime through the admin API: `GET /admin/scopes?tenant=<id>`,
+`POST /admin/scopes`, `PUT /admin/scopes/{name}`, `DELETE /admin/scopes/{name}?tenant=<id>`. The same
+API has full CRUD for users (`/admin/users`) and clients (`/admin/clients`), and create + revoke for
+signing keys (`/admin/keys`, `POST /admin/keys/{id}/revoke`). Anything created this way is stamped
+`huia:origin = dynamic`; a code-seeded client or scope is read-only (a mutating call returns `409`).
+
+## Account UI error pages
+
+`UseHuiaOpenId()` installs `UseStatusCodePagesWithReExecute`, so a bare `404` / `401` / `403` / `500` (for
+example following a link into a disabled tenant, or clicking *Register* where
+`DisableRegistration()` was called) renders a branded page that reuses the tenant's card layout and
+localised strings. Requests under `/connect`, `/manage`, `/admin`, `/.well-known` and anything that
+asked for `application/json` get the bare status code with no HTML, so API and protocol clients are
+unaffected.
+
+## Self-service profile (`/manage`)
+
+The token-protected `/manage/*` API lets a signed-in user edit their own account. Which contact
+details are editable depends on how the account signs in:
+
+| Account type | Owns | `PUT /manage/email` | `PUT`/`DELETE /manage/phone` |
+| --- | --- | --- | --- |
+| Password (email + password) | email | allowed | **rejected** — a password account has no phone number |
+| External (OIDC provider) | email | allowed | **rejected** |
+| Phone (SMS one-time code) | phone number (also the username) | **rejected** | change allowed; **remove rejected** |
+
+When a phone-login account changes its number, the username is moved with it
+(`UserManager.SetUserNameAsync`), so the new number stays usable for sign-in.
+
+## External login
+
+An external sign-in goes through the OpenIddict client, then a single dispatcher
+(`identity/account/externallogincallback`) that uses `SignInManager.GetExternalLoginInfoAsync`:
+
+- **Already signed in** — the provider is linked to the current account. Users manage their linked
+  providers at `identity/account/externallogins` (a Razor page) or through
+  `GET` / `DELETE /manage/external-logins`; the last remaining sign-in method can't be removed.
+- **Logged out, provider already linked** — signs straight in.
+- **Logged out, email matches a local account** — linked only when the tenant opted in with
+  `ext.EnableAccountsLinking()` **and** the local email is confirmed **and** the provider's
+  `email_verified` isn't `false`. Otherwise the sign-in is refused with "email already registered" and
+  no second account is created.
+- **Otherwise** — a name is collected and a new account is created.
+
+When a session was federated, `/connect/logout` also ends the upstream provider's session (RP-initiated
+end-session via the OpenIddict client; the provider must register the tenant's
+`{tenant}/signout-callback-oidc` as a post-logout redirect URI).
+
+---
+
+<!-- anchor: guide---multi-tenancy -->
+## [Guide] Multi-tenancy
+_Source: docs/guide/multi-tenancy.md_
+
+# Multi-tenancy
+
+Tenants are resolved from the first path segment (`/{tenant}/...`) by Finbuckle's base-path
+strategy with `RebaseAspNetCorePathBase`. `UseHuiaOpenId()` runs `UseMultiTenant()` before `UseRouting()`
+and `UseAuthentication()`.
+
+## Data isolation
+
+`HuiaDbContext` derives from Finbuckle's `MultiTenantIdentityDbContext<HuiaUser, HuiaRole, string>`.
+Every Identity entity (users, roles, their claims, logins, tokens and role links) carries a
+`TenantId` and is:
+
+- **filtered on read** — a global query filter restricts every query to the context's tenant. The
+  tenant is snapshotted from the ambient `IMultiTenantContextAccessor` when the context is
+  constructed, which during a request is the routing tenant.
+- **enforced on write** — `SaveChanges` throws `MultiTenantException` if an Identity entity is added,
+  modified or deleted while no tenant is in scope, or while it belongs to a different tenant;
+  `TenantId` is stamped automatically on insert.
+
+`HuiaDbContext.OnModelCreating` then strips the default Identity indexes and re-declares explicit
+tenant-scoped composites (`IX_HuiaUsers_Tenant_UserName` unique, `IX_HuiaUsers_Tenant_Email`,
+`IX_HuiaRoles_Tenant_Name` unique) so a username or email is unique only *within* a tenant.
+
+Code that legitimately reads across tenants — the admin console's user list, for example — calls
+`.IgnoreQueryFilters()`. Seeding and other non-request work sets the tenant first:
+
+```csharp
+await using var scope = services.CreateAsyncScope();
+using (HuiaTenantScope.Enter(scope.ServiceProvider, tenantId))
+{
+    var users = scope.ServiceProvider.GetRequiredService<UserManager<HuiaUser>>();
+    // ...resolved after Enter, so HuiaDbContext binds to `tenantId`
+}
+```
+
+OpenIddict applications and scopes carry a real `TenantId` column, unique together with the client id /
+scope name, and `HuiaOpenIddictApplicationStore` / `HuiaOpenIddictScopeStore` filter on it — rows from other
+tenants are invisible on the lookups the authorize / token endpoints depend on, and two tenants may each
+declare a client or scope with the same identifier.
+`HuiaSigningKey` also keeps a plain `TenantId` column (not a multi-tenant entity) so the key
+lifecycle jobs can run with no tenant in scope.
+
+## Authentication isolation
+
+`AddMultiTenant<HuiaTenantInfo>().WithPerTenantAuthentication()` binds every interactive login
+session to the tenant it was created under: the authentication ticket records its origin tenant, and
+a request whose resolved tenant does not match has its principal rejected. On top of that, each
+tenant gets its own cookie name (`huia.auth.{tenant}`, `huia.2fa.{tenant}`) so one browser can hold
+several tenants' sessions at once. Tokens are additionally isolated by a per-tenant issuer
+(`{issuer}/{tenant}`) and per-tenant rotated signing keys.
+
+## Migrations
+
+Huia ships no migrations. Adopters on a real EF Core provider must generate one migration after
+upgrading to pick up the `TenantId` shadow columns and composite indexes Finbuckle adds to the
+Identity join/claim tables:
+
+```bash
+dotnet ef migrations add PerTenantIdentity
+```
+
+---
+
+<!-- anchor: guide---pushed-authorization-par -->
+## [Guide] Pushed authorization (PAR)
+_Source: docs/guide/pushed-authorization.md_
+
+# Pushed Authorization Requests (PAR)
+
+Huia serves an [RFC 9126](https://www.rfc-editor.org/rfc/rfc9126) pushed-authorization endpoint at
+`/{tenant}/connect/par`. A client `POST`s its authorization parameters there over a back channel and
+gets a short-lived, opaque `request_uri` in return, which it then hands to `/connect/authorize`:
+
+```http
+POST /acme/connect/par
+Content-Type: application/x-www-form-urlencoded
+
+client_id=acme-web&response_type=code&redirect_uri=https://acme.example/cb
+&scope=openid%20profile&code_challenge=…&code_challenge_method=S256
+```
+
+```json
+{ "request_uri": "urn:ietf:params:oauth:request_uri:…", "expires_in": 90 }
+```
+
+```http
+GET /acme/connect/authorize?client_id=acme-web&request_uri=urn:ietf:params:oauth:request_uri:…
+```
+
+The endpoint is advertised in each tenant's discovery document as
+`pushed_authorization_request_endpoint`.
+
+## Per-application
+
+Every interactive client **may** use PAR — no configuration needed. To **require** it (a plain
+`GET /connect/authorize` without a `request_uri` is then rejected), call the method on the client:
+
+```csharp
+tenant.AddServerSideWebApplication("acme-web", "secret", client =>
+{
+    client.RequirePushedAuthorizationRequests();
+    client.RedirectUris.Add(new Uri("https://acme.example/cb"));
+});
+```
+
+or tick **Require PAR** when creating the client in the admin console. Under the hood this adds the
+OpenIddict `ft:par` requirement to the application; the `ept:pushed_authorization` endpoint
+permission is granted to every interactive client automatically.
+
+---
+
+<!-- anchor: guide---admin-console -->
+## [Guide] Admin console
+_Source: docs/guide/admin-ui.md_
+
+# Admin console (`Todo.Admin`)
+
+`samples/Todo/Todo.Admin` is a Nuxt 4 admin console that puts a UI on every `/admin/*` endpoint the
+library exposes. It is a **confidential** client built on the first-party
+[`nuxt-huia-oidc`](/nuxt/overview) module and signs in against the `master` tenant;
+[`nuxt-api-party`](https://nuxt-api-party.byjohann.dev/) proxies each call to
+`{{issuer}}/master/admin/...` and a Nitro plugin adds the access token via `getAccessToken(event)`,
+so the token never reaches the browser.
+
+## What it needs
+
+The admin API is mounted by the host without a policy; the sample attaches one:
+
+```csharp
+app.MapHuiaAdminEndpoints()
+    .RequireAuthorization(p => p.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator));
+```
+
+So a signed-in user must be in the `master` tenant, hold the `huia.administrator` role, and have
+requested the `roles` scope at sign-in (the console does). The Aspire sample seeds
+`admin@huia.local` / `Admin1!Pass` in that role.
+
+## Pages
+
+| Route | Endpoint(s) | Notes |
+|-------|-------------|-------|
+| `/` | `GET admin/tenants` | Dashboard — tenant count, per-tenant sign-in methods, quick links |
+| `/tenants` | `GET admin/tenants` | Read-only |
+| `/users` | `GET/POST/PUT/DELETE admin/users` (+ `…/{id}/roles`, `…/{id}/claims`) | Full CRUD; create a password or phone account; assign / unassign roles and claims inline; keyset paged, tenant filter |
+| `/roles` | `GET/POST/PUT/DELETE admin/roles` | Per-tenant roles; a role with members can't be deleted until they're unassigned |
+| `/clients` | `GET/POST/PUT/DELETE admin/clients` | Full CRUD for dynamic clients (static ones are read-only); keyset paged |
+| `/keys` | `GET/POST admin/keys` + `POST admin/keys/{id}/revoke` | Create a pending or active key, revoke a key; keyset paged, tenant filter |
+| `/scopes` | `GET/POST/PUT/DELETE admin/scopes` | Full CRUD, tenant filter |
+| `/profile` | `GET/PUT manage/profile` | The signed-in user's own details |
+
+Lists use the admin API's keyset pagination (`after` / `before` / `size`); the `useKeysetList`
+composable (`app/composables/useKeysetList.ts`) walks the cursor off the first / last visible row.
+
+## Static vs. dynamic scopes and clients
+
+A client or scope is **static** when it was seeded from the options tree (`tenant.AddScope(...)`,
+`tenant.AddServerSideWebApplication(...)`, …) and **dynamic** when it was created at runtime through
+`POST /admin/scopes` or `POST /admin/clients`. The distinction is persisted in the OpenIddict entity's
+`Properties` under `huia:origin` (`HuiaConstants.Origins.Static` / `Dynamic`); a row with no marker is
+treated as static.
+
+The console shows the origin as a badge. For a **static** scope or client the Edit and Delete buttons
+are disabled, and the API backs this up — `PUT` / `DELETE` on a code-defined scope or client returns
+`409 Conflict`. Create always produces a dynamic entity.
+
+## Signing keys
+
+`POST /admin/keys` mints a new RSA key for a tenant, either **pending** (published in the JWKS but not
+signing) or **active** (`activate: true`, which demotes the tenant's current active key to
+*rotated*). `POST /admin/keys/{id}/revoke` moves a key to *retired* — it stops signing and validating
+at once; the call is refused with `409` if it is the tenant's only active key. `DELETE /admin/keys/{id}`
+hard-deletes a key, and only a *retired* one.
+
+## Running it
+
+`Todo.Admin` is wired into `samples/Shared/Huia.AppHost` as `admin-app` on port 3001:
+
+```bash
+dotnet run --project samples/Shared/Huia.AppHost
+# then open http://localhost:3001 and sign in as admin@huia.local / Admin1!Pass
+```
+
+`tests/Huia.E2ETests/AdminUiE2ETests.cs` drives the console through the same AppHost via
+`Aspire.Hosting.Testing` + Playwright (`Category=Aspire`, needs Docker).
+
+---
+
+<!-- anchor: guide---email-testing -->
+## [Guide] Email testing
+_Source: docs/guide/email-testing.md_
+
+# Email testing with Mailpit
+
+The library sends transactional email (confirm-your-email, reset-your-password) through
+`IHuiaEmailSender` — a MailKit SMTP client that no-ops when no host is configured. The Aspire sample
+wires [Mailpit](https://github.com/axllent/mailpit) as the SMTP sink so the flows can be exercised
+locally and in CI without a real provider.
+
+## AppHost wiring
+
+`samples/Shared/Huia.AppHost/AppHost.cs` uses the `CommunityToolkit.Aspire.Hosting.MailPit` integration and
+points the identity server at it:
+
+```csharp
+var mailpit = builder.AddMailPit("mailpit")
+    .WithImageTag("v1.21")             // pinned to the tag CI pre-pulls
+    .WithDataVolume("mailpit-data");   // persist captured mail across `aspire run` sessions
+
+builder.AddProject<Projects.Huia_IdentityServer>("huia-identityserver")
+    .WithReference(mailpit)
+    .WaitFor(mailpit)
+    .WithEnvironment(context =>
+    {
+        // Huia binds discrete Huia:Email:* keys, not an Aspire connection string.
+        var smtp = mailpit.GetEndpoint("smtp");
+        context.EnvironmentVariables["Huia__Email__Host"] = smtp.Property(EndpointProperty.Host);
+        context.EnvironmentVariables["Huia__Email__Port"] = smtp.Property(EndpointProperty.Port);
+        context.EnvironmentVariables["Huia__Email__UseSsl"] = "false";
+        context.EnvironmentVariables["Huia__Email__FromAddress"] = "no-reply@huia.local";
+    });
+```
+
+The integration names the endpoints `smtp` and `http` (the web UI + REST API). The E2E suite runs
+with `Huia:EnableE2E=true`, which skips the data volume so every run starts with an empty sink.
+
+## Config binding
+
+The library only reads `HuiaOptions.Email` from the `AddHuiaOpenId(...)` delegate, so the sample binds the
+`Huia:Email` section itself:
+
+```csharp
+huia.ConfigureEmail(email => builder.Configuration.GetSection("Huia:Email").Bind(email));
+```
+
+When `Huia:Email:Host` is set the real MailKit sender is used. When it is **not** set (a bare
+`dotnet run` of the sample, or the in-process integration tests) the sample falls back to an
+in-memory `CapturingEmailSender` and the `/e2e-mail` debug endpoint.
+
+## Viewing and asserting
+
+Run the AppHost and open the `mailpit` resource's `http` endpoint to read captured messages. Tests
+query the REST API:
+
+- `GET /api/v1/search?query=to:<address>` — list matching messages
+- `GET /api/v1/message/<id>` — full message (`Text` / `HTML` bodies)
+- `DELETE /api/v1/messages` — clear the inbox
+
+`tests/Huia.E2ETests/MailFlowE2ETests.cs` boots the AppHost via `Aspire.Hosting.Testing`
+(`AppHostFixture`), posts the forgot-password / register forms on the identity server, then uses
+`MailpitClient.WaitForActionUrlAsync` to pull the reset / confirmation link out of the delivered
+message and follow it. The suite needs Docker (Mailpit + Postgres images) and is tagged
+`Category=Aspire`.
+
+---
+
+<!-- anchor: net-reference-huiaopenid---options-reference -->
+## [.NET reference — Huia.OpenId] Options reference
+_Source: docs/dotnet/options.md_
+
+# Options reference
+
+The Huia configuration tree is rooted at `HuiaOptions` and bound from the `Huia` configuration
+section, configured in code via the `AddHuiaOpenId(huia => …)` callback (or, for the flat Headless
+options shape, `AddHuiaHeadless(huia => …)`), or both. The full tree and its
+one-pass validation are specified in [`src/dotnet/SPEC.md` §3](https://github.com/Ayman-Elfaki/Huia/blob/main/src/dotnet/SPEC.md); this page is the practical reference.
+
+## The tree
+
+```
+HuiaOptions
+├─ Issuer : Uri                                 required — per-tenant issuer is {Issuer}/{tenant}
+├─ PublicUrl : Uri?                             absolute-link base for emails sent outside a request
+├─ DisableTransportSecurityRequirement : bool   dev / in-process tests only
+├─ Email : EmailOptions                         root SMTP; a tenant's Email merges over this
+├─ Sms : SmsOptions                             root SMS;  a tenant's Sms merges over this
+├─ Keys : KeyManagementOptions                  signing-key lifecycle (EnableBackgroundJobs, rotation windows)
+├─ Seeding : SeedingOptions                     PruneRemovedStaticEntities (off by default) — see Pruning below
+├─ Cleanup : CleanupOptions                     OpenIddict.Quartz pruning of authorizations/tokens — see Cleanup below
+└─ Tenants[id] : HuiaTenant
+   ├─ DisplayName : string?
+   ├─ Authentication : HuiaTenantAuthentication          — fluent Use* methods, see below; each sign-in method
+   │                                                       carries its own lockout policy, there is no
+   │                                                       tenant-wide Lockout any more
+   ├─ Branding : TenantBrandingOptions                   DisplayName, LogoUrl, FaviconUrl, AccentColor, TermsUrl, PrivacyUrl, SupportUrl
+   ├─ Email : EmailOptions?
+   ├─ Sms : SmsOptions?
+   ├─ Applications : HuiaApplicationCollection          AddServerSideWebApplication, AddSinglePageApplication, …
+   ├─ Scopes : IList<HuiaScopeDescriptor>
+   └─ Roles : IList<string>                             code-defined ("static") roles — see Roles below
+```
+
+## Sign-in methods — fluent `Use*` calls
+
+`tenant.Authentication` is a collection of `HuiaAuthenticationMethod`s (`EmailPasswordAuthenticationMethod`,
+`PhoneAuthenticationMethod`, `PasskeyAuthenticationMethod`, `ExternalLoginAuthenticationMethod`). Configure
+them through `UseEmailAndPasswordLogin` / `UsePhoneLogin` / `UsePasskeyLogin` / `UseExternalLogin` — each is
+a top-level call, not nested under an umbrella — and read enablement through the derived bools. Each method's options carry their own **lockout** policy
+(`MaxFailedAccessAttempts`, `LockoutDuration`, `AllowedForNewUsers`) — a phone brute-force ceiling has
+nothing to do with a password brute-force ceiling, so there is no tenant-wide lockout setting.
+
+```csharp
+huia.AddTenant("acme", tenant =>
+{
+    tenant.Authentication
+        .UseEmailAndPasswordLogin(p =>
+        {
+            p.MinimumLength = 12;              // default 10
+            p.RequireDigit = true;            // default true
+            p.RequireLowercase = true;
+            p.RequireUppercase = true;
+            p.RequireNonAlphanumeric = false;
+            p.RequiredUniqueChars = 1;
+            p.RequireConfirmedEmail = true;   // default true
+            p.RequireUniqueEmail = false;
+            p.AllowSelfServiceRegistration = true;  // or tenant.Authentication.DisableRegistration()
+            p.MaxFailedAccessAttempts = 5;    // this flow's own lockout ceiling
+            p.LockoutDuration = TimeSpan.FromMinutes(15);
+            p.AllowedForNewUsers = true;
+        })
+        .UsePhoneLogin(phone =>
+        {
+            phone.DefaultCountry = "SA";           // ISO 3166-1 alpha-2, for national numbers
+            phone.AllowAutoProvisioning = true;    // unknown well-formed number may start a sign-up
+            phone.CodeLength = 6;                  // 4–10
+            phone.CodeLifetime = TimeSpan.FromMinutes(5);
+            phone.MaxVerificationAttempts = 5;
+            phone.ResendCooldown = TimeSpan.FromSeconds(30);
+            phone.SuccessfulLoginsPerWindow = 1;   // successful-sign-in ceiling per number
+            phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
+            phone.SuccessfulLoginsPerDay = 5;
+            phone.RequireConfirmedPhoneNumber = true;  // default true
+            phone.MaxFailedAccessAttempts = 5;         // this flow's own lockout ceiling
+        })
+        .UseExternalLogin(ext =>
+        {
+            ext.AddGoogle("client-id", "client-secret");
+            ext.AddGitHub("client-id", "client-secret");
+            ext.AddMicrosoftAccount("client-id", "client-secret");
+            ext.AddOpenIdConnect("Partner", "id", "secret", "https://partner.example/", p =>
+            {
+                p.DisplayName = "Partner";
+                p.Scopes.Add("profile");
+                p.Scopes.Add("email");
+            });
+            ext.EnableAccountsLinking();   // link a verified provider email to an existing confirmed account
+        })
+        .UsePasskeyLogin(passkey =>
+        {
+            passkey.RelyingPartyId = "acme.example.com";  // null (default) → the request host
+            passkey.AllowedOrigins.Add("https://app.acme.example.com");  // extra origins beyond the request origin
+            passkey.UserVerification = PasskeyUserVerification.Required;   // Preferred | Required | Discouraged
+            passkey.AuthenticatorAttachment = PasskeyAuthenticatorAttachment.Any;  // Any | Platform | CrossPlatform
+            passkey.AuthenticatorTimeout = TimeSpan.FromMinutes(2);       // 30s – 10m
+        });
+
+    // reads (used by the account UI, the admin API, the OpenIddict client wiring):
+    // tenant.Authentication.IsEmailAndPasswordLoginEnabled
+    // tenant.Authentication.IsPhoneLoginEnabled
+    // tenant.Authentication.IsExternalLoginEnabled
+    // tenant.Authentication.IsPasskeyLoginEnabled
+});
+```
+
+The passkey **relying-party identity** (`RelyingPartyId`, `AllowedOrigins`) is per tenant — there is
+no host-wide passkey configuration. Left unset the RP id is the request host and origin validation is
+the framework's same-origin check. Every credential is a discoverable resident key. See
+[Passkeys](/dotnet/passkeys) for the RP-id-vs-host constraint.
+
+`tenant.Authentication.DisableRegistration()` turns off every anonymous account-creation path in one
+call: `AllowSelfServiceRegistration` and, when the phone flow is enabled, `AllowAutoProvisioning` —
+only an administrator can create accounts afterwards. `HuiaTenant.DisableRegistration()` is a
+shortcut for the same call.
+
+> **Tip: Migrating from an earlier version**
+>
+> `UsePasswordFlow(p => ...)` → `UseEmailAndPasswordLogin(p => ...)`.
+> `UsePasswordlessFlow(pwl => pwl.UsePhoneLogin(...))` → `UsePhoneLogin(...)`, called directly on
+> `tenant.Authentication` (same for `UseExternalLogin`) — the `Passwordless` umbrella is gone.
+> `tenant.Lockout.MaxFailedAccessAttempts = n` → the matching flow's own
+> `.MaxFailedAccessAttempts = n` inside its `Use*` lambda (lockout is per sign-in method now, not per
+> tenant). `tenant.Authentication.Password.RequireConfirmedEmail = false` →
+> `tenant.Authentication.UseEmailAndPasswordLogin(p => p.RequireConfirmedEmail = false)`.
+> `pwl.DefaultCountry` moved onto `PhoneAuthenticationMethod` — use `UsePhoneLogin(phone =>
+> phone.DefaultCountry = "SA")`. `ext.LinkExistingAccountsByEmail()` → `ext.EnableAccountsLinking()`.
+
+## Clients
+
+```csharp
+tenant.AddServerSideWebApplication("acme-web", "secret", client =>
+{
+    client.RedirectUris.Add(new Uri("https://acme.example/callback"));
+    client.PostLogoutRedirectUris.Add(new Uri("https://acme.example/"));
+    client.HomeUris.Add(new Uri("https://acme.example/"));       // first = sign-out fallback target
+    client.Scopes.Add("reports:read");                           // beyond the always-granted openid
+    client.RequirePkce = true;                                   // forced on for public clients anyway
+    client.RequireConsent = false;
+    client.RequirePushedAuthorizationRequests();                 // fluent — adds the ft:par requirement
+    client.Token.AccessToken = TimeSpan.FromMinutes(15);         // per-client lifetime overrides
+});
+
+tenant.AddSinglePageApplication("acme-spa", client =>            // public, no secret, PKCE forced
+    client.RedirectUris.Add(new Uri("https://acme.example/")));
+tenant.AddMachineToMachineApplication("acme-worker", "secret");  // client credentials
+tenant.AddDevice("acme-cli", client => client.ClientSecret = "secret");  // device authorization
+```
+
+`Kind` (`ServerSideWebApplication` | `SinglePageApplication` | `NativeApplication` | `MachineToMachine`)
+determines the default grant types and endpoint permissions. A secret is **required** for
+`ServerSideWebApplication` / `MachineToMachine` and **forbidden** for the public shapes — validation
+enforces this.
+
+## Scopes
+
+```csharp
+tenant.AddScope("reports:read", scope =>
+{
+    scope.DisplayName = "Read reports";
+    scope.Description = "Read-only access to the reporting API.";
+    scope.Resources.Add("reports-api");     // added to the token audience
+});
+```
+
+Code-defined ("static") scopes and clients are **read-only in the admin console** and `PUT` / `DELETE`
+on them returns `409`. Runtime `POST /admin/{scopes,clients}` always creates a dynamic entity.
+
+## Roles
+
+```csharp
+tenant.AddRoles("editor", "beta-tester");
+```
+
+Creates each role for the tenant at start-up if it doesn't already exist, stamped "static" like scopes
+and clients — **read-only in the admin console**, and `PUT` / `DELETE` on it returns `409`. Only stamped
+at creation: a role that already exists under that name (created dynamically before the code declaration
+was added) is left alone. Runtime `POST /admin/roles` always creates a dynamic (fully editable) role.
+
+## Pruning removed static entities
+
+```csharp
+huia.ConfigureSeeding(seeding => seeding.PruneRemovedStaticEntities = true);
+```
+
+Off by default. When on, a static role / scope / client that no longer appears anywhere in the current
+options tree — including one whose entire tenant was removed — is **deleted** at the next start-up, not
+just left behind. Turning this on means removing a line of code deletes data, so it's an explicit,
+per-deployment opt-in rather than always-on behavior.
+
+Deleting a scope or client is always safe (OpenIddict cascades an application's authorizations/tokens,
+and nothing references a scope by foreign key — at worst a client still requesting a removed scope gets
+`invalid_scope`). A static **role** that still has members is the one exception: it's skipped (and
+logged as a warning) rather than force-deleted, so removing a role declaration never silently drops a
+user's role assignment.
+
+## Cleanup
+
+```csharp
+huia.ConfigureCleanup(cleanup =>
+{
+    cleanup.EnableBackgroundJobs = true;               // default; turn off in tests
+    cleanup.PruneAuthorizations = true;
+    cleanup.PruneTokens = true;
+    cleanup.MinimumAuthorizationLifespan = TimeSpan.FromDays(14);  // must be >= 10 minutes
+    cleanup.MinimumTokenLifespan = TimeSpan.FromDays(14);          // must be >= 10 minutes
+    cleanup.MaximumRefireCount = 2;                    // must be >= 0
+});
+```
+
+Wires up [OpenIddict.Quartz](https://documentation.openiddict.com/), OpenIddict's own package for
+pruning orphaned and expired authorizations and tokens, onto Huia's existing Quartz scheduler (the one
+that also runs the signing-key lifecycle jobs). The job itself runs hourly with a short random startup
+jitter — that interval is fixed by OpenIddict.Quartz and is not configurable; the knobs above only
+control *what* it prunes and its own safety guards.
+
+`Cleanup.EnableBackgroundJobs` and `Keys.EnableBackgroundJobs` are independent toggles — turning off key
+background jobs does not implicitly turn off cleanup, or vice versa. The `Huia:EnableBackgroundJobs`
+config key in `Todo.IdentityServer`'s `Program.cs` is wired to both for convenience; define your own
+separate config keys if you need independent control in your own host.
+
+## Validation
+
+`HuiaOptions.Validate()` (also run by `HuiaOptionsBuilder.Build()`) walks the whole tree in one pass
+and throws `HuiaOptionsException` carrying **every** problem as
+`"Huia:Tenants:acme:Authentication:Phone:DefaultCountry: must be a two-letter upper-case ISO 3166-1
+alpha-2 code."`-style messages. Cross-field rules include "at least one sign-in method enabled per
+tenant", `PendingSignupLifetime >= CodeLifetime`, and `SuccessfulLoginsPerDay >= SuccessfulLoginsPerWindow`.
+
+---
+
+<!-- anchor: net-reference-huiaopenid---huiausermanager-user-types -->
+## [.NET reference — Huia.OpenId] HuiaUserManager & user types
+_Source: docs/dotnet/user-manager.md_
+
+# `HuiaUserManager` & user types
+
+This page covers the `Huia.OpenId` flavor. `HuiaUserManager<TUser>`/`HuiaSignInManager<TUser>`
+themselves live in core `Huia` (generic, so they're reusable by `Huia.Headless` too), but the
+flow-aware layer below and the `Huia.OpenId.HuiaUserManager : HuiaUserManager<HuiaUser>` concrete
+subclass are `Huia.OpenId`-specific — `Huia.Headless` registers its own concrete subclass without
+the per-flow `IdentityOptions` machinery.
+
+`Huia.OpenId.HuiaUserManager : Huia.Identity.HuiaUserManager<HuiaUser>` is registered by
+`AddHuiaOpenId()` via `new IdentityBuilder(...).AddUserManager<HuiaUserManager>()` (alongside
+`.AddSignInManager<HuiaSignInManager>()`, layered on top of `AddEntityFrameworkCoreStores<...>()`'s
+plain `AddIdentityCore<TUser>()`), so `SignInManager<HuiaUser>` and every `UserManager<HuiaUser>`
+resolution in your code resolve to them. Inject `HuiaUserManager` directly to reach the extra members.
+
+## Flow-aware managers
+
+Confirmation policy differs per **authentication flow**, not just per tenant, so `AddHuiaOpenId()`
+also registers a named `IdentityOptions` instance for each `HuiaAuthFlow`
+(`Default` / `Password` / `PhoneLogin` / `ExternalLogin`) and an `IHuiaFlowIdentityFactory`:
+
+```csharp
+var flow = factory.Create(HuiaAuthFlow.PhoneLogin);
+await flow.SignInManager.CanSignInAsync(user);   // phone flow: gates on a confirmed phone, never an email
+```
+
+`factory.Create(flow)` returns a `HuiaFlowIdentity` — a `HuiaUserManager` + `HuiaSignInManager` pair
+whose `.Options` is that flow's instance. All flows share the tenant's password / lockout policy;
+they differ only in `SignIn.RequireConfirmedEmail` / `…Account` / `…PhoneNumber`
+(`Password` → the tenant's `RequireConfirmedEmail`; `PhoneLogin` → confirmed phone; `ExternalLogin` →
+neither). The factory is scoped and binds to the tenant ambient when first called, so resolve it
+after tenant resolution or inside `HuiaTenantScope.Enter`. `/manage`, `/admin` and seeding use the
+DI-injected managers, which read the `Default` flow's (per-tenant) options.
+
+## User types
+
+```csharp
+public enum HuiaUserType { Unknown, Password, External, Phone }
+```
+
+`GetUserTypeAsync(user)` classifies an account with precedence **password → external → phone**: a
+record that has a password is a `Password` account even if it also has an external login. The type
+governs which contact details an account may change through `/manage/*`:
+
+| Type | Owns | May set | May not set |
+|---|---|---|---|
+| `Password` | an email + password | email | phone number |
+| `External` | an email + external login(s) | email | phone number |
+| `Phone` | a confirmed phone number (also the username) | phone number | email address |
+| `Unknown` | nothing yet | — | — |
+
+## Members
+
+| Member | What it does |
+|---|---|
+| `Task<HuiaUserType> GetUserTypeAsync(HuiaUser)` | classification, as above |
+| `Task<bool> CanRemoveExternalLoginAsync(HuiaUser)` | `true` unless unlinking would leave the account with no password, no phone number and one or zero logins |
+| `Task<HuiaUser?> FindByPhoneNumberAsync(string e164)` | looks up the **`PhoneNumber` column** (not the username); tenant-scoped by `HuiaDbContext`'s global query filter |
+| `Task<HuiaUserCreation> CreatePhoneUserAsync(string tenantId, string e164, string firstName, string lastName)` | creates a phone-login account — `UserName == PhoneNumber == e164`, `PhoneNumberConfirmed`, no password, no email |
+| `Task<IdentityResult> AddExternalLoginAsync(HuiaUser, string provider, string key, string displayName)` | thin wrapper over `AddLoginAsync(new UserLoginInfo(...))` |
+| `Task<HuiaUserCreation> CreateExternalUserAsync(string tenantId, string? email, string firstName, string lastName, string? phoneNumber, string provider, string key, string displayName)` | derives the username (the email, or `slug(displayName)-{key}` when there is none), creates the account, and attaches the provider login |
+| `Task<(ExternalEmailLinkOutcome Outcome, HuiaUser? User)> TryLinkExternalByEmailAsync(string email, bool providerVouches, bool accountLinkingEnabled, string provider, string key, string displayName)` | a logged-out external sign-in whose email matches a local account — see below |
+
+`HuiaUserCreation` is a `readonly record struct (IdentityResult Result, HuiaUser User)` with
+`Succeeded => Result.Succeeded`; the `User` is persisted only when `Result.Succeeded`.
+
+## `TryLinkExternalByEmailAsync`
+
+```csharp
+public enum ExternalEmailLinkOutcome { NoMatch, Linked, Blocked }
+```
+
+- **`NoMatch`** — no local account owns the email → the caller should provision a new account.
+- **`Linked`** — `accountLinkingEnabled` (the tenant's `ext.EnableAccountsLinking()`) **and** the
+  local email is confirmed **and** the provider vouches for it (`email_verified != "false"`) — the
+  provider login was attached; sign in `User`.
+- **`Blocked`** — an account owns the email but linking is off or the account is ineligible → the
+  caller must **refuse** the sign-in (redirect to `?linkError=1`) and never create a duplicate.
+
+This is the account-takeover guard for federated sign-in: linking is opt-in per tenant and, even
+when on, only happens for a confirmed, vouched-for address.
+
+## Where the ad-hoc code went
+
+`HuiaUserManager` absorbed several open-coded clusters:
+
+- `HuiaUserTypeExtensions.ResolveTypeAsync` (extension) → `GetUserTypeAsync` **(deleted)**
+- `ExternalLoginsModel.CanRemoveLoginAsync` (static) → `CanRemoveExternalLoginAsync` **(deleted)**
+- the `Users.FirstOrDefault(u => u.PhoneNumber == e164)` in `Login.cshtml.cs`
+- the phone / external `new HuiaUser { … } + CreateAsync (+ AddLoginAsync)` in `CompleteProfile.cshtml.cs`
+- the `FindByEmailAsync` + link-gate block in `ExternalEndpoints.ExternalLoginCallbackAsync`
+
+## Tests
+
+`src/dotnet/tests/Huia.IntegrationTests/HuiaUserManagerTests.cs` covers the classification
+precedence, phone lookup tenant-scoping, `CreatePhoneUserAsync` shape, `CreateExternalUserAsync`
+create-and-link, the three `TryLinkExternalByEmailAsync` outcomes, and `CanRemoveExternalLoginAsync`.
+`FlowIdentityOptionsTests`, `HuiaSignInManagerTests`, `HuiaUserManagerFlowTests` and
+`IdentityOptionsFlowTests` cover the per-flow options and manager pair (mirroring the ASP.NET Core
+Identity `SignInManagerTest` / `UserManagerTest` / `IdentityOptionsTest` scenarios on the real
+stack). `HuiaTestHost.WithUserManagerAsync(tenantId, um => …)` hands a tenant-scoped
+`HuiaUserManager`; `WithFlowIdentityAsync(tenantId, flow, fi => …)` hands a `HuiaFlowIdentity`.
+
+---
+
+<!-- anchor: net-reference-huiaopenid---endpoints -->
+## [.NET reference — Huia.OpenId] Endpoints
+_Source: docs/dotnet/endpoints.md_
+
+# Endpoints
+
+All routes live under the tenant base path, `/{tenant}/…`. `MapHuiaEndpoints()` maps the protocol,
+account-UI, external-login and self-service groups; `MapHuiaAdminEndpoints()` maps the admin group
+and returns the route-group builder so the host attaches the policy.
+
+## Protocol (`/{tenant}/connect`)
+
+| Route | Purpose |
+|---|---|
+| `GET .well-known/openid-configuration` | per-tenant discovery — issuer `{Issuer}/{tenant}`, advertises `pushed_authorization_request_endpoint` |
+| `GET .well-known/jwks` | the tenant's **published** signing keys (`HuiaTenantJwksHandler`) |
+| `GET connect/authorize` | Authorization Code + PKCE (+ PAR); redirects to the account UI when not signed in |
+| `POST connect/par` | RFC 9126 Pushed Authorization Request → `{ request_uri, expires_in }` |
+| `POST connect/token` | code / refresh / client-credentials grants — **`application/x-www-form-urlencoded` only** |
+| `GET connect/userinfo` | the standard claims for the bearer token |
+| `GET connect/end_session` | RP-initiated logout (`post_logout_redirect_uri`, `id_token_hint`) |
+| `POST connect/device` · `GET connect/verification` | device authorization grant |
+
+Tokens are minted with the **tenant's rotated RSA key** and the per-tenant issuer; a token issued
+for tenant A is `401 invalid_token` at tenant B.
+
+## Account UI (`/{tenant}/identity/account`)
+
+Razor Pages (`Areas/Identity/Pages/Account`), English + Arabic (RTL), one committed JS bundle.
+
+| Page | Notes |
+|---|---|
+| `login` | passkey-first when the tenant enables passkeys (feature-detected, silent fallback); tabs for password + phone when both are enabled; external-provider buttons below |
+| `passkeyenroll` | one-time, skippable "set up a passkey" prompt shown after a first sign-in on a passkey tenant |
+| `passkeys` | cookie-authenticated passkey management (list / add / inline-rename / two-step remove) — the browser-user counterpart of `manage/passkeys/*` |
+| `register` | 404 when `AllowSelfServiceRegistration` is off; auto-signs-in when the tenant does not `RequireConfirmedEmail`, else sends a confirmation link |
+| `verifyotp` | step 2 of the phone flow — segmented code input sized from `CodeLength`, resend cooldown |
+| `completeprofile` | collects a name for a phone auto-provisioning signup or a first-time external sign-in — the account is created **here**, never with blank names earlier |
+| `forgotpassword` / `resetpassword` / `confirmemail` | email flows; carry `returnUrl` through |
+| `externallogins` | link / unlink providers for a signed-in user |
+| `status/{code}` | the `UseStatusCodePagesWithReExecute` target — styled for HTML, a bare code for `/connect`, `/manage`, `/admin`, `/.well-known` and JSON |
+
+## Self-service (`/{tenant}/manage`)
+
+Bearer-authenticated (`HuiaConstants.Policies.Api`, which pins the OpenIddict-validation scheme); the
+caller is resolved from the token `sub`.
+
+| Route | Guard (by `HuiaUserType`) |
+|---|---|
+| `GET/PUT manage/profile`, `PUT manage/password` | — |
+| `GET/PUT manage/email` + `POST manage/email/confirm` | a `Phone` account cannot set an email |
+| `GET/PUT manage/phone` + `POST manage/phone/confirm` + `DELETE manage/phone` | a `Password` / `External` account cannot set a phone; a `Phone` account cannot remove it (a phone-user's username tracks the number in lock-step) |
+| `GET manage/external-logins` + `DELETE manage/external-logins/{provider}/{key}` | an unlink is refused when it would leave no other sign-in method |
+| `POST manage/passkeys/creation-options` + `POST/GET/PATCH/DELETE manage/passkeys[/{id}]` | passkey registration and management; `DELETE` returns `409` when the passkey is the account's only sign-in method |
+
+Passkey ceremonies also have anonymous routes under `identity/account/passkey/*`
+(`assertion-options`, `assertion`) — antiforgery- and origin-checked, mapped
+with the account UI. See [Passkeys](/dotnet/passkeys).
+
+## Admin (`/master/admin` in the sample)
+
+`MapHuiaAdminEndpoints()` is mapped without a policy; the host attaches one:
+
+```csharp
+app.MapHuiaAdminEndpoints()
+   .RequireAuthorization(p => p.RequireTenants("master").RequireRole(HuiaConstants.Roles.Administrator));
+```
+
+| Route | |
+|---|---|
+| `GET admin/tenants` | id, display name, sign-in methods, client count, `origin` (`static` = declared in code, `dynamic` = created through the API) |
+| `GET/POST admin/tenants`, `GET/PUT/DELETE admin/tenants/{id}` | runtime tenants (needs `AddPersistedTenants()` and a store adapter, else `501`). The body is a tenant *document*: sign-in methods (email/password, phone, passkey, external providers), branding, email/SMS overrides, roles, scopes and applications. Secrets are never returned and omitting one on update keeps the stored value. A created tenant is usable at once (route, signing key, seeded clients/scopes/roles). Code-declared tenants are read-only (`409`); the id must be 1-63 lower-case letters, digits or hyphens and not a reserved route |
+| `admin/users` `GET/POST/PUT/DELETE` (+ `…/{id}/roles`, `…/{id}/claims`) | create a password **or** phone account; manage roles and claims; keyset paged; tenant filter |
+| `admin/roles` `GET/POST/PUT/DELETE` | per-tenant; a role with members cannot be deleted |
+| `admin/clients` `GET/POST/PUT/DELETE` | dynamic clients only — `409` on a static one |
+| `admin/scopes` `GET/POST/PUT/DELETE` | dynamic scopes only |
+| `admin/keys` `GET/POST` + `POST admin/keys/{id}/revoke` + `DELETE` | mint pending/active (active demotes the current active to *rotated*); revoke → *retired* (`409` if it is the only active key); delete only a *retired* key |
+
+Lists use keyset pagination (`after` / `before` / `size`); `KeysetQueryModel` is built from the query
+string by hand (`[AsParameters]` 400s on minimal APIs).
+
+## Pipeline
+
+`UseHuiaOpenId()` fixes the order: `UseExceptionHandler` → `UseStatusCodePagesWithReExecute` →
+`UseRequestLocalization` → **`UseMultiTenant`** (before routing — the base-path strategy rebases
+`PathBase` to `/{tenant}`) → `HuiaSecurityHeadersMiddleware` (opt-in) → `UseStaticFiles` →
+`UseRouting` → `UseAuthentication` → `UseAuthorization`.
+
+---
+
+<!-- anchor: net-reference-huiaopenid---passwordless-sms -->
+## [.NET reference — Huia.OpenId] Passwordless SMS
+_Source: docs/dotnet/passwordless-sms.md_
+
+# Passwordless SMS
+
+A tenant enables SMS one-time-code sign-in with `UsePhoneLogin(phone => …)`, called directly on
+`tenant.Authentication`. The account UI then shows a **Phone** tab (alongside **Email** when the
+email/password flow is also on) that collects a number, dispatches a code, and hands off to a
+verification page.
+
+## Configuration
+
+```csharp
+tenant.Authentication.UsePhoneLogin(phone =>
+{
+    phone.DefaultCountry = "SA";                  // interpret national numbers; format-checked only
+    phone.AllowAutoProvisioning = true;           // unknown well-formed number may start a sign-up
+    phone.CodeLength = 6;                         // 4–10
+    phone.CodeLifetime = TimeSpan.FromMinutes(5);
+    phone.MaxVerificationAttempts = 5;            // per issued code
+    phone.PendingSignupLifetime = TimeSpan.FromMinutes(30);  // >= CodeLifetime
+    phone.ResendCooldown = TimeSpan.FromSeconds(30);
+    phone.Captcha = CaptchaMode.None;
+    phone.SuccessfulLoginsPerWindow = 1;          // successful-sign-in ceiling per number
+    phone.SuccessfulLoginWindow = TimeSpan.FromMinutes(2);
+    phone.SuccessfulLoginsPerDay = 5;
+    phone.RequireConfirmedPhoneNumber = true;     // default true
+    phone.MaxFailedAccessAttempts = 5;            // this flow's own lockout ceiling — independent of
+    phone.LockoutDuration = TimeSpan.FromMinutes(15);  // the email/password flow's
+});
+```
+
+An SMS provider is configured under `Huia:Sms` (root) and optionally per tenant (`tenant.Sms`);
+`SmsOptions.MergedWith` folds them — `LogCodesToLogger` is OR-merged and cannot be turned off by a
+tenant, and `RateLimit` is kept from the tenant **only** if the tenant also set its own `Provider`.
+
+## Flow
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant L as /identity/account/login
+  participant V as /identity/account/verifyotp
+  participant C as /identity/account/completeprofile
+  B->>L: POST phone number
+  Note over L: IPhoneNumberService.TryNormalize (IsPossibleNumber)<br/>rate-limit check + successful-login ceiling (non-consuming)
+  alt known number
+    L->>L: IOtpService.IssueAsync → SHA-256(salt‖code) in AspNetUserTokens
+  else unknown + AllowAutoProvisioning
+    L->>L: IPendingPhoneSignup.Create (hashed code, no HuiaUser yet)
+  end
+  L-->>B: 302 verifyotp?flow=<protected token>
+  B->>V: POST code
+  V->>V: IOtpService.VerifyAsync (single-use, FixedTimeEquals, attempt cap)
+  alt profile incomplete / pending signup
+    V-->>B: 302 completeprofile
+    B->>C: POST first + last name
+    C->>C: HuiaUserManager.CreatePhoneUserAsync
+  end
+  C-->>B: SignInManager cookie (amr=sms) → back to /connect/authorize
+```
+
+Key points:
+
+- The resend cooldown (`ResendCooldown`) is enforced on the server: the Razor flow stamps `CodeSentUtc` into the
+  protected flow token and the JSON flow keeps `LastSentUtc` on the flow record, so a page reload or a scripted
+  client cannot bypass the button's countdown. A wrong code reports how many attempts remain
+  (`OtpVerifyOutcome.AttemptsRemaining`); `Expired` and `TooManyAttempts` have their own messages / error codes.
+- The account is **never created at code-request time** — a `IPendingPhoneSignup` record holds the
+  hashed code until `CompleteProfile` calls `HuiaUserManager.CreatePhoneUserAsync`, so a blank-name
+  user is never persisted.
+- A phone account's `UserName` **is** its E.164 number; `HuiaUserManager.FindByPhoneNumberAsync`
+  queries the `PhoneNumber` column, and confirming a phone change calls `SetUserNameAsync` to keep
+  them in lock-step.
+- The one-time code is `RandomNumberGenerator.GetInt32`, stored as `SHA-256(salt ‖ code)` in
+  `AspNetUserTokens` (provider `Huia.Passwordless`, name `otp`) — **no EF migration**, that table
+  already exists. Verification is single-use, constant-time, attempt-capped, `TimeProvider`-based for
+  expiry.
+- Unknown number with `AllowAutoProvisioning` **off** behaves identically to a known number (same
+  redirect, same timing) to avoid enumeration.
+- The successful-sign-in ceiling is checked with a non-consuming `CanRecordLogin` **before** an SMS is
+  spent; the permit is consumed by `TryRecordLogin` only on a completed sign-in.
+
+## Testing
+
+`Huia:EnableE2E` on the sample host adds an `e2e` tenant, a `CapturingSmsSender`, and a
+`GET /e2e-otp?phone=` endpoint that hands the last code back so E2E specs can complete the flow.
+`Huia.IntegrationTests` covers issue / verify / expiry / attempt-cap and both rate limiters.
+
+---
+
+<!-- anchor: net-reference-huiaopenid---passkeys -->
+## [.NET reference — Huia.OpenId] Passkeys
+_Source: docs/dotnet/passkeys.md_
+
+# Passkeys (WebAuthn / FIDO2)
+
+A tenant enables passkeys with `UsePasskeyLogin()`, called on `tenant.Authentication`. It gives that
+tenant:
+
+- **passkey-first sign-in** — a "Sign in with a passkey" button that leads the login page and runs a
+  usernameless (discoverable) WebAuthn assertion, plus conditional-UI autofill on the email field;
+- a **prompt after sign-up** — the first time an account is created and signed in, a one-time
+  interstitial offers to set up a passkey (skippable).
+
+Every credential Huia issues is a **discoverable resident key** (`residentKey: "required"`) so a
+usernameless assertion can find it.
+
+Passkey storage rides on ASP.NET Core Identity 10's built-in support (`IdentityUserPasskey`, the EF
+`IUserPasskeyStore`, `IdentityPasskeyOptions`, the `SignInManager` / `UserManager` passkey methods).
+`HuiaDbContext` pins the Identity schema to `Version3` so the `HuiaUserPasskeys` table is always in
+the model, and — because the context derives from Finbuckle's — a credential row carries a
+`TenantId`, is filtered by the ambient tenant on read, and is stamped on write like every other
+Identity row.
+
+## Configuration
+
+The relying party is **per tenant** — there is no host-wide passkey configuration.
+
+```csharp
+tenant.Authentication.UsePasskeyLogin(passkey =>
+{
+    passkey.RelyingPartyId = "acme.example.com";  // null (default) → the request host
+    passkey.AllowedOrigins.Add("https://app.acme.example.com");  // extra origins beyond the request origin
+    passkey.UserVerification = PasskeyUserVerification.Required;        // Preferred | Required | Discouraged
+    passkey.AuthenticatorAttachment = PasskeyAuthenticatorAttachment.Any;  // Any | Platform | CrossPlatform
+    passkey.AuthenticatorTimeout = TimeSpan.FromMinutes(2);   // 30s – 10m
+});
+```
+
+`RelyingPartyId` left unset uses `Request.Host.Host`, and origin validation is the framework's
+same-origin check.
+
+> **Warning: Isolating credentials per tenant**
+>
+> A browser only accepts an RP id that is a registrable-domain suffix of the host serving the page.
+> Distinct per-tenant RP ids therefore isolate credentials **only if each tenant is fronted by its own
+> host** (for example `acme.example.com`, `globex.example.com`) at your reverse proxy — Huia validates
+> the RP id format, not that it matches the host. On a single shared host every tenant's effective RP
+> id is that host; a discoverable account picker can then surface another tenant's credential, the
+> assertion is rejected (the credential row is tenant-filtered), and the login page silently falls back
+> to the password / phone form.
+
+## Endpoints
+
+Anonymous (mapped with the account UI, `404` unless the tenant enabled passkeys):
+
+| Route | Purpose |
+| --- | --- |
+| `POST identity/account/passkey/assertion-options` | Start a discoverable assertion. |
+| `POST identity/account/passkey/assertion` | Finish it and sign in (`amr: passkey`). |
+
+Both validate antiforgery (`X-Huia-CSRF` header) and the request `Origin`.
+
+Token-protected, on the `manage` group (`Huia:Api` policy, user from `sub`):
+
+| Route | Purpose |
+| --- | --- |
+| `POST manage/passkeys/creation-options` | WebAuthn creation options for the caller. |
+| `POST manage/passkeys` | Register the attested credential (`{ credential, name }`). |
+| `GET manage/passkeys` | List the caller's credentials. |
+| `PATCH manage/passkeys/{id}` | Rename one. |
+| `DELETE manage/passkeys/{id}` | Remove one — `409` if it is the account's only sign-in method. |
+
+Browser users who signed in directly at the identity provider manage their credentials on the
+cookie-authenticated `/{tenant}/identity/account/passkeys` page instead.
+
+## Sign-up prompt
+
+After a first sign-in that created the account (email/password registration, phone one-time-code
+first sign-in, profile completion) — and, once, on the first password sign-in that follows email
+confirmation — the user is sent to `/{tenant}/identity/account/passkeyenroll`. It offers **Set up a
+passkey** (one tap) or **Skip for now**; both continue to the original return URL. When WebAuthn is
+unavailable the page skips itself. It is shown at most once per account (an `AspNetUserTokens` entry
+under the `Huia.Passkey` provider records it); registering a passkey any other way also clears it.
+
+## Login page & graceful fallback
+
+WebAuthn is feature-detected **before first paint** — the layout's synchronous head script sets
+`data-webauthn` on `<html>`, and `huia.css` hides the passkey affordances when it is absent. No
+flash, no layout shift.
+
+- **no `window.PublicKeyCredential`** → the passkey control is never rendered; the Email/Password +
+  Phone forms are the page.
+- **supported** → a slim outlined "Sign in with a passkey" button leads (the fast path); the email
+  field carries `autocomplete="username webauthn"`, so most returning users pick their passkey from
+  the browser's own autofill dropdown and never click anything.
+- **cancelled / sensor failure / `NotAllowedError` / `NotSupportedError` / timeout / an unknown
+  credential for this origin** → the button resets and focus moves to the visible identifier field.
+  No banner, no message.
+
+## Managing credentials
+
+`/{tenant}/identity/account/passkeys` (cookie session) and the bearer `manage/passkeys/*` API expose
+the same operations. In the UI:
+
+- **Add** runs the ceremony and stores the credential with a name guessed from the device
+  (`This device` / `Phone` / `Security key`); every row's name is then **click-to-edit**.
+- A credential the authenticator reports as synced shows a **Synced** badge (`IdentityUserPasskey`'s
+  `IsBackedUp`).
+- **Remove** is a two-step inline confirm and is blocked when the passkey is the account's only
+  sign-in method (`409` on the API).
+
+The discoverable assertion ceremony keeps its challenge in the short-lived
+`huia.2fa-user.{tenant}` cookie (ASP.NET Core Identity's two-factor-user scheme, which the framework's
+passkey helpers reuse for ceremony state).
+
+## Events
+
+| Event | When |
+| --- | --- |
+| `PasskeyRegisteredEvent` | A credential was registered. |
+| `PasskeyRemovedEvent` | A credential was removed. |
+| `UserLoggedInEvent` with `Method = "passkey"` | Discoverable passkey sign-in. |
+
+Registering a passkey through the sign-up interstitial raises `PasskeyRegisteredEvent` like any other
+registration path.
+
+## Upgrading
+
+`HuiaDbContext` now includes the `HuiaUserPasskeys` table (Identity schema `Version3`). The sample
+host and the tests create their schema with `EnsureCreated`, so they pick it up automatically; a
+deployment that keeps EF Core migrations must generate one to add the table (and the `Version2`
+base-table index adjustments that `Version3` implies).
+
+---
+
+<!-- anchor: net-reference-huiaopenid---external-login -->
+## [.NET reference — Huia.OpenId] External login
+_Source: docs/dotnet/external-login.md_
+
+# External login
+
+Federated sign-in ("sign in with Google / a partner IdP") is implemented **entirely through the
+OpenIddict client** — never the classic ASP.NET Core authentication handlers. A tenant enables it by
+registering at least one provider.
+
+## Configuration
+
+```csharp
+tenant.Authentication.UseExternalLogin(ext =>
+{
+    ext.AddGoogle("client-id", "client-secret");
+    ext.AddGitHub("client-id", "client-secret");
+    ext.AddMicrosoftAccount("client-id", "client-secret");
+    ext.AddOpenIdConnect("Partner", "client-id", "client-secret", "https://partner.example/", p =>
+    {
+        p.DisplayName = "Partner";
+        p.Scopes.Add("profile");
+        p.Scopes.Add("email");
+    });
+
+    // Opt-in: a logged-out external sign-in whose verified email matches an existing local account
+    // links to it instead of starting a new sign-up (see the guard below).
+    ext.EnableAccountsLinking();
+});
+```
+
+Each `(tenant, provider)` becomes one `OpenIddictClientRegistration` with
+`RegistrationId = "{tenant}:{name}"` and a `/signin-{name}` callback path. The provider name is used
+in the registration id and the callback path, so keep it stable. `IsExternalLoginEnabled` flips true
+once a provider is registered.
+
+## Routes
+
+| Route | Purpose |
+|---|---|
+| `POST identity/account/external/{provider}` | starts the OpenIddict-client challenge (antiforgery-protected) |
+| `signin-{provider}` | the provider callback (passthrough) |
+| `identity/account/externallogincallback` | the dispatcher — decides link / sign-in / provision |
+| `signout-callback-oidc` | RP-initiated end-session at the upstream provider on local sign-out |
+
+## Dispatcher
+
+`ExternalLoginCallbackAsync` handles four cases:
+
+1. **A signed-in user is linking** (from `identity/account/externallogins`) — attach the login to the
+   current account, or report `ok` / `dupe` / `error`.
+2. **Already linked** — sign the matched account in (`amr` = provider name, `idp` + id-token claims).
+3. **Logged out, email matches a local account** —
+   `HuiaUserManager.TryLinkExternalByEmailAsync(email, providerVouches, accountLinkingEnabled, …)`:
+   - `Linked` — linking is on **and** the local email is confirmed **and** the provider vouches
+     (`email_verified != "false"`) → sign in.
+   - `Blocked` — otherwise → refuse (`?linkError=1`), never create a duplicate.
+4. **First time, no email match** — hand off to `completeprofile`, which calls
+   `HuiaUserManager.CreateExternalUserAsync` (derive username from the email or a
+   `slug(displayName)-{key}`, create, attach the login).
+
+Unlinking is guarded by `HuiaUserManager.CanRemoveExternalLoginAsync` — refused when it would leave
+the account with no password, no phone and one or zero logins.
+
+## Security headers
+
+When `AddHuiaSecurityHeaders()` is on, each external provider's `Authority` origin is added to the
+CSP `form-action` directive so the challenge POST is not blocked.
+
+## The `Huia.External` sample
+
+`samples/Shared/Huia.External` is a second Huia instance acting as the upstream "partner" IdP for the `todo`
+tenant's external-login button. `tests/Huia.E2ETests/FrontEndAuthE2ETests.cs` drives the full
+round-trip (including the `EnableAccountsLinking()` path) through the Nuxt Todo.Nuxt.
+
+---
+
+<!-- anchor: net-reference-huiaopenid---events -->
+## [.NET reference — Huia.OpenId] Events
+_Source: docs/dotnet/events.md_
+
+# Events
+
+Huia raises a small set of immutable, in-process domain events at security- and audit-relevant
+moments — an account is registered, updated, or deleted, a sign-in succeeds, a password changes, an OTP is requested or
+verified, a phone number is confirmed or removed. Subscribe by registering a handler in DI; publish
+your own events the same way Huia publishes its own, through the same `IHuiaEventPublisher`.
+
+## Subscribing
+
+```csharp
+public sealed class LoginAuditHandler : IHuiaEventHandler<UserLoggedInEvent>
+{
+    public Task HandleAsync(UserLoggedInEvent domainEvent, CancellationToken cancellationToken)
+    {
+        // domainEvent.TenantId, .UserId, .Method ("password" | "sms" | a provider name), .ClientId, .OccurredAt
+        return Task.CompletedTask;
+    }
+}
+
+builder.Services.AddHuiaEventHandler<UserLoggedInEvent, LoginAuditHandler>();
+```
+
+`AddHuiaEventHandler<TEvent, THandler>()` can be called any number of times, for the same or
+different event types — every registered handler for an event's type runs. Handlers are resolved
+from DI per dispatch (see below), so constructor-inject whatever you need (a logger, an `HttpClient`,
+`IServiceScopeFactory` for something that needs its own scope, …).
+
+## Delivery model
+
+- `IHuiaEventPublisher.PublishAsync(IHuiaEvent, CancellationToken)` only **enqueues** — it returns as
+  soon as the event is written to an in-memory, unbounded `Channel<IHuiaEvent>`. Publishing from a
+  request handler never waits on subscriber work.
+- A single background `IHostedService` drains the channel and, per event, resolves every
+  `IHuiaEventHandler<TEvent>` registered for that event's concrete type in a **fresh DI scope**.
+- Delivery is **sequential**: handlers for one event are awaited one after another, and the next
+  event is not read off the channel until the current one has fully dispatched. A slow or blocking
+  handler delays every event behind it — keep handlers fast, or hand off to your own background work.
+- A handler that throws is logged (`Huia event handler {Handler} threw while handling {Event}.`) and
+  **swallowed** — one failing subscriber can never break a sign-in, a registration, or any other
+  request that published the event. Nothing is retried.
+- Events are **process-local and non-durable**: nothing is persisted, and anything still queued when
+  the process stops is lost. This is a lightweight in-process notification mechanism, not a message
+  bus or an outbox — put a real queue or outbox in a handler if you need durability.
+
+## Privacy
+
+Every event implements `IHuiaEvent` and carries only `TenantId` and `OccurredAt` (UTC) beyond its own
+fields — by design, no event carries a raw phone number, a token, or a password. Phone numbers appear
+only masked (`PhoneNumberMask`, last four digits retained — see `IPhoneNumberService.Mask`).
+
+## Reference
+
+| Event | Fields | Raised when |
+|---|---|---|
+| `UserRegisteredEvent` | `UserId`, `UserName`, `Email?`, `Method` | A new account is persisted — `Method` is `password`, `sms`, or an external provider name. |
+| `UserUpdatedEvent` | `UserId` | An existing account is updated. |
+| `UserDeletedEvent` | `UserId` | An existing account is deleted. |
+| `UserLoggedInEvent` | `UserId`, `Method`, `ClientId?` | A sign-in succeeds, interactively or via `/connect/token`. `Method` is `pwd`, `sms`, `passkey`, or an external provider name. `ClientId` is the OAuth client the sign-in was for, when there is one. |
+| `PasswordChangedEvent` | `UserId`, `Reset` | A password is set or changed — `Reset` is `true` for a forgot-password flow, `false` for an authenticated change via `/manage/password`. |
+| `OtpRequestedEvent` | `UserId?`, `PhoneNumberMask`, `Delivered` | A one-time code is generated and a delivery attempt made. `UserId` is `null` when the number has no account yet (auto-provisioning); `Delivered` reflects whether the SMS provider accepted the message. |
+| `OtpVerifiedEvent` | `UserId?`, `PhoneNumberMask` | A one-time code is verified successfully. |
+| `PhoneChangedEvent` | `UserId`, `PhoneNumberMask?`, `Confirmed` | A phone number is confirmed or removed — `Confirmed` distinguishes the two; `PhoneNumberMask` is `null` on removal. |
+| `PasskeyRegisteredEvent` | `UserId`, `CredentialId` | A passkey (WebAuthn credential) is registered. `CredentialId` is the base64url id, truncated. |
+| `PasskeyRemovedEvent` | `UserId`, `CredentialId` | A passkey is removed. |
+
+All live in the `Huia.Events` namespace (the framework-free `Huia` package) alongside `IHuiaEvent`,
+`IHuiaEventPublisher` and `IHuiaEventHandler<TEvent>` — none of it depends on ASP.NET Core.
+
+## Publishing your own events
+
+`IHuiaEventPublisher` is a public, injectable service — you're not limited to reacting to Huia's own
+events. Define your own record implementing `IHuiaEvent`, publish it from your own code, and it goes
+through the same channel and dispatcher as everything above:
+
+```csharp
+public sealed record ReportGeneratedEvent(string TenantId, string ReportId, DateTimeOffset OccurredAt) : IHuiaEvent;
+
+// anywhere with IHuiaEventPublisher injected:
+await events.PublishAsync(new ReportGeneratedEvent(tenantId, reportId, timeProvider.GetUtcNow()));
+```
+
+## Testing
+
+Huia's own integration tests assert on events with a small capturing `IHuiaEventHandler<TEvent>` per
+event type, registered instead of a real handler, that appends to a shared in-memory list — the same
+pattern works in your own tests: register a capturing handler with `AddHuiaEventHandler`, publish or
+trigger the flow under test, then assert on what was captured. Because dispatch happens on a
+background service, allow a short delay (or poll) after the action that publishes the event before
+asserting a handler ran.
+
+---
+
+<!-- anchor: net-reference-huiaheadless---huiaheadless -->
+## [.NET reference — Huia.Headless] Huia.Headless
+_Source: docs/dotnet/headless.md_
+
+# `Huia.Headless`
+
+`Huia.Headless` is the second authentication flavor: a **single-tenant**, bearer-token identity API
+for apps that own their own login form and don't need OIDC redirects or multi-tenancy. It reuses the
+same core `Huia` building blocks as `Huia.OpenId` (`HuiaUserManager<TUser>`, `HuiaSignInManager<TUser>`,
+`HuiaPasskeyRegistrar<TUser>`) but has no dependency on OpenIddict or Finbuckle, and no Razor account
+UI — every route returns JSON.
+
+Package split: `Huia.Headless.EntityFrameworkCore` provides
+`HuiaDbContext<TUser, TRole, TId> : IdentityDbContext<TUser, TRole, string>` (no multi-tenant schema
+additions);
+`Huia.Headless` provides `AddHuiaHeadless()` and `MapHuiaHeadlessEndpoints()`.
+
+## Wiring it up
+
+```csharp
+builder.Services.AddDbContext<HuiaDbContext<HuiaUser, HuiaRole, string>>(o => o.UseSqlite(connectionString));
+
+builder.Services
+    .AddHuiaHeadless(huia =>
+    {
+        huia.UseIssuer("https://api.example.com");
+        huia.UseEmailAndPasswordLogin(password => password.RequireConfirmedEmail = false);
+    })
+    .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>();
+
+// A host-specific context can derive from HuiaDbContext<HuiaUser, HuiaRole, string>
+// and use DbContextOptions<MyCustomDbContext>. AddEntityFrameworkCoreStores registers
+// the context if it was not already registered, but the host still chooses the provider.
+
+var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapHuiaHeadlessEndpoints();
+```
+
+`AddHuiaHeadless(...)` is the single entry point — unlike `Huia.OpenId`'s `AddTenant("id", tenant => ...)`,
+its options builder has no tenant wrapper, no branding (nothing in Headless's JSON API ever reads it), and
+no OAuth-client/scope/role seeding (OpenIddict concepts Headless never uses) — `UseEmailAndPasswordLogin`,
+`UsePhoneLogin`, `UseExternalLogin` and `UsePasskeyLogin` sit directly on the root builder. Internally it
+still builds exactly one tenant, so the multi-tenancy seam shared with `Huia.OpenId` keeps working
+unchanged — but that's an implementation detail a Headless host never sees. There is no `UseHuiaHeadless()`
+middleware helper and no `AddHuiaOpenId()`-style multi-tenancy wiring; a Headless host is a normal
+single-tenant ASP.NET Core app, so it calls the framework's own `UseAuthentication()`/`UseAuthorization()`
+directly.
+
+## Authentication scheme
+
+Registered via `AddAuthentication(IdentityConstants.BearerScheme).AddBearerToken(...)` — ASP.NET
+Core Identity's stock bearer tokens (Data-Protection-wrapped, **opaque**, not JWTs). This means:
+
+- A resource server can only validate tokens it itself issued — there is no JWKS/discovery endpoint
+  to hand a token to a separate API, unlike `Huia.OpenId`'s OpenIddict-issued JWTs.
+- Tokens are **not revocable** individually; `Huia.Headless` has no signing-key rotation or
+  key-lifecycle jobs (there's no JWT to sign).
+- A client's only sign-out action is deleting its own copy of the token — see
+  [`nuxt-huia-headless`](/nuxt-headless/overview)'s `logout()`, which is purely local for this reason.
+
+## Endpoints — `MapHuiaHeadlessEndpoints()`
+
+```
+endpoints.MapHuiaHeadlessRegisterEndpoint();                 // POST identity/register — Huia's own
+endpoints.MapGroup("identity").MapIdentityApi<HuiaUser>();   // login, refresh, confirmEmail,
+                                                              // resendConfirmationEmail, forgotPassword,
+                                                              // resetPassword, 2FA, /manage/info
+endpoints.MapHuiaHeadlessMeEndpoints();                      // GET identity/me
+endpoints.MapHuiaHeadlessPasskeyEndpoints();                 // identity/passkey/*, identity/manage/passkeys/*
+endpoints.MapHuiaHeadlessPhoneEndpoints();                   // identity/phone/*
+endpoints.MapHuiaHeadlessExternalEndpoints();                // identity/account/external/*
+```
+
+The framework's own [`MapIdentityApi<TUser>()`](https://learn.microsoft.com/aspnet/core/security/authentication/identity-api-authorization)
+does the heavy lifting (this is the same `identity-api-authorization` pattern Microsoft documents for
+SPAs) for everything except registration; `Huia.Headless` adds five things on top:
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `POST identity/register` | anonymous | Huia's own — requires and persists `firstName`/`lastName` alongside `email`/`password`, unlike `MapIdentityApi`'s stock `RegisterRequest` (email + password only, so a first/last name in the body would otherwise be silently discarded). Mapped with a lower route order than `MapIdentityApi`'s own `/register`, so this one always wins the match. |
+| `GET identity/me` | bearer | Richer claims than `MapIdentityApi`'s stock `/manage/info` (`email`/`isEmailConfirmed` only) — `sub`, `email`, `phoneNumber`, `firstName`, `lastName`, `roles`, so a client doesn't have to reverse-engineer claims out of an intentionally opaque token. |
+| `POST identity/passkey/assertion-options` / `assertion` | anonymous | Discoverable passkey sign-in — sets `signInManager.AuthenticationScheme = IdentityConstants.BearerScheme` before signing in, since the passkey ceremony otherwise assumes a cookie. |
+| `identity/manage/passkeys` (`GET`/`POST`), `{id}` (`PATCH`/`DELETE`) | bearer | Credential management, reusing `HuiaPasskeyRegistrar<TUser>` — the same registrar `Huia.OpenId` uses. |
+| `POST identity/phone/start` / `resend` / `verify` / `complete-profile` | anonymous | Passwordless SMS one-time-code login — the JSON counterpart to `Huia.OpenId`'s `Login`/`VerifyOtp`/`CompleteProfile` Razor pages. `start` normalizes + rate-limits + sends a code and returns `{ flowId, maskedPhoneNumber, codeLength, expiresInSeconds, resendAvailableInSeconds }` (identical in shape whether or not the number has an account); `resend` takes `{ flowId }` and sends a fresh code on the same flow, enforcing `ResendCooldown` server-side (`429 resend_too_soon` + `retryAfterSeconds`); `verify` checks the code (returning a bearer token directly for an existing account with a complete profile, or `{ status: "requires_profile", flowId, maskedPhoneNumber }` for a new phone signup or a blank-name existing account); `complete-profile` takes a first/last name and returns the bearer token. Failures are `{ error, retryAfterSeconds?, attemptsRemaining? }` with `error` one of `invalid`, `expired`, `too_many_attempts`, `not_found`, `rate_limited`, `daily_limit`, `resend_too_soon`. |
+| `GET identity/account/external/{provider}` / `callback`, `POST .../exchange` / `complete-profile` | mixed | External login — see below. |
+
+Passkey and phone-login routes 404 unless the tenant's `Authentication.UsePasskeyLogin()` /
+`Authentication.UsePhoneLogin()` is configured — same opt-in as `Huia.OpenId`. Phone login shares its
+implementation (`IPhoneNumberService`, `IOtpService<TUser>`, `IOtpRateLimiter`, `IPhoneLoginRateLimiter`,
+`IPendingPhoneSignup`, `ISmsSender`, `ICaptchaVerifier`) with `Huia.OpenId` — all of it lives in core
+`Huia.Services`, registered by both `AddHuiaOpenId()` and `AddHuiaHeadless()`. The one Headless-only
+piece is `IPhoneLoginFlowStore`, which correlates a `start` call with its later `verify`/`complete-profile`
+call — the role an encrypted flow token round-tripped through a hidden form field plays across
+`Huia.OpenId`'s page loads, played here by an opaque, server-held id instead (there is no page
+navigation to carry state across steps).
+
+## External login
+
+`Huia.OpenId`'s external login is built entirely on the OpenIddict client; `Huia.Headless` has zero
+dependency on OpenIddict, so it implements the same `ExternalLoginAuthenticationMethod` / `ExternalIdentityProvider`
+configuration (shared with `Huia.OpenId` — `tenant.Authentication.UseExternalLogin(ext => ext.AddGoogle(...))`
+works for either flavor) through the classic ASP.NET Core remote-authentication handlers instead:
+`AddGoogle`, `AddMicrosoftAccount`, `AddOpenIdConnect`, and a generic `AddOAuth` for GitHub (no official
+Microsoft handler exists for it, and its endpoints are stable enough not to need a third-party package).
+
+The redirect shape differs from `Huia.OpenId` in one important way: the browser starts on the *app's*
+own origin (not Huia.Headless's), gets sent to the provider, and needs to land back on the app's origin
+— never Huia's. So the callback never hands the browser a token directly (that would put it in a URL,
+and thus browser history); it hands back a short-lived, single-use **code** instead, via a redirect to
+a caller-supplied `returnUrl`:
+
+```
+GET  identity/account/external/{provider}?returnUrl=https://shop.example.com/auth/callback
+     -> 302 to the real provider (Google/GitHub/etc.)
+     -> (provider's own sign-in UI)
+     -> 302 back to Huia.Headless's own callback dispatcher
+     -> 302 to {returnUrl}?code=<one-time code>          (never a token)
+
+POST identity/account/external/exchange       { code }
+     -> a linked/existing account: the bearer token response body directly
+     -> a first-time sign-up: { code, requiresProfile: true, email?, firstName?, lastName? }
+
+POST identity/account/external/complete-profile   { code, firstName, lastName }
+     -> creates the account, returns the bearer token response body
+```
+
+The app's own **server** calls `exchange`/`complete-profile` (mirroring how `nuxt-huia-headless`'s
+server proxies `register`/`login`) — the code passes through the browser, the token never does.
+
+Because the challenge's `returnUrl` crosses onto a *different* origin than Huia itself, it can't be
+validated the way `Huia.OpenId`'s same-origin `returnUrl` is (a plain same-origin check) — an
+unvalidated cross-origin `returnUrl` here would be a textbook open redirect. So it's checked against an
+explicit allow-list instead:
+
+```csharp
+huia.UseExternalLogin(ext =>
+{
+    ext.AddGoogle(clientId, clientSecret);
+    ext.AllowReturnUrlPrefix("https://shop.example.com/");   // required — AddHuiaHeadless() throws without it
+});
+```
+
+`AddHuiaHeadless()` throws at start-up if external login is enabled with no `AllowReturnUrlPrefix(...)`
+configured — this is enforced, not just documented.
+
+Only a logged-out sign-in/sign-up is implemented — linking a provider to an already-authenticated
+account (`Huia.OpenId`'s "Scenario 1", from an account-settings page) is not.
+
+## What's implemented today
+
+Password login (via `MapIdentityApi`), passkeys, phone login, and external login are all wired up and
+demonstrated end to end by the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api)
+— `Shop.Nuxt`'s login page has a phone tab and a "Sign in with Partner" external-login link alongside
+email/password — and covered by its [e2e tests](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests).
+External login is additionally unit/integration-tested by `HeadlessExternalLoginTests` in
+`Huia.IntegrationTests`, which exercise the dispatch/exchange/complete-profile logic by signing
+directly into the intermediate `IdentityConstants.ExternalScheme`, standing in for a real provider's
+callback.
+
+`Shop.Api` registers [`Huia.External`](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shared/Huia.External)
+— the same mock upstream OIDC IdP `Todo.Nuxt` uses via `Huia.OpenId` — as its `AddOpenIdConnect(...)`
+provider, so the Shop e2e suite exercises a real, live challenge/callback round trip (no
+Google/GitHub account needed) rather than only the stand-in scheme sign-in above.
+
+## First-party Nuxt client
+
+[`nuxt-huia-headless`](/nuxt-headless/overview) is the matching Nuxt 4 module — a plain `fetch`-based
+JSON client (no `openid-client`, no discovery document), with the same dual-layer session principle
+as `nuxt-huia-oidc`: the browser only ever holds a sealed session cookie, tokens live server-side.
+
+## Sample
+
+`samples/Shop/Shop.Api` + `samples/Shop/Shop.Nuxt` is the reference integration: a single combined app (identity
++ resource endpoints, since Headless tokens are only valid against the app that minted them) wired
+through `Huia.AppHost`, with a Nuxt front end using `nuxt-huia-headless` for register/login, a cart,
+and checkout.
+
+---
+
+<!-- anchor: shared-core-huia-auth-core---overview -->
+## [Shared Core (huia-auth-core)] Overview
+_Source: docs/core/overview.md_
+
+# `huia-auth-core` — Shared Authentication Core
+
+`huia-auth-core` is the platform-agnostic TypeScript foundation shared across **Next.js** (`next-huia-oidc`, `next-huia-headless`) and **Nuxt** (`nuxt-huia-oidc`, `nuxt-huia-headless`). It provides cryptographic session management, token storage abstractions, token lifecycle handling, OpenID Connect client coordination, and headless client operations without ties to any particular web framework.
+
+- Package: `huia-auth-core`
+- Built on [`iron-webcrypto`](https://github.com/bruno-garcia/iron-webcrypto) and [`openid-client`](https://github.com/panva/openid-client) v6
+- Compatible with Node.js 20+, Cloudflare Workers, Edge Runtime, Vercel, and modern browser environments
+
+## Core Responsibilities
+
+```mermaid
+flowchart TD
+  Core["huia-auth-core"]
+  Core --> Cookie["Cookie & Session Sealing (iron-webcrypto)"]
+  Core --> Tokens["Token Parsing, Claims & Issuer Validation"]
+  Core --> Storage["Session Storage Adapters (Memory, KV, Redis)"]
+  Core --> Refresh["Single-Flight Token Refresh Mutex"]
+  Core --> OIDC["HuiaOidcHelper (PKCE, PAR, Code Exchange)"]
+  Core --> Headless["HuiaHeadlessClient (JSON Auth, SMS OTP, External)"]
+
+  NextOidc["next-huia-oidc"] --> Core
+  NextHeadless["next-huia-headless"] --> Core
+  NuxtOidc["nuxt-huia-oidc"] --> Core
+  NuxtHeadless["nuxt-huia-headless"] --> Core
+```
+
+## Module Exports
+
+### 1. Cookie & Session Sealing (`cookie.ts`)
+- `sealSession(payload, password)`: Seals JSON payloads with AES-256-GCM using `iron-webcrypto`.
+- `unsealSession(sealed, password)`: Decrypts and validates sealed cookies.
+- `chunkCookie(name, value, maxSize)`: Chunks cookies exceeding browser limits (~4 KB) into `name.0`, `name.1`, etc.
+- `assembleCookieChunks(cookieHeader, baseName)`: Reassembles chunked cookies into the complete encrypted payload.
+
+### 2. Token Helpers (`tokens.ts`)
+- `pickUserClaims(payload, allowedClaims)`: Sanitizes identity tokens and claims objects so sensitive fields never reach the client.
+- `isTokenExpired(expiresAt, earlyRefreshSeconds)`: Calculates whether an access token needs proactive refreshing.
+- `assertIssuerMatches(actual, expected)`: Ensures IdP issuer responses match the configured issuer endpoint.
+
+### 3. Session Storage Adapter (`storage.ts`)
+- `HuiaStorageAdapter`: Interface defining `getTokenRecord`, `setTokenRecord`, `deleteTokenRecord`.
+- `MemoryStorageAdapter`: Built-in in-memory storage implementation for local development and unit tests. Easily swapped with Redis, DynamoDB, or Upstash in production.
+
+### 4. Concurrency & Refresh Mutex (`refresh.ts`)
+- `TokenRefreshMutex`: Deduplicates simultaneous refresh requests within a single process. Multiple parallel incoming API calls await a single refresh round-trip, preventing token grant race conditions.
+
+### 5. OpenID Connect Helper (`oidc-client.ts`)
+- `HuiaOidcHelper`: Encapsulates `openid-client` v6 discovery, Pushed Authorization Requests (RFC 9126 PAR), code exchange, client authentication, and RP-initiated logout URLs.
+
+### 6. Headless Client (`headless-client.ts`)
+- `HuiaHeadlessClient`: Pure JSON API client for `Huia.Headless` ASP.NET Core backends, covering email/password login, registration, phone SMS one-time passcode flows, and external identity broker flows.
+
+---
+
+<!-- anchor: nextjs-library-oidc-next-huia-oidc---overview -->
+## [Next.js library — OIDC (next-huia-oidc)] Overview
+_Source: docs/next/overview.md_
+
+# `next-huia-oidc` — Overview
+
+`next-huia-oidc` is the official **Next.js 14 / 15** integration library for signing a relying-party application into a `Huia.OpenId` tenant. It executes the OAuth 2.0 Authorization Code Flow with PKCE and Pushed Authorization Requests (RFC 9126 PAR) on the **Next.js Route Handlers / Server Components**, keeping tokens secure on the server.
+
+- Package: `next-huia-oidc`
+- Compatible with Next.js App Router (14+, 15+)
+- Core engine: [`huia-auth-core`](/core/overview) and [`openid-client`](https://github.com/panva/openid-client) v6
+
+## Key Features
+
+- **Dual-layer session security**: The browser only receives an encrypted, chunked `__Host-huia_sess` cookie (`iron-webcrypto`) containing an opaque session identifier and safe claims. Raw access, refresh, and ID tokens are stored in server-side storage.
+- **Pushed Authorization Requests (PAR)**: Authorization parameters are securely pushed via backchannel to Huia's `/{tenant}/connect/par` endpoint, exposing only a transient `request_uri` in the browser.
+- **Transparent token refresh**: Server-side helpers automatically refresh access tokens when nearing expiration using a single-flight mutex.
+- **Full App Router support**: Works across React Server Components, Server Actions, Route Handlers, and Client Components with `<HuiaOidcProvider>` and `useUserSession()`.
+- **Edge / Node.js runtime**: Fully compatible with standard Node.js runtimes and Edge runtimes.
+
+## Flow Diagram
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User
+  participant Browser as Next.js Client
+  participant Next as Next.js Route Handler
+  participant Storage as Server Storage
+  participant IdP as Huia.OpenId
+
+  User->>Browser: Click "Sign In"
+  Browser->>Next: GET /api/auth/login
+  Next->>IdP: POST /connect/par (Client Auth + PKCE)
+  IdP-->>Next: request_uri
+  Next-->>Browser: 302 Redirect to IdP /connect/authorize?request_uri=...
+  Browser->>IdP: Interactive login & consent
+  IdP-->>Browser: 302 Redirect to /api/auth/callback?code=...
+  Browser->>Next: GET /api/auth/callback?code=...
+  Next->>IdP: POST /connect/token (code + code_verifier)
+  IdP-->>Next: access_token, refresh_token, id_token
+  Next->>Storage: Store tokens under sid
+  Next-->>Browser: Set-Cookie: __Host-huia_sess (sealed sid + claims) -> Redirect to returnTo
+```
+
+## Available Subpaths
+
+- `next-huia-oidc/server`: Server-side Route Handler factory (`createHuiaOidcHandler`), session inspectors (`getHuiaSession`, `getAccessToken`), and middleware (`withHuiaOidcAuth`).
+- `next-huia-oidc/client`: Client-side React context provider (`HuiaOidcProvider`), hook (`useUserSession`), and user context.
+
+---
+
+<!-- anchor: nextjs-library-oidc-next-huia-oidc---configuration -->
+## [Next.js library — OIDC (next-huia-oidc)] Configuration
+_Source: docs/next/configuration.md_
+
+# `next-huia-oidc` — Configuration & Usage
+
+## 1. Installation
+
+```bash
+npm install next-huia-oidc huia-auth-core
+```
+
+## 2. Defining Configuration
+
+Create an authentication configuration file (e.g., `app/auth.config.ts`):
+
+```ts
+import type { HuiaOidcConfig } from 'next-huia-oidc/server'
+
+export const huiaOidcConfig: HuiaOidcConfig = {
+  issuer: process.env.HUIA_BASE_URL || 'http://localhost:5325',
+  clientId: 'todo-app',
+  clientSecret: process.env.HUIA_CLIENT_SECRET, // required if client authentication is needed
+  // This app's own canonical origin — used to build the OAuth redirect_uri, plus the post-login,
+  // post-logout and error redirects the handler issues on its own behalf. Required whenever the app is
+  // reached under a hostname the Next.js server itself doesn't know about (a *.localhost alias, a
+  // reverse proxy, a container's service name): NextRequest.url reflects how the server was started
+  // (next dev/next start default to "localhost"), never the incoming request's actual Host header, so
+  // without this the handler would silently redirect to the wrong origin. Omit it only when the app's
+  // configured listen address and its externally-reachable hostname are guaranteed to match.
+  appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://todo-next.dev.localhost:3050',
+  scopes: ['openid', 'profile', 'email', 'offline_access', 'todos:read', 'todos:write'],
+  session: {
+    password: process.env.HUIA_SESSION_PASSWORD || 'at-least-32-characters-long-secret-key-1234',
+    maxAge: 86400 * 7,
+  },
+}
+```
+
+## 3. Catch-all Route Handler
+
+Create `app/api/auth/[...huia]/route.ts`:
+
+```ts
+import { createHuiaOidcHandler } from 'next-huia-oidc/server'
+import { huiaOidcConfig } from '@/app/auth.config'
+
+const handler = createHuiaOidcHandler(huiaOidcConfig)
+
+export const GET = handler
+export const POST = handler
+```
+
+This mounts the following endpoints:
+- `GET /api/auth/login`: Starts the PAR + PKCE redirect flow to Huia.
+- `GET /api/auth/callback`: Handles the authorization code response, completes token exchange, and sets the sealed cookie.
+- `GET /api/auth/logout`: Clears the local session and initiates RP logout at the IdP.
+- `GET /api/auth/session`: Returns `{ loggedIn, user, expiresAt }` safely without tokens.
+
+## 4. Root Layout & Client Provider
+
+In `app/layout.tsx`:
+
+```tsx
+import { HuiaOidcProvider } from 'next-huia-oidc/client'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <HuiaOidcProvider>
+          {children}
+        </HuiaOidcProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+## 5. Client Hook Usage
+
+In any Client Component:
+
+```tsx
+'use client'
+
+import { useUserSession } from 'next-huia-oidc/client'
+
+export function UserProfile() {
+  const { user, loggedIn, loading, login, clear } = useUserSession()
+
+  if (loading) return <div>Loading session...</div>
+
+  if (!loggedIn) {
+    return <button onClick={() => login()}>Sign In</button>
+  }
+
+  return (
+    <div>
+      <p>Hello, {user?.name || user?.email}!</p>
+      <button onClick={() => clear()}>Sign Out</button>
+    </div>
+  )
+}
+```
+
+## 6. Server Components & Route Handlers
+
+Retrieve the user session or upstream access token server-side:
+
+```ts
+import { getHuiaSession, getAccessToken } from 'next-huia-oidc/server'
+import { huiaOidcConfig } from '@/app/auth.config'
+
+export async function GET() {
+  const session = await getHuiaSession(huiaOidcConfig)
+  if (!session?.loggedIn) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  const token = await getAccessToken(huiaOidcConfig)
+  const response = await fetch('http://api.backend.local/data', {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const data = await response.json()
+  return Response.json(data)
+}
+```
+
+---
+
+<!-- anchor: nextjs-library-oidc-next-huia-oidc---session-model-security -->
+## [Next.js library — OIDC (next-huia-oidc)] Session model & security
+_Source: docs/next/session-model.md_
+
+# `next-huia-oidc` — Session Model & Security
+
+`next-huia-oidc` implements a zero-trust, dual-layer session architecture backed by `huia-auth-core`. It is specifically designed for Next.js App Router (React Server Components, Route Handlers, and Server Actions).
+
+## Dual-Layer Persistence
+
+| Layer | Holds | Reaches the Browser? |
+|---|---|---|
+| **Server Storage Adapter** (`MemoryStorageAdapter` or custom cache) | `access_token`, `refresh_token`, `id_token`, raw claims, expiration timestamps | **Never** |
+| **Encrypted Cookie(s)** (`iron-webcrypto` AES-GCM sealed) | `{ sid, user: <claim whitelist>, exp }` | Yes — sealed, `HttpOnly`, `Secure`, `SameSite=Lax`, `__Host-` / `__Secure-` |
+
+An XSS vulnerability in client-side React code cannot exfiltrate access or refresh tokens because tokens never touch the DOM, window storage (`localStorage`/`sessionStorage`), or client-readable cookies.
+
+---
+
+## Cookie Chunking & Integrity
+
+The sealed session payload is base64url encoded. When the payload size exceeds the browser cookie size limit (default 3,800 bytes):
+
+1. **Chunking**: The payload is split into `__Host-huia_sess.0`, `__Host-huia_sess.1`, etc.
+2. **Gap Detection**: Assembly stops at the first missing chunk. Any partial, reordered, or tampered cookie assembly fails AES-GCM decryption and is discarded.
+3. **Stale Cleanup**: When an updated session fits into fewer chunks, higher index chunks are explicitly deleted to prevent orphaned cookies.
+4. **Environment Awareness**: Over plain HTTP (local development), `__Host-` prefixes are automatically dropped so browsers do not reject insecure development cookies.
+
+---
+
+## Server Components & SSR Hydration
+
+```mermaid
+flowchart TD
+  A[Incoming HTTP Request] -->|getUserSession in Server Component| B[Read cookies → de-chunk → unseal]
+  B --> C[Fetch TokenRecord for sid from Storage]
+  C --> D{Near Expiry?}
+  D -->|Yes| E[Transparent Token Refresh<br/>via Mutex / Refresh Lock]
+  D -->|No| F[Return UserSession { user, loggedIn, expiresAt }]
+  E --> F
+  F --> G[Render Server Component HTML]
+  F --> H[Pass to HuiaOidcProvider for Client Hydration]
+```
+
+In Server Components, `getUserSession()` can be called directly without any client-side network waterfall:
+
+```tsx
+// app/dashboard/page.tsx
+import { getUserSession } from 'next-huia-oidc/server'
+import { config } from '@/auth.config'
+
+export default async function DashboardPage() {
+  const session = await getUserSession(config)
+
+  if (!session.loggedIn) {
+    return <p>Please sign in</p>
+  }
+
+  return <h1>Welcome back, {session.user.name}</h1>
+}
+```
+
+---
+
+## Transparent Token Refresh
+
+When an access token approaches expiration (`accessTokenExpiresAt - now < earlyRefreshSeconds`):
+
+- **In-process single-flight**: Concurrent server requests within the same Node.js process share an in-flight Promise for the token refresh, preventing race conditions and duplicated refresh calls.
+- **`invalid_grant` Handling**: If a refresh token has been revoked, rotated, or expired, the session store drops the record and clears the session gracefully, prompting a fresh login rather than crashing with an unhandled exception.
+
+---
+
+<!-- anchor: nextjs-library-oidc-next-huia-oidc---route-protection -->
+## [Next.js library — OIDC (next-huia-oidc)] Route protection
+_Source: docs/next/route-protection.md_
+
+# `next-huia-oidc` — Route Protection
+
+Next.js applications can enforce authentication at three distinct boundaries: Middleware, Server Components, and API Route Handlers.
+
+## 1. Edge Middleware Protection
+
+Use `withHuiaOidcAuth` in `middleware.ts` to redirect anonymous users before page rendering or data fetching begins:
+
+```ts
+// middleware.ts
+import { withHuiaOidcAuth } from 'next-huia-oidc/middleware'
+import { config } from './auth.config'
+
+export default withHuiaOidcAuth({
+  config,
+  protectedRoutes: [
+    '/dashboard',
+    '/settings',
+    /^\/admin(\/.*)?$/,
+  ],
+  loginUrl: '/api/auth/login', // default: config.routes.login
+})
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+}
+```
+
+When an unauthenticated request matches `protectedRoutes`, the middleware automatically redirects to the login URL with a `returnTo` query parameter preserving the original destination.
+
+---
+
+## 2. Server Components Protection
+
+For fine-grained control and role checks inside React Server Components:
+
+```tsx
+// app/admin/page.tsx
+import { redirect } from 'next/navigation'
+import { requireUserSession } from 'next-huia-oidc/server'
+import { config } from '@/auth.config'
+
+export default async function AdminPage() {
+  // Throws or redirects if no valid session
+  const session = await requireUserSession(config).catch(() => {
+    redirect('/api/auth/login?returnTo=/admin')
+  })
+
+  // Role validation
+  if (!session.user.roles?.includes('admin')) {
+    return <h1>Access Denied</h1>
+  }
+
+  return (
+    <main>
+      <h1>Admin Dashboard</h1>
+      <p>Signed in as: {session.user.email}</p>
+    </main>
+  )
+}
+```
+
+---
+
+## 3. Route Handlers (API Routes)
+
+In Next.js App Router Route Handlers, protect backend API endpoints and forward tokens:
+
+```ts
+// app/api/protected-data/route.ts
+import { NextResponse } from 'next/server'
+import { requireUserSession, getAccessToken } from 'next-huia-oidc/server'
+import { config } from '@/auth.config'
+
+export async function GET() {
+  try {
+    const session = await requireUserSession(config)
+    const token = await getAccessToken(config)
+
+    // Forward the token to an upstream backend API
+    const res = await fetch('https://api.example.com/data', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const data = await res.json()
+    return NextResponse.json({ user: session.user, data })
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+}
+```
+
+---
+
+## 4. Client Components Protection
+
+Wrap your root layout in `HuiaOidcProvider`, and use the `useUserSession` hook in client components:
+
+```tsx
+'use client'
+
+import { useUserSession } from 'next-huia-oidc/client'
+
+export function UserStatus() {
+  const { session, loggedIn, logout } = useUserSession()
+
+  if (!loggedIn) {
+    return <a href="/api/auth/login">Sign In</a>
+  }
+
+  return (
+    <div>
+      <span>Hello, {session?.user?.name}</span>
+      <button onClick={() => logout()}>Sign Out</button>
+    </div>
+  )
+}
+```
+
+---
+
+<!-- anchor: nextjs-library-oidc-next-huia-oidc---migrating-from-nextauth -->
+## [Next.js library — OIDC (next-huia-oidc)] Migrating from NextAuth
+_Source: docs/next/migrating.md_
+
+# Migrating from NextAuth / Auth.js to `next-huia-oidc`
+
+This guide explains how to migrate existing Next.js applications using `next-auth` (Auth.js) to `next-huia-oidc`.
+
+## Conceptual Differences
+
+| Feature | NextAuth / Auth.js | `next-huia-oidc` |
+|---|---|---|
+| **Architecture** | Broad multi-provider framework | First-party OpenID Connect & OAuth 2.0 client for Huia IdP |
+| **Token Storage** | Often in JWT cookies or DB sessions | Dual-layer: encrypted session cookie + secure server token store |
+| **Pushed Authorization (PAR)** | Manual or unsupported | Built-in RFC 9126 PAR support via `huia-auth-core` |
+| **Multi-Tenancy** | Requires custom callbacks and multi-tenant URL rewriting | Native tenant path support (`/{tenant}/...`) |
+| **Refresh Tokens** | Requires complex manual `jwt` callback rotation loops | Transparent automatic background refresh with mutex locking |
+
+---
+
+## Step-by-Step Migration
+
+### 1. Remove Dependencies
+
+Uninstall `next-auth`:
+
+```bash
+npm uninstall next-auth
+npm install next-huia-oidc huia-auth-core
+```
+
+### 2. Replace the Catch-all Route Handler
+
+In NextAuth, routes were handled under `app/api/auth/[...nextauth]/route.ts`. In `next-huia-oidc`, use `createHuiaOidcHandler`:
+
+```ts
+// app/api/auth/[...huia]/route.ts
+import { createHuiaOidcHandler } from 'next-huia-oidc/server'
+import { config } from '@/auth.config'
+
+const handler = createHuiaOidcHandler(config)
+
+export {
+  handler as GET,
+  handler as POST,
+}
+```
+
+### 3. Migrate Configuration
+
+Replace `authOptions` or `NextAuth(...)` config with `HuiaOidcConfig`:
+
+```ts
+// auth.config.ts
+import type { HuiaOidcConfig } from 'next-huia-oidc'
+
+export const config: HuiaOidcConfig = {
+  issuer: process.env.HUIA_ISSUER ?? 'https://id.example.com/master',
+  clientId: process.env.HUIA_CLIENT_ID ?? 'nextjs-app',
+  clientSecret: process.env.HUIA_CLIENT_SECRET,
+  redirectUri: process.env.HUIA_REDIRECT_URI ?? 'http://localhost:3000/api/auth/callback',
+  postLogoutRedirectUri: 'http://localhost:3000',
+  scope: 'openid profile email offline_access',
+  session: {
+    password: process.env.SESSION_SECRET!, // 32+ char secret for AES-GCM
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+  },
+}
+```
+
+### 4. Migrate Server Component Calls
+
+**Before (NextAuth):**
+```tsx
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+
+export default async function Page() {
+  const session = await getServerSession(authOptions)
+  return <div>{session?.user?.name}</div>
+}
+```
+
+**After (`next-huia-oidc`):**
+```tsx
+import { getUserSession } from 'next-huia-oidc/server'
+import { config } from '@/auth.config'
+
+export default async function Page() {
+  const session = await getUserSession(config)
+  return <div>{session.loggedIn ? session.user.name : 'Anonymous'}</div>
+}
+```
+
+### 5. Migrate Client Components
+
+Replace `SessionProvider` with `HuiaOidcProvider`:
+
+```tsx
+// app/layout.tsx
+import { HuiaOidcProvider } from 'next-huia-oidc/client'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <HuiaOidcProvider sessionEndpoint="/api/auth/session">
+          {children}
+        </HuiaOidcProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+Replace `useSession()` with `useUserSession()`:
+
+```tsx
+'use client'
+
+import { useUserSession } from 'next-huia-oidc/client'
+
+export function UserNav() {
+  const { session, loggedIn, logout } = useUserSession()
+
+  if (!loggedIn) {
+    return <a href="/api/auth/login">Log In</a>
+  }
+
+  return (
+    <div>
+      <span>{session.user.name}</span>
+      <button onClick={() => logout()}>Log Out</button>
+    </div>
+  )
+}
+```
+
+---
+
+<!-- anchor: nextjs-library-headless-next-huia-headless---overview -->
+## [Next.js library — Headless (next-huia-headless)] Overview
+_Source: docs/next-headless/overview.md_
+
+# `next-huia-headless` — Overview
+
+`next-huia-headless` is the official **Next.js 14 / 15** client library for interacting with `Huia.Headless` ASP.NET Core backends. Designed for applications that own their user interfaces completely, it provides password login, self-registration, phone SMS one-time passcode verification, and external broker flows over pure JSON APIs without OIDC redirects or hosted identity forms.
+
+- Package: `next-huia-headless`
+- Built on [`huia-auth-core`](/core/overview)
+- Compatible with Next.js App Router (14+, 15+)
+
+## Key Features
+
+- **No hosted login screens**: Your Next.js app renders all registration, password, SMS OTP, and profile forms.
+- **Sealed cookie layer**: Transparently handles tokens behind the scenes. Route Handlers convert JSON token responses into sealed `__Host-huia_sess` cookies via `iron-webcrypto`.
+- **Phone SMS one-time passcodes**: Complete three-stage flow: start with phone number, verify code, and complete optional profile (first/last name).
+- **External identity providers**: Initiate external broker redirects and complete user profile callbacks.
+- **App Router support**: Server session reading via `getHuiaHeadlessSession()` and client state via `HuiaHeadlessProvider`, `useHuia()`, and `useUserSession()`.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser[Next.js Client] -->|"Sealed Cookie<br/>(__Host-huia_sess)"| Next[Next.js Route Handlers]
+  Next -->|"sid"| Storage[(Server Storage)]
+  Next -->|"JSON API (Bearer Tokens)<br/>/api/auth/headless/*"| Backend[ASP.NET Core Huia.Headless]
+```
+
+---
+
+<!-- anchor: nextjs-library-headless-next-huia-headless---configuration -->
+## [Next.js library — Headless (next-huia-headless)] Configuration
+_Source: docs/next-headless/configuration.md_
+
+# `next-huia-headless` — Configuration & Usage
+
+## 1. Installation
+
+```bash
+npm install next-huia-headless huia-auth-core
+```
+
+## 2. Defining Configuration
+
+Create `app/auth.config.ts`:
+
+```ts
+import type { HuiaHeadlessConfig } from 'next-huia-headless/server'
+
+export const huiaHeadlessConfig: HuiaHeadlessConfig = {
+  backendUrl: process.env.SHOP_API_URL || 'http://localhost:5345',
+  session: {
+    cookiePassword: process.env.HUIA_SESSION_PASSWORD || 'at-least-32-characters-long-secret-key-1234',
+    cookieName: 'huia_sess',
+    maxAge: 86400 * 7,
+    secure: process.env.NODE_ENV === 'production',
+  },
+}
+```
+
+## 3. Catch-all Route Handler
+
+Create `app/api/auth/[...huia]/route.ts`:
+
+```ts
+import { createHuiaHeadlessHandler } from 'next-huia-headless/server'
+import { huiaHeadlessConfig } from '@/app/auth.config'
+
+const handler = createHuiaHeadlessHandler(huiaHeadlessConfig)
+
+export const GET = handler
+export const POST = handler
+```
+
+This creates the following endpoints:
+- `POST /api/auth/register`: Creates a new account with email, password, and optional first/last name.
+- `POST /api/auth/login`: Authenticates with email and password, establishing the session cookie.
+- `POST /api/auth/logout`: Clears the session cookie and purges server-stored tokens.
+- `GET /api/auth/session`: Returns the current user claims and logged-in status.
+- `POST /api/auth/phone-start`: Dispatches an SMS verification code.
+- `POST /api/auth/phone-verify`: Validates the one-time passcode.
+- `POST /api/auth/phone-complete-profile`: Sets the name for new phone users.
+- `GET /api/auth/external/:provider`: Redirects to an external IdP.
+- `POST /api/auth/external-exchange`: Exchanges the external provider callback code.
+- `POST /api/auth/external-complete-profile`: Completes profile for new external users.
+
+## 4. Root Layout & Client Provider
+
+In `app/layout.tsx`:
+
+```tsx
+import { HuiaHeadlessProvider } from 'next-huia-headless/client'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <HuiaHeadlessProvider>
+          {children}
+        </HuiaHeadlessProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+## 5. Client Hook (`useHuia`)
+
+In any Client Component:
+
+```tsx
+'use client'
+
+import { useHuia, useUserSession } from 'next-huia-headless/client'
+
+export function LoginForm() {
+  const { login, register, startPhoneLogin, verifyPhoneLogin } = useHuia()
+  const { loggedIn, user } = useUserSession()
+
+  const handleLogin = async () => {
+    const res = await login({ email: 'user@example.com', password: 'Password1!' })
+    if (res.ok) console.log('Logged in!')
+  }
+
+  return (
+    <div>
+      {loggedIn ? <p>Welcome, {user?.email}</p> : <button onClick={handleLogin}>Log In</button>}
+    </div>
+  )
+}
+```
+
+---
+
+<!-- anchor: nuxt-module-oidc-nuxt-huia-oidc---overview -->
+## [Nuxt module — OIDC (nuxt-huia-oidc)] Overview
+_Source: docs/nuxt/overview.md_
+
+# `nuxt-huia-oidc` — overview
+
+`nuxt-huia-oidc` is the first-party **Nuxt 3+** module for signing a relying-party app into a
+`Huia.OpenId` tenant. It runs the OAuth 2.0 Authorization Code flow with PKCE (and RFC 9126 PAR) on
+the **Nitro server**, and keeps every token server-side.
+
+Its sibling module, [`nuxt-huia-headless`](/nuxt-headless/overview), talks to `Huia.Headless`
+instead — a plain JSON register/login API, no OIDC redirect — for apps that own their own login
+form and don't need multi-tenancy.
+
+- Package: `nuxt-huia-oidc` · config key `huia`
+- Built on [`openid-client`](https://github.com/panva/openid-client) v6 (ESM, Web Crypto)
+- Full build-to spec: [`src/nuxt/nuxt-huia-oidc/SPEC.md`](https://github.com/Ayman-Elfaki/Huia/blob/main/src/nuxt/nuxt-huia-oidc/SPEC.md)
+
+## Why not a generic OIDC module
+
+- **Zero client-side token leakage.** Access, refresh and id tokens live only in Nitro Storage,
+  keyed by an opaque session id. The browser holds a sealed cookie carrying the session id and a
+  whitelisted subset of user claims — nothing else.
+- **PAR by default.** The authorization parameters are pushed to Huia's `/{tenant}/connect/par`
+  back channel; the browser only ever sees `client_id` + `request_uri`. Falls back to a signed
+  front-channel request when the OP does not advertise a PAR endpoint.
+- **Transparent refresh.** A near-expired access token is refreshed inside `getUserSession()` /
+  `getAccessToken()`, guarded by an in-process single-flight map and a cross-worker soft lock so
+  concurrent SSR requests never trigger duplicate `refresh_token` grants.
+- **SSR-safe hydration** following the `nuxt-auth-utils` pattern — no flash of unauthenticated
+  content, no hydration mismatch.
+
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+  B[Browser] -->|"__Host-huia_sess cookie<br/>(sealed: sid + claims)"| N[Nitro server]
+  N -->|"sess:&lt;sid&gt;"| S[(Nitro Storage<br/>access / refresh / id tokens)]
+  N -->|"POST /&lt;tenant&gt;/connect/token<br/>(form-encoded)"| H[Huia]
+  N -->|"seed useState('huia-auth:session')"| B
+```
+
+The cookie is `iron-webcrypto`-sealed, `HttpOnly`, `Secure`, `SameSite=Lax`, `__Host-` prefixed, and
+**auto-chunked** across `__Host-huia_sess.0`, `.1`, … to bypass the ~4 KB per-cookie browser limit.
+
+## Server routes it adds
+
+| Route | Purpose |
+|---|---|
+| `GET /auth/oidc/login` | begin the flow (PKCE, state/nonce, PAR push) |
+| `GET /auth/oidc/callback` | code exchange, create the session, redirect to `returnTo` |
+| `GET /auth/oidc/logout` | clear the session + RP-initiated `end_session` |
+| `GET /auth/session` | the sanitised `{ user, loggedIn, expiresAt }` — never a token |
+
+All four paths are configurable. The default `/auth/oidc/callback` matches Huia's historical redirect
+URI so no client re-registration is needed.
+
+## Composables & server utilities
+
+- Client: `useUserSession()` (`user`, `loggedIn`, `session`, `hasRole()`, `hasAnyRole()`, `fetch()`,
+  `clear()`) and `useHuia()` (`login()`, `logout()`).
+- Server (auto-imported in `server/**`): `getUserSession(event)`, `setUserSession`,
+  `clearUserSession`, `requireUserSession(event)` (401s), `getAccessToken(event)` (server-only —
+  forward the bearer to your upstream APIs).
+
+---
+
+<!-- anchor: nuxt-module-oidc-nuxt-huia-oidc---configuration -->
+## [Nuxt module — OIDC (nuxt-huia-oidc)] Configuration
+_Source: docs/nuxt/configuration.md_
+
+# `nuxt-huia-oidc` — configuration
+
+## Install
+
+```bash
+npm install nuxt-huia-oidc
+```
+
+In the monorepo the sample apps reference the module from source instead
+(`modules: ['../../src/nuxt/nuxt-huia-oidc/src/module']`) plus the runtime deps (`openid-client`,
+`iron-webcrypto`, `uncrypto`).
+
+## `nuxt.config.ts`
+
+```ts
+export default defineNuxtConfig({
+  modules: ['nuxt-huia-oidc'],
+
+  huia: {
+    baseUrl: 'https://id.example.com',   // NUXT_HUIA_BASE_URL
+    tenant: 'acme',                      // NUXT_HUIA_TENANT
+    // issuer: 'https://id.example.com/acme',   // overrides baseUrl + tenant
+
+    clientId: 'acme-web',
+    // clientSecret via NUXT_HUIA_CLIENT_SECRET (confidential client)
+    redirectUrl: '/auth/oidc/callback',
+    scopes: ['openid', 'profile', 'email', 'offline_access'],   // + 'roles' for an admin app
+    allowedAuthParams: ['ui_locales', 'prompt', 'login_hint'],
+
+    par: { enabled: true, required: false },   // `required` mirrors a Huia client with ft:par
+
+    session: {
+      name: '__Host-huia_sess',
+      // password via NUXT_HUIA_SESSION_PASSWORD (>= 32 chars, iron-webcrypto seal key)
+      maxAge: 60 * 60 * 24 * 7,
+      userClaims: ['sub', 'name', 'email', 'preferred_username', 'given_name', 'family_name', 'roles'],
+    },
+
+    storage: { base: 'huia-auth' },
+
+    refresh: {
+      enabled: true,
+      earlyRefreshSeconds: 60,
+      lock: { ttlMs: 10_000, waitMs: 8_000, pollMs: 150 },
+    },
+
+    cookie: { chunkSize: 3800, maxChunks: 8 },
+    // `middlewareExclude` (what the `auth` middleware actually reads) always adds the module's own
+    // login/callback/logout/session routes on top of this list — see Route protection.
+    middleware: { global: false, exclude: [] },
+  },
+
+  // The token store must be SHARED across instances in a multi-node deployment, or the soft lock
+  // and the token record are per-worker and sessions "flap". The `Todo.Nuxt` and `Todo.Admin`
+  // samples wire this up: the AppHost runs a Redis container and passes `NUXT_REDIS_URL`, and each
+  // `nuxt.config.ts` mounts `huia-auth` on the `redis` driver when that variable is present.
+  nitro: {
+    storage: { 'huia-auth': { driver: 'redis', url: process.env.REDIS_URL } },
+    devStorage: { 'huia-auth': { driver: 'fs', base: '.data/huia-auth' } },
+  },
+})
+```
+
+## Environment variables
+
+| Variable | Required | Notes |
+|---|---|---|
+| `NUXT_HUIA_CLIENT_SECRET` | yes | confidential client secret |
+| `NUXT_HUIA_SESSION_PASSWORD` | yes | ≥ 32 chars; rotating it invalidates every cookie (users re-authenticate) |
+| `NUXT_HUIA_BASE_URL` | — | overrides `huia.baseUrl` |
+| `NUXT_HUIA_TENANT` | — | overrides `huia.tenant` |
+| `NODE_TLS_REJECT_UNAUTHORIZED=0` | dev only | lets Node accept the ASP.NET Core dev certificate; discovery also honours it for a plain-http issuer in any environment |
+
+`runtimeConfig.public.huia` contains **only** `{ loginPath, logoutPath, sessionPath,
+middlewareExclude }` — no issuer, client id or secret reaches the browser.
+
+## The Huia token endpoint is form-encoded
+
+OpenIddict accepts `application/x-www-form-urlencoded` only on `/{tenant}/connect/token` and
+`/{tenant}/connect/par`. `openid-client` v6 sends form-encoded bodies by design, so there is nothing
+to configure — this is called out only because the previous `nuxt-oidc-auth` integration needed an
+explicit override.
+
+---
+
+<!-- anchor: nuxt-module-oidc-nuxt-huia-oidc---session-model-security -->
+## [Nuxt module — OIDC (nuxt-huia-oidc)] Session model & security
+_Source: docs/nuxt/session-model.md_
+
+# `nuxt-huia-oidc` — session model & security
+
+## Dual-layer persistence
+
+| Layer | Holds | Reaches the browser? |
+|---|---|---|
+| **Nitro Storage** (`useStorage()`), key `sess:<sid>` | `access_token`, `refresh_token`, `id_token`, full id-token claims, expiries, scope | **never** |
+| **Encrypted cookie(s)**, `iron-webcrypto`-sealed | `{ sid, user: <claim whitelist>, exp }` | yes — sealed, `HttpOnly`, `Secure`, `SameSite=Lax`, `__Host-` |
+
+An XSS payload on the RP cannot exfiltrate a token — none is ever serialised into HTML, the Nuxt
+payload, or a client-readable cookie. Storage eviction (TTL, redis flush, deploy) simply logs the
+user out: a cookie with no matching record is treated as anonymous, never an error.
+
+## Cookie chunking
+
+The sealed payload is base64url ASCII, so it is split by length into `__Host-huia_sess.0`, `.1`, …
+(the unchunked `__Host-huia_sess` is the fast path). Reads collect `.0, .1, …` and **stop at the
+first gap**; any incomplete, reordered or tampered assembly fails the AEAD check and is treated as
+**no session**. Writes clear stale higher-index chunks so a shrinking session never leaves danglers.
+Over plain http (dev) the `__Host-` / `__Secure-` prefix is dropped (the browser would reject a
+prefixed cookie without `Secure`).
+
+## SSR hydration
+
+```mermaid
+flowchart TD
+  A[Nitro request middleware] -->|getUserSession| B[read cookie → unseal → de-chunk]
+  B --> C[getTokenRecord sess:sid from useStorage]
+  C --> D{near expiry?}
+  D -->|yes| E[ensureFreshTokens<br/>single-flight + soft lock]
+  D -->|no| F[event.context.huia = { user, loggedIn, expiresAt }]
+  E --> F
+  F --> G[Nuxt server plugin<br/>seeds useState 'huia-auth:session']
+  G --> H[SSR HTML + __NUXT__ payload]
+  H --> I[client reads the same useState<br/>no fetch, no mismatch, no FOUC]
+```
+
+`useUserSession()` on the client is just `useState('huia-auth:session')` — the value came from the
+SSR payload, so `loggedIn` is correct on the very first render. A `useAsyncData` +
+`useRequestFetch('/auth/session')` alternative is documented in the SPEC.
+
+## Transparent refresh
+
+Inside `getUserSession()` / `getAccessToken()`, when `accessTokenExpiresAt - now <
+earlyRefreshSeconds`:
+
+- **In-process single-flight** — a `Map<sid, Promise>` so concurrent SSR requests in one worker
+  `await` a single refresh.
+- **Cross-worker soft lock** — `lock:<sid>` in Nitro Storage (`{ lockId, acquiredAt }`, TTL 10 s).
+  The winner calls `refreshTokenGrant` and persists the rotated tokens; losers poll for release then
+  reuse the winner's record. A stale lock (older than the TTL) is taken over.
+- **`invalid_grant`** (revoked / reused / expired refresh token) → delete the token record → the
+  session is cleared → the request continues anonymous and the next navigation re-authenticates. No
+  500 is shown.
+
+> **Warning: Multi-instance**
+>
+> `unstorage` has no atomic CAS. Single-instance is fully correct via the in-process map; for more than
+> one instance use the `redis` driver — a residual double-refresh is then bounded to one wasted token
+> call.
+
+## Security summary
+
+| Concern | Mitigation |
+|---|---|
+| code interception | PKCE S256 (`code_verifier` server-side only) |
+| request tampering / referrer leak | RFC 9126 PAR back channel |
+| callback CSRF | `state` bound to both the storage record and a sealed `__Host-huia_oauth` cookie |
+| id-token replay | per-request `nonce` |
+| IdP mix-up | RFC 9207 `iss` + an exact per-tenant issuer check (`{baseUrl}/{tenant}`) |
+| token theft via XSS | tokens never leave Nitro Storage |
+| cookie forgery / disclosure | `iron-webcrypto` AEAD + `HttpOnly` `Secure` `SameSite=Lax` `__Host-` |
+| open redirect | `returnTo` / `post_logout_redirect_uri` sanitised to a same-origin path |
+| session fixation | a fresh random `sid` on every successful login |
+
+---
+
+<!-- anchor: nuxt-module-oidc-nuxt-huia-oidc---route-protection -->
+## [Nuxt module — OIDC (nuxt-huia-oidc)] Route protection
+_Source: docs/nuxt/route-protection.md_
+
+# `nuxt-huia-oidc` — route protection
+
+## Client — pages
+
+The module registers a named route middleware `auth` (opt-in per page):
+
+```vue
+<script setup lang="ts">
+definePageMeta({ middleware: 'auth' })
+</script>
+```
+
+It reads `useUserSession().loggedIn` — which is correct during SSR — so an unauthenticated visitor is
+redirected to `/auth/oidc/login?returnTo=<path>` before any protected HTML is sent: no flash, no
+client-side bounce.
+
+Set `huia.middleware.global = true` to protect everything, with
+`huia.middleware.exclude = ['/', '/about', '/auth/**']` for the public routes (glob: `**` any depth,
+`*` one segment). The module's own login/callback/logout/session routes are always excluded on top of
+this list, regardless of what you configure — protecting the routes that exist for the logged-out
+flow would only cause a redirect loop. To keep the old "bounce to the landing page" UX instead of
+going straight to Huia, add an app `middleware/auth.ts` that re-implements the check with
+`navigateTo('/')` (the sample apps do this).
+
+## Server — API routes
+
+```ts
+// server/api/me.get.ts
+export default defineEventHandler(async (event) => {
+  const { user } = await requireUserSession(event)   // 401 { code: 'auth_required' } if anonymous
+  return { id: user.sub, name: user.name, roles: user.roles ?? [] }
+})
+```
+
+`requireUserSession` throws `createError({ statusCode: 401, … })` and runs the same
+resolve-and-refresh path as `getUserSession`, so a protected API call also refreshes a near-expired
+token transparently.
+
+## Forwarding the access token upstream
+
+Never send the token to the browser. On the Nitro server:
+
+```ts
+// server/plugins/upstream-auth.ts — with nuxt-api-party
+export default defineNitroPlugin((nitro) => {
+  nitro.hooks.hook('api-party:request', async (ctx, event) => {
+    const token = await getAccessToken(event)   // server-only; refreshes transparently
+    if (token) {
+      const headers = new Headers(ctx.options.headers as HeadersInit | undefined)
+      headers.set('Authorization', `Bearer ${token}`)
+      ctx.options.headers = headers
+    }
+  })
+})
+```
+
+Or in a plain proxy route:
+
+```ts
+// server/api/todos.get.ts
+export default defineEventHandler(async (event) => {
+  const token = await getAccessToken(event)
+  if (!token) throw createError({ statusCode: 401 })
+  return $fetch(`${useRuntimeConfig().todoApiUrl}/todos`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+})
+```
+
+## `useHuia()`
+
+```ts
+const { login, logout, user, loggedIn } = useHuia()
+
+login({ returnTo: '/dashboard', locale: 'ar' })   // → /auth/oidc/login?returnTo=…&ui_locales=ar
+logout({ returnTo: '/' })                          // → /auth/oidc/logout?returnTo=/
+```
+
+---
+
+<!-- anchor: nuxt-module-oidc-nuxt-huia-oidc---migrating-from-nuxt-oidc-auth -->
+## [Nuxt module — OIDC (nuxt-huia-oidc)] Migrating from nuxt-oidc-auth
+_Source: docs/nuxt/migrating.md_
+
+# Migrating from `nuxt-oidc-auth`
+
+Both sample apps (`samples/Todo/Todo.Nuxt`, `samples/Todo/Todo.Admin`) were moved from the third-party
+`nuxt-oidc-auth` beta to `nuxt-huia-oidc`. The full diff is commit `f363cec`; the shape of the change:
+
+## `package.json`
+
+```diff
+-  "nuxt-oidc-auth": "1.0.0-beta.12",
++  "iron-webcrypto": "^1.2.1",
++  "openid-client": "^6.1.0",
++  "uncrypto": "^0.1.3",
+```
+
+Removing `nuxt-oidc-auth` also drops `typescript` from the tree (it was transitive), so add it back
+and pin `vue` / `vue-router` off the floating `latest`. An `.npmrc` with `legacy-peer-deps=true`
+sidesteps an npm 10 arborist crash on the nuxt peer graph.
+
+## `nuxt.config.ts`
+
+```diff
+   modules: [
+     '@nuxtjs/tailwindcss', '@nuxtjs/color-mode', 'shadcn-nuxt', 'nuxt-api-party',
+-    'nuxt-oidc-auth',
++    '../../src/nuxt/nuxt-huia-oidc/src/module',   // from source in the monorepo; or 'nuxt-huia-oidc' when installed
+   ],
+
+-  oidc: {
+-    defaultProvider: 'oidc',
+-    session: { expirationCheck: true, automaticRefresh: true },
+-    providers: { oidc: {
+-      clientId: '…', clientSecret: '…',
+-      authorizationUrl: `${huiaBaseUrl}/master/connect/authorize`,
+-      tokenUrl: `${huiaBaseUrl}/master/connect/token`,
+-      userInfoUrl: `${huiaBaseUrl}/master/connect/userinfo`,
+-      redirectUri: `${selfUrl}/auth/oidc/callback`,
+-      scope: ['openid', 'profile', 'email', 'roles', 'offline_access'],
+-      exposeAccessToken: true,
+-      tokenRequestType: 'form-urlencoded',
+-      logoutUrl: `${huiaBaseUrl}/master/connect/logout`,
+-      logoutRedirectParameterName: 'post_logout_redirect_uri',
+-      additionalLogoutParameters: { idTokenHint: '' },
+-    } },
+-  },
++  huia: {
++    baseUrl: huiaBaseUrl,
++    tenant: 'master',
++    clientId: process.env.NUXT_HUIA_CLIENT_ID ?? 'todo-admin',
++    clientSecret: process.env.NUXT_HUIA_CLIENT_SECRET ?? 'todo-admin-secret',
++    scopes: ['openid', 'profile', 'email', 'roles', 'offline_access'],
++    par: { enabled: true },
++    session: { password: process.env.NUXT_HUIA_SESSION_PASSWORD ?? 'dev-only-32-chars-minimum-…' },
++  },
+```
+
+The discovery-derived endpoints replace the four hand-written URLs; the redirect URI is derived
+per-request from the request origin + `redirectUrl` (default `/auth/oidc/callback`, so a Huia client
+registered for the old integration needs no change).
+
+## Components & middleware
+
+| `nuxt-oidc-auth` | `nuxt-huia-oidc` |
+|---|---|
+| `const { loggedIn, user, login, logout } = useOidcAuth()` | `const { loggedIn, user } = useUserSession()` + `const { login, logout } = useHuia()` |
+| `user.value?.userInfo?.name` | `user.value?.name` (flat claims) |
+| `login('oidc')` / `logout('oidc')` | `login()` / `logout()` |
+| `login('oidc', { ui_locales })` | `login({ locale })` |
+| `getUserSession(event)` in a Nitro plugin (`accessToken` on the session) | `getAccessToken(event)` (auto-imported; token stays server-side) |
+
+## Environment (E2E / AppHost)
+
+`NUXT_OIDC_*` → `NUXT_HUIA_*`:
+
+| old | new |
+|---|---|
+| `NUXT_OIDC_SESSION_SECRET` / `NUXT_OIDC_AUTH_SESSION_SECRET` / `NUXT_OIDC_TOKEN_KEY` | `NUXT_HUIA_SESSION_PASSWORD` (single value, ≥ 32 chars) |
+| `NUXT_OIDC_PROVIDERS_OIDC_CLIENT_SECRET` | `NUXT_HUIA_CLIENT_SECRET` |
+| the four `NUXT_OIDC_PROVIDERS_OIDC_*_URL` vars | `NUXT_HUIA_BASE_URL` + `NUXT_HUIA_TENANT` |
+
+`NUXT_API_PARTY_ENDPOINTS_*` and `NODE_TLS_REJECT_UNAUTHORIZED=0` are unchanged.
+
+---
+
+<!-- anchor: nuxt-module-headless-nuxt-huia-headless---overview -->
+## [Nuxt module — Headless (nuxt-huia-headless)] Overview
+_Source: docs/nuxt-headless/overview.md_
+
+# `nuxt-huia-headless` — overview
+
+`nuxt-huia-headless` is the first-party **Nuxt 4** module for apps that authenticate against a
+`Huia.Headless` backend: a plain JSON register/login API, no OIDC redirect, no discovery document. Its
+sibling module, [`nuxt-huia-oidc`](/nuxt/overview), covers the multi-tenant OIDC flow against
+`Huia.OpenId` instead.
+
+- Package: `nuxt-huia-headless` · config key `huiaHeadless`
+- No `openid-client` dependency — talks to `Huia.Headless` with plain `fetch`
+- Same dual-layer session principle as `nuxt-huia-oidc`: the browser only ever holds a sealed,
+  chunked session cookie; access/refresh tokens live server-side in Nitro Storage and are refreshed
+  transparently
+
+## Why it's a separate module, not an option on `nuxt-huia-oidc`
+
+The two backends are different enough in kind, not just configuration, that folding one into the
+other would leak abstractions both ways:
+
+| | `Huia.OpenId` (`nuxt-huia-oidc`) | `Huia.Headless` (`nuxt-huia-headless`) |
+|---|---|---|
+| Protocol | OAuth 2.0 Authorization Code + PKCE, redirect-based | Plain JSON POST/GET, no redirect |
+| Login UI | Hosted on the identity server (Razor pages) | Owned by the app itself — there is nothing to redirect to |
+| Tokens | JWTs (OpenIddict-signed), validable by a separate resource server | Opaque bearer tokens, valid only against the app that minted them |
+| Sign-out | RP-initiated `end_session` round-trip | Purely local — delete the local token, nothing to tell the server |
+| Multi-tenancy | Yes — `tenant` is part of the config | No — `Huia.Headless` is single-tenant only |
+
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+  B[Browser] -->|"__Host-huia_headless_sess cookie<br/>(sealed: sid + claims)"| N[Nitro server]
+  N -->|"sess:&lt;sid&gt;"| S[(Nitro Storage<br/>access / refresh tokens)]
+  N -->|"POST /identity/login (JSON)"| H[Huia.Headless]
+  N -->|"seed useState('huia-headless-auth:session')"| B
+```
+
+The cookie is `iron-webcrypto`-sealed, `HttpOnly`, `Secure`, `SameSite=Lax`, `__Host-` prefixed (bare
+name over plain http in dev), and auto-chunked past the ~4 KB per-cookie browser limit — identical
+mechanics to `nuxt-huia-oidc`.
+
+## Server routes it adds
+
+| Route | Purpose |
+|---|---|
+| `POST /auth/register` | proxies `Huia.Headless`'s register endpoint — does **not** sign in |
+| `POST /auth/login` | login, then fetches `identity/me` and establishes the session |
+| `POST /auth/logout` | clears the local session cookie + stored tokens — no server round-trip |
+| `POST /auth/refresh` | manual refresh (usually unnecessary — `getUserSession` refreshes transparently) |
+| `GET /auth/session` | the sanitised `{ user, loggedIn, expiresAt }` — never a token |
+| `GET /auth/confirm-email`, `POST /auth/resend-confirmation`, `/auth/forgot-password`, `/auth/reset-password` | thin proxies to the matching `Huia.Headless` endpoints |
+| `POST /auth/phone/start`, `/resend`, `/verify`, `/complete-profile` | passwordless SMS one-time-code login |
+| `GET /auth/external/{provider}` | starts an external-login redirect (a link, not a `fetch` call — see below) |
+| `POST /auth/external-exchange`, `/auth/external-complete-profile` | completes external login after the provider's callback |
+
+All paths are configurable via `routes`. Unlike `nuxt-huia-oidc`'s `login`/`callback`/`logout`
+(browser-navigated redirects), every route except the external-login challenge is a plain API call
+the app's own login form invokes with `$fetch`/`useRequestFetch`.
+
+## Composables & server utilities
+
+- Client: `useUserSession()` (`user`, `loggedIn`, `session`, `hasRole()`, `hasAnyRole()`, `fetch()`,
+  `clear()`) and `useHuia()` (`register()`, `login()`, `logout`, `startPhoneLogin()`,
+  `verifyPhoneLogin()`, `completePhoneProfile()`, `externalLoginHref()`, `exchangeExternalCode()`,
+  `completeExternalProfile()`).
+- Server (auto-imported in `server/**`): `getUserSession(event)`, `setUserSession`,
+  `clearUserSession`, `requireUserSession(event)` (401s), `getAccessToken(event)` (server-only —
+  forward the bearer to `Huia.Headless` or an upstream API).
+
+## External login
+
+Because a real provider redirect has to physically leave the app's origin, `externalLoginHref`
+returns a plain URL for an `<a>` tag, not something you `fetch`. The module's own `GET
+/auth/external/{provider}` route builds the *absolute* `returnUrl` `Huia.Headless`'s
+`AllowedReturnUrlPrefixes` allow-list expects — the app's own origin plus
+`huiaHeadless.externalCallbackPage` (default `/auth/callback`) — from a caller-supplied same-origin
+path, so the app never has to know its own deployed origin:
+
+```vue
+<a :href="useHuia().externalLoginHref('google', '/dashboard')">Sign in with Google</a>
+```
+
+The app owns the callback page itself (`huiaHeadless.externalCallbackPage` just names where it
+lives — Huia.Headless has no hosted "completing sign-in…" page to redirect to). That page reads
+`?code=` and `?returnTo=` off its own route, calls `exchangeExternalCode(code)` — which returns the
+bearer session directly for a linked/existing account, or `{ requiresProfile: true, flowId }` for a
+first-time sign-up — and, in the latter case, collects a name and calls
+`completeExternalProfile({ code: flowId, firstName, lastName })`.
+
+## Reference integration
+
+`samples/Shop/Shop.Api` + `samples/Shop/Shop.Nuxt` puts this module through a full register → login → cart →
+checkout → logout round trip, plus phone login and external login against a real upstream IdP
+([`Huia.External`](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shared/Huia.External), the same
+mock provider `Todo.Nuxt` uses) — all covered end to end by
+[`ShopE2ETests`](https://github.com/Ayman-Elfaki/Huia/tree/main/tests/Huia.E2ETests/ShopE2ETests.cs).
+
+---
+
+<!-- anchor: nuxt-module-headless-nuxt-huia-headless---configuration -->
+## [Nuxt module — Headless (nuxt-huia-headless)] Configuration
+_Source: docs/nuxt-headless/configuration.md_
+
+# `nuxt-huia-headless` — configuration
+
+## Install
+
+```bash
+npm install nuxt-huia-headless
+```
+
+In the monorepo the `Shop.Nuxt` sample references the module from source instead
+(`modules: ['../../src/nuxt/nuxt-huia-headless/src/module']`).
+
+## `nuxt.config.ts`
+
+```ts
+export default defineNuxtConfig({
+  modules: ['nuxt-huia-headless'],
+
+  huiaHeadless: {
+    baseUrl: 'https://api.example.com',   // NUXT_HUIA_HEADLESS_BASE_URL
+
+    session: {
+      name: '__Host-huia_headless_sess',
+      // password via NUXT_HUIA_HEADLESS_SESSION_PASSWORD (>= 32 chars, iron-webcrypto seal key)
+      maxAge: 60 * 60 * 24 * 7,
+      userClaims: ['sub', 'email', 'firstName', 'lastName', 'roles'],
+    },
+
+    storage: { base: 'huia-headless-auth' },
+
+    refresh: {
+      enabled: true,
+      earlyRefreshSeconds: 60,
+      lock: { ttlMs: 10_000, waitMs: 8_000, pollMs: 150 },
+    },
+
+    cookie: { chunkSize: 3800, maxChunks: 8 },
+
+    // No hosted login page to redirect to — an unauthenticated visit to a protected route goes to
+    // the app's own loginPage instead of an external URL.
+    loginPage: '/login',
+    // The app's own page that reads ?code= after an external-provider callback (see External login
+    // in the overview) — Huia.Headless has no hosted "completing sign-in…" page either.
+    externalCallbackPage: '/auth/callback',
+    middleware: { global: false, exclude: [] },
+
+    routes: {
+      // ...register/login/logout/refresh/session/confirmEmail/resendConfirmation/forgotPassword/resetPassword
+      phoneStart: '/auth/phone/start',
+      phoneResend: '/auth/phone/resend',
+      phoneVerify: '/auth/phone/verify',
+      phoneCompleteProfile: '/auth/phone/complete-profile',
+      externalLogin: '/auth/external',            // + '/{provider}'
+      externalExchange: '/auth/external-exchange',
+      externalCompleteProfile: '/auth/external-complete-profile',
+    },
+
+    allowInsecureTls: false,   // dev only
+  },
+
+  nitro: {
+    storage: { 'huia-headless-auth': { driver: 'redis', url: process.env.REDIS_URL } },
+    devStorage: { 'huia-headless-auth': { driver: 'fs', base: '.data/huia-headless-auth' } },
+  },
+})
+```
+
+## Environment variables
+
+| Variable | Required | Notes |
+|---|---|---|
+| `NUXT_HUIA_HEADLESS_SESSION_PASSWORD` | yes | ≥ 32 chars. Rotating it invalidates every existing cookie. |
+| `NUXT_HUIA_HEADLESS_BASE_URL` | — | overrides `huiaHeadless.baseUrl` |
+| `NODE_TLS_REJECT_UNAUTHORIZED=0` | dev only | lets Node accept the ASP.NET Core dev certificate for the `Huia.Headless` backend |
+
+`runtimeConfig.public.huiaHeadless` contains **only** the module's own route paths (`registerPath`,
+`loginPath`, `logoutPath`, `sessionPath`, `phoneStartPath`, `phoneVerifyPath`,
+`phoneCompleteProfilePath`, `externalLoginPath`, `externalExchangePath`,
+`externalCompleteProfilePath`), `loginPage`, `externalCallbackPage`, and `middlewareExclude` — the
+backend URL and session password never reach the browser.
+
+## Route protection
+
+```vue
+<script setup lang="ts">
+definePageMeta({ middleware: 'auth' })
+</script>
+```
+
+Set `huiaHeadless.middleware.global = true` to protect everything, with
+`huiaHeadless.middleware.exclude = ['/', '/login']` for the public routes (glob: `**` any depth, `*`
+one segment). `loginPage` and the module's own `register`/`login`/`logout`/`refresh`/`session`/etc.
+routes are always excluded on top of this list — an unauthenticated visit redirects to `loginPage`
+with `?returnTo=<path>`, an ordinary internal Nuxt navigation, not an external redirect.
+
+## `useHuia()`
+
+```ts
+const { register, login, logout, user, loggedIn } = useHuia()
+
+const reg = await register({ email, password })       // does not sign in
+if (reg.ok) {
+  const result = await login({ email, password })     // { ok, user? } or { ok: false, error }
+}
+
+logout()   // purely local: clears the session cookie + stored tokens, no server round-trip
+```
+
+`login()` also accepts `twoFactorCode`/`twoFactorRecoveryCode` for accounts with 2FA enabled.
+
+```ts
+const { startPhoneLogin, resendPhoneLogin, verifyPhoneLogin, completePhoneProfile, externalLoginHref, exchangeExternalCode, completeExternalProfile } = useHuia()
+
+// started: { ok, flowId, maskedPhoneNumber, codeLength, expiresInSeconds, resendAvailableInSeconds }
+// on failure `error` is the backend problem: { error: 'rate_limited' | 'daily_limit' | ..., retryAfterSeconds? }
+const started = await startPhoneLogin({ phoneNumber: '+12025550123' })
+const { flowId } = started
+await resendPhoneLogin({ flowId })   // 429 resend_too_soon (+ retryAfterSeconds) inside the cooldown
+const verified = await verifyPhoneLogin({ flowId, code })   // wrong code: error.attemptsRemaining
+if (verified.requiresProfile) {
+  await completePhoneProfile({ flowId: verified.flowId, firstName, lastName })
+}
+
+// a link, not a fetch call — the browser has to leave the app's origin
+externalLoginHref('google', '/dashboard')
+
+// on the app's own externalCallbackPage, after the provider round trip:
+const exchanged = await exchangeExternalCode(route.query.code as string)
+if (exchanged.requiresProfile) {
+  await completeExternalProfile({ code: exchanged.flowId, firstName, lastName })
+}
+```
+
+See [External login](/nuxt-headless/overview#external-login) in the overview for the full shape of
+that redirect and why it needs a dedicated callback page.
+
+---
+
+<!-- anchor: architecture---overview -->
+## [Architecture] Overview
+_Source: docs/architecture/overview.md_
+
+# Architecture overview
+
+Huia turns one ASP.NET Core host + one database into an OIDC provider that serves **many isolated
+tenants**. A tenant is a URL base-path segment, an EF Core row-scope, a signing-key set, an issuer
+(`{Issuer}/{tenant}`), and a bundle of per-tenant Identity + sign-in policy.
+
+```mermaid
+flowchart LR
+  Browser -->|"GET /{tenant}/connect/authorize"| Server[OpenIddict server]
+  Server -->|"not signed in → 302"| AccountUI["Razor account UI<br/>/{tenant}/identity/account/login"]
+  AccountUI -->|"password / SMS OTP / external"| Cookie["SignInManager cookie<br/>huia.auth.{tenant}"]
+  Cookie --> Server
+  Server -->|"code → POST /{tenant}/connect/token"| Client[Relying party]
+  Client -->|"Bearer JWT"| ResourceApi[Resource API]
+  ResourceApi -->|"GET /{tenant}/.well-known/jwks"| Server
+```
+
+## Packages
+
+Huia ships two independent authentication flavors over a shared core, so a host picks the one that
+fits and links only that flavor's packages:
+
+| Package | Role |
+|---|---|
+| `Huia` | domain model, the options tree, eventing, store abstractions (`IHuiaStore`, `IHuiaOpenIdAdminStore`), constants, the `IHuiaTenantContext` seam, generic `HuiaUserManager<TUser>`/`HuiaSignInManager<TUser>` — **no** EF Core / OpenIddict / Finbuckle dependency (a build target enforces it), though the ASP.NET Core shared framework is allowed |
+| `Huia.OpenId.EntityFrameworkCore` | `HuiaDbContext : MultiTenantIdentityDbContext`, layers OpenIddict + tenant-scoped composite indexes on top of Identity schema, `AddEntityFrameworkCoreStores<TContext,TUser,TRole>()`, implements `IHuiaOpenIdAdminStore` with keyset pagination — ships no migrations |
+| `Huia.OpenId` | `AddHuiaOpenId()` / `UseHuiaOpenId()` / `MapHuiaEndpoints()` — multi-tenant, OpenIddict server + client, the Razor account UI, passwordless SMS, key-lifecycle jobs, security headers |
+| `Huia.Headless.EntityFrameworkCore` | Generic `HuiaDbContext<TUser,TRole,TId> : IdentityDbContext<TUser,TRole,string>` — single-tenant, implements `IHuiaStore` with `MR.AspNetCore.Pagination` keyset and offset pagination, `AddEntityFrameworkCoreStores<TContext,TUser,TRole>()` |
+| `Huia.Headless` | `AddHuiaHeadless(...)` / `MapHuiaHeadlessEndpoints()` — store-agnostic, a flat, tenant-free, branding-free options builder (single-tenant internally, but that's never exposed), ASP.NET Core Identity bearer tokens via `MapIdentityApi`, no OpenIddict, no Finbuckle. See the [Shop sample](https://github.com/Ayman-Elfaki/Huia/tree/main/samples/Shop/Shop.Api) |
+
+A host wires one flavor via a single root call:
+
+```csharp
+// OpenId flavor:
+services.AddHuiaOpenId(huia => { /* options */ })
+  .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>();
+
+// Or Headless flavor:
+services.AddHuiaHeadless(huia => { /* options */ })
+  .AddEntityFrameworkCoreStores<HuiaDbContext<HuiaUser, HuiaRole, string>>();
+```
+
+## Pipeline order
+
+`UseHuiaOpenId()` (the `Huia.OpenId` flavor only — `Huia.Headless` has no hosted UI or per-tenant
+routing, so it needs no equivalent) fixes the middleware order:
+
+```
+UseExceptionHandler → UseStatusCodePagesWithReExecute → UseRequestLocalization
+  → UseMultiTenant   (before UseRouting — the base-path strategy rebases PathBase to /{tenant})
+  → HuiaSecurityHeadersMiddleware   (opt-in; after UseMultiTenant so the CSP can use tenant branding)
+  → UseStaticFiles → UseRouting → UseAuthentication → UseAuthorization
+```
+
+## Tenant isolation
+
+`HuiaDbContext` derives from Finbuckle's `MultiTenantIdentityDbContext<HuiaUser, HuiaRole, string>`:
+
+- a **global query filter** `TenantId == TenantInfo.Id` scopes every read of a user / role / claim /
+  login / token entity;
+- `SaveChanges` runs `EnforceMultiTenant()` — throws on a tenant-less or cross-tenant write,
+  auto-stamps `TenantId` on insert;
+- `TenantInfo` is snapshotted **at context construction**, so seeding / background code must set the
+  ambient tenant (`HuiaTenantScope.Enter(...)`) before resolving the context or `UserManager`.
+
+See [`src/dotnet/SPEC.md`](https://github.com/Ayman-Elfaki/Huia/blob/main/src/dotnet/SPEC.md) for the
+full specification and [Multi-tenancy](/guide/multi-tenancy) for the request-time details.
+
+---
+
+<!-- anchor: architecture---request-token-flow -->
+## [Architecture] Request & token flow
+_Source: docs/architecture/request-flow.md_
+
+# Request & token flow
+
+## Interactive sign-in (Authorization Code + PKCE, with PAR)
+
+```mermaid
+sequenceDiagram
+  participant RP as Relying party
+  participant B as Browser
+  participant S as OpenIddict server
+  participant UI as Razor account UI
+  participant K as HuiaTenantSigningKeyHandler
+
+  RP->>S: POST /{tenant}/connect/par (client-auth, PKCE, form-encoded)
+  S-->>RP: { request_uri, expires_in }
+  RP->>B: 302 /{tenant}/connect/authorize?client_id&request_uri
+  B->>S: GET /{tenant}/connect/authorize
+  S-->>B: 302 /{tenant}/identity/account/login   (no session)
+  B->>UI: password / SMS OTP / external provider
+  UI-->>B: Set-Cookie huia.auth.{tenant}  +  302 back to /connect/authorize
+  B->>S: GET /{tenant}/connect/authorize   (now authenticated)
+  S-->>B: 302 redirect_uri?code
+  B->>RP: code
+  RP->>S: POST /{tenant}/connect/token (code, code_verifier, form-encoded)
+  Note over S,K: AuthorizeAsync builds the principal (sub, role[], tenant, scopes)<br/>K swaps in the tenant's rotated RSA key for the access + id token<br/>issuer = {Issuer}/{tenant}
+  S-->>RP: access_token (JWT) + id_token + refresh_token
+```
+
+## Token validation
+
+Tokens are minted with the tenant's rotated key and per-tenant issuer, so three custom OpenIddict
+handlers are inserted at fixed orders:
+
+| Handler | Event | Order | Job |
+|---|---|---|---|
+| `HuiaTenantSigningKeyHandler` | `GenerateTokenContext` | `int.MinValue + 100_500` | override `SigningCredentials` for the **access token / id token only** (overriding the code or refresh token breaks `code` exchange) |
+| `HuiaTenantTokenValidationHandler` | `ValidateTokenContext` | `int.MinValue + 101_000` | append the tenant's published keys to `IssuerSigningKeys` and `{Issuer}/{tenant}` to `ValidIssuers` |
+| `HuiaTenantJwksHandler` | JWKS request | `int.MaxValue - 100_000` | serve the tenant's published keys at `/{tenant}/.well-known/jwks` |
+
+A resource API on a **separate host** simply points its JWT bearer validation at
+`{Issuer}/{tenant}/.well-known/openid-configuration` and gets the right keys over HTTP.
+
+## Passwordless SMS
+
+`amr=sms` is a cookie sign-in the account UI performs after verifying a one-time code; `/connect/authorize`
+accepts it with zero OpenIddict changes. The full flow is in [Passwordless SMS](/dotnet/passwordless-sms).
+
+## Relying party (Nuxt)
+
+`nuxt-huia-oidc` runs the RP half of the diagram on the Nitro server and keeps every token
+server-side — see [the Nuxt module docs](/nuxt/overview).
+
+---
+
+<!-- anchor: architecture---key-management -->
+## [Architecture] Key management
+_Source: docs/architecture/key-management.md_
+
+# Key management
+
+Each tenant signs with its **own rotated RSA key**. Keys live in the `HuiaSigningKeys` table (status
+enum stored as a string) with private material wrapped by ASP.NET Core Data Protection.
+`HuiaSigningKey` is deliberately **not** a multi-tenant entity — it carries a manual `TenantId` so
+the lifecycle jobs can run with no tenant scope.
+
+## Lifecycle
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pending: mint (rotation job or POST /admin/keys)
+  Pending --> Active: activation job (ActivateAt reached) or POST /admin/keys { activate: true }
+  Active --> Rotated: a newer key is activated
+  Rotated --> Retired: retention window elapsed, or POST /admin/keys/{id}/revoke
+  Retired --> [*]: DELETE /admin/keys/{id}  (retired only)
+```
+
+- **Pending** — published in the JWKS (so RPs can pre-fetch it) but does not sign.
+- **Active** — the one key that signs; activating a new key demotes the current active to *Rotated*.
+- **Rotated** — still validates (tokens signed before the switch are still in flight) but no longer
+  signs.
+- **Retired** — stops signing **and** validating at once. `revoke` is refused with `409` if it would
+  leave the tenant with no active key.
+
+## Serving
+
+`IHuiaKeyRing` is a `HybridCache`-backed service (not an entity). RSA import is memoised by `kid` in
+a process-static dictionary. It exposes the active signing key and the published (validation) set per
+tenant. The custom OpenIddict handlers (see [Request & token flow](/architecture/request-flow)) use
+the active key for signing and the whole published set for validation; `HuiaTenantJwksHandler` serves
+the published set at `/{tenant}/.well-known/jwks`.
+
+## Jobs
+
+Four Quartz jobs — promote pending → active, rotate on schedule, retire rotated keys past the
+overlap window, delete retired keys — gated by `KeyManagementOptions.EnableBackgroundJobs` (default
+true). Tests and the `Huia:EnableBackgroundJobs=false` sample flag disable them: Quartz keeps a
+process-static log provider that throws on a second host in the same process.
+
+---
+
+<!-- anchor: security---overview -->
+## [Security] Overview
+_Source: docs/security/index.md_
+
+# Security Model
+
+Huia is built from the ground up for high-assurance, multi-tenant and headless identity workloads in ASP.NET Core. This page outlines the core architectural security guarantees, data isolation boundaries, and mitigation strategies implemented across the platform.
+
+## Multi-Tenant Isolation Model
+
+Huia operates on a base-path tenant resolution architecture (`/{tenant}/...`). Isolation is enforced strictly across four layers:
+
+1. **Database Isolation (`HuiaDbContext`)**:
+   - Every tenant-scoped entity implements `IHuiaTenantScoped` containing a `TenantId`.
+   - Global query filters (`TenantId == TenantInfo.Id`) automatically constrain all reads to the current tenant context.
+   - `EnforceMultiTenant()` validates and stamps `TenantId` on write operations, preventing cross-tenant injection.
+   - Unique constraints are enforced via composite database indexes (`{TenantId, Normalized*}`).
+
+2. **Cryptographic Key Isolation**:
+   - Each tenant receives dedicated RSA signing and encryption keys.
+   - Private key material is encrypted at rest using ASP.NET Core Data Protection.
+   - In-memory keys are held in `IHuiaKeyRing` keyed strictly by tenant ID and key ID (`kid`).
+
+3. **Token & Issuer Validation**:
+   - Tokens issued by tenant $A$ cannot be used against tenant $B$.
+   - `HuiaTenantTokenValidationHandler` validates both the issuer URL (`/{tenant}`) and pins the expected signing keys for that specific tenant. Cross-tenant token replay yields `401 Unauthorized (invalid_token)` before request handling or authorization logic executes.
+
+4. **Cookie & Session Scoping**:
+   - Cookies are isolated per-tenant.
+   - `WithPerTenantAuthentication()` embeds a `__tenant__` claim and rejects any cookie where `__tenant__ != request_tenant`.
+   - Per-tenant cookie naming prevents browser session bleeding across tenants on the same domain.
+
+---
+
+## Token Security & OAuth 2.0 Hardening
+
+- **Authorization Code + PKCE**: Proof Key for Code Exchange (RFC 7636) is strictly enforced for all public clients (`RequirePkce()`).
+- **Pushed Authorization Requests (PAR)**: Implements RFC 9126 at `/{tenant}/connect/par`. PAR moves complex authorization parameters from public front-channel query strings to back-channel direct HTTP calls, eliminating authorization request tampering, URL length limits, and sensitive data leakage into access logs and `Referer` headers.
+- **Client Credentials & Refresh Tokens**: Refresh tokens are cryptographically bound to the client and subject. Revocation of an active grant immediately invalidates associated refresh tokens.
+
+---
+
+## Passwordless SMS & OTP Hardening
+
+Passwordless phone authentication presents unique threat models. Huia applies extensive countermeasures:
+
+- **Salted Hashing**: Verification codes are never stored in plaintext. They are hashed as `SHA-256(salt || code)` using cryptographically secure random salts.
+- **Constant-Time Verification**: Verification comparisons use `CryptographicOperations.FixedTimeEquals` to eliminate timing side-channels.
+- **Single-Use Enforcement**: Codes are marked consumed immediately upon use, preventing replay.
+- **Brute-Force & Attempt Caps**: Failed verification attempts increment an attempt counter; exceeding the cap instantly invalidates the OTP.
+- **Dual-Tier Rate Limiting**:
+  - Outbound rate limiting prevents SMS bombing before telecommunication credits are spent.
+  - Inbound verification throttling blocks high-frequency brute-force attempts.
+- **Timing Invariance on Account Enumeration**: In phone sign-in with auto-provisioning disabled, requests for unregistered numbers execute with identical timing and return matching generic responses to prevent user enumeration.
+
+---
+
+## External Provider & Account Linking
+
+- **No Blind Linking**: Account linking by email is disabled by default.
+- **Strict Verification Prerequisite**: When `AllowEmailLinking` is explicitly enabled, linking requires that the local account has `EmailConfirmed == true` AND the external identity provider vouches for email verification (`email_verified == true`). If either condition is not met, the sign-in is rejected (`ExternalEmailLinkOutcome.Blocked`).
+- **Last Sign-in Guard**: `HuiaUserManager.CanRemoveExternalLoginAsync` prevents users from disassociating an external login if doing so would leave them without any authentication method (no password, no phone, and no remaining logins).
+
+---
+
+## Cookie Policy & Transport Security
+
+Huia enforces conservative cookie defaults across all flows:
+
+| Cookie | SameSite | Scope | Purpose |
+|---|---|---|---|
+| `huia.auth` | `Lax` | Tenant-scoped | Primary authentication session |
+| `huia.flow` | `Strict` | Tenant-scoped | Ephemeral multi-step flow state |
+| `huia.csrf` | `Strict` | App-scoped | Anti-forgery validation token |
+| `huia.external` | `None` + `Secure` | App-scoped | Cross-site correlation cookie for external IdP redirects |
+
+All cookies automatically receive the `Secure` flag in production environments. Transport security can be customized via `DisableTransportSecurityRequirement` strictly for local testing.
+
+---
+
+## Comprehensive Security Controls Matrix
+
+The following matrix summarizes the mitigations implemented across Huia:
+
+| Security Concern | Implementation / Mitigation |
+|---|---|
+| **Cross-tenant data access** | `HuiaDbContext` global query filters (`TenantId == TenantInfo.Id`) on read + `EnforceMultiTenant()` on write; composite unique indexes `{TenantId, Normalized*}`. |
+| **Cross-tenant token replay** | `HuiaTenantTokenValidationHandler` pins the tenant's keys + issuer; token from tenant A is rejected at tenant B. |
+| **Session bleed across tenants** | `WithPerTenantAuthentication()` rejects cookies whose `__tenant__ != request_tenant`; distinct cookie name prefixes. |
+| **Authorization code interception** | Enforced PKCE with S256 challenge verification. |
+| **Auth-request tampering & log leaks** | RFC 9126 PAR at `/{tenant}/connect/par`; optional client enforcement via `RequirePushedAuthorizationRequests()`. |
+| **OTP brute force / reuse** | Salted SHA-256, single-use invalidation, constant-time comparison, attempt caps, outbound & inbound rate limits. |
+| **Account enumeration on phone login** | Timing-invariant responses whether number exists or not when auto-provisioning is off. |
+| **External sign-in account takeover** | Link-by-email disabled by default; requires confirmed email on both ends when enabled; blocks unverified merges. |
+| **Removing last sign-in method** | `HuiaUserManager.CanRemoveExternalLoginAsync` checks against complete account lockouts. |
+| **Lockout bypass on token grants** | Resource Owner Password Credentials flow delegates to `CheckPasswordSignInAsync(lockoutOnFailure: true)`; `/connect/token` verifies `IsLockedOutAsync`. |
+| **Open redirect attacks** | `IReturnUrlProtector` with Data Protection tokenization and same-origin validation for `returnUrl` and `post_logout_redirect_uri`. |
+| **Private key exposure** | Private keys encrypted at rest via ASP.NET Core Data Protection; memory caches store unwrapped keys only by `kid`. |
+| **Insecure transport (HTTP)** | OpenIddict transport guard, HTTPS redirection, and mandatory `Secure` cookie flags. |
+| **HTTP header hardening** | Opt-in `AddHuiaSecurityHeaders()` providing per-request nonce CSP, HSTS, and referrer policies. |
+
+---
+
+<!-- anchor: security---security-headers -->
+## [Security] Security headers
+_Source: docs/security/security-headers.md_
+
+# Security Headers
+
+Huia provides opt-in, pre-configured HTTP response security headers designed to protect both the Razor account UI and API surfaces against Cross-Site Scripting (XSS), clickjacking, MIME sniffing, and referrer leaks.
+
+## Enabling Security Headers
+
+To enable security headers, add the middleware to your ASP.NET Core service registration pipeline:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Register Huia with security headers
+builder.Services.AddHuiaOpenId(options => { ... })
+    .AddHuiaSecurityHeaders(options =>
+    {
+        // Custom header configuration (optional)
+        options.AppendNonceToInlineScripts = true;
+    });
+
+var app = builder.Build();
+
+app.UseHuiaOpenId();
+
+app.Run();
+```
+
+The middleware is inserted right after tenant resolution, ensuring all downstream responses (including identity endpoints and error status pages) receive hardened headers.
+
+---
+
+## Default Directives
+
+When enabled, the following HTTP headers are emitted on every response:
+
+### Content-Security-Policy (CSP)
+A per-request cryptographic nonce is generated and injected into the CSP header and request items:
+
+```http
+Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{RANDOM_NONCE}'; style-src 'self' 'nonce-{RANDOM_NONCE}'; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://login.microsoftonline.com; frame-ancestors 'none';
+```
+
+- **Per-Request Nonce**: Injected automatically into the Razor account UI views.
+- **Form Action Protection**: Restricts form submissions to `'self'` and registered external identity provider authorization endpoints.
+- **Clickjacking Protection**: `frame-ancestors 'none'` blocks embedding in iframes.
+
+### Strict-Transport-Security (HSTS)
+When the request is delivered over HTTPS (and `DisableTransportSecurityRequirement` is not set):
+
+```http
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+```
+
+### X-Content-Type-Options
+Prevents MIME-type sniffing:
+
+```http
+X-Content-Type-Options: nosniff
+```
+
+### Referrer-Policy
+Reduces privacy leaks in outgoing referrers:
+
+```http
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+### Permissions-Policy
+Disables unused browser capabilities:
+
+```http
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+```
+
+---
+
+## Configuration Knobs
+
+The `HuiaSecurityHeadersOptions` class exposes the following knobs:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `AppendNonceToInlineScripts` | `bool` | `true` | Appends `'nonce-{random}'` to the `script-src` directive |
+| `DisableScripts` | `bool` | `false` | Disables script execution entirely for pure API / headless hosts |
+| `AdditionalScriptSrc` | `string[]` | `[]` | Additional trusted origins for external scripts (e.g. analytics or CDNs) |
+| `AdditionalStyleSrc` | `string[]` | `[]` | Additional trusted origins for external stylesheets or web fonts |
+| `AdditionalFormActionOrigins` | `string[]` | `[]` | Extra origins for external authentication redirects |
+
+### Example: Adding Custom Script and Style Origins
+
+```csharp
+builder.Services.AddHuiaSecurityHeaders(options =>
+{
+    options.AdditionalScriptSrc = new[] { "https://cdn.jsdelivr.net" };
+    options.AdditionalStyleSrc = new[] { "https://fonts.googleapis.com" };
+});
+```
+
+---
