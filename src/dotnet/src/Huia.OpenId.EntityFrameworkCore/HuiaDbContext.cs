@@ -3,6 +3,7 @@ using Finbuckle.MultiTenant.EntityFrameworkCore.Extensions;
 using Finbuckle.MultiTenant.Identity.EntityFrameworkCore;
 using Huia.OpenId.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.EntityFrameworkCore.Models;
 
@@ -56,7 +57,22 @@ public class HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUs
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(builder);
+        // Invoke IdentityDbContext.OnModelCreating directly to configure Identity tables without
+        // triggering Finbuckle 10's AdjustUniqueIndexes(), which has a binary breaking change on EF Core 11
+        // (Huia's ApplyTenantScopedIndexes deterministically replaces Identity unique indexes anyway).
+        InvokeIdentityOnModelCreating(this, builder);
+
+        builder.Entity<TUser>().IsMultiTenant();
+        builder.Entity<TRole>().IsMultiTenant();
+        builder.Entity<IdentityUserRole<string>>().IsMultiTenant();
+        builder.Entity<IdentityUserClaim<string>>().IsMultiTenant();
+        builder.Entity<IdentityUserLogin<string>>().IsMultiTenant();
+        builder.Entity<IdentityUserToken<string>>().IsMultiTenant();
+        builder.Entity<IdentityRoleClaim<string>>().IsMultiTenant();
+        builder.Entity<IdentityUserPasskey<string>>().IsMultiTenant();
+
+        builder.ConfigureMultiTenant();
+
         builder.UseOpenIddict();
 
         builder.ConfigureHuiaIdentitySchema<TUser, TRole>();
@@ -67,23 +83,56 @@ public class HuiaDbContext<TUser, TRole, TId> : MultiTenantIdentityDbContext<TUs
         ConfigureTenantRecords(builder);
     }
 
+    private static readonly Action<object, ModelBuilder> InvokeIdentityOnModelCreating = CreateIdentityOnModelCreatingInvoker();
+
+    private static Action<object, ModelBuilder> CreateIdentityOnModelCreatingInvoker()
+    {
+        var type = typeof(HuiaDbContext<TUser, TRole, TId>).BaseType;
+        while (type != null && !type.Name.StartsWith("IdentityDbContext", StringComparison.Ordinal))
+        {
+            type = type.BaseType;
+        }
+
+        var identityContextType = type ?? throw new InvalidOperationException("IdentityDbContext base type not found.");
+        var onModelCreatingMethod = identityContextType.GetMethod(
+            "OnModelCreating",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+            [typeof(ModelBuilder)])!;
+
+        var dm = new System.Reflection.Emit.DynamicMethod(
+            "InvokeBaseIdentityOnModelCreating",
+            typeof(void),
+            [typeof(object), typeof(ModelBuilder)],
+            typeof(HuiaDbContext<TUser, TRole, TId>).Module,
+            skipVisibility: true);
+
+        var il = dm.GetILGenerator();
+        il.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+        il.Emit(System.Reflection.Emit.OpCodes.Castclass, identityContextType);
+        il.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
+        il.Emit(System.Reflection.Emit.OpCodes.Call, onModelCreatingMethod);
+        il.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+        return (Action<object, ModelBuilder>)dm.CreateDelegate(typeof(Action<object, ModelBuilder>));
+    }
+
     /// <summary>
     /// Makes the passkey (WebAuthn credential) entity multi-tenant, on top of the plain configuration
     /// <see cref="HuiaIdentitySchemaConventions.ConfigureHuiaIdentitySchema{TUser,TRole}"/> already applied
-    /// — when Finbuckle has not already done so (the base <c>OnModelCreating</c> only makes it multi-tenant
-    /// when <c>IdentityOptions.Stores.SchemaVersion</c> resolves to <c>Version3</c> — true on the DI path,
-    /// not when the context is constructed directly by the model tests or a design-time factory) — so a
-    /// credential is scoped to its tenant on read and stamped on write like every other Identity row.
+    /// — so a credential is scoped to its tenant on read and stamped on write like every other Identity row.
     /// </summary>
     private static void MakePasskeysMultiTenant(ModelBuilder builder)
     {
-        var alreadyMultiTenant = builder.Model
-            .FindEntityType(typeof(IdentityUserPasskey<string>))!
-            .FindProperty("TenantId") is not null;
+        var entity = builder.Model.FindEntityType(typeof(IdentityUserPasskey<string>));
+        if (entity is null)
+        {
+            return;
+        }
 
+        var alreadyMultiTenant = entity.FindProperty("TenantId") is not null;
         if (!alreadyMultiTenant)
         {
-            builder.Entity<IdentityUserPasskey<string>>().IsMultiTenant().AdjustUniqueIndexes();
+            builder.Entity<IdentityUserPasskey<string>>().IsMultiTenant();
         }
 
         builder.Entity<IdentityUserPasskey<string>>()

@@ -47,6 +47,13 @@ public static class HuiaIdentitySchemaConventions
         passkey.ToTable("HuiaUserPasskeys");
         passkey.HasKey(p => p.CredentialId);
         passkey.Property(p => p.CredentialId).HasMaxLength(1024);
+
+        var existingComplex = passkey.Metadata.FindComplexProperty(nameof(IdentityUserPasskey<string>.Data));
+        if (existingComplex is not null)
+        {
+            passkey.Metadata.RemoveComplexProperty(existingComplex.Name);
+        }
+
         passkey.OwnsOne(p => p.Data, owned => owned.ToJson());
 
         builder.Entity<TUser>()
