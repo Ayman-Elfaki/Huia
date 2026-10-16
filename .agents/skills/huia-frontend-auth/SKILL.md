@@ -1,16 +1,17 @@
 ---
 name: huia-frontend-auth
 description: >-
-  Use this skill when integrating Huia authentication into Next.js or Nuxt applications,
-  configuring next-huia-oidc, next-huia-headless, nuxt-huia-oidc, or nuxt-huia-headless,
-  setting up session encryption, route handlers, hooks, or calling protected APIs.
+  Use this skill when integrating Huia authentication into Next.js, TanStack Start, or Nuxt applications,
+  configuring next-huia-oidc, next-huia-headless, @huia/tanstack-start-oidc, @huia/tanstack-start-headless,
+  nuxt-huia-oidc, or nuxt-huia-headless, setting up session encryption, route handlers, hooks, or calling protected APIs.
 ---
 
-# Consuming Huia in Next.js and Nuxt Applications
+# Consuming Huia in Next.js, TanStack Start, and Nuxt Applications
 
 This guide provides step-by-step instructions for integrating Huia authentication into client web applications.
 
 - **Next.js**: Use `next-huia-oidc` (for `Huia.OpenId`) or `next-huia-headless` (for `Huia.Headless`).
+- **TanStack Start**: Use `@huia/tanstack-start-oidc` (for `Huia.OpenId`) or `@huia/tanstack-start-headless` (for `Huia.Headless`).
 - **Nuxt 4**: Use `nuxt-huia-oidc` or `nuxt-huia-headless`.
 - **Shared Primitives**: `huia-auth-core` handles encrypted cookies, refresh mutex, and Redis adapters.
 
@@ -161,28 +162,126 @@ const { login, logout } = useHuia()
 ```
 
 ---
-
-## 3. Consuming `Huia.Headless` (Pure JSON Auth)
-
-If your backend uses `Huia.Headless` instead of OIDC Razor Pages:
-
-### Next.js (`next-huia-headless`)
-```ts
-// app/api/auth/[...huia]/route.ts
-import { createHuiaHeadlessHandler } from 'next-huia-headless/server'
-
-export const { GET, POST } = createHuiaHeadlessHandler({
-  baseUrl: 'https://api.example.com',
-  session: { password: process.env.HUIA_SESSION_PASSWORD! }
-})
-```
-Client component usage with `useHuia`:
-```tsx
-'use client'
-import { useHuia } from 'next-huia-headless/client'
-
-export function LoginForm() {
-  const { loginWithPassword, startPhoneLogin, verifyPhoneCode } = useHuia()
-  // Trigger custom login forms directly via JSON REST calls
-}
-```
+-
+-## 3. Consuming `Huia.Headless` (Pure JSON Auth)
+-
+-If your backend uses `Huia.Headless` instead of OIDC Razor Pages:
+-
+-### Next.js (`next-huia-headless`)
+-```ts
+-// app/api/auth/[...huia]/route.ts
+-import { createHuiaHeadlessHandler } from 'next-huia-headless/server'
+-
+-export const { GET, POST } = createHuiaHeadlessHandler({
+-  baseUrl: 'https://api.example.com',
+-  session: { password: process.env.HUIA_SESSION_PASSWORD! }
+-})
+-```
+-Client component usage with `useHuia`:
+-```tsx
+-'use client'
+-import { useHuia } from 'next-huia-headless/client'
+-
+-export function LoginForm() {
+-  const { loginWithPassword, startPhoneLogin, verifyPhoneCode } = useHuia()
+-  // Trigger custom login forms directly via JSON REST calls
+-}
+-```
+-
++---
++
++## 3. TanStack Start Integration (`@huia/tanstack-start-oidc` & `@huia/tanstack-start-headless`)
++
++### Step 1: Install Dependencies
++```bash
++npm install @huia/tanstack-start-oidc huia-auth-core
++# Or for headless:
++npm install @huia/tanstack-start-headless huia-auth-core
++```
++
++### Step 2: Configure Vite Plugin in `vite.config.ts`
++```ts
++import { defineConfig } from 'vite'
++import { tanstackStart } from '@tanstack/react-start/plugin/vite'
++import { huiaOidc } from '@huia/tanstack-start-oidc/vite'
++
++export default defineConfig({
++  plugins: [
++    huiaOidc({
++      routeFile: 'src/routes/api/auth/$.ts',
++      authConfigImportPath: '@/auth.config',
++    }),
++    tanstackStart(),
++  ],
++})
++```
++
++### Step 3: Create Server Route Handler (`src/routes/api/auth/$.ts`)
++```ts
++import { createFileRoute } from '@tanstack/react-router'
++import { createHuiaOidcHandler } from '@huia/tanstack-start-oidc/server'
++import { huiaConfig } from '@/auth.config'
++
++const handler = createHuiaOidcHandler(huiaConfig)
++
++export const Route = createFileRoute('/api/auth/$')({
++  server: {
++    handlers: {
++      GET: ({ request }) => handler(request),
++      POST: ({ request }) => handler(request),
++    },
++  },
++})
++```
++
++### Step 4: Protect Routes via `beforeLoad`
++```tsx
++import { createFileRoute } from '@tanstack/react-router'
++import { requireHuiaAuth } from '@huia/tanstack-start-oidc/server'
++import { huiaConfig } from '@/auth.config'
++
++export const Route = createFileRoute('/dashboard')({
++  beforeLoad: async ({ location }) => {
++    return await requireHuiaAuth(huiaConfig, { returnTo: location.href })
++  },
++})
++```
++
++---
++
++## 4. Consuming `Huia.Headless` (Pure JSON Auth)
++
++If your backend uses `Huia.Headless` instead of OIDC Razor Pages:
++
++### Next.js (`next-huia-headless`)
++```ts
++// app/api/auth/[...huia]/route.ts
++import { createHuiaHeadlessHandler } from 'next-huia-headless/server'
++
++export const { GET, POST } = createHuiaHeadlessHandler({
++  baseUrl: 'https://api.example.com',
++  session: { password: process.env.HUIA_SESSION_PASSWORD! }
++})
++```
++
++### TanStack Start (`@huia/tanstack-start-headless`)
++```ts
++// src/routes/api/auth/$.ts
++import { createFileRoute } from '@tanstack/react-router'
++import { createHuiaHeadlessHandler } from '@huia/tanstack-start-headless/server'
++import { huiaHeadlessConfig } from '@/auth.config'
++
++const handler = createHuiaHeadlessHandler(huiaHeadlessConfig)
++export const Route = createFileRoute('/api/auth/$')({
++  server: { handlers: { GET: ({ request }) => handler(request), POST: ({ request }) => handler(request) } },
++})
++```
++
++Client usage with `useHuia`:
++```tsx
++import { useHuia } from '@huia/tanstack-start-headless/client'
++
++export function LoginForm() {
++  const { login, register, startPhoneLogin, verifyPhoneLogin } = useHuia()
++}
++```

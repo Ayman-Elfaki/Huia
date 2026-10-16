@@ -12,6 +12,7 @@ public sealed class TodoTenant : HuiaTenant
     private readonly string _issuer;
     private readonly string _todoAppUrl;
     private readonly string _todoNextUrl;
+    private readonly string _todoTanStackUrl;
     private readonly string _todoApiUrl;
     private readonly string _externalIssuer;
     private readonly string? _googleClientId;
@@ -21,6 +22,7 @@ public sealed class TodoTenant : HuiaTenant
         string issuer,
         string todoAppUrl,
         string todoNextUrl,
+        string todoTanStackUrl,
         string todoApiUrl,
         string externalIssuer,
         string? googleClientId,
@@ -29,6 +31,7 @@ public sealed class TodoTenant : HuiaTenant
         _issuer = issuer;
         _todoAppUrl = todoAppUrl;
         _todoNextUrl = todoNextUrl;
+        _todoTanStackUrl = todoTanStackUrl;
         _todoApiUrl = todoApiUrl;
         _externalIssuer = externalIssuer;
         _googleClientId = googleClientId;
@@ -111,6 +114,16 @@ public sealed class TodoTenant : HuiaTenant
             RedirectUris = { new Uri($"{_todoNextUrl}/api/auth/callback") },
             PostLogoutRedirectUris = { new Uri($"{_todoNextUrl}/") },
             HomeUris = { new Uri($"{_todoNextUrl}/") },
+        });
+
+        applications.Add(new ServerSideWebApplication("todo-tanstack", "todo-tanstack-secret")
+        {
+            DisplayName = "Todo (TanStack Start)",
+            ClientUri = new Uri($"{_todoTanStackUrl}/"),
+            LogoUri = new Uri($"{_issuer}/brand/huia-logo.svg"),
+            RedirectUris = { new Uri($"{_todoTanStackUrl}/api/auth/callback") },
+            PostLogoutRedirectUris = { new Uri($"{_todoTanStackUrl}/") },
+            HomeUris = { new Uri($"{_todoTanStackUrl}/") },
         });
 
         applications.Add(new SinglePageApplication("todo-api-docs")

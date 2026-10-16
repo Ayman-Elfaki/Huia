@@ -61,6 +61,8 @@ packages=(
   "src/javascript/next/next-huia-headless"
   "src/javascript/nuxt/nuxt-huia-oidc"
   "src/javascript/nuxt/nuxt-huia-headless"
+  "src/javascript/tanstack-start/tanstack-start-huia-oidc"
+  "src/javascript/tanstack-start/tanstack-start-huia-headless"
 )
 
 staged_files=()

@@ -1,0 +1,94 @@
+{
+  "name": "@huia/tanstack-start-oidc",
+  "version": "1.0.0-alpha.16",
+  "description": "TanStack Start OIDC / OAuth2 (PKCE + PAR) authentication library for Huia.OpenId identity provider",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayman-Elfaki/Huia.git",
+    "directory": "src/javascript/tanstack-start/tanstack-start-huia-oidc"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
+    "./middleware": {
+      "types": "./dist/middleware.d.ts",
+      "import": "./dist/middleware.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "dev": "unbuild --stub",
+    "test": "vitest run",
+    "test:watch": "vitest --watch"
+  },
+  "dependencies": {
+    "iron-webcrypto": "^1.2.1",
+    "openid-client": "^6.1.0",
+    "uncrypto": "^0.1.3"
+  },
+  "peerDependencies": {
+    "@tanstack/react-router": ">=1.0.0",
+    "@tanstack/react-start": ">=1.0.0",
+    "react": ">=18.0.0 || >=19.0.0",
+    "react-dom": ">=18.0.0 || >=19.0.0",
+    "vite": ">=5.0.0 || >=6.0.0 || >=7.0.0 || >=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-router": {
+      "optional": false
+    },
+    "@tanstack/react-start": {
+      "optional": false
+    },
+    "react": {
+      "optional": false
+    },
+    "react-dom": {
+      "optional": false
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tanstack/react-router": "^1.170.44",
+    "@tanstack/react-start": "^1.169.2",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "huia-auth-core": "file:../../shared/huia-auth-core",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.9.3",
+    "unbuild": "^3.6.1",
+    "vite": "^8.0.0",
+    "vitest": "^4.0.2"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}

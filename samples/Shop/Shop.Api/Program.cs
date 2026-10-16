@@ -12,6 +12,7 @@ var enableE2E = builder.Configuration.GetValue("Huia:EnableE2E", false);
 var externalIssuer = builder.Configuration.GetValue("Huia:ExternalIssuer", "https://localhost:5320")!;
 var shopAppUrl = builder.Configuration.GetValue("Shop:AppUrl", "https://localhost:3002")!;
 var shopNextAppUrl = builder.Configuration.GetValue("Shop:NextAppUrl", "https://localhost:3060")!;
+var shopTanStackAppUrl = builder.Configuration.GetValue("Shop:TanStackAppUrl", "https://localhost:3080")!;
 var databaseProvider = builder.Configuration.GetValue("Huia:Database", (string?)null);
 
 var rawConnectionString = builder.Configuration.GetConnectionString("shop") ??
@@ -68,6 +69,7 @@ builder.Services
             ext.EnableAccountsLinking();
             ext.AllowReturnUrlPrefix(shopAppUrl);
             ext.AllowReturnUrlPrefix(shopNextAppUrl);
+            ext.AllowReturnUrlPrefix(shopTanStackAppUrl);
             ext.AllowReturnUrlPrefix(issuer);
         });
     })

@@ -43,6 +43,16 @@ internal static class E2EArtifacts
             (null, "src\\javascript\\nuxt\\nuxt-huia-oidc\\playground", "src\\javascript\\nuxt\\nuxt-huia-oidc\\playground\\.output\\server\\index.mjs"),
         ], "npm", ["run", "build"]);
 
+    public static Task EnsureTanStackStackAsync(string repoRoot)
+        => EnsureAsync("tanstack", repoRoot, null, [
+            ("samples\\Shared\\Huia.External\\Huia.External.csproj", null, "samples\\Shared\\Huia.External\\bin\\Release\\net11.0\\Huia.External.dll"),
+            ("samples\\Todo\\Todo.IdentityServer\\Todo.IdentityServer.csproj", null, "samples\\Todo\\Todo.IdentityServer\\bin\\Release\\net11.0\\Todo.IdentityServer.dll"),
+            ("samples\\Todo\\Todo.Api\\Todo.Api.csproj", null, "samples\\Todo\\Todo.Api\\bin\\Release\\net11.0\\Todo.Api.dll"),
+            ("samples\\Shop\\Shop.Api\\Shop.Api.csproj", null, "samples\\Shop\\Shop.Api\\bin\\Release\\net11.0\\Shop.Api.dll"),
+            (null, "samples\\Todo\\Todo.TanStack", "samples\\Todo\\Todo.TanStack\\dist\\server\\server.js"),
+            (null, "samples\\Shop\\Shop.TanStack", "samples\\Shop\\Shop.TanStack\\dist\\server\\server.js"),
+        ]);
+
     private static Task EnsureAsync(
         string key,
         string repoRoot,
@@ -65,7 +75,7 @@ internal static class E2EArtifacts
 
         foreach (var target in targets)
         {
-            if (File.Exists(target.Item3) || Directory.Exists(target.Item3))
+            if (ArtifactExists(target.Item3))
             {
                 continue;
             }
@@ -79,11 +89,27 @@ internal static class E2EArtifacts
                 await RunAsync(repoRoot, executable ?? "npm", arguments ?? ["run", "build"], target.Item2);
             }
 
-            if (!File.Exists(target.Item3) && !Directory.Exists(target.Item3))
+            if (!ArtifactExists(target.Item3))
             {
                 throw new InvalidOperationException($"Build completed without producing expected artifact: {target.Item3}");
             }
         }
+    }
+
+    private static bool ArtifactExists(string path)
+    {
+        if (File.Exists(path) || Directory.Exists(path)) return true;
+        if (path.Contains("net10.0"))
+        {
+            var p11 = path.Replace("net10.0", "net11.0");
+            if (File.Exists(p11) || Directory.Exists(p11)) return true;
+        }
+        if (path.Contains("net11.0"))
+        {
+            var p10 = path.Replace("net11.0", "net10.0");
+            if (File.Exists(p10) || Directory.Exists(p10)) return true;
+        }
+        return false;
     }
 
     private static async Task RunAsync(string repoRoot, string executable, string[] arguments, string? workingDirectory)

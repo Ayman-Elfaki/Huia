@@ -96,6 +96,8 @@ public static class E2ECommandExtensions
             "samples/Shop/Shop.Nuxt",
             "samples/Todo/Todo.Next",
             "samples/Shop/Shop.Next",
+            "samples/Todo/Todo.TanStack",
+            "samples/Shop/Shop.TanStack",
             "src/javascript/nuxt/nuxt-huia-oidc/playground"
         };
 

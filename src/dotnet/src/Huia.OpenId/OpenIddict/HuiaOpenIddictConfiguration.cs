@@ -156,6 +156,7 @@ internal static class HuiaOpenIddictConfiguration
 
                 client.UseSystemNetHttp();
 
+                client.SetRedirectionEndpointUris("signin-oidc");
                 client.SetPostLogoutRedirectionEndpointUris("signout-callback-oidc");
 
                 var clientAspNetCore = client.UseAspNetCore()

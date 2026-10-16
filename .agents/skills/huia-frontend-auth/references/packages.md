@@ -43,3 +43,25 @@ React hook providing:
 - `isLoading`: Boolean indicating if the initial session check is running.
 - `login(params?: { locale?: string; returnTo?: string })`: Redirects browser to initiate OIDC login.
 - `clear()`: Initiates logout and clears the local session cookie.
+
+---
+
+## 4. TanStack Start Packages (`@huia/tanstack-start-oidc` & `@huia/tanstack-start-headless`)
+
+### `@huia/tanstack-start-oidc/server`
+- `createHuiaOidcHandler(config)`: Standard `(request: Request) => Promise<Response>` server route handler.
+- `getHuiaSession(config, request?)`: Unseals and inspects session state.
+- `getAccessToken(config, request?)`: Returns fresh bearer token, refreshing automatically via mutex if near expiry.
+- `requireHuiaAuth(config, options?)`: Throws a TanStack Router `redirect` if unauthenticated.
+- `createHuiaServerFns(config)`: Produces type-safe `createServerFn` helpers for `getSession` and `getAccessToken`.
+
+### `@huia/tanstack-start-headless/server`
+- `createHuiaHeadlessHandler(config)`: Pure JSON authentication endpoints for login, register, SMS OTP, external broker, and session management.
+- `getHuiaHeadlessSession(config, request?)`: Reads headless session state.
+- `getAccessToken(config, request?)`: Resolves bearer token from session.
+- `requireHuiaHeadlessAuth(config, options?)`: Route protection helper for headless apps.
+
+### Client Packages
+- `<HuiaOidcProvider>` and `useUserSession()` from `@huia/tanstack-start-oidc/client`
+- `<HuiaHeadlessProvider>`, `useHuia()`, and `useUserSession()` from `@huia/tanstack-start-headless/client`
+- Vite plugins: `huiaOidc()` from `@huia/tanstack-start-oidc/vite` and `huiaHeadless()` from `@huia/tanstack-start-headless/vite`

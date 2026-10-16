@@ -17,6 +17,13 @@ export default withMermaid(defineConfig({
         ],
       },
       {
+        text: 'TanStack Start',
+        items: [
+          { text: 'OIDC (@huia/tanstack-start-oidc)', link: '/tanstack-start/overview' },
+          { text: 'Headless (@huia/tanstack-start-headless)', link: '/tanstack-start-headless/overview' },
+        ],
+      },
+      {
         text: 'Nuxt',
         items: [
           { text: 'OIDC (nuxt-huia-oidc)', link: '/nuxt/overview' },
@@ -79,6 +86,24 @@ export default withMermaid(defineConfig({
         items: [
           { text: 'Overview', link: '/next-headless/overview' },
           { text: 'Configuration', link: '/next-headless/configuration' },
+        ],
+      },
+      {
+        text: 'TanStack Start — OIDC (@huia/tanstack-start-oidc)',
+        items: [
+          { text: 'Overview', link: '/tanstack-start/overview' },
+          { text: 'Configuration', link: '/tanstack-start/configuration' },
+          { text: 'Session model & security', link: '/tanstack-start/session-model' },
+          { text: 'Route protection', link: '/tanstack-start/route-protection' },
+        ],
+      },
+      {
+        text: 'TanStack Start — Headless (@huia/tanstack-start-headless)',
+        items: [
+          { text: 'Overview', link: '/tanstack-start-headless/overview' },
+          { text: 'Configuration', link: '/tanstack-start-headless/configuration' },
+          { text: 'Session model & security', link: '/tanstack-start-headless/session-model' },
+          { text: 'Route protection', link: '/tanstack-start-headless/route-protection' },
         ],
       },
       {

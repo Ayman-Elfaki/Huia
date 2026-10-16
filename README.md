@@ -31,15 +31,21 @@ src/
       next-huia-headless/   Next.js 14/15 library for Huia.Headless (Route Handlers, password auth,
                             SMS OTP, external login, HuiaHeadlessProvider, useHuia).
 
+    tanstack-start/
+      tanstack-start-huia-oidc/      TanStack Start library for Huia.OpenId (@huia/tanstack-start-oidc,
+                                     Server Routes, createServerFn, HuiaOidcProvider, useUserSession, Vite plugin).
+      tanstack-start-huia-headless/  TanStack Start library for Huia.Headless (@huia/tanstack-start-headless,
+                                     Server Routes, SMS OTP, external login, HuiaHeadlessProvider, useHuia, Vite plugin).
+
     nuxt/
       nuxt-huia-oidc/       Nuxt 4 module for Huia.OpenId (built on huia-auth-core).
       nuxt-huia-headless/   Nuxt 4 module for Huia.Headless (built on huia-auth-core).
 
 samples/
   Shared/     Huia.AppHost (Aspire), Huia.Cli, Huia.External
-  Todo/       Todo.Api, Todo.Nuxt (Nuxt), Todo.Next (Next.js), Todo.Admin (Nuxt), Todo.IdentityServer
-  Shop/       Shop.Api, Shop.Nuxt (Nuxt), Shop.Next (Next.js)
-tests/        Huia.E2ETests — full-stack Playwright E2E across .NET hosts, Nuxt, and Next.js apps
+  Todo/       Todo.Api, Todo.Nuxt (Nuxt), Todo.Next (Next.js), Todo.TanStack (TanStack Start), Todo.Admin (Nuxt), Todo.IdentityServer
+  Shop/       Shop.Api, Shop.Nuxt (Nuxt), Shop.Next (Next.js), Shop.TanStack (TanStack Start)
+tests/        Huia.E2ETests — full-stack Playwright E2E across .NET hosts, Nuxt, Next.js, and TanStack Start apps
 docs/         VitePress documentation site
 ```
 
@@ -67,17 +73,24 @@ cd src/shared/huia-auth-core
 npm install && npm test && npm run build
 
 # Next.js Libraries
-cd src/next/next-huia-oidc
+cd src/javascript/next/next-huia-oidc
 npm install && npm test && npm run build
 
-cd src/next/next-huia-headless
+cd src/javascript/next/next-huia-headless
+npm install && npm test && npm run build
+
+# TanStack Start Libraries
+cd src/javascript/tanstack-start/tanstack-start-huia-oidc
+npm install && npm test && npm run build
+
+cd src/javascript/tanstack-start/tanstack-start-huia-headless
 npm install && npm test && npm run build
 
 # Nuxt Modules
-cd src/nuxt/nuxt-huia-oidc
+cd src/javascript/nuxt/nuxt-huia-oidc
 npm install && npm test && npm run build
 
-cd src/nuxt/nuxt-huia-headless
+cd src/javascript/nuxt/nuxt-huia-headless
 npm install && npm test && npm run build
 ```
 

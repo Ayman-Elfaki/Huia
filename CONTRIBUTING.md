@@ -53,6 +53,13 @@ npm install && npm test && npm run build
 cd ../next-huia-headless
 npm install && npm test && npm run build
 
+# TanStack Start packages
+cd ../../tanstack-start/tanstack-start-huia-oidc
+npm install && npm test && npm run build
+
+cd ../tanstack-start-huia-headless
+npm install && npm test && npm run build
+
 # Nuxt modules
 cd ../../nuxt/nuxt-huia-oidc
 npm install && npm test && npm run build
@@ -78,7 +85,7 @@ npm install && npm test && npm run build
 
 Huia uses a **unified versioning model**. All packages across the monorepo (.NET NuGet and NPM) share the same version number and are published in lockstep:
 - **.NET NuGet packages**: `Huia`, `Huia.OpenId`, `Huia.OpenId.EntityFrameworkCore`, `Huia.Headless`, `Huia.Headless.EntityFrameworkCore`
-- **NPM packages**: `huia-auth-core`, `next-huia-oidc`, `next-huia-headless`, `nuxt-huia-oidc`, `nuxt-huia-headless`
+- **NPM packages**: `huia-auth-core`, `next-huia-oidc`, `next-huia-headless`, `@huia/tanstack-start-oidc`, `@huia/tanstack-start-headless`, `nuxt-huia-oidc`, `nuxt-huia-headless`
 
 ### Creating a Release
 

@@ -18,6 +18,7 @@ var todoApiUrl = builder.Configuration.GetValue("Clients:TodoApi:BaseUrl", "http
 
 var todoAppUrl = builder.Configuration.GetValue("Clients:TodoApp:BaseUrl", "https://localhost:3000");
 var todoNextUrl = builder.Configuration.GetValue("Clients:TodoNext:BaseUrl", "https://localhost:3050");
+var todoTanStackUrl = builder.Configuration.GetValue("Clients:TodoTanStack:BaseUrl", "https://localhost:3070");
 var adminAppUrl = builder.Configuration.GetValue("Clients:AdminApp:BaseUrl", "https://localhost:3001");
 
 
@@ -73,7 +74,7 @@ var huiaBuilder = builder.Services.AddHuiaOpenId(huia =>
     var googleClientSecret = builder.Configuration["Google:ClientSecret"];
 
     huia.AddTenant(new MasterTenant(issuer, adminAppUrl));
-    huia.AddTenant(new TodoTenant(issuer, todoAppUrl, todoNextUrl, todoApiUrl, externalIssuer, googleClientId,
+    huia.AddTenant(new TodoTenant(issuer, todoAppUrl, todoNextUrl, todoTanStackUrl, todoApiUrl, externalIssuer, googleClientId,
         googleClientSecret));
 
     if (enableE2E)

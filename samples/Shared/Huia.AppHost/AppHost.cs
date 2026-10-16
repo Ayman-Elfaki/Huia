@@ -7,8 +7,10 @@ var builder = DistributedApplication.CreateBuilder(args);
 const string adminAppUrl = "https://localhost:3001";
 const string todoAppUrl = "https://localhost:3000";
 const string todoNextUrl = "https://localhost:3050";
+const string todoTanStackUrl = "https://localhost:3070";
 const string shopAppUrl = "https://localhost:3002";
 const string shopNextUrl = "https://localhost:3060";
+const string shopTanStackUrl = "https://localhost:3080";
 // huia-external, shop-api, huia-identityserver and todo-api below all run unproxied on these fixed dev
 // ports (Properties/launchSettings.json pins the same values). Unlike the browser-facing app URLs above,
 // their own URLs stay on plain "localhost" rather than a *.dev.localhost alias: every one of them is also
@@ -132,6 +134,7 @@ var shopApi = builder.AddProject<Projects.Shop_Api>("shop-api")
     .WithEnvironment("Huia__EnableE2E", enableE2E ? "true" : "false")
     .WithEnvironment("Shop__AppUrl", shopAppUrl)
     .WithEnvironment("Shop__NextAppUrl", shopNextUrl)
+    .WithEnvironment("Shop__TanStackAppUrl", shopTanStackUrl)
     .WithEnvironment("Huia__ExternalIssuer", externalUrl)
     .WithReference(shopPostgres)
     .WaitFor(shopPostgres)
@@ -168,6 +171,7 @@ var identityServer = builder.AddProject<Projects.Todo_IdentityServer>("huia-iden
     .WithEnvironment("Huia__Issuer", identityServerUrl)
     .WithEnvironment("Clients__TodoApp__BaseUrl", todoAppUrl)
     .WithEnvironment("Clients__TodoNext__BaseUrl", todoNextUrl)
+    .WithEnvironment("Clients__TodoTanStack__BaseUrl", todoTanStackUrl)
     .WithEnvironment("Clients__AdminApp__BaseUrl", adminAppUrl)
     .WithEnvironment("Google__ClientId", googleClientId)
     .WithEnvironment("Google__ClientSecret", googlePassword)
@@ -341,6 +345,49 @@ builder.AddNextJsApp("shop-next", "../../Shop/Shop.Next")
     .WithBuildE2EArtifactCommand("samples/Shop/Shop.Next", isNpm: true)
     ;
 
+builder.AddViteApp("todo-tanstack", "../../Todo/Todo.TanStack")
+    .WithHttpEndpoint(port: 3070, targetPort: 3070, env: "PORT", isProxied: false)
+    .WithUrlForEndpoint("https", url => url.Url = todoTanStackUrl)
+    .WithHttpsDeveloperCertificate(nuxtDevCertPassword)
+    .WithHttpsCertificateConfiguration(NuxtHttpsCertificate)
+    .WithDeveloperCertificateTrust(true)
+    .WaitFor(identityServer)
+    .WaitFor(todoApi)
+    .WithReference(redis)
+    .WaitFor(redis)
+    .WithEnvironment("PORT", "3070")
+    .WithEnvironment("APP_URL", todoTanStackUrl)
+    .WithEnvironment("HUIA_BASE_URL", identityServerUrl)
+    .WithEnvironment("TODO_API_URL", todoApiUrl)
+    .WithEnvironment("REDIS_URL", redisUrl)
+    .WithEnvironment("HUIA_SESSION_PASSWORD", GenerateRandomUrlSafeString())
+    .WithEnvironment("HUIA_CLIENT_ID", "todo-tanstack")
+    .WithEnvironment("HUIA_CLIENT_SECRET", "todo-tanstack-secret")
+    .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
+    .WithExternalHttpEndpoints()
+    .WithNpm()
+    .WithBuildE2EArtifactCommand("samples/Todo/Todo.TanStack", isNpm: true)
+    ;
+
+builder.AddViteApp("shop-tanstack", "../../Shop/Shop.TanStack")
+    .WithHttpEndpoint(port: 3080, targetPort: 3080, env: "PORT", isProxied: false)
+    .WithUrlForEndpoint("https", url => url.Url = shopTanStackUrl)
+    .WithHttpsDeveloperCertificate(nuxtDevCertPassword)
+    .WithHttpsCertificateConfiguration(NuxtHttpsCertificate)
+    .WithDeveloperCertificateTrust(true)
+    .WaitFor(shopApi)
+    .WithReference(redis)
+    .WaitFor(redis)
+    .WithEnvironment("PORT", "3080")
+    .WithEnvironment("APP_URL", shopTanStackUrl)
+    .WithEnvironment("SHOP_API_URL", shopApiUrl)
+    .WithEnvironment("REDIS_URL", redisUrl)
+    .WithEnvironment("HUIA_SESSION_PASSWORD", GenerateRandomUrlSafeString())
+    .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
+    .WithExternalHttpEndpoints()
+    .WithNpm()
+    .WithBuildE2EArtifactCommand("samples/Shop/Shop.TanStack", isNpm: true)
+    ;
 
 builder.Build().Run();
 

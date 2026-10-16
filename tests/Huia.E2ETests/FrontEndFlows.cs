@@ -61,7 +61,8 @@ internal static class FrontEndFlows
             await page.WaitForURLAsync(
                 u => u.StartsWith(appUrl, StringComparison.Ordinal)
                      && !u.Contains("/connect/", StringComparison.Ordinal)
-                     && !u.Contains("/auth/oidc/", StringComparison.Ordinal),
+                     && !u.Contains("/auth/oidc/", StringComparison.Ordinal)
+                     && !u.Contains("/api/auth/", StringComparison.Ordinal),
                 new() { Timeout = 20_000 });
         }
         catch (TimeoutException ex)
@@ -106,5 +107,7 @@ internal static class FrontEndFlows
     private const string PasskeyEnrollMarker = "/identity/account/passkeyenroll";
 
     private static bool IsAppUrl(string url, string prefix) =>
-        url.StartsWith(prefix, StringComparison.Ordinal) && !url.Contains("/auth/oidc/", StringComparison.Ordinal);
+        url.StartsWith(prefix, StringComparison.Ordinal)
+        && !url.Contains("/auth/oidc/", StringComparison.Ordinal)
+        && !url.Contains("/api/auth/", StringComparison.Ordinal);
 }
