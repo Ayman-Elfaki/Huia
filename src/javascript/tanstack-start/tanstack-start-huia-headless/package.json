@@ -1,6 +1,6 @@
 {
   "name": "@huia/tanstack-start-headless",
-  "version": "1.0.0-alpha.16",
+  "version": "1.0.0-alpha.17",
   "description": "TanStack Start pure JSON authentication library for Huia.Headless identity provider",
   "license": "MIT",
   "type": "module",

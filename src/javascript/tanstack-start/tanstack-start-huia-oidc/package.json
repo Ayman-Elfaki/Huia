@@ -1,6 +1,6 @@
 {
   "name": "@huia/tanstack-start-oidc",
-  "version": "1.0.0-alpha.16",
+  "version": "1.0.0-alpha.17",
   "description": "TanStack Start OIDC / OAuth2 (PKCE + PAR) authentication library for Huia.OpenId identity provider",
   "license": "MIT",
   "type": "module",
