@@ -41,6 +41,9 @@ public sealed class CompleteProfileModel(
     /// <summary>The tenant's configured default region, used to preselect the phone country picker.</summary>
     public string? PhoneDefaultCountry => Tenant?.Authentication.DefaultPhoneCountry ?? Tenant?.Authentication.Phone?.DefaultCountry;
 
+    /// <summary>Whether the form should render and require the phone number field (true for external sign-ups, false for phone login).</summary>
+    public bool RequirePhoneNumber { get; private set; }
+
     /// <summary>The opaque flow token round-tripped through the form.</summary>
     [BindProperty]
     public string Flow { get; set; } = string.Empty;
@@ -60,6 +63,7 @@ public sealed class CompleteProfileModel(
             return NotFound();
         }
 
+        RequirePhoneNumber = state.ExternalProvider is not null;
         Input = new InputModel
         {
             FirstName = state.FirstName ?? string.Empty,
@@ -81,16 +85,16 @@ public sealed class CompleteProfileModel(
             return NotFound();
         }
 
+        RequirePhoneNumber = state.ExternalProvider is not null;
+
         if (!ModelState.IsValid)
         {
             return Page();
         }
 
-        // Normalize phone number for all paths that don't already have one (phone login users
-        // always have their phone set — we only require it for external and existing-user paths).
+        // Normalize phone number for external sign-ups (phone-login users already have their phone number verified).
         string? e164 = null;
-        var isPhoneLoginPath = state.PendingSignupId is not null && state.ExternalProvider is null;
-        if (!isPhoneLoginPath)
+        if (RequirePhoneNumber)
         {
             var defaultCountry = !string.IsNullOrWhiteSpace(Input.Country) ? Input.Country : PhoneDefaultCountry;
             if (string.IsNullOrWhiteSpace(Input.PhoneNumber) || !phoneNumbers.TryNormalize(Input.PhoneNumber, defaultCountry, out e164))

@@ -95,9 +95,9 @@ public sealed class PasswordlessFlowTests : IAsyncLifetime
             $"/phone-auto/identity/account/completeprofile?flow={Uri.EscapeDataString(completeFlow)}");
         page.ShouldContain("data-validate");
         page.ShouldContain("js/form-validate.js");
-        page.ShouldContain("js/phone-validate.js");
-        page.ShouldContain("complete-profile-phone-country-listbox");
-        page.ShouldContain("fi-us");
+        page.ShouldNotContain("js/phone-validate.js");
+        page.ShouldNotContain("complete-profile-phone-country-listbox");
+        page.ShouldNotContain("Input.PhoneNumber");
         page.ShouldContain("data-val-for=\"Input.FirstName\"");
         page.ShouldContain("required");
 
@@ -105,6 +105,54 @@ public sealed class PasswordlessFlowTests : IAsyncLifetime
         afterProfile.StatusCode.ShouldBe(HttpStatusCode.Redirect);
 
         (await CountUsersAsync("phone-auto", number)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task An_existing_phone_user_with_incomplete_profile_completes_profile_without_phone_input()
+    {
+        var number = FreshNumber();
+        await _host.WithUserManagerAsync("phone", async userManager =>
+        {
+            var result = await userManager.CreateAsync(new HuiaUser
+            {
+                TenantId = "phone",
+                UserName = number,
+                PhoneNumber = number,
+                PhoneNumberConfirmed = false,
+                FirstName = string.Empty,
+                LastName = string.Empty,
+            });
+            result.Succeeded.ShouldBeTrue();
+            return result;
+        });
+
+        var flow = new PhoneFlow(_host, "phone");
+        var token = await flow.RequestCodeAsync(number);
+        var code = _host.Sms.LastCode(number);
+        code.ShouldNotBeNull();
+
+        var afterCode = await flow.SubmitCodeAsync(token, code!);
+        afterCode.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        flow.LastLocation!.ShouldContain("completeprofile");
+
+        var completeFlow = ExtractQuery(flow.LastLocation!, "flow")!;
+
+        var page = await _host.CreateClient().GetStringAsync(
+            $"/phone/identity/account/completeprofile?flow={Uri.EscapeDataString(completeFlow)}");
+        page.ShouldNotContain("js/phone-validate.js");
+        page.ShouldNotContain("complete-profile-phone-country-listbox");
+        page.ShouldNotContain("Input.PhoneNumber");
+
+        var afterProfile = await flow.CompleteProfileAsync(completeFlow, "Jordan", "Lee");
+        afterProfile.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        (await flow.IsSignedInAsync()).ShouldBeTrue();
+
+        var updated = await _host.WithUserManagerAsync("phone", userManager => userManager.FindByNameAsync(number));
+        updated.ShouldNotBeNull();
+        updated.FirstName.ShouldBe("Jordan");
+        updated.LastName.ShouldBe("Lee");
+        updated.PhoneNumber.ShouldBe(number);
+        updated.PhoneNumberConfirmed.ShouldBeTrue();
     }
 
     private async Task<int> CountUsersAsync(string tenantId, string phoneNumber)
