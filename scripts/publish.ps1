@@ -5,14 +5,19 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
 
 if (-not $Version) {
     $Version = Read-Host 'Version to release (for example 1.0.0-alpha.16)'
 }
 
+$Version = $Version.Trim() -replace '^v', ''
+
 if ($Version -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$') {
     throw "Invalid version '$Version'. Use semantic versioning such as 1.0.0-alpha.16 or 1.0.0."
 }
+
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $repoRoot
@@ -74,7 +79,8 @@ try {
 
         $packageJson = Get-Content $packagePath -Raw | ConvertFrom-Json
         $packageJson.version = $Version
-        $packageJson | ConvertTo-Json -Depth 100 | Set-Content $packagePath
+        $pkgContent = (($packageJson | ConvertTo-Json -Depth 100) -replace "`r`n", "`n") + "`n"
+        [System.IO.File]::WriteAllText($packagePath, $pkgContent, $utf8NoBom)
 
         if (Test-Path $lockPath) {
             $lockJson = Get-Content $lockPath -Raw | ConvertFrom-Json -AsHashtable
@@ -82,7 +88,8 @@ try {
             if ($lockJson.ContainsKey('packages') -and $lockJson['packages'].ContainsKey('')) {
                 $lockJson['packages']['']['version'] = $Version
             }
-            $lockJson | ConvertTo-Json -Depth 100 | Set-Content $lockPath
+            $lockContent = (($lockJson | ConvertTo-Json -Depth 100) -replace "`r`n", "`n") + "`n"
+            [System.IO.File]::WriteAllText($lockPath, $lockContent, $utf8NoBom)
         }
 
         $relPkg = "$pkg/package.json"
@@ -94,6 +101,7 @@ try {
 
     $currentStaged = @(git diff --cached --name-only)
     foreach ($file in $currentStaged) {
+        if (-not $file) { continue }
         $normalized = $file.Replace('\', '/')
         if ($normalized -notin $stagedFiles) {
             git reset @stagedFiles | Out-Null
@@ -104,15 +112,17 @@ try {
     git diff --cached --quiet
     if ($LASTEXITCODE -eq 0) {
         git reset @stagedFiles | Out-Null
-        if (-not $Force) {
-            throw "All package versions are already '$Version'."
-        }
+        Write-Host "All package versions are already '$Version'; skipping version bump commit."
     } else {
         git commit -m "chore(release): bump version to $Version"
-        git push $Remote HEAD
         if ($LASTEXITCODE -ne 0) {
-            throw "Failed to push the version bump to '$Remote'; the tag was not created."
+            throw 'Failed to commit the version bump; the tag was not created.'
         }
+    }
+
+    git push $Remote HEAD
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to push HEAD to '$Remote'; the tag was not created."
     }
 
     git tag -a $tag -m "Release $tag"

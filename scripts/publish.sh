@@ -24,6 +24,8 @@ if [[ -z "$version" ]]; then
   read -r -p 'Version to release (for example 1.0.0-alpha.16): ' version
 fi
 
+version="${version#v}"
+
 if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
   printf "Invalid version '%s'. Use semantic versioning such as 1.0.0-alpha.16 or 1.0.0.\n" "$version" >&2
   exit 1
@@ -94,7 +96,8 @@ NODE
 done
 
 mapfile -t current_staged < <(git diff --cached --name-only)
-for file in "${current_staged[@]}"; do
+for file in ${current_staged[@]+"${current_staged[@]}"}; do
+  [[ -z "$file" ]] && continue
   matched=false
   for expected in "${staged_files[@]}"; do
     if [[ "$file" == "$expected" ]]; then
@@ -111,16 +114,14 @@ done
 
 if git diff --cached --quiet; then
   git reset "${staged_files[@]}" >/dev/null
-  if [[ "$force" != true ]]; then
-    printf "All package versions are already '%s'.\n" "$version" >&2
-    exit 1
-  fi
+  printf "All package versions are already '%s'; skipping version bump commit.\n" "$version"
 else
   git commit -m "chore(release): bump version to $version"
-  if ! git push "$remote" HEAD; then
-    printf "Failed to push the version bump to '%s'; the tag was not created.\n" "$remote" >&2
-    exit 1
-  fi
+fi
+
+if ! git push "$remote" HEAD; then
+  printf "Failed to push HEAD to '%s'; the tag was not created.\n" "$remote" >&2
+  exit 1
 fi
 
 git tag -a "$tag" -m "Release $tag"
