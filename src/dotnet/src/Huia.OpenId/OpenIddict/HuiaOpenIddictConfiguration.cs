@@ -1,11 +1,13 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using Huia.OpenId.DependencyInjection;
 using Huia.OpenId.OpenIddict.Handlers;
 using Huia.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Client;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -20,6 +22,17 @@ namespace Huia.OpenId.OpenIddict;
 /// </summary>
 internal static class HuiaOpenIddictConfiguration
 {
+    private static readonly RsaSecurityKey ServerEncryptionKey = CreateEphemeralRsaKey();
+    private static readonly RsaSecurityKey ServerSigningKey = CreateEphemeralRsaKey();
+    private static readonly RsaSecurityKey ClientEncryptionKey = CreateEphemeralRsaKey();
+    private static readonly RsaSecurityKey ClientSigningKey = CreateEphemeralRsaKey();
+
+    private static RsaSecurityKey CreateEphemeralRsaKey()
+    {
+        using var rsa = RSA.Create(2048);
+        return new RsaSecurityKey(rsa.ExportParameters(includePrivateParameters: true));
+    }
+
     public static IServiceCollection AddHuiaOpenIddict(
         this IServiceCollection services, HuiaOptions options, HuiaOpenIdConfigurationBuilder? configBuilder = null)
     {
@@ -94,8 +107,8 @@ internal static class HuiaOpenIddictConfiguration
             server.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess);
 
             // Throw-away keys: real signing/validation is per-tenant (see the custom handlers).
-            server.AddEphemeralEncryptionKey()
-                  .AddEphemeralSigningKey();
+            server.AddEncryptionKey(ServerEncryptionKey)
+                  .AddSigningKey(ServerSigningKey);
 
             server.DisableAccessTokenEncryption();
 
@@ -151,8 +164,8 @@ internal static class HuiaOpenIddictConfiguration
 
                 client.UseDataProtection();
 
-                client.AddEphemeralEncryptionKey()
-                      .AddEphemeralSigningKey();
+                client.AddEncryptionKey(ClientEncryptionKey)
+                      .AddSigningKey(ClientSigningKey);
 
                 client.UseSystemNetHttp();
 

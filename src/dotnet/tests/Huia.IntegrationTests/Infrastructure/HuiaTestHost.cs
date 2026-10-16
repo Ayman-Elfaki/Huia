@@ -1,6 +1,8 @@
 using System.Net;
+using System.Security.Cryptography;
 using Finbuckle.MultiTenant.Abstractions;
 using Huia.OpenId.Identity;
+using Huia.OpenId.Keys;
 using Huia.OpenId.Multitenancy;
 using Huia.OpenId.EntityFrameworkCore;
 using Huia.OpenId.Entities;
@@ -30,6 +32,16 @@ namespace Huia.IntegrationTests.Infrastructure;
 /// </summary>
 public sealed class HuiaTestHost : IAsyncDisposable
 {
+    private static readonly (byte[] Modulus, byte[] Exponent, byte[] Pkcs8PrivateKey)[] RsaKeyPool =
+        Enumerable.Range(0, 16)
+            .Select(_ =>
+            {
+                using var rsa = RSA.Create(2048);
+                var p = rsa.ExportParameters(includePrivateParameters: false);
+                return (p.Modulus!, p.Exponent!, rsa.ExportPkcs8PrivateKey());
+            })
+            .ToArray();
+
     private readonly IHost _host;
     private readonly SqliteConnection _connection;
 
@@ -159,6 +171,23 @@ public sealed class HuiaTestHost : IAsyncDisposable
                     builder
                         .AddEntityFrameworkCoreStores<HuiaDbContext, HuiaUser, HuiaRole>()
                         .AddHuiaUi();
+                    var keyIndex = 0;
+                    services.AddSingleton(sp => new HuiaSigningKeyFactory(
+                        sp.GetRequiredService<IHuiaKeyProtector>(),
+                        sp.GetRequiredService<TimeProvider>(),
+                        keySize =>
+                        {
+                            if (keySize == 2048)
+                            {
+                                var idx = Interlocked.Increment(ref keyIndex) - 1;
+                                return RsaKeyPool[idx % RsaKeyPool.Length];
+                            }
+
+                            using var rsa = RSA.Create(keySize);
+                            var p = rsa.ExportParameters(includePrivateParameters: false);
+                            return (p.Modulus!, p.Exponent!, rsa.ExportPkcs8PrivateKey());
+                        }));
+                    services.Configure<PasswordHasherOptions>(o => o.IterationCount = 1_000);
                     services.AddSingleton(sms);
                     services.AddScoped<Huia.Services.ISmsSender>(_ => sms);
                     services.AddSingleton(email);

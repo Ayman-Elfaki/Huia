@@ -7,7 +7,10 @@ using Microsoft.IdentityModel.Tokens;
 namespace Huia.OpenId.Keys;
 
 /// <summary>Generates fresh RSA signing keys and renders their public half as a JWK.</summary>
-internal sealed class HuiaSigningKeyFactory(IHuiaKeyProtector protector, TimeProvider timeProvider)
+internal sealed class HuiaSigningKeyFactory(
+    IHuiaKeyProtector protector,
+    TimeProvider timeProvider,
+    Func<int, (byte[] Modulus, byte[] Exponent, byte[] Pkcs8PrivateKey)>? keyMaterialProvider = null)
 {
     /// <summary>Creates a new key for a tenant. The caller decides the initial status and activation time.</summary>
     /// <param name="tenantId">The owning tenant.</param>
@@ -20,9 +23,24 @@ internal sealed class HuiaSigningKeyFactory(IHuiaKeyProtector protector, TimePro
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
         ArgumentNullException.ThrowIfNull(options);
 
-        using var rsa = RSA.Create(options.KeySize);
+        byte[] modulus;
+        byte[] exponent;
+        byte[] pkcs8PrivateKey;
+
+        if (keyMaterialProvider is not null)
+        {
+            (modulus, exponent, pkcs8PrivateKey) = keyMaterialProvider(options.KeySize);
+        }
+        else
+        {
+            using var rsa = RSA.Create(options.KeySize);
+            var parameters = rsa.ExportParameters(includePrivateParameters: false);
+            modulus = parameters.Modulus!;
+            exponent = parameters.Exponent!;
+            pkcs8PrivateKey = rsa.ExportPkcs8PrivateKey();
+        }
+
         var keyId = Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(16));
-        var parameters = rsa.ExportParameters(includePrivateParameters: false);
 
         var publicJwk = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -30,8 +48,8 @@ internal sealed class HuiaSigningKeyFactory(IHuiaKeyProtector protector, TimePro
             ["use"] = "sig",
             ["kid"] = keyId,
             ["alg"] = SecurityAlgorithms.RsaSha256,
-            ["n"] = Base64UrlEncoder.Encode(parameters.Modulus),
-            ["e"] = Base64UrlEncoder.Encode(parameters.Exponent),
+            ["n"] = Base64UrlEncoder.Encode(modulus),
+            ["e"] = Base64UrlEncoder.Encode(exponent),
         };
 
         return new HuiaSigningKey
@@ -40,7 +58,7 @@ internal sealed class HuiaSigningKeyFactory(IHuiaKeyProtector protector, TimePro
             KeyId = keyId,
             Algorithm = SecurityAlgorithms.RsaSha256,
             PublicJwkJson = JsonSerializer.Serialize(publicJwk),
-            WrappedPrivateKey = protector.Protect(rsa.ExportPkcs8PrivateKey()),
+            WrappedPrivateKey = protector.Protect(pkcs8PrivateKey),
             Status = status,
             CreatedAt = timeProvider.GetUtcNow(),
             ActivateAt = activateAt,
